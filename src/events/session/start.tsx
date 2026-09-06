@@ -15,8 +15,7 @@ import { requestDaemonConfig } from '../../lib/request-config.js';
  * within the probe budget rather than delaying the session.
  */
 export const config = {
-  // The portable target defines no hooks; the three plugin hosts do.
-  targets: ['claude', 'codex', 'cursor'],
+  requires: ['events.sessionStart.context'],
   // The route probes within its own budget; ordinary rendered routes do not.
   providers: [],
   runtime: 'standalone',
