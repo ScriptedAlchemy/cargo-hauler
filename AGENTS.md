@@ -5,7 +5,7 @@
 - `pnpm run build` compiles one composite plugin root (`artifact/`: the
   Claude, Codex, Cursor, and Agent Plugins `portable` projections over one
   set of files, `agent-bundle.manifest.json` beside `bin/`) and the package
-  binaries (`dist/bin/hauler.js`, `dist/bin/cargo-hauler.js`,
+  binaries (`dist/bin/hauler.js`, `dist/bin/cargo-hauler.mjs`,
   `dist/bin/cargo-hauler-install.js`).
 - `pnpm run check` is the gate: validate, build, typecheck, Effect
   diagnostics, `rstest`, and the route-unit suite. Run it before claiming a
