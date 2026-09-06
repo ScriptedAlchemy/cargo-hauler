@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.9
+
+### Patch Changes
+
+- e160307: Print usage and exit 2 when `hauler daemon` is missing or given an unknown subcommand, and accept `hauler daemon stop --force` as a no-op alias for stop (#138).
+- 8dfe1c3: Flag cargo that ran outside the broker. An agent that wraps cargo in a script calling the toolchain binary by absolute path (`~/.rustup/toolchains/*/bin/cargo`) slips past both the `tool/before` rewrite (the command never says `cargo`) and the PATH shim (never on PATH), so its builds get no lane, no attach, and no ledger row while the machine saturates. The `tool/after` preflight and route now recognise cargo's status lines (`   Compiling …`, `    Finished … profile`, `     Running …`) in the output of a command that named neither cargo nor hauler, record the call in the hook log with reason `cargo ran outside cargo-hauler`, and tell the agent to name `cargo` in the command or run `hauler exec -- cargo …`. A file reader showing a saved log (`tail build.log`) is not treated as a run. The skill now says not to wrap cargo that way — besides leaving the broker, a toolchain binary called directly sets no `RUSTUP_TOOLCHAIN`, so registry crates compile under the default toolchain and fail with `E0514` — and how to drop a rustc wrapper or pin a toolchain through the broker instead.
+
 ## 0.6.8
 
 ### Patch Changes
