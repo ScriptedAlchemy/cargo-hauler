@@ -27,7 +27,7 @@ import {
  * The process-level entry: `exec` owns stdout/stderr byte-for-byte for the
  * cargo stream, `install-shim` embeds the global PATH entry, and `daemon` is
  * what the detached spawn re-enters. Everything else is a routed CLI command
- * (`src/cli/**`) and is forwarded to the generated `cargo-hauler` bin: beside
+ * (the tools' `.cli.ts` projections) and is forwarded to the generated `cargo-hauler` bin: beside
  * this script in the npm package, or under `bin/` in a host artifact.
  */
 const usage = `Usage: hauler <command>
@@ -41,7 +41,7 @@ Commands:
       (in-flight tickets end killed: "daemon shutdown")
   install-shim [--dir DIR] [--real-cargo PATH] [--force]
       Install an optional PATH cargo shim
-  status | log | last | await <ticket> | result <ticket> | request [--after TICKET] -- <cargo command> | dashboard
+  status | log | last | await <ticket> | result <ticket> | request [--after TICKET] -- <cargo command>
       Routed commands; run \`cargo-hauler --help\` for options
 `;
 

@@ -4,7 +4,7 @@ import React from 'react';
 import { z } from 'zod';
 
 import { KillDocument } from '../../../components/documents.js';
-import { mcpSurface } from '../../../components/surface.js';
+import { surfaceNames } from '../../../components/surface.js';
 import { killResultSchema } from '../../../lib/protocol-schemas.js';
 import { requestDaemonConfig } from '../../../lib/request-config.js';
 import { killTicketResult } from '../../../lib/tickets.js';
@@ -24,5 +24,5 @@ export const resultSchema = killResultSchema;
 export default async function HaulerKill({ input, signal }: ToolRouteProps<typeof inputSchema>) {
   const context = await agent();
   const result = await killTicketResult(input, { config: requestDaemonConfig(context), signal });
-  return <KillDocument names={mcpSurface} nowMs={Date.now()} result={result} />;
+  return <KillDocument names={surfaceNames(context)} nowMs={Date.now()} result={result} />;
 }

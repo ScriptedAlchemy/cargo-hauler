@@ -3,7 +3,7 @@ import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
 import React from 'react';
 
 import { LogStream } from '../../../components/streaming.js';
-import { mcpSurface } from '../../../components/surface.js';
+import { surfaceNames } from '../../../components/surface.js';
 import { loadLogResult } from '../../../lib/inspect.js';
 import { limitInputSchema, logResultSchema } from '../../../lib/protocol-schemas.js';
 import { requestDaemonConfig } from '../../../lib/request-config.js';
@@ -22,7 +22,7 @@ export default async function HaulerLog({ input, signal }: ToolRouteProps<typeof
   return (
     <LogStream
       loading={loadLogResult(input, { config: requestDaemonConfig(context), signal })}
-      names={mcpSurface}
+      names={surfaceNames(context)}
     />
   );
 }

@@ -2,8 +2,9 @@
 
 ## Build and check
 
-- `pnpm run build` compiles one host pack per target (`artifact/claude`,
-  `artifact/codex`, `artifact/cursor`, `artifact/portable`) and the package
+- `pnpm run build` compiles one composite plugin root (`artifact/`: the
+  Claude, Codex, Cursor, and Agent Plugins `portable` projections over one
+  set of files, `agent-bundle.manifest.json` beside `bin/`) and the package
   binaries (`dist/bin/hauler.js`, `dist/bin/cargo-hauler.js`,
   `dist/bin/cargo-hauler-install.js`).
 - `pnpm run check` is the gate: validate, build, typecheck, Effect
@@ -12,10 +13,11 @@
 - The plugin surface is an agent-bundle application: `src/layout.tsx` (the
   shell), `src/providers/hauler-daemon.ts` (daemon connection), `src/components`
   (typed components over `view-models.ts`), `src/mcp/hauler/tools` and
-  `src/mcp/hauler/apps` (MCP), `src/events` (hook routes), `src/hooks/fast-path`
-  (the declared `tool/before` and `tool/after` shell hooks: decide on the raw
-  command, then `import()` the rest — keep them free of React and Effect),
-  `src/cli` (routed CLI), `src/scripts/hauler.ts` (process entry),
+  `src/mcp/hauler/apps` (MCP; each tool's `<tool>.cli.ts` is its `hauler`
+  command), `src/events` (hook routes; `tool/before.preflight.ts` and
+  `tool/after.preflight.ts` decide on the raw command before the route
+  loads — keep them free of React and Effect), `src/hooks` (the handlers
+  the routes call), `src/cli/daemon.ts`, `src/scripts/hauler.ts` (process entry),
   `src/skills`. The README's tour is the map; do not reintroduce a
   hand-written server, argv parser, or string-concatenated documents — add a
   component and a view-model.

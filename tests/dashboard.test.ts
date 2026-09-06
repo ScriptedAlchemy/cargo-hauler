@@ -66,20 +66,18 @@ const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 describe('MCP App dashboard', () => {
   it('declares the widget URI and ships a self-contained artifact page', () => {
     expect(APP_RESOURCE_URI).toBe('ui://cargo-hauler/dashboard.html');
-    for (const target of ['claude', 'codex', 'cursor', 'portable'] as const) {
-      const built = join(repoRoot, 'artifact', target, 'mcp-apps', 'dashboard.html');
-      expect(existsSync(built)).toBe(true);
-      const html = readFileSync(built, 'utf8');
-      expect(html).toContain('In flight');
-      expect(html).toContain('History');
-      expect(html).toContain('Contention');
-      expect(html).toContain('hauler_status');
-      expect(html).toContain('hauler_result');
-      expect(html).toContain('wait exceeds estimate');
-      expect(html).toContain('no output — long compile/link phases can be silent');
-      expect(html).toContain('likely deadlocked');
-      expect(html).not.toContain('src="http');
-    }
+    const built = join(repoRoot, 'artifact', 'mcp-apps', 'dashboard.html');
+    expect(existsSync(built)).toBe(true);
+    const html = readFileSync(built, 'utf8');
+    expect(html).toContain('In flight');
+    expect(html).toContain('History');
+    expect(html).toContain('Contention');
+    expect(html).toContain('hauler_status');
+    expect(html).toContain('hauler_result');
+    expect(html).toContain('wait exceeds estimate');
+    expect(html).toContain('no output — long compile/link phases can be silent');
+    expect(html).toContain('likely deadlocked');
+    expect(html).not.toContain('src="http');
   });
 });
 

@@ -165,7 +165,7 @@ const defaultRequestOutcomeDependencies: RequestOutcomeDependencies = {
 
 /**
  * One-shot hook request with the same one-version gate as the Effect client.
- * Hook fast paths stay dependency-free on Effect: on skew they delegate the
+ * Hook preflights stay dependency-free on Effect: on skew they delegate the
  * replacement to `hauler daemon start`, which owns the shutdown/wait/spawn
  * lifecycle, then retry the requested operation once.
  */

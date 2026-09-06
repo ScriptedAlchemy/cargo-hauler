@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 import { RegistryProvider, useAtomRefresh, useAtomSet, useAtomValue } from '@effect/atom-react';
 import type { AppRouteConfig } from 'agent-bundle';
+import { createAppClient } from 'agent-bundle/app';
 import { version as dashboardVersion } from 'agent-bundle/meta';
 import { Cause, Data, Effect, Option } from 'effect';
 import { AsyncResult, Atom } from 'effect/unstable/reactivity';
@@ -81,19 +82,6 @@ export const config = {
   resourceUri: APP_RESOURCE_URI,
   template: './dashboard.html',
 } satisfies AppRouteConfig;
-
-interface JsonRpcMessage {
-  readonly jsonrpc?: unknown;
-  readonly id?: unknown;
-  readonly method?: unknown;
-  readonly params?: unknown;
-  readonly result?: ToolCallResult;
-  readonly error?: { readonly message?: unknown } | null;
-}
-
-interface ToolCallResult {
-  readonly structuredContent?: StructuredContent | null;
-}
 
 interface SystemLoadShape {
   readonly loadAvg1?: unknown;
@@ -239,11 +227,6 @@ interface KacheShape {
   readonly pressure?: unknown;
 }
 
-interface PendingRequest {
-  readonly resolve: (value: ToolCallResult) => void;
-  readonly reject: (error: unknown) => void;
-}
-
 interface PushedStatus {
   readonly receivedAt: number;
   readonly value: StructuredContent;
@@ -259,52 +242,16 @@ type Initialization =
   | { readonly _tag: 'Ready' }
   | { readonly _tag: 'Failed'; readonly error: Error };
 
-const pending = new Map<number, PendingRequest>();
 const pushedStatusAtom = Atom.make<PushedStatus | null>(null);
-let nextId = 0;
 
-const postMessage = (payload: Record<string, unknown>): void => {
-  window.parent.postMessage(payload, '*');
-};
-
-const rpcRequest = (method: string, params: Record<string, unknown>): Promise<ToolCallResult> =>
-  new Promise((resolve, reject) => {
-    const id = ++nextId;
-    const timer = setTimeout(() => {
-      if (pending.delete(id)) {
-        reject(new Error(`timed out: ${method}`));
-      }
-    }, 15_000);
-    pending.set(id, {
-      resolve: (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      reject: (error) => {
-        clearTimeout(timer);
-        reject(error);
-      },
-    });
-    postMessage({ id, jsonrpc: '2.0', method, params });
-  });
+/** The MCP Apps host connection: handshake, request ids, timeouts, and result decoding are the framework's. */
+const client = createAppClient({
+  appInfo: { name: 'cargo-hauler', version: dashboardVersion },
+  timeoutMs: 15_000,
+});
 
 const asRecord = (value: unknown): StructuredContent | null =>
   value !== null && typeof value === 'object' ? (value as StructuredContent) : null;
-
-const structuredFrom = (value: unknown): StructuredContent | null => {
-  const record = asRecord(value);
-  if (record === null) {
-    return null;
-  }
-  const nested = asRecord(record.structuredContent);
-  if (nested !== null) {
-    return nested;
-  }
-  if (record.daemon !== undefined || record.operation === 'status' || Array.isArray(record.recent)) {
-    return record;
-  }
-  return null;
-};
 
 class StatusRpcError extends Data.TaggedError('StatusRpcError')<{
   readonly cause: unknown;
@@ -315,13 +262,7 @@ class StatusRpcError extends Data.TaggedError('StatusRpcError')<{
 }
 
 const fetchStatus = Effect.tryPromise({
-  try: async () => {
-    const response = await rpcRequest('tools/call', {
-      arguments: { limit: 40 },
-      name: 'hauler_status',
-    });
-    return structuredFrom(response);
-  },
+  try: async () => asRecord(await client.call('tool:hauler/hauler_status', { limit: 40 })),
   catch: (cause) => new StatusRpcError({ cause }),
 });
 
@@ -341,13 +282,8 @@ export const statusAtom = Atom.make(
  * record — the ledger tail once settled, the daemon's full live tail while
  * the run is in progress.
  */
-const fetchTicketRecord = async (ticketId: string): Promise<unknown> => {
-  const response = await rpcRequest('tools/call', {
-    arguments: { ticket: ticketId },
-    name: 'hauler_result',
-  });
-  return asRecord(response.structuredContent)?.request ?? null;
-};
+const fetchTicketRecord = async (ticketId: string): Promise<unknown> =>
+  asRecord(await client.call('tool:hauler/hauler_result', { ticket: ticketId }))?.request ?? null;
 
 const arrayOrEmpty = <T,>(value: unknown): readonly T[] => (Array.isArray(value) ? value : []);
 
@@ -1911,46 +1847,20 @@ const DashboardApp = () => {
 
   useEffect(() => {
     let active = true;
-    const onMessage = (event: MessageEvent): void => {
-      const message = event.data as JsonRpcMessage | null;
-      if (message === null || message.jsonrpc !== '2.0') {
-        return;
+    // The opening `hauler_status` result the host pushes beside the App.
+    const stop = client.onToolResult('tool:hauler/hauler_status', (result) => {
+      const value = asRecord(result);
+      if (value !== null) {
+        setPushed({ receivedAt: Date.now(), value });
       }
-      if (typeof message.id === 'number') {
-        const waiter = pending.get(message.id);
-        if (waiter !== undefined) {
-          pending.delete(message.id);
-          if (message.error) {
-            const reason =
-              typeof message.error.message === 'string' ? message.error.message : 'tool call failed';
-            waiter.reject(new Error(reason));
-          } else {
-            waiter.resolve(message.result ?? {});
-          }
-          return;
-        }
-      }
-      if (message.method === 'ui/notifications/tool-result') {
-        const value = structuredFrom(message.params);
-        if (value !== null) {
-          setPushed({ receivedAt: Date.now(), value });
-        }
-      }
-    };
+    });
 
-    window.addEventListener('message', onMessage);
     setInitialization({ _tag: 'Initializing' });
-    void rpcRequest('ui/initialize', {
-      appCapabilities: { availableDisplayModes: ['inline'] },
-      appInfo: { name: 'cargo-hauler', version: dashboardVersion },
-      protocolVersion: '2026-01-26',
-    }).then(
+    client.connect().then(
       () => {
-        if (!active) {
-          return;
+        if (active) {
+          setInitialization({ _tag: 'Ready' });
         }
-        postMessage({ jsonrpc: '2.0', method: 'ui/notifications/initialized', params: {} });
-        setInitialization({ _tag: 'Ready' });
       },
       (error: unknown) => {
         if (active) {
@@ -1964,11 +1874,7 @@ const DashboardApp = () => {
 
     return () => {
       active = false;
-      window.removeEventListener('message', onMessage);
-      for (const waiter of pending.values()) {
-        waiter.reject(new Error('dashboard unmounted'));
-      }
-      pending.clear();
+      stop();
     };
   }, [attempt, setPushed]);
 

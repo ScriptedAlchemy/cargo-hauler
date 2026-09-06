@@ -101,8 +101,6 @@ export const daemonBadgeModel = (
         state: health.state,
         stateDir,
       };
-    case 'unprobed':
-      return { detail: null, headline: 'daemon not probed on this surface', state: health.state, stateDir };
     default: {
       const exhaustive: never = health;
       return exhaustive;

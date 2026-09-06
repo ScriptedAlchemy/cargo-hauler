@@ -9,7 +9,7 @@ clippy, fmt, nextest) or is waiting on someone else's cargo.
 
 The CLI is `hauler` on PATH, installed with `npm i -g cargo-hauler`. Never run
 `scripts/hauler.mjs` or any path under `.claude/plugins/cache`,
-`.codex/plugins/cache`, `.cursor/plugins`, or `artifact/<host>`; those are
+`.codex/plugins/cache`, `.cursor/plugins`, or `artifact/`; those are
 plugin internals, not CLI entry points.
 
 ## Rules

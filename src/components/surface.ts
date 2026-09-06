@@ -1,3 +1,5 @@
+import type { AgentRequestContext } from '@agent-bundle/runtime';
+
 /**
  * The same document renders on two surfaces whose follow-up commands are
  * spelled differently: MCP tool names for hosts, `hauler <cmd>` for the CLI.
@@ -32,3 +34,7 @@ export const cliSurface: SurfaceNames = {
   resultFull: (ticket) => `hauler result ${ticket} --full`,
   status: 'hauler status',
 };
+
+/** The names for this request's surface: the routed CLI (a tool's `.cli.ts` projection) or the MCP server. */
+export const surfaceNames = ({ invocation }: Pick<AgentRequestContext, 'invocation'>): SurfaceNames =>
+  invocation.kind === 'cli' ? cliSurface : mcpSurface;

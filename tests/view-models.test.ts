@@ -77,12 +77,6 @@ describe('daemonBadgeModel', () => {
     expect(daemonBadgeModel({ reason: 'answer-timeout', state: 'unresponsive', timeoutMs: 750 }, nowMs).detail).toContain('accepted the connection but sent no status');
     expect(daemonBadgeModel({ reason: 'connection-closed', state: 'unresponsive', timeoutMs: 750 }, nowMs).detail).toContain('closed the connection');
     expect(daemonBadgeModel({ detail: 'EACCES: permission denied', reason: 'open-failed', state: 'unreachable' }, nowMs).detail).toContain('EACCES');
-    expect(daemonBadgeModel({ reason: 'event-surface', state: 'unprobed' }, nowMs)).toEqual({
-      detail: null,
-      headline: 'daemon not probed on this surface',
-      state: 'unprobed',
-      stateDir: null,
-    });
   });
 
   it('names the state directory it was given', () => {

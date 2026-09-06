@@ -3,7 +3,7 @@ import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
 import React from 'react';
 
 import { AwaitStream } from '../../../components/streaming.js';
-import { mcpSurface } from '../../../components/surface.js';
+import { surfaceNames } from '../../../components/surface.js';
 import { awaitResultSchema, ticketInputSchema } from '../../../lib/protocol-schemas.js';
 import { requestDaemonConfig } from '../../../lib/request-config.js';
 import { awaitTicketResult, defaultAwaitMs, fetchTicketResult, progressMessage } from '../../../lib/tickets.js';
@@ -52,7 +52,7 @@ export default async function HaulerAwait({ input, signal }: ToolRouteProps<type
     <AwaitStream
       awaited={awaited}
       maxWaitMs={maxWaitMs}
-      names={mcpSurface}
+      names={surfaceNames(context)}
       nowMs={startedAt}
       snapshot={snapshot.request}
       ticket={input.ticket}

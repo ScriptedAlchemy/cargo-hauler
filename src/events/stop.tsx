@@ -10,6 +10,7 @@ import { decisionValue } from '../lib/event-support.js';
 export const config = {
   // The portable playground target defines no hooks; events ship with the plugin hosts.
   targets: ['claude', 'codex', 'cursor'],
+  providers: [],
   runtime: 'standalone',
   timeoutMs: 900_000,
 } satisfies AgentEventRouteConfig;

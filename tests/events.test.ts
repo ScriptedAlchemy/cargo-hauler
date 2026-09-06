@@ -92,20 +92,24 @@ describe('agent event routes', () => {
       import('../src/events/session/start.js'),
     ]);
     const hosts = ['claude', 'codex', 'cursor'];
-    expect(stop.config).toEqual({ runtime: 'standalone', targets: hosts, timeoutMs: 900_000 });
-    expect(sessionStart.config).toEqual({ runtime: 'standalone', targets: hosts, timeoutMs: 5_000 });
+    expect(stop.config).toEqual({ providers: [], runtime: 'standalone', targets: hosts, timeoutMs: 900_000 });
+    expect(sessionStart.config).toEqual({ providers: [], runtime: 'standalone', targets: hosts, timeoutMs: 5_000 });
   });
 
-  it('declares the shell tool hooks as config handlers, not rendered routes', () => {
-    // tool/before and tool/after are the two hooks every shell call pays for,
-    // so they compile from `src/hooks/fast-path/` into standalone entries that
-    // decide on the command before the rendering runtime loads (#90).
-    expect(typeof bundleConfig).toBe('object');
-    const config = bundleConfig as AgentBundleConfig;
-    expect(config.hooks).toEqual({
-      afterTool: { handler: './src/hooks/fast-path/shell-after.ts', timeout: 10, tools: ['shell'] },
-      beforeTool: { handler: './src/hooks/fast-path/shell-before.ts', timeout: 10, tools: ['shell'] },
-    });
+  it('routes the shell tool hooks with preflight gates and no provider', async () => {
+    // tool/before and tool/after are the two hooks every shell call pays for:
+    // their preflight decides on the raw command before the route loads (#90),
+    // and neither pays the daemon provider's probe.
+    const [before, after] = await Promise.all([
+      import('../src/events/tool/before.js'),
+      import('../src/events/tool/after.js'),
+    ]);
+    const hosts = ['claude', 'codex', 'cursor'];
+    for (const route of [before, after]) {
+      expect(route.config).toEqual({ providers: [], runtime: 'standalone', targets: hosts, timeoutMs: 10_000, tools: ['shell'] });
+      expect(typeof route.preflight).toBe('function');
+    }
+    expect((bundleConfig as AgentBundleConfig).hooks).toBeUndefined();
   });
 
   it('decisionValue drops a reason from a continue result and keeps it on allow and deny', () => {

@@ -51,8 +51,7 @@ export type DaemonHealth =
       readonly reason: 'accept-timeout' | 'answer-timeout' | 'connection-closed';
       readonly timeoutMs: number;
     }
-  | { readonly state: 'unreachable'; readonly reason: 'open-failed'; readonly detail: string }
-  | { readonly state: 'unprobed'; readonly reason: 'event-surface' };
+  | { readonly state: 'unreachable'; readonly reason: 'open-failed'; readonly detail: string };
 
 /** Bounded so a saturated daemon costs a document at most this long — for the accept and for the answer. */
 export const healthProbeTimeoutMs = 750;

@@ -20,8 +20,7 @@ import { pollReport, scopedDaemon } from './harness.js';
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const fixtureRoot = join(repoRoot, 'tests', 'fixtures', 'hooks');
 const artifactRoot = join(repoRoot, 'artifact');
-const claudeHooksRoot = join(artifactRoot, 'claude', 'hooks');
-const cursorHooksRoot = join(artifactRoot, 'cursor', 'hooks');
+const hooksRoot = join(artifactRoot, 'hooks');
 
 const loadJson = (name: string): Record<string, unknown> =>
   JSON.parse(readFileSync(join(fixtureRoot, name), 'utf8')) as Record<string, unknown>;
@@ -68,29 +67,14 @@ const runWrapper = (
   });
 
 /**
- * The compiled shell hook entry for one host pack: the config-declared
- * `beforeTool`/`afterTool` handler from `src/hooks/fast-path/`, emitted as
- * `before-tool-shell-before-<hash>.mjs` next to the event-route wrappers.
+ * The compiled shell hook entry for one host: the `tool/before` or
+ * `tool/after` event route's preflight shell, which runs the gate and loads
+ * the rendered route (`*.execute.mjs`) only when it says `execute`.
  */
 const findHookEntry = (event: 'before-tool' | 'after-tool', host: 'claude' | 'cursor'): string | undefined => {
-  const root = host === 'cursor' ? cursorHooksRoot : claudeHooksRoot;
-  if (!existsSync(root)) {
-    return undefined;
-  }
-  const found = readdirSync(root).find((name) => name.startsWith(`${event}-`) && name.endsWith('.mjs'));
-  return found === undefined ? undefined : join(root, found);
+  const entry = join(hooksRoot, `event-route-tool-${event === 'before-tool' ? 'before' : 'after'}.${host}.mjs`);
+  return existsSync(entry) ? entry : undefined;
 };
-
-/** The canonical `HookEvent` a config-declared hook receives; `simulateHook` encodes it to the host envelope itself. */
-const canonicalShellEvent = (command: string, extra: Record<string, unknown> = {}): Record<string, unknown> => ({
-  cwd: '/tmp/ws',
-  sessionId: 'sess-claude',
-  toolInput: { command },
-  toolName: 'Bash',
-  toolUseId: 'toolu_simulate',
-  transcriptPath: '/tmp/transcript.json',
-  ...extra,
-});
 
 const claudeEnvelope = (
   hookEventName: 'PreToolUse' | 'PostToolUse',
@@ -196,7 +180,7 @@ describe('host envelope fixtures', () => {
 });
 
 describe('agent-bundle hooks simulate', () => {
-  it.skipIf(!existsSync(join(artifactRoot, 'agent-bundle.hooks.json')))(
+  it.skipIf(!existsSync(join(artifactRoot, 'agent-bundle.manifest.json')))(
     'simulates the Claude beforeTool, afterTool, and stop wrappers',
     async () => {
       const previousHost = process.env.AGENT_BUNDLE_HOOK_HOST;
@@ -216,15 +200,10 @@ describe('agent-bundle hooks simulate', () => {
         const rewritten = await simulateHook({
           artifact: artifactRoot,
           hook: before!.name,
-          // Config-declared hooks are simulated with the canonical event; the
-          // wrapper encodes it to Claude's envelope before the handler runs.
-          input: canonicalShellEvent('cargo test -p foo'),
+          input: claudeEnvelope('PreToolUse', 'cargo test -p foo'),
           root: repoRoot,
           target: 'claude',
         });
-        // `allow` is the one decision the handler contract cannot carry, so
-        // the hook writes Claude's native PreToolUse output itself — which is
-        // also what the simulation reads back here.
         expect(rewritten).toEqual({
           hookSpecificOutput: {
             hookEventName: 'PreToolUse',
@@ -238,7 +217,7 @@ describe('agent-bundle hooks simulate', () => {
         const recorded = await simulateHook({
           artifact: artifactRoot,
           hook: after!.name,
-          input: canonicalShellEvent('cargo test -p foo', { toolResponse: { exit_code: 0, stdout: 'ok' } }),
+          input: claudeEnvelope('PostToolUse', 'cargo test -p foo', { tool_response: { exit_code: 0, stdout: 'ok' } }),
           root: repoRoot,
           target: 'claude',
         });
@@ -349,15 +328,15 @@ describe('agent-bundle hooks simulate', () => {
     },
   );
 
-  it.skipIf(!existsSync(claudeHooksRoot))('ships the shell hook entries without the rendering runtime', () => {
+  it.skipIf(!existsSync(hooksRoot))('ships the shell hook preflight entries without the rendering runtime', () => {
     for (const host of ['claude', 'cursor'] as const) {
       for (const event of ['before-tool', 'after-tool'] as const) {
         const entry = findHookEntry(event, host);
         expect(entry).toBeDefined();
         const source = readFileSync(entry!, 'utf8');
-        // The whole entry — token test, socket ping, and the deferred
-        // rewrite/telemetry chunk — stays a fraction of the 3.6 MB event
-        // wrapper, and never pulls in React or the Flight worker.
+        // The preflight shell — token test and socket ping — stays a fraction
+        // of the 3.6 MB rendered route beside it, and never pulls in React or
+        // the Flight worker.
         expect(statSync(entry!).size).toBeLessThan(512 * 1024);
         expect(source).not.toContain('react-dom');
         expect(source).not.toContain('hooks-flight');
