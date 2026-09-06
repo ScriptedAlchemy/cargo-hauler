@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.10
+
+### Patch Changes
+
+- 58f0da4: Hand the `tool/after` preflight's session-completed answer to the route as `preflight` data so the after-shell hook does not query the daemon a second time, and pin `agent-bundle` and `@agent-bundle/runtime` to the preview of main `9197015b9` (agent-bundle #661/#664).
+- 40c5dc4: Make the kache snapshot-reader event-loop test count observed loop turns during a large refresh instead of bounding a 1 ms `setInterval` gap, so the check stays deterministic on shared runners including macOS.
+
 ## 0.6.9
 
 ### Patch Changes
