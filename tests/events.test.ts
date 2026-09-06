@@ -91,9 +91,18 @@ describe('agent event routes', () => {
       import('../src/events/stop.js'),
       import('../src/events/session/start.js'),
     ]);
-    const hosts = ['claude', 'codex', 'cursor'];
-    expect(stop.config).toEqual({ providers: [], runtime: 'standalone', targets: hosts, timeoutMs: 900_000 });
-    expect(sessionStart.config).toEqual({ providers: [], runtime: 'standalone', targets: hosts, timeoutMs: 5_000 });
+    expect(stop.config).toEqual({
+      providers: [],
+      requires: ['events.stop.deny'],
+      runtime: 'standalone',
+      timeoutMs: 900_000,
+    });
+    expect(sessionStart.config).toEqual({
+      providers: [],
+      requires: ['events.sessionStart.context'],
+      runtime: 'standalone',
+      timeoutMs: 5_000,
+    });
   });
 
   it('routes the shell tool hooks with preflight gates and no provider', async () => {
@@ -104,11 +113,22 @@ describe('agent event routes', () => {
       import('../src/events/tool/before.js'),
       import('../src/events/tool/after.js'),
     ]);
-    const hosts = ['claude', 'codex', 'cursor'];
-    for (const route of [before, after]) {
-      expect(route.config).toEqual({ providers: [], runtime: 'standalone', targets: hosts, timeoutMs: 10_000, tools: ['shell'] });
-      expect(typeof route.preflight).toBe('function');
-    }
+    expect(before.config).toEqual({
+      providers: [],
+      requires: ['events.toolBefore.deny'],
+      runtime: 'standalone',
+      timeoutMs: 10_000,
+      tools: ['shell'],
+    });
+    expect(after.config).toEqual({
+      providers: [],
+      requires: ['events.toolAfter.context'],
+      runtime: 'standalone',
+      timeoutMs: 10_000,
+      tools: ['shell'],
+    });
+    expect(typeof before.preflight).toBe('function');
+    expect(typeof after.preflight).toBe('function');
     expect((bundleConfig as AgentBundleConfig).hooks).toBeUndefined();
   });
 

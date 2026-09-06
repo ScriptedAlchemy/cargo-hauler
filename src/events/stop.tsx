@@ -8,8 +8,7 @@ import { decisionValue } from '../lib/event-support.js';
 // Standalone: stop-hold may block for its bounded wait and must not occupy
 // the shared MCP runtime. Budget mirrors the former 900 s stop hook.
 export const config = {
-  // The portable playground target defines no hooks; events ship with the plugin hosts.
-  targets: ['claude', 'codex', 'cursor'],
+  requires: ['events.stop.deny'],
   providers: [],
   runtime: 'standalone',
   timeoutMs: 900_000,

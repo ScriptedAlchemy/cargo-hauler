@@ -6,8 +6,7 @@ import { handleBeforeShell } from '../../hooks/before-shell.js';
 import { decisionValue, shellEventFrom } from '../../lib/event-support.js';
 
 export const config = {
-  // The portable playground target defines no hooks; events ship with the plugin hosts.
-  targets: ['claude', 'codex', 'cursor'],
+  requires: ['events.toolBefore.deny'],
   // The route reads the daemon itself (`probeActiveBuilds`); no provider probe.
   providers: [],
   runtime: 'standalone',
