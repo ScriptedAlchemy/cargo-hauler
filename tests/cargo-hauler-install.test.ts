@@ -101,4 +101,23 @@ describe('cargo-hauler-install', () => {
       rmSync(root, { force: true, recursive: true });
     }
   });
+
+  it('does not restore modes for uninstall --plan', async () => {
+    await withArtifact(async (artifactRoot) => {
+      const path = join(artifactRoot, 'tool.sh');
+      writeFileSync(path, '#!/bin/sh\n');
+      chmodSync(path, 0o644);
+      writeFileSync(join(artifactRoot, 'agent-bundle.manifest.json'), JSON.stringify({
+        application: { id: 'cargo-hauler', name: 'cargo-hauler', version: '0.6.11' },
+        files: [{ mode: 0o755, path: 'tool.sh' }],
+      }));
+      await runInstallCli({
+        artifactRoot,
+        argv: ['uninstall', 'claude', '--plan'],
+        write: () => undefined,
+        writeStderr: () => undefined,
+      });
+      expect(statSync(path).mode & 0o777).toBe(0o644);
+    });
+  });
 });

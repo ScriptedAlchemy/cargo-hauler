@@ -280,7 +280,9 @@ export const runInstallCli = async (options: InstallCliOptions = {}): Promise<nu
         break;
       }
       case 'uninstall': {
-        await restoreManifestModes(artifactRoot);
+        if (!parsed.plan) {
+          await restoreManifestModes(artifactRoot);
+        }
         const result = await uninstallBundle({
           confirmPurge: parsed.confirmPurge,
           force: parsed.force,
