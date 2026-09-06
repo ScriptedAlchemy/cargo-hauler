@@ -12,7 +12,7 @@ const isDaemonConfig = (value: unknown): value is DaemonConfigShape =>
   typeof value.databasePath === 'string';
 
 const isHaulerDaemonContext = (value: unknown): value is HaulerDaemonContext =>
-  isRecord(value) && isDaemonConfig(value.config) && isRecord(value.health) && typeof value.health.state === 'string';
+  isRecord(value) && isDaemonConfig(value.config);
 
 /**
  * The daemon connection for this request: the `haulerDaemon` provider when

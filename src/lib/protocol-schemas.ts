@@ -554,7 +554,7 @@ export const resultFetchResultSchema = z
 export const requestInputSchema = z
   .object({
     argv: z.array(z.string()).min(1),
-    cwd: z.string().min(1),
+    cwd: z.string().min(1).optional(),
     session: z.string().optional(),
     host: z.string().optional(),
     after: z

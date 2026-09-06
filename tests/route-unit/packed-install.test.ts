@@ -130,6 +130,14 @@ describe('packed install', () => {
             expect(failed).toEqual([]);
             const tools = await session.client.listTools();
             expect(tools.tools.map((tool) => tool.name)).toContain('hauler_status');
+            const requested = await session.client.callTool({
+              arguments: { argv: ['cargo', 'check'] },
+              name: 'hauler_request',
+            });
+            expect(requested.isError).toBe(true);
+            expect(JSON.stringify(requested.content)).toContain(
+              'cwd is required when Agent Bundle has no authoritative workspace',
+            );
           } finally {
             await session.close();
           }

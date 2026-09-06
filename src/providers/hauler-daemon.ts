@@ -1,29 +1,16 @@
-import type { AgentProviderContext } from 'agent-bundle';
-
 import { resolveDaemonConfig, type DaemonConfigShape } from '../daemon/config.js';
-import { probeDaemonHealth, type DaemonHealth } from '../lib/daemon-health.js';
 
 /**
- * The daemon connection for one request, mounted at
+ * The daemon configuration for one request, mounted at
  * `(await agent()).providers.haulerDaemon` (and `useAgent().providers.haulerDaemon`
  * in synchronous components) for every generated MCP tool, routed CLI
- * command, and rendered script. Event routes declare `providers: []` and
- * probe for themselves within their own budget when they need to.
- *
- * `config` is where the daemon lives (state dir, socket, ledger) resolved
- * once from the environment; `health` is what one bounded probe proved about
- * it at request start. A probe never fabricates status: a missing socket or
- * refused connection is `stopped`, an accept that did not finish in time is
- * `unresponsive`.
+ * command, and rendered script. Active daemon observations belong to the
+ * operation that needs them, so the root layout performs no socket I/O.
  */
 export interface HaulerDaemonContext {
   readonly config: DaemonConfigShape;
-  readonly health: DaemonHealth;
-  readonly probedAt: string;
 }
 
-export default async function haulerDaemon({ signal }: AgentProviderContext): Promise<HaulerDaemonContext> {
-  const config = resolveDaemonConfig();
-  const health = await probeDaemonHealth(config, { signal });
-  return { config, health, probedAt: new Date().toISOString() };
+export default function haulerDaemon(): HaulerDaemonContext {
+  return { config: resolveDaemonConfig() };
 }

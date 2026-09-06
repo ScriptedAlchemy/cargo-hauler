@@ -24,14 +24,13 @@ export const config = {
   positionals: ['argv'],
 } satisfies CliProjectionConfig<typeof inputSchema>;
 
-type CliInput = Omit<z.input<typeof inputSchema>, 'cwd'> & { readonly cwd?: string };
+type CliInput = z.input<typeof inputSchema>;
 
-/** The current directory when `--cwd` is absent; comma-separated `--after` lists split. */
+/** Comma-separated `--after` lists split; request context resolves an omitted cwd. */
 export const mapInput = (input: CliInput): z.input<typeof inputSchema> => {
   const after = input.after === undefined ? [] : [...parseTicketList(input.after)];
   return {
     ...input,
-    cwd: input.cwd ?? process.cwd(),
     ...(after.length === 0 ? {} : { after }),
   };
 };

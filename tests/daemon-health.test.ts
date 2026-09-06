@@ -13,7 +13,7 @@ import { probeDaemonHealth } from '../src/lib/daemon-health.js';
 import { scopedDaemon, scopedTempDir } from './harness.js';
 
 /**
- * The health probe behind the shell badge and the `haulerDaemon` provider:
+ * The active health probe used by session-start and daemon operations:
  * each non-running state names its cause, and the budget bounds the socket
  * accept as well as the answer.
  */

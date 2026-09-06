@@ -84,17 +84,20 @@ The CLI is `hauler` on PATH from `npm i -g cargo-hauler`. Never run
 | `hauler await <ticket> [--max-wait-ms N]` | Long-poll until the ticket finishes or the wait expires (default 30 s, ceiling 2 h per call — the daemon's await ceiling; call again to keep waiting). A host with its own per-call deadline still bounds one call: Codex stops a tool call at `tool_timeout_sec` (60 s unless raised). |
 | `hauler result <ticket> [--full]` | A stored ticket in full: the settled 16 KiB output tail, or the whole live in-memory tail while it runs (not the status preview). The document names the full on-disk output log (`Full output: <path> (size)`) and `--json` carries it as `request.outputPath`; `--full` prints that whole log instead of the tail (the last ~768 KiB when it does not fit, with the path for the rest). |
 | `hauler kill <ticket>` | Stop a ticket: drop it from the queue or SIGTERM (then SIGKILL) its cargo process group, freeing the lane. Riders return to their lane or fail with it. |
-| `hauler request [--session ID] [--host HOST] [--cwd DIR] [--after TICKET …] -- <cargo …>` | Submit a background request and return its ticket, with where it landed in its lane (`queued behind cc-3281 (~13m)`, `waiting for cc-3281`, or `attached to cc-3281`). `--after` works as for `exec`. |
+| `hauler request [--session ID] [--host HOST] [--cwd DIR] [--after TICKET …] -- <cargo …>` | Submit a background request and return its ticket, with where it landed in its lane (`queued behind cc-3281 (~13m)`, `waiting for cc-3281`, or `attached to cc-3281`). `--cwd` overrides the current CLI workspace; `--after` works as for `exec`. |
 | `hauler daemon <run\|start\|stop\|status\|restart>` | Manage the daemon lifecycle. `restart` is the manual replacement: it sends the graceful stop, waits up to 5 s for the old pid to exit, then starts a daemon from this install and prints both (`restarted: pid 741314 (0.6.0) → pid 742001 (0.6.1)`); a daemon that has not exited by then is reported, not killed, and nothing is started (exit `1`). Tickets in flight are not handed over: the old daemon settles them itself as it shuts down — `killed`, error `daemon shutdown` — and callers resubmit (only rows a daemon that died without shutting down never marked are stamped `orphaned by daemon restart` by the next daemon's first ledger pass). After upgrading the package, every client entry — reads (`status`, `daemon status`, `log`, `last`, `await`, `result`, the dashboard and MCP tools), writes, and hooks — checks the daemon version before requesting a versioned payload and replaces a daemon from the previous install automatically. When the old daemon has not exited within the grace, the command fails with `` cargo-hauler daemon pid N (X.Y.Z) is still running 5s after the shutdown request; not restarted — retry once it has exited, or stop it with `hauler daemon stop` `` instead of parsing its payload or starting a second daemon. |
 | `hauler install-shim [--dir DIR] [--real-cargo PATH] [--force]` | Install the optional PATH shim. |
-| `hauler dashboard [--target claude\|codex\|cursor\|portable] [--port N] [--no-open]` | Open the dashboard in a plain browser tab: serve the MCP App standalone against the plugin's own `hauler` server on `127.0.0.1` (`spawnServeApp` from `agent-bundle/serve-app-command`, which runs `agent-bundle serve-app` as a child process and prints its URL), call `hauler_status` once so it opens populated, and stay in the foreground until Ctrl-C. A checkout command: it needs the built `artifact/` beside the CLI and `agent-bundle` under `node_modules` (`pnpm install && pnpm build`); the npm package ships no runtime dependencies and an installed host pack has no artifact, so both report what is missing. In an MCP host, call `hauler_status` instead. |
+| `hauler web [--port N] [--no-open]` | Open the dashboard from the checkout, npm package, or installed plugin. Agent Bundle's generated web command serves the built App against the plugin's own `hauler` server, opens it populated by `hauler_status`, and stays in the foreground until Ctrl-C. In an MCP host, call `hauler_status` instead. |
 
 The `hauler` MCP server projects the same operations as `hauler_status`,
 `hauler_log`, `hauler_last`, `hauler_await`, `hauler_result`, `hauler_kill`,
 and `hauler_request`, with the same filters as the CLI. `hauler_status` and
 `hauler_log` rows are the same bounded summaries (`outputPreview`, never a
 tail); `hauler_result`, `hauler_await`, and `hauler_last` carry the whole
-tail.
+tail. `hauler_request.cwd` is an optional override: Agent Bundle's authoritative
+workspace supplies it when available, and callers must provide it when the host
+supplied none. The MCP server process directory is not treated as the caller's
+workspace.
 
 ## Dashboard
 
@@ -701,7 +704,7 @@ argv parser, or string-concatenated Markdown; the `src/` tree is the app.
 ```text
 src/
   layout.tsx                    the hauler shell around every rendered route
-  providers/hauler-daemon.ts    request-scoped daemon connection + health probe
+  providers/hauler-daemon.ts    request-scoped daemon configuration
   components/                   typed components over pure view-models
   mcp/hauler/tools/*.tsx        hauler_status, _log, _last, _await, _result, _request, _kill
   mcp/hauler/tools/*.cli.ts     each tool's `hauler <command>` projection (flags, positionals)
@@ -719,12 +722,6 @@ src/
 Every rendered route — MCP tool, CLI command, rendered script — composes
 through one layout, the way a page framework's `layout.tsx` wraps every page:
 
-- **Header:** `<DaemonBadge>` prints what the request-start probe proved and
-  which state directory it is: `cargo-hauler · daemon running (pid 4021) ·
-  2/5 permits +1 riding, 1 queued · 2 lanes busy · up since 3h ago · state dir
-  /fast/cache/cargo-hauler`, or `daemon stopped · no socket; it starts on
-  demand…`, or `daemon unresponsive · did not accept a connection within
-  750ms (machine saturated)…`.
 - **Body:** the route's own document, unchanged. The route keeps its
   `<Agent.Result value>`; the runtime merges it into the shell so
   `structuredContent` and `--json` are exactly what the route declared.
@@ -733,7 +730,9 @@ through one layout, the way a page framework's `layout.tsx` wraps every page:
   read synchronously with `useAgent()`, and stays silent when the host cannot
   place the request rather than guessing.
 - **`_meta.hauler`** on every MCP result: `route`, `surface`, `server`,
-  `version`, `daemon: { state, pid? }`, `lineage: { conversation, root, depth } | null`.
+  `version`, and `lineage: { conversation, root, depth } | null`. Daemon state
+  comes from each operation's result, so the shell does not pay or report a
+  separate request-start health probe.
 
 Event routes are host protocol responses and are never wrapped.
 
@@ -748,7 +747,7 @@ Flight worker, or Effect — and runs before the rendered route
 (`src/hooks/tokens.ts`; `session-ping.ts` for the one bounded completion ping
 after a tool ran): `continue` for the shell calls that name neither cargo nor
 hauler, `execute` for the rest. Both routes declare `providers: []`, so
-neither pays the daemon provider's probe; the rendered route calls
+neither mounts the daemon-config provider; the rendered route calls
 `before-shell.ts` (the rewrite, the `cargo clean` guard) or `after-shell.ts`
 (telemetry, finished-ticket context) and returns `allow`, `continue` +
 `updatedInput`, `deny` with a reason, or `additionalContext` through the
@@ -756,21 +755,11 @@ framework's host projection.
 
 #### The daemon provider (`src/providers/hauler-daemon.ts`)
 
-One request-context provider mounts `providers.haulerDaemon` for every tool,
-command, event, and script: the resolved `config` (state dir, socket, ledger)
-and a `health` value from one bounded `status` probe:
-
-| `health.state` | meaning |
-| --- | --- |
-| `running` | `pid`, `startedAtMs`, `latencyMs`, `running` (permit holders), `riding` (attached), `queued`, `busyLanes`, `maxConcurrent`, and `version` (the daemon's release version) |
-| `stopped` | `socket-missing` (starts on demand) or `connection-refused` (stale socket) |
-| `unresponsive` | `accept-timeout` (never accepted), `answer-timeout` (accepted, no `status-result`), or `connection-closed` within the probe budget (750 ms for the accept and for the answer); ledger reads still work |
-| `unreachable` | `open-failed` with the errno (`EACCES`, `EMFILE`, …): the socket is present but could not be opened, which is not evidence the daemon is down |
-| `unprobed` | `event-surface`: hooks run on every shell command and skip the probe by design |
-
-The provider fails closed on nothing it can observe and fabricates nothing.
-Routes read it through `requestDaemon(context)` / `requestDaemonConfig(context)`;
-tests inject a fixture through the harness `context.providers` seam.
+One request-context provider mounts `providers.haulerDaemon` for rendered tools,
+commands, and scripts. It resolves only cheap `config` data (state directory,
+socket, and ledger paths); active health and status I/O belongs to the operation
+that needs it. Routes read the config through `requestDaemonConfig(context)`,
+and tests inject a fixture through the harness `context.providers` seam.
 
 #### Components (`src/components/`)
 
@@ -790,7 +779,7 @@ assertion share one derivation.
 | `<BuildDiagnostics>` | an index of cargo `error[E…]`/`warning:` blocks (level / code / message / location) followed by every captured block verbatim |
 | `<DashboardLink>` | where the MCP App lives and how to open it elsewhere |
 | `<TicketGuidance>` | what to do next, one component per ticket status |
-| `<DaemonBadge>`, `<LineageFooter>` | the shell header and footer |
+| `<LineageFooter>` | the shell footer |
 | `<EmptyState>`, `<UnavailableState>`, `<ErrorState>` | the three non-happy shapes every document may take |
 
 `documents.tsx` composes them into one document per hauler result
@@ -815,10 +804,13 @@ valueless `Agent.Result` container around one `Suspense` boundary:
 
 #### Attribution and lineage
 
-`hauler_request` attributes tickets from the request context: an explicit
-`host`/`session` wins; otherwise the negotiated host and native session are
-used; and when the transport publishes no session id (bare stdio MCP), the
-conversation from `request.lineage` becomes the session of record. That is
+`hauler_request` resolves `cwd` from an explicit input first, then from Agent
+Bundle's authoritative workspace; a caller must provide it when neither exists.
+The MCP server's derived process directory is not a caller workspace.
+It attributes tickets from the same request context: an explicit
+`host`/`session` wins; otherwise the negotiated host and native session are used;
+and when the transport publishes no session id (bare stdio MCP), the conversation
+from `request.lineage` becomes the session of record. That is
 what makes parallel agents' builds attributable in the ledger, the dashboard,
 and `hauler status --session <conversation>` (the `hauler_status` tool takes
 the same filter as its `session` field). Results carry

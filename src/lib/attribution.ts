@@ -4,6 +4,25 @@ import type { RequestInput, TicketAttribution } from './protocol-schemas.js';
 
 export type TicketRequestContext = Pick<AgentRequestContext, 'host' | 'lineage' | 'session'> & {
   readonly invocation: Pick<AgentRequestContext['invocation'], 'kind'>;
+  readonly workspace?: AgentRequestContext['workspace'];
+};
+
+export type ResolvedRequestInput = Omit<RequestInput, 'cwd'> & { readonly cwd: string };
+
+const requestCwd = (input: RequestInput, requestContext: TicketRequestContext): string => {
+  if (input.cwd !== undefined) {
+    return input.cwd;
+  }
+  if (
+    requestContext.workspace?.state === 'available'
+    && (requestContext.workspace.source !== 'derived' || requestContext.invocation.kind === 'cli')
+  ) {
+    return requestContext.workspace.value.root;
+  }
+  if (requestContext.invocation.kind === 'cli') {
+    return process.cwd();
+  }
+  throw new TypeError('cwd is required when Agent Bundle has no authoritative workspace');
 };
 
 /**
@@ -16,7 +35,7 @@ export type TicketRequestContext = Pick<AgentRequestContext, 'host' | 'lineage' 
  * ticket is never recorded as anonymous.
  */
 export const ticketAttribution = (
-  input: Pick<RequestInput, 'argv' | 'cwd' | 'host' | 'session'>,
+  input: RequestInput,
   requestContext: TicketRequestContext,
 ): TicketAttribution => {
   const lineage = requestContext.lineage.state === 'available' ? requestContext.lineage.value : null;
@@ -48,10 +67,11 @@ export const ticketAttribution = (
 export const enrichTicketRequest = (
   input: RequestInput,
   requestContext: TicketRequestContext,
-): RequestInput => {
+): ResolvedRequestInput => {
   const attribution = ticketAttribution(input, requestContext);
   return {
     ...input,
+    cwd: requestCwd(input, requestContext),
     host: attribution.host,
     ...(attribution.session === null ? {} : { session: attribution.session }),
   };

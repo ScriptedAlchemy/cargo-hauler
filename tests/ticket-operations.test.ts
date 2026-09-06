@@ -12,6 +12,7 @@ const unavailable = {
   host: { reason: 'host-omitted', state: 'unavailable' },
   lineage: { reason: 'not-provided', state: 'unavailable' },
   session: { reason: 'not-provided', state: 'unavailable' },
+  workspace: { reason: 'not-provided', state: 'unavailable' },
 } as const;
 
 const lineage = {
@@ -66,6 +67,51 @@ describe('ticket request attribution', () => {
       host: 'cursor',
       session: 'native-session',
     });
+  });
+
+  it('fills omitted cwd from the observed workspace', () => {
+    const input = { argv: ['cargo', 'test'] };
+    const context = {
+      ...unavailable,
+      invocation: { kind: 'tool' },
+      workspace: {
+        source: 'native',
+        state: 'available',
+        value: { root: '/observed/workspace' },
+      },
+    } as const;
+
+    expect(enrichTicketRequest(input, context)).toEqual({
+      ...input,
+      cwd: '/observed/workspace',
+      host: 'mcp',
+    });
+  });
+
+  it('requires cwd when a tool request has no observed workspace', () => {
+    expect(() =>
+      enrichTicketRequest(
+        { argv: ['cargo', 'test'] },
+        { ...unavailable, invocation: { kind: 'tool' } },
+      ),
+    ).toThrow('cwd is required when Agent Bundle has no authoritative workspace');
+  });
+
+  it('does not use the MCP process directory as the request workspace', () => {
+    expect(() =>
+      enrichTicketRequest(
+        { argv: ['cargo', 'test'] },
+        {
+          ...unavailable,
+          invocation: { kind: 'tool' },
+          workspace: {
+            source: 'derived',
+            state: 'available',
+            value: { root: '/installed/plugin/root' },
+          },
+        },
+      ),
+    ).toThrow('cwd is required when Agent Bundle has no authoritative workspace');
   });
 
   it('attributes CLI requests to the cli host when native host is unavailable', () => {

@@ -154,9 +154,10 @@ export const submitTicketRequest = async (
   requestContext: TicketRequestContext,
   options: TicketOptions,
 ): Promise<RequestSubmitResult> => {
-  const attribution = ticketAttribution(input, requestContext);
+  const request = enrichTicketRequest(input, requestContext);
+  const attribution = ticketAttribution(request, requestContext);
   const ack = await runTicketEffect(
-    submitBackgroundAck(enrichTicketRequest(input, requestContext), options.config),
+    submitBackgroundAck(request, options.config),
     options.signal,
   );
   if (ack === null) {
