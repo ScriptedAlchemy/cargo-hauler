@@ -27,8 +27,9 @@ export default (async ({ canonical }) => {
   if (session === undefined || session.length === 0) {
     return { outcome: 'continue' };
   }
+  const asOfMs = Date.now();
   const pinged = await pingSessionCompleted(session, readCursor(session));
   return pinged.kind === 'finished' && pinged.tickets.length > 0
-    ? { outcome: 'execute', data: documentValue({ ...pinged, asOfMs: Date.now() }) }
+    ? { outcome: 'execute', data: documentValue({ ...pinged, asOfMs }) }
     : { outcome: 'continue' };
 }) satisfies EventPreflight<'tool/after'>;
