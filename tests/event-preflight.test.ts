@@ -262,7 +262,14 @@ describe('pingSessionCompleted', () => {
       const previous = process.env.CARGO_HAULER_STATE_DIR;
       process.env.CARGO_HAULER_STATE_DIR = fixture.config.stateDir;
       try {
-        expect(yield* Effect.promise(() => afterPreflight(preflightContext('tool/after', shellPayload('ls -la', session))))).toBe('execute');
+        expect(yield* Effect.promise(() => afterPreflight(preflightContext('tool/after', shellPayload('ls -la', session))))).toEqual({
+          data: {
+            asOfMs: expect.any(Number),
+            kind: 'finished',
+            tickets: [expect.objectContaining({ exitCode: 0, status: 'done' })],
+          },
+          outcome: 'execute',
+        });
         expect(yield* Effect.promise(() => afterPreflight(preflightContext('tool/after', shellPayload('ls -la', 'sess-other'))))).toEqual({
           outcome: 'continue',
         });

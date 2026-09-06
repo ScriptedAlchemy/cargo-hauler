@@ -3,6 +3,7 @@ import type { EventPreflight } from 'agent-bundle';
 import { readCursor } from '../../hooks/hook-state.js';
 import { pingSessionCompleted } from '../../hooks/session-ping.js';
 import { commandMentionsHauler, hiddenCargoRun } from '../../hooks/tokens.js';
+import { documentValue } from '../../lib/json.js';
 import { extractShellCommand, extractShellOutput } from '../../lib/tool-input.js';
 
 /**
@@ -14,10 +15,8 @@ import { extractShellCommand, extractShellOutput } from '../../lib/tool-input.js
  * the command itself names cargo or hauler, or the command's output carries
  * cargo's status lines without the command naming cargo (a wrapper script
  * ran it past the hook and the shim); a daemon that is down or slow
- * answers `unavailable`, which is `continue` here. The gate's result does not
- * reach the route, so `after-shell.ts` asks the daemon once more with the
- * same cursor and advances it only after announcing — a second answer that
- * fails leaves the tickets for the next call rather than losing them.
+ * answers `unavailable`, which is `continue` here. A finished-ticket answer
+ * is returned as `data` so the route can announce it without asking again.
  */
 export default (async ({ canonical }) => {
   const command = extractShellCommand(canonical.payload.toolInput?.value);
@@ -28,6 +27,9 @@ export default (async ({ canonical }) => {
   if (session === undefined || session.length === 0) {
     return { outcome: 'continue' };
   }
+  const asOfMs = Date.now();
   const pinged = await pingSessionCompleted(session, readCursor(session));
-  return pinged.kind === 'finished' && pinged.tickets.length > 0 ? 'execute' : { outcome: 'continue' };
+  return pinged.kind === 'finished' && pinged.tickets.length > 0
+    ? { outcome: 'execute', data: documentValue({ ...pinged, asOfMs }) }
+    : { outcome: 'continue' };
 }) satisfies EventPreflight<'tool/after'>;

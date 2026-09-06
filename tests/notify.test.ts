@@ -67,4 +67,41 @@ describe('afterTool completion notify', () => {
     );
     expect(down).toEqual({ outcome: 'continue' });
   });
+
+  it('announces preflight tickets without querying the daemon, at the ping watermark', async () => {
+    let queried = false;
+    let cursor: number | undefined;
+    const result = await handleAfterShell(
+      {
+        finishedAsOfMs: 40,
+        finishedTickets: [
+          {
+            error: null,
+            errorCount: 0,
+            exitCode: 0,
+            status: 'done',
+            ticket: 'cc-42',
+            warningCount: 0,
+          },
+        ],
+        sessionId: 'sess-1',
+        toolInput: { command: 'ls' },
+      },
+      { target: 'claude' },
+      {
+        completedSince: async () => {
+          queried = true;
+          return [];
+        },
+        nowMs: () => 99,
+        record: () => undefined,
+        writeCursor: (_session, atMs) => {
+          cursor = atMs;
+        },
+      },
+    );
+    expect(queried).toBe(false);
+    expect(cursor).toBe(40);
+    expect(result.additionalContext).toContain('cc-42 finished: success');
+  });
 });
