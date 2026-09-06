@@ -94,7 +94,24 @@ describe('ticket request attribution', () => {
         { argv: ['cargo', 'test'] },
         { ...unavailable, invocation: { kind: 'tool' } },
       ),
-    ).toThrow('cwd is required when Agent Bundle has no observed workspace');
+    ).toThrow('cwd is required when Agent Bundle has no authoritative workspace');
+  });
+
+  it('does not use the MCP process directory as the request workspace', () => {
+    expect(() =>
+      enrichTicketRequest(
+        { argv: ['cargo', 'test'] },
+        {
+          ...unavailable,
+          invocation: { kind: 'tool' },
+          workspace: {
+            source: 'derived',
+            state: 'available',
+            value: { root: '/installed/plugin/root' },
+          },
+        },
+      ),
+    ).toThrow('cwd is required when Agent Bundle has no authoritative workspace');
   });
 
   it('attributes CLI requests to the cli host when native host is unavailable', () => {

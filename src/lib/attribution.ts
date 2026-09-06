@@ -13,13 +13,16 @@ const requestCwd = (input: RequestInput, requestContext: TicketRequestContext): 
   if (input.cwd !== undefined) {
     return input.cwd;
   }
-  if (requestContext.workspace?.state === 'available') {
+  if (
+    requestContext.workspace?.state === 'available'
+    && (requestContext.workspace.source !== 'derived' || requestContext.invocation.kind === 'cli')
+  ) {
     return requestContext.workspace.value.root;
   }
   if (requestContext.invocation.kind === 'cli') {
     return process.cwd();
   }
-  throw new TypeError('cwd is required when Agent Bundle has no observed workspace');
+  throw new TypeError('cwd is required when Agent Bundle has no authoritative workspace');
 };
 
 /**

@@ -94,9 +94,10 @@ The `hauler` MCP server projects the same operations as `hauler_status`,
 and `hauler_request`, with the same filters as the CLI. `hauler_status` and
 `hauler_log` rows are the same bounded summaries (`outputPreview`, never a
 tail); `hauler_result`, `hauler_await`, and `hauler_last` carry the whole
-tail. `hauler_request.cwd` is an optional override: Agent Bundle's observed
-workspace supplies it when available, and callers must provide it only when
-the host supplied no workspace context.
+tail. `hauler_request.cwd` is an optional override: Agent Bundle's authoritative
+workspace supplies it when available, and callers must provide it when the host
+supplied none. The MCP server process directory is not treated as the caller's
+workspace.
 
 ## Dashboard
 
@@ -804,7 +805,8 @@ valueless `Agent.Result` container around one `Suspense` boundary:
 #### Attribution and lineage
 
 `hauler_request` resolves `cwd` from an explicit input first, then from Agent
-Bundle's observed workspace; a caller must provide it when neither exists.
+Bundle's authoritative workspace; a caller must provide it when neither exists.
+The MCP server's derived process directory is not a caller workspace.
 It attributes tickets from the same request context: an explicit
 `host`/`session` wins; otherwise the negotiated host and native session are used;
 and when the transport publishes no session id (bare stdio MCP), the conversation
