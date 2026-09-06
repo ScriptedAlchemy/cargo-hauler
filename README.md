@@ -746,7 +746,7 @@ Flight worker, or Effect — and runs before the rendered route
 (`src/hooks/tokens.ts`; `session-ping.ts` for the one bounded completion ping
 after a tool ran): `continue` for the shell calls that name neither cargo nor
 hauler, `execute` for the rest. Both routes declare `providers: []`, so
-neither pays the daemon provider's probe; the rendered route calls
+neither mounts the daemon-config provider; the rendered route calls
 `before-shell.ts` (the rewrite, the `cargo clean` guard) or `after-shell.ts`
 (telemetry, finished-ticket context) and returns `allow`, `continue` +
 `updatedInput`, `deny` with a reason, or `additionalContext` through the
@@ -754,21 +754,11 @@ framework's host projection.
 
 #### The daemon provider (`src/providers/hauler-daemon.ts`)
 
-One request-context provider mounts `providers.haulerDaemon` for every tool,
-command, event, and script: the resolved `config` (state dir, socket, ledger)
-and a `health` value from one bounded `status` probe:
-
-| `health.state` | meaning |
-| --- | --- |
-| `running` | `pid`, `startedAtMs`, `latencyMs`, `running` (permit holders), `riding` (attached), `queued`, `busyLanes`, `maxConcurrent`, and `version` (the daemon's release version) |
-| `stopped` | `socket-missing` (starts on demand) or `connection-refused` (stale socket) |
-| `unresponsive` | `accept-timeout` (never accepted), `answer-timeout` (accepted, no `status-result`), or `connection-closed` within the probe budget (750 ms for the accept and for the answer); ledger reads still work |
-| `unreachable` | `open-failed` with the errno (`EACCES`, `EMFILE`, …): the socket is present but could not be opened, which is not evidence the daemon is down |
-| `unprobed` | `event-surface`: hooks run on every shell command and skip the probe by design |
-
-The provider fails closed on nothing it can observe and fabricates nothing.
-Routes read it through `requestDaemon(context)` / `requestDaemonConfig(context)`;
-tests inject a fixture through the harness `context.providers` seam.
+One request-context provider mounts `providers.haulerDaemon` for rendered tools,
+commands, and scripts. It resolves only cheap `config` data (state directory,
+socket, and ledger paths); active health and status I/O belongs to the operation
+that needs it. Routes read the config through `requestDaemonConfig(context)`,
+and tests inject a fixture through the harness `context.providers` seam.
 
 #### Components (`src/components/`)
 
