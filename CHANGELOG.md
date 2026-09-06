@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.12
+
+### Patch Changes
+
+- cc1ebc7: Install from the published `artifact/` root and restore manifest file modes so `cargo-hauler-install install <host>` works after npm rewrites executable bits. (#145)
+
 ## 0.6.11
 
 ### Patch Changes
