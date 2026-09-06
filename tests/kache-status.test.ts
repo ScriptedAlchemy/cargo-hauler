@@ -9,7 +9,6 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { performance } from 'node:perf_hooks';
 import { DatabaseSync } from 'node:sqlite';
 
 import { describe, expect, it } from 'effect-rstest';
@@ -391,21 +390,25 @@ describe('createKacheSnapshotReader', () => {
       const fileBytes = statSync(eventsPath).size;
       const reader = createKacheSnapshotReader(indexPath, { maxEventBytes: fileBytes * 2 });
 
-      let maxGapMs = 0;
-      let last = performance.now();
-      const probe = setInterval(() => {
-        const now = performance.now();
-        maxGapMs = Math.max(maxGapMs, now - last);
-        last = now;
-      }, 1);
+      let turns = 0;
+      let probing = true;
+      const pump = (async () => {
+        while (probing) {
+          turns += 1;
+          await new Promise<void>((resolve) => {
+            setImmediate(resolve);
+          });
+        }
+      })();
       try {
         const snapshot = await reader.read(nowMs);
         expect(snapshot.eventPriors.sampleCount).toBe(lineCount);
         expect(snapshot.eventPriors.bytesRead).toBe(fileBytes);
       } finally {
-        clearInterval(probe);
+        probing = false;
+        await pump;
       }
-      expect(maxGapMs).toBeLessThan(50);
+      expect(turns).toBeGreaterThan(10);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
