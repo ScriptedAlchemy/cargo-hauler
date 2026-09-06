@@ -61,6 +61,19 @@ describe('tool/after preflight', () => {
     expect(await afterPreflight(preflightContext('tool/after', shellPayload('cargo test -p foo')))).toBe('execute');
   });
 
+  it('executes the route, without a ping, for a wrapper script whose output is cargo status lines', async () => {
+    const cargoOutput = { exit_code: 0, stdout: '   Compiling foo v0.1.0\n    Finished `test` profile target(s) in 2.00s\n' };
+    expect(
+      await afterPreflight(
+        preflightContext('tool/after', { ...shellPayload('/tmp/scratch/cg.sh test -p foo', ''), toolResponse: { value: cargoOutput } }),
+      ),
+    ).toBe('execute');
+    // A saved log shown with a file reader is not a run: no session, so no ping, plain continue.
+    expect(
+      await afterPreflight(preflightContext('tool/after', { ...shellPayload('tail -30 build.log', ''), toolResponse: { value: cargoOutput } })),
+    ).toEqual({ outcome: 'continue' });
+  });
+
   it('continues without a ping when the host names no session', async () => {
     expect(await afterPreflight(preflightContext('tool/after', shellPayload('ls -la', '')))).toEqual({ outcome: 'continue' });
   });
