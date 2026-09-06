@@ -12,7 +12,10 @@ import { extractShellCommand } from '../../lib/tool-input.js';
  * announced on the very next tool call. The rendered route (telemetry record,
  * completion context) loads only when the daemon reports finished tickets or
  * the command itself names cargo or hauler; a daemon that is down or slow
- * answers `unavailable`, which is `continue` here.
+ * answers `unavailable`, which is `continue` here. The gate's result does not
+ * reach the route, so `after-shell.ts` asks the daemon once more with the
+ * same cursor and advances it only after announcing — a second answer that
+ * fails leaves the tickets for the next call rather than losing them.
  */
 export default (async ({ canonical }) => {
   if (commandMentionsHauler(extractShellCommand(canonical.payload.toolInput?.value))) {
