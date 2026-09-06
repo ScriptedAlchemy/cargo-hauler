@@ -1,10 +1,15 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { describe, expect, it } from 'effect-rstest';
 
-import { runInstallCli } from '../src/cargo-hauler-install.js';
+import {
+  defaultArtifactRoot,
+  restoreManifestModes,
+  runInstallCli,
+} from '../src/cargo-hauler-install.js';
 
 const withArtifact = async (
   run: (artifactRoot: string) => Promise<void>,
@@ -65,5 +70,35 @@ describe('cargo-hauler-install', () => {
     });
     expect(code).toBe(1);
     expect(stderr).toContain('Cannot install host "windsurf"');
+  });
+
+  it('prefers a sibling artifact/ over dist/ when both exist', () => {
+    const pkg = mkdtempSync(join(tmpdir(), 'hauler-install-layout-'));
+    try {
+      mkdirSync(join(pkg, 'dist', 'bin'), { recursive: true });
+      mkdirSync(join(pkg, 'artifact'), { recursive: true });
+      writeFileSync(join(pkg, 'artifact', 'agent-bundle.manifest.json'), '{}');
+      writeFileSync(join(pkg, 'dist', 'bin', 'cargo-hauler-install.js'), '');
+      expect(defaultArtifactRoot(pathToFileURL(join(pkg, 'dist', 'bin', 'cargo-hauler-install.js')).href))
+        .toBe(join(pkg, 'artifact'));
+    } finally {
+      rmSync(pkg, { force: true, recursive: true });
+    }
+  });
+
+  it('restores npm-stripped executable bits from the manifest', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'hauler-install-modes-'));
+    try {
+      const path = join(root, 'tool.sh');
+      writeFileSync(path, '#!/bin/sh\n');
+      chmodSync(path, 0o644);
+      writeFileSync(join(root, 'agent-bundle.manifest.json'), JSON.stringify({
+        files: [{ mode: 0o755, path: 'tool.sh' }],
+      }));
+      expect(await restoreManifestModes(root)).toBe(1);
+      expect(statSync(path).mode & 0o777).toBe(0o755);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
   });
 });
