@@ -1,4 +1,5 @@
-import { lstat, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { chmod, lstat, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,7 +38,34 @@ const usage = [
   '',
 ].join('\n');
 
-const defaultArtifactRoot = (): string => dirname(dirname(fileURLToPath(import.meta.url)));
+/**
+ * Repo-root publish puts the composite plugin at `artifact/` and the npm bins
+ * under `dist/bin/`. `dist/` is a copy whose executable bits npm often rewrites,
+ * so prefer the sibling `artifact/` when it is present.
+ */
+export const defaultArtifactRoot = (binUrl = import.meta.url): string => {
+  const distRoot = dirname(dirname(fileURLToPath(binUrl)));
+  const sibling = join(dirname(distRoot), 'artifact');
+  return existsSync(join(sibling, 'agent-bundle.manifest.json')) ? sibling : distRoot;
+};
+
+/** npm pack/extract rewrites modes; installBundle refuses a digest-matching tree with the wrong bits. */
+export const restoreManifestModes = async (root: string): Promise<number> => {
+  const manifest = JSON.parse(await readFile(join(root, 'agent-bundle.manifest.json'), 'utf8')) as {
+    readonly files?: readonly { readonly mode?: number; readonly path?: string }[];
+  };
+  let restored = 0;
+  for (const file of manifest.files ?? []) {
+    if (typeof file.path !== 'string' || typeof file.mode !== 'number') continue;
+    const path = join(root, file.path);
+    const current = (await lstat(path)).mode & 0o777;
+    const expected = file.mode & 0o777;
+    if (current === expected) continue;
+    await chmod(path, expected);
+    restored += 1;
+  }
+  return restored;
+};
 
 const isHost = (value: string): value is InstallHost =>
   value === 'claude' || value === 'codex' || value === 'cursor';
@@ -240,6 +268,7 @@ export const runInstallCli = async (options: InstallCliOptions = {}): Promise<nu
           }));
           break;
         }
+        await restoreManifestModes(artifactRoot);
         const result = await installBundle({
           from: artifactRoot,
           host: parsed.host,
@@ -251,6 +280,9 @@ export const runInstallCli = async (options: InstallCliOptions = {}): Promise<nu
         break;
       }
       case 'uninstall': {
+        if (!parsed.plan) {
+          await restoreManifestModes(artifactRoot);
+        }
         const result = await uninstallBundle({
           confirmPurge: parsed.confirmPurge,
           force: parsed.force,
