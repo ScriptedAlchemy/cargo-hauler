@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.13
+
+### Patch Changes
+
+- 16bbf46: Use Agent Bundle route references and workspace context for hauler requests, and stop probing daemon health from the global layout (#147).
+
 ## 0.6.12
 
 ### Patch Changes
