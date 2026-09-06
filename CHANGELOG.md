@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.14
+
+### Patch Changes
+
+- 1805d07: Select semantic event routes with Agent Bundle capability requirements instead of host names (#149).
+
 ## 0.6.13
 
 ### Patch Changes
