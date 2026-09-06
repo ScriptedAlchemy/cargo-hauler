@@ -221,10 +221,31 @@ describe('hauler script', () => {
     }
   });
 
-  it('documents daemon restart and rejects unknown daemon subcommands by name', async () => {
+  it('prints usage and exits 2 for a missing or unknown daemon subcommand', async () => {
     const usage = await run(['--help']);
     expect(usage.text).toContain('daemon <run|start|stop|status|restart>');
-    await expect(run(['daemon', 'reload'])).rejects.toThrow('run, start, stop, status, restart');
+    for (const argv of [['daemon'], ['daemon', 'reload'], ['daemon', '--help']] as const) {
+      const result = await run(argv);
+      expect(result.code).toBe(2);
+      expect(result.text).toContain('Usage: hauler');
+    }
+  });
+
+  it('accepts daemon stop --force', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'cc-script-daemon-force-'));
+    try {
+      await withEnv({ CARGO_HAULER_STATE_DIR: join(root, 'state') }, async () => {
+        const result = await run(['daemon', 'stop', '--force']);
+        expect(result.code).toBe(0);
+        expect(JSON.parse(result.text)).toMatchObject({
+          operation: 'daemon',
+          running: false,
+          subcommand: 'stop',
+        });
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('refuses install-shim with an unknown flag instead of installing anyway', async () => {

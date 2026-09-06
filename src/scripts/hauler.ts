@@ -180,7 +180,14 @@ const runDaemonCommand = async (
   rest: readonly string[],
   write: (value: string) => void,
 ): Promise<number> => {
-  const result = await runDaemonControl(parseDaemonSubcommand(rest));
+  let subcommand;
+  try {
+    subcommand = parseDaemonSubcommand(rest);
+  } catch {
+    write(usage);
+    return 2;
+  }
+  const result = await runDaemonControl(subcommand);
   write(`${JSON.stringify(result)}\n`);
   return daemonExitCode(result);
 };
