@@ -1,4 +1,6 @@
-import { finishedTicketsOf, type FinishedTicket } from './finished-ticket.js';
+import { isRecord } from '../lib/guards.js';
+
+import { asFinishedTicket, finishedTicketsOf, type FinishedTicket } from './finished-ticket.js';
 import { resolveHookSocketPath } from './paths.js';
 import { requestOutcome } from './rpc.js';
 
@@ -25,6 +27,17 @@ export type SessionCompletedPing =
       readonly reason: 'closed' | 'malformed' | 'replacement-failed' | 'timeout';
     }
   | { readonly kind: 'unavailable'; readonly reason: 'unreachable'; readonly code: string | null };
+
+/** Tickets the `tool/after` preflight handed the route, or undefined when it did not ping. */
+export const finishedTicketsFromPreflight = (value: unknown): readonly FinishedTicket[] | undefined => {
+  if (!isRecord(value) || value.kind !== 'finished' || !Array.isArray(value.tickets)) {
+    return undefined;
+  }
+  return value.tickets.flatMap((entry) => {
+    const ticket = asFinishedTicket(entry);
+    return ticket === null ? [] : [ticket];
+  });
+};
 
 export interface SessionPingOptions {
   readonly socketPath?: string;
