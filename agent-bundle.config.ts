@@ -19,6 +19,7 @@ import { defineConfig } from 'agent-bundle/config';
  *   artifact).
  * - `src/scripts/hauler.ts` → `scripts/hauler.mjs` in the artifact (the hook
  *   rewrite target) and the package `hauler` bin (see `bin`).
+ * - `src/cargo-hauler-install.ts` → the package `cargo-hauler-install` bin.
  * - `src/providers/hauler-daemon.ts` → the per-request daemon connection
  *   (config, socket discovery, health).
  * - `src/skills/*` → skills (`SKILL.md` or a rendered `SKILL.tsx`).
@@ -30,6 +31,7 @@ import { defineConfig } from 'agent-bundle/config';
  */
 export default defineConfig({
   bin: {
+    'cargo-hauler-install': './src/cargo-hauler-install.ts',
     hauler: './src/scripts/hauler.ts',
   },
   // Claude Code and Codex install via `<cli> plugin marketplace add`; this

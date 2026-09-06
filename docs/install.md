@@ -82,8 +82,10 @@ node artifact/install.mjs [--mode local|marketplace] [--replace]
   same-version rebuild needs `claude plugin uninstall … --keep-data` then a
   fresh install; Codex needs `codex plugin remove …` then `marketplace add` +
   `plugin add`. The installer performs these sequences itself.
-- `cargo-hauler-install … --json` prints the outcome (`installed`, `replaced`,
-  `current`, `refused`) for scripts. `npm install` itself never mutates a host.
+- `cargo-hauler-install install <host> --plan` prints the artifact identity
+  and destination host without changing anything. `--json` prints the outcome
+  (`installed`, `replaced`, `planned`, `current`, `refused`) for scripts.
+  `npm install` itself never mutates a host.
 - Contributors with the framework available can also use
   `pnpm exec agent-bundle install <host> --from artifact` and
   `agent-bundle doctor --host <host>` (installed copy versus artifact:

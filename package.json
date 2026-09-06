@@ -28,7 +28,7 @@
     "node": ">=22.19.0"
   },
   "bin": {
-    "cargo-hauler": "./dist/bin/cargo-hauler.js",
+    "cargo-hauler": "./dist/bin/cargo-hauler.mjs",
     "cargo-hauler-install": "./dist/bin/cargo-hauler-install.js",
     "hauler": "./dist/bin/hauler.js"
   },
@@ -70,6 +70,7 @@
     "@types/react-dom": "^19.2.5",
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
     "agent-bundle": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@9197015b9ae5088eee75c7d2d11a40890b37b367",
+    "agent-bundle-src": "github:ScriptedAlchemy/agent-bundle#9197015b9ae5088eee75c7d2d11a40890b37b367",
     "bashjsast": "github:woolkingx/bashjsast#131f4b677d1906774fc49cfceab0ccb7b370b2e6",
     "effect": "4.0.0-rc.112",
     "effect-rstest": "https://pkg.pr.new/ScriptedAlchemy/effect-rstest@e5f8d5f",

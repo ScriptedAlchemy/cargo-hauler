@@ -542,7 +542,8 @@ cargo-hauler-install install cursor --mode marketplace  # stage a local marketpl
 `cargo-hauler-install` runs the host's own plugin commands for you (below),
 detects an installed copy with the same version but different content and
 replaces it, and takes `--replace` (alias `--force`) to replace a different
-installed version. `--json` prints the result for scripts.
+installed version. `install <host> --plan` prints the artifact identity
+without changing anything. `--json` prints the result for scripts.
 
 ### With the hosts' own plugin commands
 
