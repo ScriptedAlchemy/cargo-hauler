@@ -1,3 +1,5 @@
+import { extractShellOutput } from '../lib/tool-input.js';
+
 import { readCursor, writeCursor } from './hook-state.js';
 import { appendHookRecord } from './record.js';
 import { listSessionCompleted } from './rpc.js';
@@ -10,6 +12,7 @@ import {
   type HookContext,
   type HookServices,
 } from './shared.js';
+import { hiddenCargoRun } from './tokens.js';
 
 export interface AfterShellEvent {
   readonly cwd?: string;
@@ -25,6 +28,10 @@ export interface AfterShellResult {
   readonly additionalContext?: string;
   readonly outcome: 'continue';
 }
+
+const hiddenCargoReason = 'cargo ran outside cargo-hauler (wrapper script, alias, or shell variable)';
+const hiddenCargoContext =
+  'cargo-hauler: this command ran cargo outside the broker — through a wrapper script, alias, or shell variable the hook cannot see — so it skipped lane serialization, attach, and the ledger. Name `cargo` in the command itself (env prefixes are fine: `RUSTC_WRAPPER= cargo test …`) or run `hauler exec -- cargo …` so the daemon brokers it.';
 
 const extractExitCode = (toolResponse: unknown): number | undefined => {
   if (!isRecord(toolResponse)) {
@@ -72,7 +79,10 @@ const decideAfterShell = async (
   }
   // Only cargo/hauler activity belongs in the telemetry log; every other
   // shell command still flows through so completion notifications inject.
-  if (command.includes('cargo') || command.includes('hauler')) {
+  // A command that never named cargo but printed cargo's status lines ran it
+  // unbrokered; it is recorded with the reason and the agent is told.
+  const hidden = hiddenCargoRun(command, extractShellOutput(event.toolResponse));
+  if (hidden || command.includes('cargo') || command.includes('hauler')) {
     const record = services.record ?? appendHookRecord;
     const exitCode = extractExitCode(event.toolResponse);
     await record({
@@ -81,16 +91,18 @@ const decideAfterShell = async (
       host: resolveHookHost(context),
       outcome: 'continue',
       phase: 'afterTool',
+      ...(hidden ? { reason: hiddenCargoReason } : {}),
       ...(event.cwd === undefined ? {} : { cwd: event.cwd }),
       ...(exitCode === undefined ? {} : { exitCode }),
       ...(event.sessionId === undefined ? {} : { session: event.sessionId }),
       ...(event.toolName === undefined ? {} : { toolName: event.toolName }),
     });
   }
-  const additionalContext = await notifyContext(event.sessionId, services);
-  return additionalContext === undefined
+  const finished = await notifyContext(event.sessionId, services);
+  const notices = [...(hidden ? [hiddenCargoContext] : []), ...(finished === undefined ? [] : [finished])];
+  return notices.length === 0
     ? { outcome: 'continue' }
-    : { additionalContext, outcome: 'continue' };
+    : { additionalContext: notices.join('\n'), outcome: 'continue' };
 };
 
 export const handleAfterShell = async (

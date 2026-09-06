@@ -109,6 +109,19 @@ plugin internals, not CLI entry points.
 - Daemon-spawned cargo bypasses the shim automatically
   (`CARGO_HAULER_INSIDE`), so brokered work never re-enters the broker —
   no need to strip the shim from PATH or probe for recursion.
+- Do not wrap cargo in a script that calls the toolchain binary by absolute
+  path (`~/.rustup/toolchains/*/bin/cargo`): that skips the hook and the
+  shim, so the run gets no lane, no attach, and no ledger row. It also
+  loses rustup's toolchain pin: the toolchain binary sets no
+  `RUSTUP_TOOLCHAIN`, so the bare `rustc` cargo runs for registry crates
+  (cwd inside `~/.cargo/registry`, no `rust-toolchain.toml`) resolves to
+  the default toolchain while workspace crates compile under the pinned
+  one — `error[E0514]: found crate … compiled by an incompatible version of
+  rustc`. To drop a rustc wrapper or pin a toolchain, prefix the cargo
+  command itself (`RUSTC_WRAPPER= cargo test …`, `cargo +1.97.1 test …`,
+  `RUSTUP_TOOLCHAIN=… cargo test …`); the daemon runs `~/.cargo/bin/cargo`
+  (the rustup proxy) with the environment you gave it. The `tool/after`
+  hook flags unbrokered runs from their output.
 
 ## Workflow
 

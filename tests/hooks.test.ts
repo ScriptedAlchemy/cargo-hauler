@@ -264,6 +264,70 @@ describe('afterTool recorder', () => {
     ]);
   });
 
+  it('flags cargo that ran through a wrapper script, from its output alone', async () => {
+    const records: HookRecord[] = [];
+    const result = await handleAfterShell(
+      {
+        cwd: '/tmp/ws',
+        sessionId: 'sess-1',
+        toolInput: { command: '/tmp/scratch/cg.sh test -p foo 2>&1 | tail -30' },
+        toolName: 'Bash',
+        toolResponse: {
+          exitCode: 101,
+          stderr: '',
+          stdout: '   Compiling foo v0.1.0 (/tmp/ws/foo)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.20s\n',
+        },
+      },
+      { nativeEvent: 'PostToolUse', target: 'claude' },
+      {
+        completedSince: async () => [],
+        record: (entry) => {
+          records.push(entry);
+        },
+      },
+    );
+
+    expect(result.outcome).toBe('continue');
+    expect(result.additionalContext).toContain('outside the broker');
+    expect(result.additionalContext).toContain('hauler exec -- cargo');
+    expect(records).toEqual([
+      expect.objectContaining({
+        command: '/tmp/scratch/cg.sh test -p foo 2>&1 | tail -30',
+        exitCode: 101,
+        phase: 'afterTool',
+        reason: expect.stringContaining('outside cargo-hauler'),
+      }),
+    ]);
+  });
+
+  it('does not mistake a saved cargo log shown with tail, or a brokered run, for a hidden one', async () => {
+    const records: HookRecord[] = [];
+    const services = {
+      completedSince: async () => [],
+      record: (entry: HookRecord) => {
+        records.push(entry);
+      },
+    };
+    const cargoOutput = { exitCode: 0, stdout: '   Compiling foo v0.1.0\n    Finished `dev` profile target(s) in 1.00s\n' };
+
+    const shown = await handleAfterShell(
+      { sessionId: 'sess-1', toolInput: { command: 'tail -40 build.log' }, toolName: 'Bash', toolResponse: cargoOutput },
+      { target: 'claude' },
+      services,
+    );
+    expect(shown).toEqual({ outcome: 'continue' });
+    expect(records).toEqual([]);
+
+    const brokered = await handleAfterShell(
+      { sessionId: 'sess-1', toolInput: { command: 'cargo build -p foo' }, toolName: 'Bash', toolResponse: cargoOutput },
+      { target: 'claude' },
+      services,
+    );
+    expect(brokered).toEqual({ outcome: 'continue' });
+    expect(records).toEqual([expect.objectContaining({ command: 'cargo build -p foo' })]);
+    expect(records[0]).not.toHaveProperty('reason');
+  });
+
   it('fails open when the recorder throws', async () => {
     const result = await handleAfterShell(
       {

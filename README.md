@@ -156,9 +156,16 @@ the full path). Only a matching command evaluates the parser and the rewrite.
 The `tool/after` entry runs the token test and one bounded socket ping to the
 daemon (the `session-completed` request with the session's hook-state cursor,
 500 ms, no Effect runtime); it loads the telemetry and notification code only
-when the command was cargo-related or the daemon reported finished tickets. A
-non-cargo call with nothing finished — or no daemon at all — exits with no
-output. Measured with `/usr/bin/time -v` on a Claude `ls -la` envelope, the
+when the command was cargo-related, the daemon reported finished tickets, or
+the command's output carries cargo's own status lines (`   Compiling …`,
+`    Finished … profile`) without the command naming cargo. That last case is
+cargo run through a wrapper script, an alias, or a shell variable — the one
+shape neither the rewrite nor the PATH shim sees, since a script can call the
+toolchain's `cargo` binary by absolute path. It is recorded in the hook log
+with its reason and the agent is told to name `cargo` in the command or use
+`hauler exec -- cargo …`; a file reader showing a saved log (`tail
+build.log`) is not mistaken for a run. A non-cargo call with nothing finished
+— or no daemon at all — exits with no output. Measured with `/usr/bin/time -v` on a Claude `ls -la` envelope, the
 compiled entries take ~50 ms wall and ~49 MB RSS, against ~100 ms and 64 MB
 for the 0.4.8 event-route wrappers with a shared runtime available and
 ~560 ms and 144 MB without one.
@@ -831,7 +838,7 @@ the same filter as its `session` field). Results carry
 | `event:session/start` | new session | daemon state and the no-kill rule as context |
 | `event:stop` | agent stopping | holds the stop while a foreground ticket is pending (bounded, re-deniable) |
 | `event:tool/before` | shell tool about to run | the preflight continues a non-cargo command without loading the route; otherwise rewrites `cargo …` to `hauler exec --session … --host … -- cargo …`, denies `cargo clean` during in-flight builds, brokers it while the daemon is too busy to answer |
-| `event:tool/after` | shell tool finished | the preflight pings the daemon once per call; the route records cargo commands and injects finished background-ticket results once per session |
+| `event:tool/after` | shell tool finished | the preflight pings the daemon once per call; the route records cargo commands, injects finished background-ticket results once per session, and flags cargo that ran unbrokered through a wrapper script (cargo status lines in the output of a command that never named cargo) |
 
 #### Skills
 
