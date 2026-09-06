@@ -17,6 +17,7 @@ import { hiddenCargoRun } from './tokens.js';
 export interface AfterShellEvent {
   readonly cwd?: string;
   readonly sessionId?: string;
+  readonly finishedAsOfMs?: number;
   readonly finishedTickets?: readonly FinishedTicket[];
   /** The completed call's input as the host sent it: an object on Claude and Cursor, any JSON on Codex. */
   readonly toolInput?: unknown;
@@ -46,6 +47,7 @@ const notifyContext = async (
   session: string | undefined,
   services: HookServices,
   known?: readonly FinishedTicket[],
+  asOfMs?: number,
 ): Promise<string | undefined> => {
   if (session === undefined || session.length === 0) {
     return undefined;
@@ -69,7 +71,7 @@ const notifyContext = async (
     // was returns the same (empty) set next time; skip the state-file write.
     return undefined;
   }
-  write(session, nowMs);
+  write(session, asOfMs ?? nowMs);
   return finished.map(formatFinishedTicket).join('\n');
 };
 
@@ -103,7 +105,7 @@ const decideAfterShell = async (
       ...(event.toolName === undefined ? {} : { toolName: event.toolName }),
     });
   }
-  const finished = await notifyContext(event.sessionId, services, event.finishedTickets);
+  const finished = await notifyContext(event.sessionId, services, event.finishedTickets, event.finishedAsOfMs);
   const notices = [...(hidden ? [hiddenCargoContext] : []), ...(finished === undefined ? [] : [finished])];
   return notices.length === 0
     ? { outcome: 'continue' }

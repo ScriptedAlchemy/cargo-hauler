@@ -264,6 +264,7 @@ describe('pingSessionCompleted', () => {
       try {
         expect(yield* Effect.promise(() => afterPreflight(preflightContext('tool/after', shellPayload('ls -la', session))))).toEqual({
           data: {
+            asOfMs: expect.any(Number),
             kind: 'finished',
             tickets: [expect.objectContaining({ exitCode: 0, status: 'done' })],
           },

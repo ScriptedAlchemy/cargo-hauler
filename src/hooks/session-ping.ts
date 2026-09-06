@@ -29,14 +29,20 @@ export type SessionCompletedPing =
   | { readonly kind: 'unavailable'; readonly reason: 'unreachable'; readonly code: string | null };
 
 /** Tickets the `tool/after` preflight handed the route, or undefined when it did not ping. */
-export const finishedTicketsFromPreflight = (value: unknown): readonly FinishedTicket[] | undefined => {
+export const finishedTicketsFromPreflight = (
+  value: unknown,
+): { readonly asOfMs?: number; readonly tickets: readonly FinishedTicket[] } | undefined => {
   if (!isRecord(value) || value.kind !== 'finished' || !Array.isArray(value.tickets)) {
     return undefined;
   }
-  return value.tickets.flatMap((entry) => {
+  const tickets = value.tickets.flatMap((entry) => {
     const ticket = asFinishedTicket(entry);
     return ticket === null ? [] : [ticket];
   });
+  return {
+    tickets,
+    ...(typeof value.asOfMs === 'number' ? { asOfMs: value.asOfMs } : {}),
+  };
 };
 
 export interface SessionPingOptions {

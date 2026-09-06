@@ -21,9 +21,11 @@ export { default as preflight } from './after.preflight.js';
 export default async function AfterShellTool({ canonical, preflight }: AgentEventRouteProps<'tool/after'>) {
   const { host, nativeEvent } = canonical.provenance;
   const event = shellEventFrom(canonical.payload);
-  const finishedTickets = finishedTicketsFromPreflight(preflight);
+  const announcement = finishedTicketsFromPreflight(preflight);
   const result = await handleAfterShell(
-    finishedTickets === undefined ? event : { ...event, finishedTickets },
+    announcement === undefined
+      ? event
+      : { ...event, finishedAsOfMs: announcement.asOfMs, finishedTickets: announcement.tickets },
     { nativeEvent, target: host },
   );
   return (
