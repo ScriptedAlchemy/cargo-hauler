@@ -146,10 +146,11 @@ export const parseDaemonSubcommand = (argv: readonly string[]): DaemonSubcommand
   if (subcommand === undefined || !isSubcommand(subcommand)) {
     throw new Error(`daemon requires one of: ${daemonSubcommands.join(', ')}`);
   }
-  if (argv.length > 1) {
-    throw new Error(`daemon ${subcommand} does not accept extra arguments`);
+  const extra = argv.slice(1);
+  if (extra.length === 0 || (subcommand === 'stop' && extra.length === 1 && extra[0] === '--force')) {
+    return subcommand;
   }
-  return subcommand;
+  throw new Error(`daemon ${subcommand} does not accept extra arguments`);
 };
 
 const result = (
