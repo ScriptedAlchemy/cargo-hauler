@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'effect-rstest';
 
-import { inputSchema as cliAwaitInputSchema } from '../src/cli/await.js';
-import { inputSchema as cliStatusInputSchema } from '../src/cli/status.js';
 import {
   awaitCeilingMs,
   requestStatuses,
@@ -235,13 +233,6 @@ const stoppedResult = {
   stateRoot: '/tmp/cc',
   summary: 'stopped',
 };
-
-describe('CLI status filter literal', () => {
-  it('spells exactly the protocol request statuses (the validator needs the literal, AB4814)', () => {
-    const statusFilter = cliStatusInputSchema.shape.status.unwrap().element;
-    expect([...statusFilter.options]).toEqual([...requestStatuses]);
-  });
-});
 
 describe('status report contract', () => {
   it('parses a full status report from the current daemon', () => {
@@ -556,16 +547,6 @@ describe('daemon-sourced payload shape (issue #4)', () => {
     });
   });
 
-  it('keeps the inline CLI status schema pinned to the shared status input keys', () => {
-    const normalizedCliKeys = Object.keys(cliStatusInputSchema.shape).map((key) => {
-      if (key === 'lane') return 'laneKey';
-      if (key === 'ticket') return 'tickets';
-      if (key === 'status') return 'statuses';
-      return key;
-    });
-    expect(normalizedCliKeys.sort()).toEqual(Object.keys(statusInputSchema.shape).sort());
-  });
-
   it('strips record keys the schema does not declare instead of rejecting the row', () => {
     // The ledger's row mapper also emits `buildFinishedAtMs`, a stamp only the
     // metrics windows summarize; the record schema leaves it out, so it is
@@ -668,7 +649,5 @@ describe('await wait ceiling (issues #3, #32)', () => {
     // holds the budget to it.
     expect(ticketInputSchema.parse({ maxWaitMs: awaitCeilingMs, ticket: 'cc-1' }).maxWaitMs).toBe(awaitCeilingMs);
     expect(() => ticketInputSchema.parse({ maxWaitMs: awaitCeilingMs + 1, ticket: 'cc-1' })).toThrow();
-    expect(cliAwaitInputSchema.parse({ maxWaitMs: awaitCeilingMs, ticket: 'cc-1' }).maxWaitMs).toBe(awaitCeilingMs);
-    expect(() => cliAwaitInputSchema.parse({ maxWaitMs: awaitCeilingMs + 1, ticket: 'cc-1' })).toThrow();
   });
 });

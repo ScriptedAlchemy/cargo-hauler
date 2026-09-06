@@ -23,10 +23,9 @@ describe('route manifest', () => {
     expect(manifest.proofLevel).toBe('route-unit');
     expect(manifest.diagnostics.filter((diagnostic) => diagnostic.severity === 'error')).toEqual([]);
     const routes = Object.keys(manifest.routes);
-    // tool/before and tool/after are config-declared hook handlers, not
-    // routes (`src/hooks/fast-path/`, #90); they never appear in the manifest.
-    expect(routes.filter((id) => id.startsWith('event:tool/'))).toEqual([]);
     for (const id of [
+      'event:tool/before',
+      'event:tool/after',
       'tool:hauler/hauler_status',
       'tool:hauler/hauler_log',
       'tool:hauler/hauler_last',
@@ -36,17 +35,13 @@ describe('route manifest', () => {
       'tool:hauler/hauler_kill',
       'event:session/start',
       'event:stop',
-      'cli:status',
-      'cli:log',
-      'cli:last',
-      'cli:await',
-      'cli:result',
-      'cli:request',
-      'cli:kill',
       'cli:daemon',
     ]) {
       expect(routes).toContain(id);
     }
+    // `hauler status` and its siblings are the tools' own `.cli.ts`
+    // projections, not routes of their own.
+    expect(routes.filter((id) => id.startsWith('cli:'))).toEqual(['cli:daemon']);
   });
 
   it('declares the hauler shell layout and the daemon provider', () => {

@@ -76,11 +76,10 @@ describe('session/start daemon notice', () => {
 
 /**
  * Permission semantics: the hauler never introduces a prompt. The shell tool
- * hooks (tool/before, tool/after) are config-declared handlers rather than
- * rendered routes since #90, so their decisions — `allow` for a rewritten
- * cargo command, `continue` plus `updatedInput` beside an ungoverned segment,
- * plain `continue` for everything else, never `ask` — are proven in
- * `tests/hook-fast-path.test.ts` against the handler and in
+ * routes' decisions — `allow` for a rewritten cargo command, `continue` plus
+ * `updatedInput` beside an ungoverned segment, plain `continue` for
+ * everything else, never `ask` — are proven in `tests/hooks.test.ts` against
+ * the handler, `tests/event-preflight.test.ts` against the gate, and
  * `tests/hooks-simulate.test.ts` against the compiled entries. The stop route
  * stays here: it makes no decision without a daemon hold.
  */

@@ -16,7 +16,7 @@ const canonical = (path: string): string => {
 };
 
 const pluginCachePath =
-  /\/(?:\.cursor\/plugins\/|\.claude\/plugins\/cache\/|\.codex\/plugins\/cache\/|artifact\/[^/]+\/)/u;
+  /\/(?:\.cursor\/plugins\/|\.claude\/plugins\/cache\/|\.codex\/plugins\/cache\/|artifact\/)/u;
 
 /**
  * Classifies the currently running `hauler` entry. Host packs emit this file

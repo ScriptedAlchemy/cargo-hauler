@@ -33,10 +33,12 @@ export default () => (
         badge, admission meter, lane board, in-flight and recent tickets, and kache summary.
       </li>
       <li>
-        <strong>Plain browser:</strong> run <code>hauler dashboard</code>. It serves the App standalone against
-        the plugin's own <code>hauler</code> server, opens it, and stays in the foreground until Ctrl-C; the panels
-        show the daemon's own data and poll every five seconds. From the plugin checkout, <code>pnpm run dev</code>{' '}
-        and the Workbench's MCP page preview <code>{APP_RESOURCE_URI}</code> the same way.
+        <strong>Plain browser:</strong> run <code>node &lt;plugin root&gt;/bin/cargo-hauler.mjs web</code> — the
+        installed plugin's own <code>web</code> command (the root is the directory holding{' '}
+        <code>agent-bundle.manifest.json</code>; in a checkout, <code>artifact/</code>). It serves the App
+        standalone against the plugin's own <code>hauler</code> server, opens it, and stays in the foreground until
+        Ctrl-C; the panels show the daemon's own data and poll every five seconds. From the plugin checkout,{' '}
+        <code>pnpm run dev</code> and the Workbench's MCP page preview <code>{APP_RESOURCE_URI}</code> the same way.
       </li>
     </ul>
     <h2>Read the panels</h2>

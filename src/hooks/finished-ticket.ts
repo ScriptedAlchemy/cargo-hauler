@@ -2,7 +2,7 @@ import { isRecord } from '../lib/guards.js';
 
 /**
  * One finished ticket as the daemon's `session-completed-result` lists it,
- * shared by the hook fast path (`src/hooks/fast-path/session-ping.ts`) and
+ * shared by the after-shell preflight ping (`src/hooks/session-ping.ts`) and
  * the full client in `rpc.ts`, so both read the daemon's reply the same way.
  */
 export interface FinishedTicket {

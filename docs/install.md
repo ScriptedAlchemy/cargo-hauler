@@ -1,16 +1,17 @@
 # Installing cargo-hauler
 
 The npm package (`npm install -g cargo-hauler`) carries one ready-made plugin
-per host — `artifact/claude`, `artifact/codex`, `artifact/cursor`, and the
-Agent Plugins `artifact/portable` — plus three executables in `dist/bin/`:
-`hauler` (the CLI), `cargo-hauler` (the routed commands), and
+root, `artifact/`, that Claude Code, Codex, Cursor, and Agent Plugins hosts
+all read (its `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`, and
+`.agents/` manifests point at one set of files) — plus three executables in
+`dist/bin/`: `hauler` (the CLI), `cargo-hauler` (the routed commands), and
 `cargo-hauler-install`. Installing needs only Node and the host; the
-agent-bundle framework that builds these packs is a development dependency
-only, and the packs and installer never load it.
+agent-bundle framework that builds the root is a development dependency
+only, and the plugin and installer never load it.
 
 The CLI entry point is `hauler` on PATH from `npm i -g cargo-hauler`. Never
 run `scripts/hauler.mjs` or a path under `.claude/plugins/cache`,
-`.codex/plugins/cache`, `.cursor/plugins`, or `artifact/<host>` directly.
+`.codex/plugins/cache`, `.cursor/plugins`, or `artifact/` directly.
 
 After an upgrade, every CLI command, MCP tool, dashboard read, and hook checks
 the daemon version before requesting a versioned payload. A daemon from the
@@ -30,16 +31,14 @@ pnpm install
 pnpm run build   # or `pnpm run check` to also run the typecheck and test gate
 ```
 
-Every pack ships the same surfaces: `mcp/` (the `hauler` MCP server), `hooks/`
-(the four hooks in the host's own hook document: the `session/start` and
-`stop` event-route wrappers, and the standalone `before-tool-shell-before-*`
-and `after-tool-shell-after-*` shell hook entries, which decide on the command
-before loading anything heavier — about 50 ms and 49 MB for a non-cargo
-call), `skills/`,
-`scripts/hauler.mjs` (the internal `exec` / `daemon run` entry used by hooks),
-`bin/cargo-hauler.mjs` (the routed CLI: `status`, `log`,
-`last`, `await`, `result`, `request`, `daemon`), `mcp-apps/dashboard.html`,
-and an `INSTALL.md` with the exact compiled names.
+The root ships `mcp/` (the `hauler` MCP server), `hooks/` (one hook document
+per host and the four event routes — `session/start`, `stop`, and the
+`tool/before` / `tool/after` shell routes, whose preflight gates decide on the
+raw command before the route itself loads), `skills/`, `scripts/hauler.mjs`
+(the internal `exec` / `daemon run` entry used by hooks), `bin/cargo-hauler.mjs`
+(the routed CLI: `status`, `log`, `last`, `await`, `result`, `request`, `kill`,
+`daemon`, and `web`, which serves the dashboard App in a browser),
+`mcp-apps/dashboard.html`, and an `INSTALL.md` with the exact compiled names.
 
 The hooks never introduce a permission prompt. The `tool/before` hook answers
 `allow` only when every command in the input is a cargo invocation it has
@@ -67,13 +66,13 @@ cargo-hauler-install install codex
 cargo-hauler-install install cursor --mode local
 ```
 
-Or the host commands directly, from `artifact/<host>` (in the package or a
-checkout — each pack's `INSTALL.md` repeats them with the compiled names):
+Or the host commands directly, from `artifact/` (in the package or a
+checkout — its `INSTALL.md` repeats them with the compiled names):
 
 ```sh
-(cd artifact/claude && claude plugin marketplace add ./ && claude plugin install cargo-hauler@cargo-hauler-marketplace --scope user)
-(cd artifact/codex  && codex plugin marketplace add ./  && codex plugin add cargo-hauler@cargo-hauler-marketplace)
-node artifact/cursor/install.mjs [--mode local|marketplace] [--replace]
+(cd artifact && claude plugin marketplace add ./ && claude plugin install cargo-hauler@cargo-hauler-marketplace --scope user)
+(cd artifact && codex plugin marketplace add ./  && codex plugin add cargo-hauler@cargo-hauler-marketplace)
+node artifact/install.mjs [--mode local|marketplace] [--replace]
 ```
 
 - `--replace` (alias `--force`) on `cargo-hauler-install` and on the Cursor
@@ -86,7 +85,7 @@ node artifact/cursor/install.mjs [--mode local|marketplace] [--replace]
 - `cargo-hauler-install … --json` prints the outcome (`installed`, `replaced`,
   `current`, `refused`) for scripts. `npm install` itself never mutates a host.
 - Contributors with the framework available can also use
-  `pnpm exec agent-bundle install <host> --from artifact/<host>` and
+  `pnpm exec agent-bundle install <host> --from artifact` and
   `agent-bundle doctor --host <host>` (installed copy versus artifact:
   `current`, `stale`, `version-mismatch`, `foreign`, `not-installed`); they
   apply the same policy.
@@ -141,10 +140,11 @@ node artifact/cursor/install.mjs [--mode local|marketplace] [--replace]
 
 ### Portable (Agent Plugins 1.0.0)
 
-`artifact/portable` is the open-standard pack: skills and the MCP server only
-(the standard defines no hooks), loaded natively by Cursor, Codex, VS Code,
-GitHub Copilot, Kiro, and ChatGPT, and used by the agent-bundle Workbench
-playground. It also carries an `install.mjs` for Cursor-compatible hosts.
+The root's `.agents/` projection is the open-standard view: skills and the
+MCP server only (the standard defines no hooks), loaded natively by Cursor,
+Codex, VS Code, GitHub Copilot, Kiro, and ChatGPT, and used by the
+agent-bundle Workbench playground. `install.mjs` copies it for
+Cursor-compatible hosts.
 
 ## Optional PATH shim
 

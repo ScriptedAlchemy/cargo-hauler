@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'effect-rstest';
 
-import { commandMentionsHauler } from '../src/hooks/fast-path/tokens.js';
+import { commandMentionsHauler } from '../src/hooks/tokens.js';
 
 /**
  * The pre-parse test both shell hook entries apply before anything heavy

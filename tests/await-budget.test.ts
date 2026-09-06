@@ -1,23 +1,21 @@
 import { MAX_ROUTE_RENDER_ELAPSED_MS } from 'agent-bundle';
 import { describe, expect, it } from 'effect-rstest';
 
-import { config as cliAwaitConfig } from '../src/cli/await.js';
 import { awaitCeilingMs } from '../src/daemon/protocol.js';
 import { awaitMaxWaitMessage, ticketInputSchema } from '../src/lib/protocol-schemas.js';
 import { config as toolAwaitConfig } from '../src/mcp/hauler/tools/hauler_await.js';
 
 /**
- * One `await` call waits up to the daemon's ceiling (issues #3, #32). The two
- * rendered routes declare a `config.render.maxElapsedMs` (agent-bundle#454)
- * that covers that whole wait plus the snapshot fetch before it and the
- * socket round trip after it — the literal in each config is what the
- * compiler reads, so this test holds it to `awaitCeilingMs`.
+ * One `await` call waits up to the daemon's ceiling (issues #3, #32). The
+ * rendered route (and `hauler await`, its CLI projection) declares a
+ * `config.render.maxElapsedMs` (agent-bundle#454) that covers that whole wait
+ * plus the snapshot fetch before it and the socket round trip after it — the
+ * literal in the config is what the compiler reads, so this test holds it to
+ * `awaitCeilingMs`.
  */
 describe('await render budget', () => {
-  it.each([
-    ['cli:await', cliAwaitConfig.render.maxElapsedMs],
-    ['tool:hauler/hauler_await', toolAwaitConfig.render.maxElapsedMs],
-  ])('%s covers the daemon await ceiling with transport headroom', (_route, maxElapsedMs) => {
+  it('covers the daemon await ceiling with transport headroom', () => {
+    const maxElapsedMs = toolAwaitConfig.render.maxElapsedMs;
     expect(maxElapsedMs).toBeGreaterThan(awaitCeilingMs);
     expect(maxElapsedMs - awaitCeilingMs).toBeLessThanOrEqual(60_000);
     expect(maxElapsedMs).toBeLessThanOrEqual(MAX_ROUTE_RENDER_ELAPSED_MS);

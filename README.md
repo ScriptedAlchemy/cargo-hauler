@@ -66,7 +66,7 @@ checkout? See [Install](#install).
 
 The CLI is `hauler` on PATH from `npm i -g cargo-hauler`. Never run
 `scripts/hauler.mjs` or any path under `.claude/plugins/cache`,
-`.codex/plugins/cache`, `.cursor/plugins`, or `artifact/<host>` directly.
+`.codex/plugins/cache`, `.cursor/plugins`, or `artifact/` directly.
 
 ## Commands and tools
 
@@ -103,9 +103,17 @@ The dashboard is an MCP App (`ui://cargo-hauler/dashboard.html`) attached to
 — each running row with the last line of its output preview, each ticket's
 drawer with the whole tail fetched through `hauler_result` — metrics over
 one-hour, 24-hour, and all-time windows, per-command timings, optional kache
-data, lanes, and history. It polls `hauler_status` every 5 s while open. Outside an MCP host, `hauler dashboard` (from the
-plugin checkout) serves the same App in a plain browser tab against the
-running daemon.
+data, lanes, and history. It polls `hauler_status` every 5 s while open.
+Outside an MCP host, the installed plugin's own `web` command serves the same
+App in a plain browser tab against the running daemon:
+
+```sh
+node <plugin root>/bin/cargo-hauler.mjs web
+```
+
+where the plugin root is the directory `cargo-hauler-install install <host>`
+printed (the one holding `agent-bundle.manifest.json`), or `artifact/` in a
+checkout after `pnpm run build`.
 
 ![cargo-hauler metrics for one-hour, 24-hour, and all-time windows](docs/media/dashboard-metrics.png)
 
@@ -503,11 +511,12 @@ an empty store.
 Requirements: Node 22.19 or newer, Cargo, and Linux or macOS (Windows is
 experimental: named-pipe transport, no PATH shim).
 
-The npm package ships one plugin per host under `artifact/<host>` — the
-Claude Code plugin with its local marketplace, the Codex plugin, and the Cursor
-plugin with its `install.mjs` — plus three executables: `hauler` (the CLI),
-`cargo-hauler` (the routed commands), and `cargo-hauler-install`. Every pack
-also contains an `INSTALL.md` with the exact commands for that host. The
+The npm package ships one plugin root, `artifact/`, that every host reads —
+the Claude Code plugin with its local marketplace, the Codex plugin, the
+Cursor plugin with its `install.mjs`, and the Agent Plugins `portable`
+projection — plus three executables: `hauler` (the CLI), `cargo-hauler` (the
+routed commands), and `cargo-hauler-install`. The root's `INSTALL.md` has the
+exact commands for each host. The
 package declares no runtime dependencies — every library the packs and
 executables use is bundled into them — so `npm install` fetches this one
 tarball and nothing else.
@@ -534,25 +543,25 @@ The same result without the installer, from the package or a build (paths are
 relative to `node_modules/cargo-hauler` or the checkout):
 
 ```sh
+cd artifact
+
 # Claude Code — a local marketplace plus a plugin install
-cd artifact/claude
 claude plugin marketplace add ./
 claude plugin install cargo-hauler@cargo-hauler-marketplace --scope user
 
 # Codex — a local marketplace snapshot
-cd artifact/codex
 codex plugin marketplace add ./
 codex plugin add cargo-hauler@cargo-hauler-marketplace
 
-# Cursor — no non-interactive plugin command exists, so the pack ships one
-node artifact/cursor/install.mjs                     # local plugin (default)
-node artifact/cursor/install.mjs --mode marketplace  # local marketplace repository
+# Cursor — no non-interactive plugin command exists, so the root ships one
+node ./install.mjs                     # local plugin (default)
+node ./install.mjs --mode marketplace  # local marketplace repository
 ```
 
 Upgrading to a new version: `claude plugin marketplace update cargo-hauler-marketplace
 && claude plugin update cargo-hauler@cargo-hauler-marketplace`, `codex plugin
 remove … && codex plugin marketplace add ./ && codex plugin add …`, and
-`node artifact/cursor/install.mjs --replace`. `claude plugin update` is
+`node artifact/install.mjs --replace`. `claude plugin update` is
 version-gated, so after a rebuild that did not bump the version use
 `claude plugin uninstall … --keep-data` and install again (the installer does
 this automatically). Restart or reload the host after installing.
@@ -561,10 +570,10 @@ this automatically). Restart or reload the host after installing.
 
 ```sh
 pnpm install
-pnpm run build      # artifact/{claude,codex,cursor,portable} + dist/bin
+pnpm run build      # artifact/ (one root, every host) + dist/bin
 ```
 
-Then install with either method above from `artifact/<host>`, and run
+Then install with either method above from `artifact/`, and run
 `hauler install-shim` from the globally installed CLI for the PATH shim.
 Building needs the
 repository's dev dependencies (including the agent-bundle framework, pinned as
@@ -686,11 +695,12 @@ src/
   layout.tsx                    the hauler shell around every rendered route
   providers/hauler-daemon.ts    request-scoped daemon connection + health probe
   components/                   typed components over pure view-models
-  mcp/hauler/tools/*.tsx        hauler_status, _log, _last, _await, _result, _request
+  mcp/hauler/tools/*.tsx        hauler_status, _log, _last, _await, _result, _request, _kill
+  mcp/hauler/tools/*.cli.ts     each tool's `hauler <command>` projection (flags, positionals)
   mcp/hauler/apps/dashboard.tsx the MCP App (ui://cargo-hauler/dashboard.html)
-  cli/*.tsx, cli/daemon.ts      the routed `cargo-hauler` CLI, same components
+  cli/daemon.ts                 the one plain CLI command
   events/{session/start,stop}.tsx   rendered hook routes
-  hooks/fast-path/              the declared tool/before and tool/after shell hooks
+  events/tool/{before,after}.tsx    the shell hook routes, gated by *.preflight.ts
   skills/cargo-hauler/SKILL.md, skills/hauler-dashboard/SKILL.tsx
   scripts/hauler.ts             the `hauler` process entry hooks rewrite cargo to
   daemon/, client/, hooks/, shim/, lib/   the broker and its libraries
@@ -719,23 +729,22 @@ through one layout, the way a page framework's `layout.tsx` wraps every page:
 
 Event routes are host protocol responses and are never wrapped.
 
-#### The shell hooks (`src/hooks/fast-path/`)
+#### The shell hooks (`src/events/tool/`)
 
-`tool/before` and `tool/after` are not rendered routes. They are declared in
-`agent-bundle.config.ts` under `hooks` as handler modules
-(`shell-before.ts`, `shell-after.ts`), which the framework compiles into
-standalone entries — `hooks/before-tool-shell-before-<hash>.mjs`,
-`hooks/after-tool-shell-after-<hash>.mjs` — that carry no React, no Flight
-worker, and no Effect. Each entry decides on the raw command first
-(`tokens.ts`; `session-ping.ts` for the completion ping) and reaches the
-rewrite (`before-shell.ts`) or the telemetry and notification code
-(`after-shell.ts`) through a deliberate dynamic `import()`, the one place in
-the codebase that imports lazily. The handler contract has no `allow`
-outcome, so a fully brokered rewrite writes the host's own allow shape
-(`allow-output.ts`) instead of `continue` + `updatedInput`, which would make
-the host prompt for the rewrite. Everything else — `continue`, `deny` with a
-reason, `additionalContext` — goes through the generated wrapper's
-projection.
+`tool/before` and `tool/after` are event routes like the other two, with one
+addition: each re-exports a `preflight` (`before.preflight.ts`,
+`after.preflight.ts`) that the framework compiles into the hook entry itself —
+`hooks/event-route-tool-before.<host>.mjs`, a few hundred KB with no React,
+Flight worker, or Effect — and runs before the rendered route
+(`*.execute.mjs`) is loaded. The gate decides on the raw command
+(`src/hooks/tokens.ts`; `session-ping.ts` for the one bounded completion ping
+after a tool ran): `continue` for the shell calls that name neither cargo nor
+hauler, `execute` for the rest. Both routes declare `providers: []`, so
+neither pays the daemon provider's probe; the rendered route calls
+`before-shell.ts` (the rewrite, the `cargo clean` guard) or `after-shell.ts`
+(telemetry, finished-ticket context) and returns `allow`, `continue` +
+`updatedInput`, `deny` with a reason, or `additionalContext` through the
+framework's host projection.
 
 #### The daemon provider (`src/providers/hauler-daemon.ts`)
 
@@ -811,18 +820,18 @@ the same filter as its `session` field). Results carry
 
 | Route | Surface | Document |
 | --- | --- | --- |
-| `tool:hauler/hauler_status` · `cli:status` | queue, lanes, admission, kache, filters; bounded summary rows (`StatusRow`): `outputPreview` on running rows, never a tail | `StatusDocument`; the tool advertises the dashboard App |
-| `tool:hauler/hauler_log` · `cli:log` | recent requests, as summary rows | `LogStream` → `LogDocument` |
-| `tool:hauler/hauler_last` · `cli:last` | most recent request, as a detail record with its tail | `LastDocument` |
-| `tool:hauler/hauler_await` · `cli:await` | long-poll a ticket (≤ 2 h) | `AwaitStream` → `AwaitDocument` |
-| `tool:hauler/hauler_result` · `cli:result` | one ticket as a detail record: the settled tail, or the whole live tail while running; `full` renders the whole on-disk output log | `ResultDocument` (`<FullOutput>`) |
-| `tool:hauler/hauler_kill` · `cli:kill` | stop a queued or running ticket | `KillDocument` |
-| `tool:hauler/hauler_request` · `cli:request` | submit a background request | `RequestDocument` |
+| `tool:hauler/hauler_status` (`hauler status`) | queue, lanes, admission, kache, filters; bounded summary rows (`StatusRow`): `outputPreview` on running rows, never a tail | `StatusDocument`; the tool advertises the dashboard App |
+| `tool:hauler/hauler_log` (`hauler log`) | recent requests, as summary rows | `LogStream` → `LogDocument` |
+| `tool:hauler/hauler_last` (`hauler last`) | most recent request, as a detail record with its tail | `LastDocument` |
+| `tool:hauler/hauler_await` (`hauler await`) | long-poll a ticket (≤ 2 h) | `AwaitStream` → `AwaitDocument` |
+| `tool:hauler/hauler_result` (`hauler result`) | one ticket as a detail record: the settled tail, or the whole live tail while running; `full` renders the whole on-disk output log | `ResultDocument` (`<FullOutput>`) |
+| `tool:hauler/hauler_kill` (`hauler kill`) | stop a queued or running ticket | `KillDocument` |
+| `tool:hauler/hauler_request` (`hauler request`) | submit a background request | `RequestDocument` |
 | `cli:daemon` | `run` / `start` / `stop` / `status` / `restart` | plain JSON, exit code from the result |
 | `event:session/start` | new session | daemon state and the no-kill rule as context |
 | `event:stop` | agent stopping | holds the stop while a foreground ticket is pending (bounded, re-deniable) |
-| `hooks.beforeTool` (`src/hooks/fast-path/shell-before.ts`) | shell tool about to run | `continue` without loading anything for a non-cargo command; otherwise rewrites `cargo …` to `hauler exec --session … --host … -- cargo …`, denies `cargo clean` during in-flight builds, brokers it while the daemon is too busy to answer |
-| `hooks.afterTool` (`src/hooks/fast-path/shell-after.ts`) | shell tool finished | one bounded completion ping per call; injects finished background-ticket results once per session |
+| `event:tool/before` | shell tool about to run | the preflight continues a non-cargo command without loading the route; otherwise rewrites `cargo …` to `hauler exec --session … --host … -- cargo …`, denies `cargo clean` during in-flight builds, brokers it while the daemon is too busy to answer |
+| `event:tool/after` | shell tool finished | the preflight pings the daemon once per call; the route records cargo commands and injects finished background-ticket results once per session |
 
 #### Skills
 
@@ -867,11 +876,12 @@ artifact build, at the harness proof levels:
 
 | Level | Suite | What it proves |
 | --- | --- | --- |
-| route-unit | `routes`, `layout`, `streaming`, `events` | documents, shell metadata, Suspense fallbacks and settled values, lineage attribution, event decisions (the shell hooks are unit-tested in `tests/hook-fast-path.test.ts` and against their compiled entries in `tests/hooks-simulate.test.ts`) |
+| route-unit | `routes`, `layout`, `streaming`, `events` | documents, shell metadata, Suspense fallbacks and settled values, lineage attribution, event decisions (the shell routes' preflight gates are unit-tested in `tests/event-preflight.test.ts` and against their compiled entries in `tests/hooks-simulate.test.ts`) |
 | cli-dispatch | `cli-dispatch`, `layout` | argv through the routed CLI shell; Markdown wrapped by the shell, `--json` bare |
 | script-dispatch | `script-dispatch` | the `hauler` entry through its `main` envelope as its own process |
 | mcp-in-memory | `mcp-surface`, `layout` | tool names, `outputSchema`, the dashboard resource link, `_meta.hauler`, and a live fixture broker over the in-memory transport |
-| packed-stdio | `packed-contract` | the built `artifact/cursor` server as a real process against a live broker, every tool through the wire-contract matrix |
+| packed-stdio | `packed-contract` | the built `artifact/` server as a real process against a live broker, every tool through the wire-contract matrix |
+| host-install | `packed-install` | `cargo-hauler-install install <host> --replace` into an isolated home for Claude, Codex, and Cursor; the installed root's MCP server as a real process and its `bin/cargo-hauler.mjs web` serving the dashboard |
 | workbench-surface | `workbench-surface` | what `agent-bundle dev` would show: catalog, provider, lifecycles per host, counts |
 
 Daemon-backed cases run a real broker in-process with a fake `cargo`
@@ -882,21 +892,20 @@ seam or through `CARGO_HAULER_STATE_DIR`.
 
 ```sh
 pnpm run dev       # agent-bundle workbench with live rebuilds
-pnpm run build     # artifact/{claude,codex,cursor,portable} and dist/bin
+pnpm run build     # artifact/ (one root, every host) and dist/bin
 pnpm run inspect   # per-host component accounting
 pnpm run doctor    # installed copies versus the artifact
 pnpm run check     # the gate
 ```
 
-To see the dashboard outside an MCP host, run `node dist/bin/hauler.js
-dashboard` after a build: it serves the `ui://cargo-hauler/dashboard.html` App
-standalone against the generated `hauler` server (`spawnServeApp` from
-`agent-bundle/serve-app-command` runs `agent-bundle serve-app`, the
-Workbench's own host stack, as a child process — the routed bin stays
-self-contained and never imports the compiler, agent-bundle `AB4837`), so the
-data is the daemon's own. `pnpm run dev` and the Workbench's MCP page preview
-the same App with live rebuilds. The repository ships no preview harness of
-its own.
+To see the dashboard outside an MCP host, run `node artifact/bin/cargo-hauler.mjs
+web` after a build: the framework's `web` command (configured under `web` in
+`agent-bundle.config.ts`) launches the artifact's own `hauler` server, calls
+`hauler_status` once so the App opens populated, approves `call-tool` so its
+panels may poll, and serves `ui://cargo-hauler/dashboard.html` on a loopback
+origin until Ctrl-C — so the data is the daemon's own. `pnpm run dev` and the
+Workbench's MCP page preview the same App with live rebuilds. The repository
+ships no preview harness of its own.
 
 agent-bundle does not yet have an npm release; this repository pins the
 [pkg.pr.new](https://pkg.pr.new) preview of main commit

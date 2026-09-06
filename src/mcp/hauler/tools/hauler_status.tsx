@@ -3,7 +3,7 @@ import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
 import React from 'react';
 
 import { StatusDocument } from '../../../components/documents.js';
-import { mcpSurface } from '../../../components/surface.js';
+import { surfaceNames } from '../../../components/surface.js';
 import { APP_RESOURCE_URI } from '../../../constants.js';
 import { loadStatusResult } from '../../../lib/inspect.js';
 import { statusInputSchema, statusResultSchema } from '../../../lib/protocol-schemas.js';
@@ -30,7 +30,7 @@ export default async function HaulerStatus({ input, signal }: ToolRouteProps<typ
   return (
     <StatusDocument
       filtered={hasStatusFilters(input)}
-      names={mcpSurface}
+      names={surfaceNames(context)}
       nowMs={Date.now()}
       result={status}
     />

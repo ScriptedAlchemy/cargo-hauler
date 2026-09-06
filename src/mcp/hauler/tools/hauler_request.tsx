@@ -3,7 +3,7 @@ import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
 import React from 'react';
 
 import { RequestDocument } from '../../../components/documents.js';
-import { mcpSurface } from '../../../components/surface.js';
+import { surfaceNames } from '../../../components/surface.js';
 import { lineageModel } from '../../../components/view-models.js';
 import { requestInputSchema, requestResultSchema } from '../../../lib/protocol-schemas.js';
 import { requestDaemonConfig } from '../../../lib/request-config.js';
@@ -29,7 +29,7 @@ export default async function HaulerRequest({ input, signal }: ToolRouteProps<ty
     <RequestDocument
       argv={input.argv}
       lineage={lineageModel(context.lineage)}
-      names={mcpSurface}
+      names={surfaceNames(context)}
       result={submitted}
     />
   );

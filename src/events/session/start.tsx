@@ -17,6 +17,8 @@ import { requestDaemonConfig } from '../../lib/request-config.js';
 export const config = {
   // The portable target defines no hooks; the three plugin hosts do.
   targets: ['claude', 'codex', 'cursor'],
+  // The route probes within its own budget; the provider's probe stays unpaid.
+  providers: [],
   runtime: 'standalone',
   timeoutMs: 5_000,
 } satisfies AgentEventRouteConfig;
@@ -31,8 +33,6 @@ const notice = (model: ReturnType<typeof daemonBadgeModel>): string => {
       return `cargo-hauler ${model.headline}: ${model.detail ?? ''}. Treat the machine as saturated — prefer \`hauler status\` (or the hauler_status tool) over new builds until it answers.`;
     case 'unreachable':
       return `cargo-hauler ${model.headline}: ${model.detail ?? ''}. Cargo still runs (the hooks fail open), but nothing is brokered until the socket can be opened.`;
-    case 'unprobed':
-      return 'cargo-hauler daemon state was not probed for this session.';
     default: {
       const exhaustive: never = model.state;
       return exhaustive;

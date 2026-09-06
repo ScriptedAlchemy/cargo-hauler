@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'effect-rstest';
-import { inspectWorkbenchSurface, workbenchPageLabel } from 'agent-bundle/test';
+import { inspectWorkbenchSurface } from 'agent-bundle/test';
 
 /**
  * workbench-surface proof: what `agent-bundle dev` would hand the Workbench
@@ -21,15 +21,15 @@ describe('workbench surface', () => {
     expect(surface.catalog.routeCount).toBeGreaterThanOrEqual(15);
 
     const routeIds = surface.catalog.groups.flatMap((group) => group.entries.map((entry) => entry.route.id));
-    for (const id of ['tool:hauler/hauler_status', 'cli:status', 'event:session/start', 'event:stop']) {
+    for (const id of ['tool:hauler/hauler_status', 'cli:daemon', 'event:session/start', 'event:stop', 'event:tool/before', 'event:tool/after']) {
       expect(routeIds).toContain(id);
     }
-    // The shell hooks are config-declared handlers (#90), not catalogued routes.
-    expect(routeIds.filter((id) => id.startsWith('event:tool/'))).toEqual([]);
+    // The status tool's `.cli.ts` projection is catalogued as `hauler status`, in the CLI's own flag spellings.
     const statusCommand = surface.catalog.groups
       .flatMap((group) => group.entries)
-      .find((entry) => entry.route.id === 'cli:status');
-    expect(statusCommand?.commandUsage).toContain('status');
+      .find((entry) => entry.route.id === 'tool:hauler/hauler_status' && entry.commandUsage !== undefined);
+    expect(statusCommand?.commandUsage).toContain('status [--command-contains <string>]');
+    expect(statusCommand?.commandUsage).toContain('--lane <string>');
   }, 60_000);
 
   it('offers every plugin host for lifecycle replay and counts the four targets', async () => {
@@ -38,6 +38,6 @@ describe('workbench surface', () => {
     expect(surface.counts.mcpServers).toBeGreaterThanOrEqual(4);
     const sessionStart = surface.lifecycles.find((lifecycle) => lifecycle.routeId === 'event:session/start');
     expect(sessionStart?.targets.map((target) => target.target).sort()).toEqual(['claude', 'codex', 'cursor']);
-    expect(surface.pages.map(workbenchPageLabel)).toEqual(expect.arrayContaining(['Routes', 'Lifecycles']));
+    expect(surface.advanced).toEqual(expect.arrayContaining(['artifact', 'hosts']));
   }, 60_000);
 });

@@ -1,6 +1,6 @@
-import { finishedTicketsOf, type FinishedTicket } from '../finished-ticket.js';
-import { resolveHookSocketPath } from '../paths.js';
-import { requestOutcome } from '../rpc.js';
+import { finishedTicketsOf, type FinishedTicket } from './finished-ticket.js';
+import { resolveHookSocketPath } from './paths.js';
+import { requestOutcome } from './rpc.js';
 
 /**
  * The bounded wait `after-shell.ts` has always given the `session-completed`
@@ -35,8 +35,8 @@ export interface SessionPingOptions {
  * The smallest client of the daemon's `session-completed` request: one
  * `net.connect` on the Unix socket, one NDJSON line out, the first line back
  * (`requestOutcome`, which is dependency-free — no Effect runtime, no shared
- * `LineBuffer`). The hook fast path runs this on every after-tool call before
- * deciding whether the rest of the hook needs to load at all. It never throws
+ * `LineBuffer`). The `tool/after` preflight runs this on every shell call before
+ * deciding whether the rendered route needs to load at all. It never throws
  * and never writes to stdout or stderr: a daemon that is down or slow is an
  * `unavailable` value, not an error.
  *

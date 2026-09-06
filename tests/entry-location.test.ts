@@ -14,7 +14,7 @@ describe('hauler entry location', () => {
     '/home/test/.claude/plugins/cache/cargo-hauler-marketplace/cargo-hauler/1.0.0/scripts/hauler.mjs',
     '/home/test/.codex/plugins/cache/cargo-hauler-marketplace/cargo-hauler/1.0.0/scripts/hauler.mjs',
     '/home/test/.cursor/plugins/local/cargo-hauler/scripts/hauler.mjs',
-    '/checkout/artifact/cursor/scripts/hauler.mjs',
+    '/checkout/artifact/scripts/hauler.mjs',
   ])('detects host plugin entry %s', (entry) => {
     expect(haulerEntryLocation(entry)).toEqual({
       kind: 'host-plugin',

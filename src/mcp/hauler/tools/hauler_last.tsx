@@ -1,11 +1,12 @@
 import { agent } from '@agent-bundle/runtime';
 import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
 import React from 'react';
+import { z } from 'zod';
 
 import { LastDocument } from '../../../components/documents.js';
-import { mcpSurface } from '../../../components/surface.js';
+import { surfaceNames } from '../../../components/surface.js';
 import { loadLastResult } from '../../../lib/inspect.js';
-import { lastResultSchema, limitInputSchema } from '../../../lib/protocol-schemas.js';
+import { lastResultSchema } from '../../../lib/protocol-schemas.js';
 import { requestDaemonConfig } from '../../../lib/request-config.js';
 
 export const config = {
@@ -14,11 +15,11 @@ export const config = {
   title: 'Hauler last request',
 } satisfies ToolConfig;
 
-export const inputSchema = limitInputSchema;
+export const inputSchema = z.object({}).strict();
 export const resultSchema = lastResultSchema;
 
 export default async function HaulerLast({ signal }: ToolRouteProps<typeof inputSchema>) {
   const context = await agent();
   const last = await loadLastResult({ config: requestDaemonConfig(context), signal });
-  return <LastDocument names={mcpSurface} nowMs={Date.now()} result={last} />;
+  return <LastDocument names={surfaceNames(context)} nowMs={Date.now()} result={last} />;
 }

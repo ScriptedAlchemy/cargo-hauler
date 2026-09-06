@@ -3,7 +3,7 @@ import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
 import React from 'react';
 
 import { ResultDocument } from '../../../components/documents.js';
-import { mcpSurface } from '../../../components/surface.js';
+import { surfaceNames } from '../../../components/surface.js';
 import { resultFetchResultSchema, resultInputSchema } from '../../../lib/protocol-schemas.js';
 import { requestDaemonConfig } from '../../../lib/request-config.js';
 import { fetchTicketResultView } from '../../../lib/tickets.js';
@@ -22,6 +22,6 @@ export default async function HaulerResult({ input, signal }: ToolRouteProps<typ
   const context = await agent();
   const view = await fetchTicketResultView(input, { config: requestDaemonConfig(context), signal });
   return (
-    <ResultDocument names={mcpSurface} nowMs={Date.now()} output={view.output} result={view.result} />
+    <ResultDocument names={surfaceNames(context)} nowMs={Date.now()} output={view.output} result={view.result} />
   );
 }
