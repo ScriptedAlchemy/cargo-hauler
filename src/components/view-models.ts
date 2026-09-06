@@ -33,12 +33,6 @@ export interface DaemonBadgeModel {
   readonly state: DaemonHealth['state'];
   readonly headline: string;
   readonly detail: string | null;
-  /** The resolved state directory, so a reader sees which ledger and socket this is. */
-  readonly stateDir: string | null;
-}
-
-export interface DaemonBadgeShell {
-  readonly stateDir?: string;
 }
 
 const unresponsiveDetail = (
@@ -62,9 +56,7 @@ const unresponsiveDetail = (
 export const daemonBadgeModel = (
   health: DaemonHealth,
   nowMs: number,
-  shell: DaemonBadgeShell = {},
 ): DaemonBadgeModel => {
-  const stateDir = shell.stateDir ?? null;
   switch (health.state) {
     case 'running': {
       const lanes = health.busyLanes === 0
@@ -75,7 +67,6 @@ export const daemonBadgeModel = (
         detail: `${health.running}/${health.maxConcurrent} permits${riding}, ${health.queued} queued · ${lanes} · up since ${relativeTime(health.startedAtMs, nowMs)}`,
         headline: `daemon running (pid ${health.pid})`,
         state: health.state,
-        stateDir,
       };
     }
     case 'stopped':
@@ -85,21 +76,18 @@ export const daemonBadgeModel = (
           : 'socket present but connection refused; a stale socket from an earlier daemon',
         headline: 'daemon stopped',
         state: health.state,
-        stateDir,
       };
     case 'unresponsive':
       return {
         detail: unresponsiveDetail(health.reason, health.timeoutMs),
         headline: 'daemon unresponsive',
         state: health.state,
-        stateDir,
       };
     case 'unreachable':
       return {
         detail: `socket present but could not be opened (${health.detail}); the daemon may be running — check permissions on the state directory`,
         headline: 'daemon unreachable',
         state: health.state,
-        stateDir,
       };
     default: {
       const exhaustive: never = health;

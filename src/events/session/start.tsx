@@ -17,7 +17,7 @@ import { requestDaemonConfig } from '../../lib/request-config.js';
 export const config = {
   // The portable target defines no hooks; the three plugin hosts do.
   targets: ['claude', 'codex', 'cursor'],
-  // The route probes within its own budget; the provider's probe stays unpaid.
+  // The route probes within its own budget; ordinary rendered routes do not.
   providers: [],
   runtime: 'standalone',
   timeoutMs: 5_000,

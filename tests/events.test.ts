@@ -99,7 +99,7 @@ describe('agent event routes', () => {
   it('routes the shell tool hooks with preflight gates and no provider', async () => {
     // tool/before and tool/after are the two hooks every shell call pays for:
     // their preflight decides on the raw command before the route loads (#90),
-    // and neither pays the daemon provider's probe.
+    // and neither mounts the daemon-config provider.
     const [before, after] = await Promise.all([
       import('../src/events/tool/before.js'),
       import('../src/events/tool/after.js'),

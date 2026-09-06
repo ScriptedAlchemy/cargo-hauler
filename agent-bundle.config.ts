@@ -6,7 +6,7 @@ import { defineConfig } from 'agent-bundle/config';
  *
  * Everything else is discovered by convention (framework mode):
  * - `src/layout.tsx` → the hauler shell around every rendered route
- *   (daemon badge, lane summary, lineage footer, `_meta.hauler`).
+ *   (lineage footer and `_meta.hauler`).
  * - `src/mcp/hauler/tools/*.tsx` → the `hauler` MCP server's tools; each
  *   `<tool>.cli.ts` beside one is that tool's `cargo-hauler <command>`
  *   projection (positionals, flag names, `mapInput`);
@@ -20,8 +20,8 @@ import { defineConfig } from 'agent-bundle/config';
  * - `src/scripts/hauler.ts` → `scripts/hauler.mjs` in the artifact (the hook
  *   rewrite target) and the package `hauler` bin (see `bin`).
  * - `src/cargo-hauler-install.ts` → the package `cargo-hauler-install` bin.
- * - `src/providers/hauler-daemon.ts` → the per-request daemon connection
- *   (config, socket discovery, health).
+ * - `src/providers/hauler-daemon.ts` → request-scoped daemon configuration
+ *   (state directory, socket, ledger).
  * - `src/skills/*` → skills (`SKILL.md` or a rendered `SKILL.tsx`).
  * - Version comes from package.json (`agent-bundle/meta` in code).
  *

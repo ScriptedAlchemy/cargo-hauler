@@ -78,13 +78,6 @@ describe('daemonBadgeModel', () => {
     expect(daemonBadgeModel({ reason: 'connection-closed', state: 'unresponsive', timeoutMs: 750 }, nowMs).detail).toContain('closed the connection');
     expect(daemonBadgeModel({ detail: 'EACCES: permission denied', reason: 'open-failed', state: 'unreachable' }, nowMs).detail).toContain('EACCES');
   });
-
-  it('names the state directory it was given', () => {
-    const running = { busyLanes: 0, latencyMs: 3, maxConcurrent: 5, pid: 42, queued: 0, riding: 0, running: 0, startedAtMs: nowMs, state: 'running' as const, version: '0.5.0' };
-    const model = daemonBadgeModel(running, nowMs, { stateDir: '/fast/cache/cargo-hauler' });
-    expect(model.stateDir).toBe('/fast/cache/cargo-hauler');
-    expect(daemonBadgeModel(running, nowMs).stateDir).toBeNull();
-  });
 });
 
 describe('buildDiagnosticsModel', () => {

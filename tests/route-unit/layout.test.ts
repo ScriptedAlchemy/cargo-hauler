@@ -6,8 +6,8 @@ import { documentMetadata, withIsolatedStateDir } from './support.js';
 
 /**
  * The hauler shell (`src/layout.tsx`) composes around every rendered route:
- * daemon badge on top, the route's own document unchanged in the middle,
- * lineage footer at the bottom, and `_meta.hauler` on the wire. These tests
+ * the route's own document unchanged, lineage footer at the bottom, and
+ * `_meta.hauler` on the wire. These tests
  * pin that contract at the route-unit, cli-dispatch, and mcp-in-memory levels.
  */
 describe('hauler shell layout', () => {
@@ -48,7 +48,7 @@ describe('hauler shell layout', () => {
     });
   });
 
-  it('renders honestly with the daemon provider absent: no badge, unmounted in _meta', async () => {
+  it('does not claim daemon state when the provider is absent', async () => {
     await withIsolatedStateDir(async () => {
       const rendered = await renderRoute('tool:hauler/hauler_log', {
         // An explicit map mounts verbatim; the conventional provider does not run.
@@ -56,7 +56,8 @@ describe('hauler shell layout', () => {
         input: { limit: 1 },
       });
       expect(JSON.stringify(rendered.document.root)).not.toContain('cargo-hauler · daemon');
-      expect(documentMetadata(rendered.document)).toMatchObject({ hauler: { daemon: { state: 'unmounted' } } });
+      expect(documentMetadata(rendered.document)).toMatchObject({ hauler: { lineage: null } });
+      expect(documentMetadata(rendered.document)).not.toHaveProperty('hauler.daemon');
       expect(rendered.result).toMatchObject({ operation: 'log', requests: [] });
     });
   });
@@ -67,15 +68,15 @@ describe('hauler shell layout', () => {
       expect(result.isError).toBe(false);
       expect(result._meta).toMatchObject({
         hauler: {
-          daemon: { state: 'stopped' },
           route: 'tool:hauler/hauler_status',
           server: 'mcp:hauler',
           surface: 'tool',
         },
       });
+      expect(result._meta).not.toHaveProperty('hauler.daemon');
       expect(result.structuredContent).toMatchObject({ daemon: 'stopped', operation: 'status' });
       const text = result.content.map((block) => ('text' in block ? block.text : '')).join('\n');
-      expect(text).toContain('cargo-hauler · daemon stopped');
+      expect(text).not.toContain('cargo-hauler · daemon stopped');
     });
   });
 
@@ -83,7 +84,7 @@ describe('hauler shell layout', () => {
     await withIsolatedStateDir(async () => {
       const markdown = await invokeCli(['status']);
       expect(markdown.exitCode).toBe(0);
-      expect(markdown.stdout).toContain('cargo-hauler · daemon stopped');
+      expect(markdown.stdout).not.toContain('cargo-hauler · daemon stopped');
       expect(markdown.stdout).toContain('Dashboard: ui://cargo-hauler/dashboard.html');
 
       const json = await invokeCli(['status', '--json']);

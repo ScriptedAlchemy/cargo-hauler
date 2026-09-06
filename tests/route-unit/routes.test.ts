@@ -52,21 +52,16 @@ describe('route manifest', () => {
 
 describe('tool documents without a daemon', () => {
   it('renders status as a stopped daemon with nothing in flight, under the shell', async () => {
-    await withIsolatedStateDir(async (stateDir) => {
+    await withIsolatedStateDir(async () => {
       const rendered = await renderRoute('tool:hauler/hauler_status', { input: {} });
       expectDocument(rendered)
         .toHaveStatus('success')
-        .toContainText('cargo-hauler · daemon stopped · no socket')
-        // The resolved state dir rides the header, so a reader who memorised
-        // another path notices the move (#75).
-        .toContainText(`state dir ${stateDir}`)
         .toContainText('daemon is not running')
         .toContainText('Nothing queued or running.')
         .toContainContext('Dashboard: ui://cargo-hauler/dashboard.html');
       expect(rendered.result).toMatchObject({ active: [], daemon: 'stopped', operation: 'status' });
       expect(documentMetadata(rendered.document)).toMatchObject({
         hauler: {
-          daemon: { state: 'stopped' },
           lineage: null,
           route: 'tool:hauler/hauler_status',
           server: 'mcp:hauler',
@@ -133,8 +128,11 @@ describe('tool documents against a live daemon', () => {
         yield* Effect.promise(async () => {
           const daemon = await withDaemon(fixture.config);
           const submitted = await renderRoute('tool:hauler/hauler_request', {
-            ...daemon,
-            input: { argv: ['cargo', 'check', '-p', 'ws1'], cwd: fixture.ws1, host: 'test', session: 's-1' },
+            context: {
+              ...daemon.context,
+              workspace: { source: 'native', state: 'available', value: { root: fixture.ws1 } },
+            },
+            input: { argv: ['cargo', 'check', '-p', 'ws1'], host: 'test', session: 's-1' },
           });
           // Identical request while the first runs: the broker attaches it,
           // and the document still hands the agent a ticket to wait on.
@@ -157,11 +155,9 @@ describe('tool documents against a live daemon', () => {
           expect(statusValue.daemon).toBe('running');
           expect([...statusValue.active.map((record) => record.ticket)]).toContain(ticket);
           expectDocument(status)
-            .toContainText('cargo-hauler · daemon running (pid')
             .toContainMarkdown('In flight')
             .toContainMarkdown('### Lanes')
             .toContainContext('Do not start a duplicate');
-          expect(documentMetadata(status.document)).toMatchObject({ hauler: { daemon: { state: 'running' } } });
 
           const awaited = await renderRouteEvents('tool:hauler/hauler_await', {
             ...daemon,

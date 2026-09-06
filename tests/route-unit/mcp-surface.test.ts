@@ -2,7 +2,6 @@ import { describe, expect, it } from 'effect-rstest';
 import { invokeMcpTool, listMcpSurface, openInMemoryMcpServer } from 'agent-bundle/test';
 import * as Effect from 'effect/Effect';
 
-import { APP_RESOURCE_URI } from '../../src/constants.js';
 import { scopedDaemon } from '../harness.js';
 
 import { withIsolatedStateDir, withStateDir } from './support.js';
@@ -35,7 +34,9 @@ describe('hauler MCP surface', () => {
       try {
         const listed = await session.client.listTools();
         const status = listed.tools.find((tool) => tool.name === 'hauler_status');
-        expect(status?._meta).toMatchObject({ ui: { resourceUri: APP_RESOURCE_URI } });
+        expect(status?._meta).toMatchObject({
+          ui: { resourceUri: 'ui://cargo-hauler/dashboard.html' },
+        });
         expect(status?.annotations).toMatchObject({ readOnlyHint: true });
         // Every hauler result is an object, so every tool advertises its outputSchema.
         expect(listed.tools.every((tool) => tool.outputSchema !== undefined)).toBe(true);
@@ -86,7 +87,9 @@ describe('hauler MCP surface', () => {
             };
             expect(value.ticket).toMatch(/^cc-\d+$/u);
             expect(value.attribution).toMatchObject({ session: 'mcp-1' });
-            expect(submitted._meta).toMatchObject({ hauler: { daemon: { state: 'running' }, route: 'tool:hauler/hauler_request' } });
+            expect(submitted._meta).toMatchObject({
+              hauler: { route: 'tool:hauler/hauler_request' },
+            });
 
             const status = await session.client.callTool({ arguments: { session: 'mcp-1' }, name: 'hauler_status' });
             const statusValue = status.structuredContent as {

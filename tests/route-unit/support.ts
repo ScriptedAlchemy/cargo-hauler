@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import type { AgentDocument, JsonValue } from '@agent-bundle/runtime';
 
 import type { DaemonConfigShape } from '../../src/daemon/config.js';
-import { probeDaemonHealth } from '../../src/lib/daemon-health.js';
 import type { HaulerDaemonContext } from '../../src/providers/hauler-daemon.js';
 
 /**
@@ -47,16 +46,14 @@ export const withStateDir = async <A>(stateDir: string, body: () => Promise<A>):
   }
 };
 
-/** The provider value the artifact would mount for this config, probed live. */
-export const haulerDaemonFor = async (config: DaemonConfigShape): Promise<HaulerDaemonContext> => ({
+/** The provider value the artifact would mount for this config. */
+export const haulerDaemonFor = (config: DaemonConfigShape): HaulerDaemonContext => ({
   config,
-  health: await probeDaemonHealth(config),
-  probedAt: new Date().toISOString(),
 });
 
 /** Harness options mounting an explicit `haulerDaemon` provider (no conventional provider runs). */
-export const withDaemon = async (config: DaemonConfigShape) => ({
-  context: { providers: { haulerDaemon: await haulerDaemonFor(config) } },
+export const withDaemon = (config: DaemonConfigShape) => ({
+  context: { providers: { haulerDaemon: haulerDaemonFor(config) } },
 });
 
 /** The root `Agent.Result` metadata — what the MCP projector emits as `_meta`. */
