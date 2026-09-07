@@ -586,9 +586,9 @@ pnpm install
 pnpm run build      # artifact/ (one root, every host) + dist/bin
 ```
 
-Then install with either method above from `artifact/`, and run
-`hauler install-shim` from the globally installed CLI for the PATH shim.
-Building needs the
+Then run `node dist/bin/cargo-hauler-install.js install <host>` or use the
+direct host commands above from `artifact/`, and run `hauler install-shim`
+from the globally installed CLI for the PATH shim. Building needs the
 repository's dev dependencies (including the agent-bundle framework, pinned as
 a pkg.pr.new preview until it is on npm); using the published package does
 not.
@@ -911,7 +911,7 @@ ships no preview harness of its own.
 
 agent-bundle does not yet have an npm release; this repository pins the
 [pkg.pr.new](https://pkg.pr.new) preview of main commit
-[`b435f7b91`](https://github.com/ScriptedAlchemy/agent-bundle/commit/b435f7b9179271cbff81d3e40d14ee342cbd65dd)
+[`78b966a8`](https://github.com/ScriptedAlchemy/agent-bundle/commit/78b966a8d1fe37134d6e2c77dd96adacd0624316)
 for both `agent-bundle` and `@agent-bundle/runtime`. `inspect` reports the
 `agent` component kind as unavailable on every host (agent-bundle G5
 deferral); this plugin defines no agents.
