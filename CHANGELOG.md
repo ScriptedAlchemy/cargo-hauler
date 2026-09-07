@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.16
+
+### Patch Changes
+
+- dded7d3: Adopt the Agent Bundle opaque-origin App client so Codex can connect to the cargo-hauler dashboard. (#164)
+- 5765610: Keep dashboard payload handling synchronized with generated Agent Bundle route result types. (#165)
+- cb5b4dd: Delegate `cargo-hauler-install` to `agent-bundle/install`, publish the plugin root at `dist/`, and replace `install --plan` with `doctor --host` or `uninstall --plan`. (#160)
+
 ## 0.6.15
 
 ### Patch Changes
