@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -70,7 +70,7 @@ describe('relocated read-only semantic hook binding (#168)', () => {
           const native = host === 'claude' ? output.hookSpecificOutput : output;
           const updated = host === 'claude' ? native.updatedInput : native.updated_input;
           expect(host === 'claude' ? native.permissionDecision : native.permission).toBe('allow');
-          expect(updated.command).toContain(`'${join(moved, 'scripts/hauler.mjs')}'`);
+          expect(updated.command).toContain(`'${join(realpathSync(moved), 'scripts/hauler.mjs')}'`);
           expect(updated.command).toContain(`-- ${command}`);
           expect(updated.command).not.toContain('/wrong-native-alias');
           expect(updated.command.startsWith('hauler ')).toBe(false);
