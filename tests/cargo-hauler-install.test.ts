@@ -1,4 +1,13 @@
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -7,7 +16,6 @@ import { describe, expect, it } from 'effect-rstest';
 
 import {
   defaultArtifactRoot,
-  restoreManifestModes,
   runInstallCli,
 } from '../src/cargo-hauler-install.js';
 
@@ -23,6 +31,40 @@ const withArtifact = async (
   } finally {
     rmSync(artifactRoot, { force: true, recursive: true });
   }
+};
+
+const unsafeManifestCandidate = (
+  pathKind: 'escaping' | 'symlinked-ancestor',
+): { readonly artifactRoot: string; readonly cleanup: () => void; readonly sentinel: string } => {
+  const root = mkdtempSync(join(tmpdir(), 'hauler-install-untrusted-'));
+  const artifactRoot = join(root, 'candidate');
+  const outside = join(root, 'outside');
+  mkdirSync(artifactRoot);
+  mkdirSync(outside);
+  const sentinel = join(outside, 'sentinel');
+  writeFileSync(sentinel, 'outside\n');
+  chmodSync(sentinel, 0o644);
+  if (pathKind === 'symlinked-ancestor') {
+    symlinkSync(outside, join(artifactRoot, 'linked'), 'dir');
+  }
+  // Deliberately incomplete: Agent Bundle must reject it before either untrusted path is followed.
+  writeFileSync(join(artifactRoot, 'agent-bundle.manifest.json'), JSON.stringify({
+    application: { id: 'cargo-hauler', name: 'cargo-hauler', version: '0.6.14' },
+    files: [{
+      mode: 0o600,
+      path: pathKind === 'escaping' ? '../outside/sentinel' : 'linked/sentinel',
+    }],
+  }));
+  chmodSync(join(artifactRoot, 'agent-bundle.manifest.json'), 0o444);
+  chmodSync(artifactRoot, 0o555);
+  return {
+    artifactRoot,
+    cleanup: () => {
+      chmodSync(artifactRoot, 0o755);
+      rmSync(root, { force: true, recursive: true });
+    },
+    sentinel,
+  };
 };
 
 describe('cargo-hauler-install', () => {
@@ -86,38 +128,36 @@ describe('cargo-hauler-install', () => {
     }
   });
 
-  it('restores npm-stripped executable bits from the manifest', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'hauler-install-modes-'));
-    try {
-      const path = join(root, 'tool.sh');
-      writeFileSync(path, '#!/bin/sh\n');
-      chmodSync(path, 0o644);
-      writeFileSync(join(root, 'agent-bundle.manifest.json'), JSON.stringify({
-        files: [{ mode: 0o755, path: 'tool.sh' }],
-      }));
-      expect(await restoreManifestModes(root)).toBe(1);
-      expect(statSync(path).mode & 0o777).toBe(0o755);
-    } finally {
-      rmSync(root, { force: true, recursive: true });
-    }
-  });
-
-  it('does not restore modes for uninstall --plan', async () => {
-    await withArtifact(async (artifactRoot) => {
-      const path = join(artifactRoot, 'tool.sh');
-      writeFileSync(path, '#!/bin/sh\n');
-      chmodSync(path, 0o644);
-      writeFileSync(join(artifactRoot, 'agent-bundle.manifest.json'), JSON.stringify({
-        application: { id: 'cargo-hauler', name: 'cargo-hauler', version: '0.6.11' },
-        files: [{ mode: 0o755, path: 'tool.sh' }],
-      }));
-      await runInstallCli({
-        artifactRoot,
-        argv: ['uninstall', 'claude', '--plan'],
-        write: () => undefined,
-        writeStderr: () => undefined,
-      });
-      expect(statSync(path).mode & 0o777).toBe(0o644);
-    });
-  });
+  it.each([
+    ['install', 'escaping', ['install', 'cursor']],
+    ['install', 'symlinked-ancestor', ['install', 'cursor']],
+    ['plan', 'escaping', ['uninstall', 'cursor', '--plan']],
+    ['plan', 'symlinked-ancestor', ['uninstall', 'cursor', '--plan']],
+    ['uninstall', 'escaping', ['uninstall', 'cursor']],
+    ['uninstall', 'symlinked-ancestor', ['uninstall', 'cursor']],
+  ] as const)(
+    'rejects an invalid candidate without pre-validation mutation during %s: %s path entry',
+    async (_operation, pathKind, argv) => {
+      const fixture = unsafeManifestCandidate(pathKind);
+      let stderr = '';
+      try {
+        const content = readFileSync(fixture.sentinel, 'utf8');
+        const mode = statSync(fixture.sentinel).mode & 0o777;
+        const code = await runInstallCli({
+          artifactRoot: fixture.artifactRoot,
+          argv,
+          write: () => undefined,
+          writeStderr: (value) => {
+            stderr += value;
+          },
+        });
+        expect(code).toBe(1);
+        expect(stderr).toContain('AB7001');
+        expect(readFileSync(fixture.sentinel, 'utf8')).toBe(content);
+        expect(statSync(fixture.sentinel).mode & 0o777).toBe(mode);
+      } finally {
+        fixture.cleanup();
+      }
+    },
+  );
 });
