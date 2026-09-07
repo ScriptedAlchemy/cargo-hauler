@@ -1,7 +1,7 @@
 # Installing cargo-hauler
 
 The npm package (`npm install -g cargo-hauler`) carries one ready-made plugin
-root, `artifact/`, that Claude Code, Codex, Cursor, and Agent Plugins hosts
+root, `dist/`, that Claude Code, Codex, Cursor, and Agent Plugins hosts
 all read (its `.claude-plugin/`, `.codex-plugin/`, `.cursor-plugin/`, and
 `.agents/` manifests point at one set of files) — plus three executables in
 `dist/bin/`: `hauler` (the CLI), `cargo-hauler` (the routed commands), and
@@ -66,13 +66,14 @@ cargo-hauler-install install codex
 cargo-hauler-install install cursor --mode local
 ```
 
-Or the host commands directly, from `artifact/` (in the package or a
-checkout — its `INSTALL.md` repeats them with the compiled names):
+Or the host commands directly from `dist/` in the npm package, or `artifact/`
+in a checkout. Each root's `INSTALL.md` repeats them with the compiled names:
 
 ```sh
-(cd artifact && claude plugin marketplace add ./ && claude plugin install cargo-hauler@cargo-hauler-marketplace --scope user)
-(cd artifact && codex plugin marketplace add ./  && codex plugin add cargo-hauler@cargo-hauler-marketplace)
-node artifact/install.mjs [--mode local|marketplace] [--replace]
+PLUGIN_ROOT="$(npm root -g)/cargo-hauler/dist" # use PLUGIN_ROOT=artifact in a checkout
+(cd "$PLUGIN_ROOT" && claude plugin marketplace add ./ && claude plugin install cargo-hauler@cargo-hauler-marketplace --scope user)
+(cd "$PLUGIN_ROOT" && codex plugin marketplace add ./  && codex plugin add cargo-hauler@cargo-hauler-marketplace)
+node "$PLUGIN_ROOT/install.mjs" [--mode local|marketplace] [--replace]
 ```
 
 - `--replace` (alias `--force`) on `cargo-hauler-install` and on the Cursor
@@ -82,9 +83,9 @@ node artifact/install.mjs [--mode local|marketplace] [--replace]
   same-version rebuild needs `claude plugin uninstall … --keep-data` then a
   fresh install; Codex needs `codex plugin remove …` then `marketplace add` +
   `plugin add`. The installer performs these sequences itself.
-- `cargo-hauler-install install <host> --plan` prints the artifact identity
-  and destination host without changing anything. `--json` prints the outcome
-  (`installed`, `replaced`, `planned`, `current`, `refused`) for scripts.
+- `cargo-hauler-install doctor --host <host>` reports the real installed
+  status without changing anything. `cargo-hauler-install uninstall <host>
+  --plan` reports the exact receipt-owned removals. Both accept `--json`;
   `npm install` itself never mutates a host.
 - Contributors with the framework available can also use
   `pnpm exec agent-bundle install <host> --from artifact` and

@@ -1,29 +1,34 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
-import { describe, expect, it } from 'effect-rstest';
+import { afterAll, beforeAll, describe, expect, it } from 'effect-rstest';
 import { openInstalledHostMcpServer, testManifest } from 'agent-bundle/test';
 
 /**
- * Host-install proof: the packed installer (`dist/bin/cargo-hauler-install.js
- * install <host> --replace`) places the one composite `artifact/` root into an
- * isolated home for each host, the framework discovers the installed MCP
- * command from that host's own layout and runs it as a real process, and the
- * installed root's own `bin/cargo-hauler.mjs web` serves the dashboard App on a
- * loopback origin. Claude and Codex install through their CLIs, so those
- * lanes run only where the binary is on PATH (CI has neither).
+ * Host-install proof from the actual npm shape: pack a source staging copy,
+ * install it without dev dependencies, delete that source, and drive the
+ * package-bound installer from another cwd.
  */
 const projectRoot = resolve(import.meta.dirname, '../..');
-const artifactRoot = join(projectRoot, 'artifact');
-const installer = join(projectRoot, 'dist', 'bin', 'cargo-hauler-install.js');
+const agentBundleImport = /(?:\bfrom\s*|\bimport\s*\(\s*)['"]agent-bundle(?:\/[^'"]*)?['"]/u;
 
 type Host = 'claude' | 'codex' | 'cursor';
 
 const hasBinary = (name: string): boolean => spawnSync(name, ['--version'], { stdio: 'ignore' }).status === 0;
 
-/** An isolated home the host CLIs and the installer write into, with the daemon state beside it. */
 const isolatedHome = (host: Host): { readonly env: Record<string, string>; readonly home: string } => {
   const home = mkdtempSync(join(tmpdir(), `hauler-install-${host}-`));
   mkdirSync(join(home, `.${host}`), { recursive: true });
@@ -43,7 +48,6 @@ const isolatedHome = (host: Host): { readonly env: Record<string, string>; reado
   return { env, home };
 };
 
-/** Where each host keeps the installed plugin root the installer just placed. */
 const installedRootFor = (host: Host, home: string, version: string): string => {
   switch (host) {
     case 'claude':
@@ -65,7 +69,6 @@ interface WebReady {
   readonly url: string;
 }
 
-/** `bin/cargo-hauler.mjs web --json --no-open` from the installed root: the ready line, then the host page. */
 const serveWeb = async (installedRoot: string, env: Record<string, string>): Promise<{ readonly ready: WebReady; readonly status: number }> => {
   const child = spawn(process.execPath, [join(installedRoot, 'bin', 'cargo-hauler.mjs'), 'web', '--json', '--no-open'], {
     env,
@@ -94,29 +97,141 @@ const serveWeb = async (installedRoot: string, env: Record<string, string>): Pro
   }
 };
 
+interface Invocation {
+  readonly status: number | null;
+  readonly stderr: string;
+  readonly stdout: string;
+}
+
+let consumer = '';
+let fixtureRoot = '';
+let installer = '';
+let packageRoot = '';
+let pluginRoot = '';
+let sourceRoot = '';
+
+const setTreeWritable = (root: string, writable: boolean): void => {
+  for (const entry of readdirSync(root)) {
+    const path = join(root, entry);
+    const metadata = lstatSync(path);
+    if (metadata.isSymbolicLink()) continue;
+    if (metadata.isDirectory()) setTreeWritable(path, writable);
+    chmodSync(path, writable ? metadata.mode | 0o200 : metadata.mode & ~0o222);
+  }
+  const metadata = lstatSync(root);
+  chmodSync(root, writable ? metadata.mode | 0o200 : metadata.mode & ~0o222);
+};
+
+const runInstaller = (argv: readonly string[], env: Record<string, string> = process.env as Record<string, string>): Invocation => {
+  const result = spawnSync(process.execPath, [installer, ...argv], {
+    cwd: consumer,
+    encoding: 'utf8',
+    env,
+  });
+  return { status: result.status, stderr: result.stderr, stdout: result.stdout };
+};
+
+beforeAll(() => {
+  fixtureRoot = mkdtempSync(join(tmpdir(), 'hauler-packed-install-'));
+  sourceRoot = join(fixtureRoot, 'source');
+  const tarballs = join(fixtureRoot, 'tarballs');
+  consumer = join(fixtureRoot, 'consumer');
+  mkdirSync(sourceRoot);
+  mkdirSync(tarballs);
+  mkdirSync(consumer);
+  const packageJson = JSON.parse(readFileSync(join(projectRoot, 'package.json'), 'utf8')) as {
+    readonly files: readonly string[];
+  };
+  for (const relativePath of ['package.json', ...packageJson.files]) {
+    const source = join(projectRoot, relativePath);
+    if (!existsSync(source)) continue;
+    const destination = join(sourceRoot, relativePath);
+    mkdirSync(dirname(destination), { recursive: true });
+    cpSync(source, destination, { recursive: true });
+  }
+  const packed = spawnSync('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', tarballs], {
+    cwd: sourceRoot,
+    encoding: 'utf8',
+  });
+  expect(packed.status).toBe(0);
+  const output = JSON.parse(packed.stdout) as unknown;
+  const row = Array.isArray(output)
+    ? output[0]
+    : typeof output === 'object' && output !== null && !('filename' in output)
+      ? Object.values(output)[0]
+      : output;
+  if (typeof row !== 'object' || row === null || !('filename' in row) || typeof row.filename !== 'string') {
+    throw new TypeError(`npm pack returned no filename: ${packed.stdout}`);
+  }
+  const filename = row.filename;
+  writeFileSync(join(consumer, 'package.json'), '{"private":true}\n');
+  const installed = spawnSync(
+    'npm',
+    ['install', '--ignore-scripts', '--no-audit', '--no-fund', join(tarballs, filename)],
+    { cwd: consumer, encoding: 'utf8' },
+  );
+  expect(installed.status).toBe(0);
+  rmSync(sourceRoot, { force: true, recursive: true });
+  packageRoot = join(consumer, 'node_modules', 'cargo-hauler');
+  pluginRoot = join(packageRoot, 'dist');
+  installer = join(pluginRoot, 'bin', 'cargo-hauler-install.js');
+  setTreeWritable(packageRoot, false);
+}, 120_000);
+
+afterAll(() => {
+  if (packageRoot !== '' && existsSync(packageRoot)) setTreeWritable(packageRoot, true);
+  if (fixtureRoot !== '') rmSync(fixtureRoot, { force: true, recursive: true });
+});
+
 describe('packed install', () => {
+  it('ships one source-free generated root with the framework CLI bundled', () => {
+    expect(existsSync(sourceRoot)).toBe(false);
+    expect(existsSync(join(packageRoot, 'artifact'))).toBe(false);
+    expect(existsSync(join(consumer, 'node_modules', 'agent-bundle'))).toBe(false);
+    expect(readFileSync(installer, 'utf8')).not.toMatch(agentBundleImport);
+    expect(readFileSync(installer, 'utf8')).not.toContain('agent-bundle-src');
+    expect(lstatSync(packageRoot).mode & 0o222).toBe(0);
+    expect(lstatSync(join(pluginRoot, 'agent-bundle.manifest.json')).mode & 0o222).toBe(0);
+
+    const help = runInstaller(['--help']);
+    expect(help.status).toBe(0);
+    expect(help.stdout).toContain('Usage: cargo-hauler-install');
+    expect(help.stdout).toContain('doctor');
+    expect(help.stdout).not.toContain('--from');
+
+    const unselected = runInstaller(['install', 'amp']);
+    expect(unselected.status).toBe(2);
+    expect(unselected.stderr).toContain('Install host must be claude, codex, or cursor.');
+    const from = runInstaller(['install', 'cursor', '--from', projectRoot]);
+    expect(from.status).toBe(2);
+    expect(from.stderr).toContain("unknown option '--from'");
+    const approximatePlan = runInstaller(['install', 'cursor', '--plan']);
+    expect(approximatePlan.status).toBe(2);
+    expect(approximatePlan.stderr).toContain("unknown option '--plan'");
+  });
+
   const hosts: readonly Host[] = ['claude', 'codex', 'cursor'];
-  const available = (host: Host): boolean => existsSync(installer) && (host === 'cursor' || hasBinary(host));
 
   for (const host of hosts) {
-    it.skipIf(!available(host))(
-      `installs the composite root for ${host} with --replace, runs its MCP server, and serves the dashboard with web`,
+    it.skipIf(host !== 'cursor' && !hasBinary(host))(
+      `installs the packed root for ${host}, runs its MCP server, and serves the dashboard`,
       async () => {
         const { env, home } = isolatedHome(host);
         try {
-          const installed = spawnSync(process.execPath, [installer, 'install', host, '--replace', '--json'], {
-            encoding: 'utf8',
-            env,
-          });
+          const installed = runInstaller(['install', host, '--replace', '--json'], env);
           expect(installed.stderr).toBe('');
           expect(installed.status).toBe(0);
-          const receipt = JSON.parse(installed.stdout) as { readonly state: string; readonly version: string };
-          expect(receipt.state).toBe('installed');
+          const receipt = JSON.parse(installed.stdout) as {
+            readonly bundleRoot: string;
+            readonly state: string;
+            readonly version: string;
+          };
+          expect(receipt).toMatchObject({ bundleRoot: pluginRoot, state: 'installed' });
           const installedRoot = installedRootFor(host, home, receipt.version);
           expect(existsSync(join(installedRoot, 'agent-bundle.manifest.json'))).toBe(true);
 
           const session = await openInstalledHostMcpServer({
-            artifactRoot,
+            artifactRoot: pluginRoot,
             env,
             host,
             installedRoot,
@@ -152,4 +267,50 @@ describe('packed install', () => {
       120_000,
     );
   }
+
+  it('replaces, reports, plans, and uninstalls through the package-bound lifecycle', () => {
+    const { env, home } = isolatedHome('cursor');
+    try {
+      const first = runInstaller(['install', 'cursor', '--json'], env);
+      expect(first.status).toBe(0);
+      expect(first.stderr).toBe('');
+      const installed = JSON.parse(first.stdout) as { readonly destination: string; readonly state: string };
+      expect(installed).toMatchObject({ state: 'installed' });
+      const ownedFile = join(installed.destination, 'skills', 'cargo-hauler', 'SKILL.md');
+      chmodSync(ownedFile, lstatSync(ownedFile).mode | 0o200);
+      writeFileSync(ownedFile, 'edited\n');
+
+      const replacement = runInstaller(['install', 'cursor', '--json'], env);
+      expect(replacement.status).toBe(0);
+      expect(JSON.parse(replacement.stdout)).toMatchObject({ state: 'replaced' });
+      expect(readFileSync(ownedFile, 'utf8')).not.toBe('edited\n');
+
+      const doctor = runInstaller(['doctor', '--host', 'cursor', '--json'], env);
+      expect(doctor.status).toBe(0);
+      const report = JSON.parse(doctor.stdout) as {
+        readonly hosts: readonly {
+          readonly bundle?: { readonly comparison?: { readonly status: string } };
+          readonly host: string;
+        }[];
+      };
+      expect(report.hosts).toEqual([
+        expect.objectContaining({
+          bundle: expect.objectContaining({ comparison: expect.objectContaining({ status: 'current' }) }),
+          host: 'cursor',
+        }),
+      ]);
+
+      const plan = runInstaller(['uninstall', 'cursor', '--plan', '--json'], env);
+      expect(plan.status).toBe(0);
+      expect(JSON.parse(plan.stdout)).toMatchObject({ state: 'planned' });
+      expect(existsSync(installed.destination)).toBe(true);
+
+      const removed = runInstaller(['uninstall', 'cursor', '--json'], env);
+      expect(removed.status).toBe(0);
+      expect(JSON.parse(removed.stdout)).toMatchObject({ state: 'uninstalled' });
+      expect(existsSync(installed.destination)).toBe(false);
+    } finally {
+      rmSync(home, { force: true, recursive: true });
+    }
+  }, 120_000);
 });
