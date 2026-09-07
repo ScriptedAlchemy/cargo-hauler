@@ -4,6 +4,7 @@ import React from 'react';
 import { awaitCeilingMs, isOrphanedByRestart, type RequestRecord, type RequestStatus } from '../daemon/protocol.js';
 import { formatMs } from '../lib/format.js';
 
+import { failedPrerequisite } from './headlines.js';
 import type { SurfaceNames } from './surface.js';
 
 export interface TicketGuidanceProps {
@@ -29,11 +30,16 @@ const DoneGuidance: GuidanceComponent = ({ record }) => (
   <Agent.Context>{`${record.ticket} succeeded; its output above is the result of that cargo run.`}</Agent.Context>
 );
 
-const FailedGuidance: GuidanceComponent = ({ record }) => (
-  <Agent.Context>
-    {`${record.ticket} failed (exit ${record.exitCode ?? 'unknown'}). Fix the diagnostics above before re-running; the hauler dedupes identical requests, so an unchanged retry attaches to the same result.`}
-  </Agent.Context>
-);
+const FailedGuidance: GuidanceComponent = ({ record }) => {
+  const prerequisite = failedPrerequisite(record);
+  return (
+    <Agent.Context>
+      {prerequisite === null
+        ? `${record.ticket} failed (exit ${record.exitCode ?? 'unknown'}). Fix the diagnostics above before re-running; the hauler dedupes identical requests, so an unchanged retry attaches to the same result.`
+        : `${record.ticket} never ran: ${record.error} — fix or rerun ${prerequisite}, then resubmit (optionally --after the new ticket).`}
+    </Agent.Context>
+  );
+};
 
 const KilledGuidance: GuidanceComponent = ({ names, record }) => (
   <Agent.Context>
