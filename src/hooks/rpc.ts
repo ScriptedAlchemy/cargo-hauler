@@ -1,12 +1,13 @@
 import { spawn } from 'node:child_process';
 import { createConnection } from 'node:net';
+import { fileURLToPath } from 'node:url';
 
 import { version } from 'agent-bundle/meta';
 
 import { socketErrorCode } from '../lib/socket-errors.js';
 
 import { asFinishedTicket, type FinishedTicket } from './finished-ticket.js';
-import { resolveHaulerArgv, resolveHookSocketPath } from './paths.js';
+import { resolveHookSocketPath } from './paths.js';
 import { isRecord } from './shared.js';
 
 export type { FinishedTicket };
@@ -126,9 +127,13 @@ const requestOnce = (
     });
   });
 
-const replaceStaleDaemon = (): Promise<{ readonly detail: string; readonly replaced: boolean }> =>
-  new Promise((resolve) => {
-    const [command, ...args] = resolveHaulerArgv();
+const replaceStaleDaemon = async (): Promise<{ readonly detail: string; readonly replaced: boolean }> => {
+  // Keep the public runtime resolver off the normal lightweight preflight path.
+  const { resolveHaulerArgv } = await import('./hauler-binding.js');
+  const [command, ...args] = resolveHaulerArgv({
+    fallback: { root: fileURLToPath(new URL('..', import.meta.url)) },
+  });
+  return new Promise((resolve) => {
     const child = spawn(command, [...args, 'daemon', 'start'], {
       killSignal: 'SIGTERM',
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -151,6 +156,8 @@ const replaceStaleDaemon = (): Promise<{ readonly detail: string; readonly repla
       });
     });
   });
+
+};
 
 export interface RequestOutcomeDependencies {
   readonly replaceStaleDaemon: () => Promise<{
