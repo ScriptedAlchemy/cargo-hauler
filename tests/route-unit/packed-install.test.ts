@@ -8,6 +8,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -226,7 +227,7 @@ describe('packed install', () => {
             readonly state: string;
             readonly version: string;
           };
-          expect(receipt).toMatchObject({ bundleRoot: pluginRoot, state: 'installed' });
+          expect(receipt).toMatchObject({ bundleRoot: realpathSync(pluginRoot), state: 'installed' });
           const installedRoot = installedRootFor(host, home, receipt.version);
           expect(existsSync(join(installedRoot, 'agent-bundle.manifest.json'))).toBe(true);
 
