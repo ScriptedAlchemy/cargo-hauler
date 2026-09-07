@@ -49,10 +49,17 @@ describe('prerequisite failure guidance (#169)', () => {
     });
   }
 
+  it('reports a rider that attached without declaring the prerequisite', () => {
+    const entry = record({ after: [], attachedTo: 'cc-9420' });
+    expect(failedPrerequisite(entry)).toBe('cc-9395');
+    expect(guidanceText(entry, cliSurface)).toContain('cc-9421 never ran');
+    expect(ticketHeadline(entry, 3)).toContain('failed — never ran');
+  });
+
   const unrelated: readonly Partial<RequestRecord>[] = [
     { startedAtMs: 1 }, { exitCode: 101 }, { error: 'compile failed' },
     { error: 'prerequisite cc-9395 failed\nother text' }, { error: null },
-    { error: 'prerequisite cc-9395 done' }, { after: [], error: 'prerequisite cc-9395 failed' },
+    { error: 'prerequisite cc-9395 done' },
   ];
   for (const override of unrelated) {
     it(`keeps existing failed-run guidance for ${JSON.stringify(override)}`, () => {

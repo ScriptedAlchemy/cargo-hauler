@@ -36,7 +36,7 @@ const FailedGuidance: GuidanceComponent = ({ record }) => {
     <Agent.Context>
       {prerequisite === null
         ? `${record.ticket} failed (exit ${record.exitCode ?? 'unknown'}). Fix the diagnostics above before re-running; the hauler dedupes identical requests, so an unchanged retry attaches to the same result.`
-        : `${record.ticket} never ran: ${record.error} — fix or rerun ${prerequisite}, then resubmit (optionally --after the new ticket).`}
+        : `${record.ticket} never ran: ${record.error} — fix or rerun ${prerequisite}, then resubmit after the new ticket.`}
     </Agent.Context>
   );
 };
