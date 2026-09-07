@@ -1,3 +1,4 @@
+import type { AppRouteResult } from 'agent-bundle/app';
 import { Effect, Schedule, Stream, type Duration } from 'effect';
 
 import type {
@@ -134,62 +135,13 @@ export const pollStatus = <A, E, R>(
  */
 export const percentileMinSamples = 10;
 
-export const metricsWindowIds = ['hour', 'day', 'all'] as const;
-export type MetricsWindowId = (typeof metricsWindowIds)[number];
+type StatusResult = AppRouteResult<'tool:hauler/hauler_status'>;
+export type DashboardMetricsWindow = NonNullable<StatusResult['metrics']>['windows'][number];
+type DashboardPhaseSplit = NonNullable<DashboardMetricsWindow['bySubcommand'][number]['phases']>;
+export type MetricsWindowId = DashboardMetricsWindow['id'];
+
+export const metricsWindowIds = ['hour', 'day', 'all'] as const satisfies readonly MetricsWindowId[];
 export const defaultMetricsWindowId: MetricsWindowId = 'day';
-
-/** Compile vs execution phases of the leaders that handed their lane back (#92). */
-export interface DashboardPhaseSplit {
-  readonly count: number;
-  readonly compileP50Ms: number | null;
-  readonly executeP50Ms: number | null;
-  readonly compileTotalMs: number;
-  readonly executeTotalMs: number;
-}
-
-export interface DashboardMetricsWindowBySubcommand {
-  readonly subcommand: string;
-  readonly profile?: string;
-  readonly count: number;
-  readonly p50Ms: number | null;
-  readonly maxMs: number | null;
-  /** Null when no leader of this population carries the build-finished stamp (pure compiles never do). */
-  readonly phases: DashboardPhaseSplit | null;
-}
-
-/** Queue wait of the window's leaders attributed to its cause (#92). */
-export interface DashboardWaitSplit {
-  readonly count: number;
-  readonly laneBoundMs: number;
-  readonly permitBoundMs: number;
-  readonly otherMs: number;
-  readonly permits: number | null;
-}
-
-export interface DashboardHandBack {
-  readonly leaders: number;
-  readonly laneReleasedMs: number;
-}
-
-export interface DashboardMetricsWindow {
-  readonly id: MetricsWindowId;
-  readonly count: number;
-  readonly done: number;
-  readonly failed: number;
-  readonly killed: number;
-  readonly runP50Ms: number | null;
-  readonly runP95Ms: number | null;
-  readonly runMeanMs: number | null;
-  readonly waitP50Ms: number | null;
-  readonly waitP95Ms: number | null;
-  readonly bySubcommand: readonly DashboardMetricsWindowBySubcommand[];
-  /** Sum of leader run time in the window. */
-  readonly runTotalMs: number;
-  /** Sum of leader queue wait in the window. */
-  readonly waitTotalMs: number;
-  readonly waitSplit: DashboardWaitSplit;
-  readonly handBack: DashboardHandBack;
-}
 
 export interface PickedMetricsWindow {
   readonly id: MetricsWindowId;
