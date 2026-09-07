@@ -8,8 +8,8 @@
   binaries (`dist/bin/hauler.js`, `dist/bin/cargo-hauler.mjs`,
   `dist/bin/cargo-hauler-install.js`).
 - `pnpm run check` is the gate: validate, build, typecheck, Effect
-  diagnostics, `rstest`, and the route-unit suite. Run it before claiming a
-  change is done.
+  diagnostics, `rstest`, the route-unit suite, and browser App tests. Run it
+  before claiming a change is done.
 - The plugin surface is an agent-bundle application: `src/layout.tsx` (the
   shell), `src/providers/hauler-daemon.ts` (daemon connection), `src/components`
   (typed components over `view-models.ts`), `src/mcp/hauler/tools` and

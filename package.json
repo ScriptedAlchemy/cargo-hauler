@@ -40,7 +40,7 @@
   ],
   "scripts": {
     "build": "agent-bundle build",
-    "check": "pnpm validate && pnpm build && pnpm typecheck && pnpm diagnostics && pnpm test && pnpm test:routes",
+    "check": "pnpm validate && pnpm build && pnpm typecheck && pnpm diagnostics && pnpm test && pnpm test:routes && pnpm test:browser",
     "changeset": "changeset",
     "dev": "agent-bundle dev",
     "diagnostics": "effect-tsgo diagnostics --project tsconfig.json",
@@ -65,7 +65,6 @@
     "@modelcontextprotocol/server": "2.0.0",
     "@rstest/browser": "0.11.12",
     "@rstest/core": "0.11.12",
-    "@rstest/playwright": "0.11.12",
     "@types/node": "^22.18.0",
     "@types/proper-lockfile": "^4.1.4",
     "@types/react": "^19.2.18",

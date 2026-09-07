@@ -1487,7 +1487,7 @@ const Dashboard = ({ pushed }: { readonly pushed: PushedStatus | null }) => {
     pushed?._tag === 'Rejected' && (polled === null || pushed.receivedAt >= polled.timestamp)
       ? pushed.error
       : null;
-  const error = openingError ?? pollError;
+  const error = pollError ?? openingError;
   const latest =
     acceptedPush !== null && (polled === null || acceptedPush.receivedAt >= polled.timestamp)
       ? acceptedPush.value
