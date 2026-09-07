@@ -127,12 +127,13 @@ const requestOnce = (
     });
   });
 
-const replaceStaleDaemon = async (): Promise<{ readonly detail: string; readonly replaced: boolean }> => {
-  // Keep the public runtime resolver off the normal lightweight preflight path.
-  const { resolveHaulerArgv } = await import('./hauler-binding.js');
-  const [command, ...args] = resolveHaulerArgv({
-    fallback: { root: fileURLToPath(new URL('..', import.meta.url)) },
-  });
+const replaceStaleDaemon = (): Promise<{ readonly detail: string; readonly replaced: boolean }> => {
+  // This RPC runs from a generated artifact hook. Its declared companion
+  // script is code-relative, not state-relative or PATH-selected. Do not
+  // import the runtime root resolver here: preflight builds inline even a
+  // dynamic import and would pull the rendering runtime into the fast path.
+  const command = process.execPath;
+  const args = [fileURLToPath(new URL('../scripts/hauler.mjs', import.meta.url))];
   return new Promise((resolve) => {
     const child = spawn(command, [...args, 'daemon', 'start'], {
       killSignal: 'SIGTERM',
@@ -156,7 +157,6 @@ const replaceStaleDaemon = async (): Promise<{ readonly detail: string; readonly
       });
     });
   });
-
 };
 
 export interface RequestOutcomeDependencies {
