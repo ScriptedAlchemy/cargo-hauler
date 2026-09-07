@@ -910,8 +910,8 @@ Workbench's MCP page preview the same App with live rebuilds. The repository
 ships no preview harness of its own.
 
 agent-bundle does not yet have an npm release; this repository pins the
-[pkg.pr.new](https://pkg.pr.new) preview of main commit
-[`78b966a8`](https://github.com/ScriptedAlchemy/agent-bundle/commit/78b966a8d1fe37134d6e2c77dd96adacd0624316)
+[pkg.pr.new](https://pkg.pr.new) preview of Agent Bundle PR #733 commit
+[`5064133`](https://github.com/ScriptedAlchemy/agent-bundle/commit/506413326359bff154ce4476eb0f47b0dabf4efe)
 for both `agent-bundle` and `@agent-bundle/runtime`. `inspect` reports the
 `agent` component kind as unavailable on every host (agent-bundle G5
 deferral); this plugin defines no agents.
