@@ -1,10 +1,6 @@
+import type { AppRouteResult } from 'agent-bundle/app';
 import { Effect, Schedule, Stream, type Duration } from 'effect';
 
-import type {
-  KacheGcReport,
-  KacheStoreLimitReport,
-  KacheStorePressureReport,
-} from '../daemon/protocol.js';
 import { cargoJsonDemuxFlag, defaultCargoProfile, namedPackagesInArgv } from '../lib/argv.js';
 import { isRecord } from '../lib/guards.js';
 import {
@@ -134,62 +130,14 @@ export const pollStatus = <A, E, R>(
  */
 export const percentileMinSamples = 10;
 
-export const metricsWindowIds = ['hour', 'day', 'all'] as const;
-export type MetricsWindowId = (typeof metricsWindowIds)[number];
+type StatusResult = AppRouteResult<'tool:hauler/hauler_status'>;
+export type DashboardMetricsWindow = NonNullable<StatusResult['metrics']>['windows'][number];
+type DashboardPhaseSplit = NonNullable<DashboardMetricsWindow['bySubcommand'][number]['phases']>;
+export type DashboardKachePressure = NonNullable<NonNullable<StatusResult['kache']>['pressure']>;
+export type MetricsWindowId = DashboardMetricsWindow['id'];
+
+export const metricsWindowIds = ['hour', 'day', 'all'] as const satisfies readonly MetricsWindowId[];
 export const defaultMetricsWindowId: MetricsWindowId = 'day';
-
-/** Compile vs execution phases of the leaders that handed their lane back (#92). */
-export interface DashboardPhaseSplit {
-  readonly count: number;
-  readonly compileP50Ms: number | null;
-  readonly executeP50Ms: number | null;
-  readonly compileTotalMs: number;
-  readonly executeTotalMs: number;
-}
-
-export interface DashboardMetricsWindowBySubcommand {
-  readonly subcommand: string;
-  readonly profile?: string;
-  readonly count: number;
-  readonly p50Ms: number | null;
-  readonly maxMs: number | null;
-  /** Null when no leader of this population carries the build-finished stamp (pure compiles never do). */
-  readonly phases: DashboardPhaseSplit | null;
-}
-
-/** Queue wait of the window's leaders attributed to its cause (#92). */
-export interface DashboardWaitSplit {
-  readonly count: number;
-  readonly laneBoundMs: number;
-  readonly permitBoundMs: number;
-  readonly otherMs: number;
-  readonly permits: number | null;
-}
-
-export interface DashboardHandBack {
-  readonly leaders: number;
-  readonly laneReleasedMs: number;
-}
-
-export interface DashboardMetricsWindow {
-  readonly id: MetricsWindowId;
-  readonly count: number;
-  readonly done: number;
-  readonly failed: number;
-  readonly killed: number;
-  readonly runP50Ms: number | null;
-  readonly runP95Ms: number | null;
-  readonly runMeanMs: number | null;
-  readonly waitP50Ms: number | null;
-  readonly waitP95Ms: number | null;
-  readonly bySubcommand: readonly DashboardMetricsWindowBySubcommand[];
-  /** Sum of leader run time in the window. */
-  readonly runTotalMs: number;
-  /** Sum of leader queue wait in the window. */
-  readonly waitTotalMs: number;
-  readonly waitSplit: DashboardWaitSplit;
-  readonly handBack: DashboardHandBack;
-}
 
 export interface PickedMetricsWindow {
   readonly id: MetricsWindowId;
@@ -391,94 +339,11 @@ export const handBackView = (window: DashboardMetricsWindow | null): HandBackVie
 // ---------------------------------------------------------------------------
 // Kache store pressure (#92)
 
-const finiteOrNull = (value: unknown): number | null =>
-  typeof value === 'number' && Number.isFinite(value) ? value : null;
-
-const asKacheStoreLimit = (value: unknown): KacheStoreLimitReport | null => {
-  if (!isRecord(value)) {
-    return null;
-  }
-  if (value.kind === 'known') {
-    return typeof value.bytes === 'number' && typeof value.source === 'string'
-      ? { bytes: value.bytes, kind: 'known', source: value.source }
-      : null;
-  }
-  if (value.kind === 'unknown') {
-    const reason = value.reason;
-    if (
-      reason === 'config-missing' ||
-      reason === 'not-configured' ||
-      reason === 'unparsable' ||
-      reason === 'store-mismatch'
-    ) {
-      return { detail: typeof value.detail === 'string' ? value.detail : '', kind: 'unknown', reason };
-    }
-  }
-  return null;
-};
-
-const asKacheGc = (value: unknown): KacheGcReport | null => {
-  if (!isRecord(value)) {
-    return null;
-  }
-  if (value.kind === 'unavailable') {
-    return value.reason === 'missing' || value.reason === 'unparsable'
-      ? { kind: 'unavailable', reason: value.reason }
-      : null;
-  }
-  if (value.kind === 'ran' && typeof value.lastRunAtMs === 'number') {
-    return {
-      kind: 'ran',
-      lastRunAtMs: value.lastRunAtMs,
-      durationMs: finiteOrNull(value.durationMs),
-      entriesEvicted: finiteOrNull(value.entriesEvicted),
-      bytesFreed: finiteOrNull(value.bytesFreed),
-      diskBytesReclaimed: finiteOrNull(value.diskBytesReclaimed),
-      blobsRemoved: finiteOrNull(value.blobsRemoved),
-      declined: value.declined === true,
-      entriesPinned: finiteOrNull(value.entriesPinned),
-      entriesUnreclaimable: finiteOrNull(value.entriesUnreclaimable),
-      evictionErrors: finiteOrNull(value.evictionErrors),
-      evictionErrorSample:
-        typeof value.evictionErrorSample === 'string' ? value.evictionErrorSample : null,
-    };
-  }
-  return null;
-};
-
-/**
- * The daemon's `kache.pressure` report from the untyped status payload the
- * widget receives; null when absent or not the shape the protocol promises,
- * so the panel can say so instead of inventing zeros.
- */
-export const asKachePressure = (value: unknown): KacheStorePressureReport | null => {
-  if (!isRecord(value)) {
-    return null;
-  }
-  const limit = asKacheStoreLimit(value.limit);
-  const gc = asKacheGc(value.gc);
-  if (limit === null || gc === null) {
-    return null;
-  }
-  const timing = value.keyTiming;
-  const keyTiming =
-    isRecord(timing) &&
-    typeof timing.count === 'number' &&
-    typeof timing.meanMs === 'number' &&
-    typeof timing.p95Ms === 'number'
-      ? { count: timing.count, meanMs: timing.meanMs, p95Ms: timing.p95Ms }
-      : null;
-  return { gc, keyTiming, limit, storeBytes: finiteOrNull(value.storeBytes) };
-};
-
-/**
- * The kache panel's pressure block from the untyped status payload; null when
- * the payload carried no report of the promised shape.
- */
-export const kachePressureView = (value: unknown, nowMs: number): KachePressureModel | null => {
-  const pressure = asKachePressure(value);
-  return pressure === null ? null : kachePressureModel(pressure, nowMs);
-};
+export const kachePressureView = (
+  pressure: DashboardKachePressure | null | undefined,
+  nowMs: number,
+): KachePressureModel | null =>
+  pressure == null ? null : kachePressureModel(pressure, nowMs);
 
 export const frequencyEntries = (
   record: Readonly<Record<string, unknown>> | undefined,

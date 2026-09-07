@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import { RegistryProvider, useAtomRefresh, useAtomSet, useAtomValue } from '@effect/atom-react';
 import type { AppRouteConfig } from 'agent-bundle';
-import { createAppClient } from 'agent-bundle/app';
+import { createAppClient, type AppRouteResult } from 'agent-bundle/app';
 import { version as dashboardVersion } from 'agent-bundle/meta';
 import { Cause, Data, Effect, Option } from 'effect';
 import { AsyncResult, Atom } from 'effect/unstable/reactivity';
@@ -56,12 +56,7 @@ import {
   summaryFirstLine,
   terminalStatuses,
   ticketDetailFrom,
-  type DashboardHandBack,
-  type DashboardMetricsWindow,
-  type DashboardPhaseSplit,
   type DashboardSection,
-  type DashboardMetricsWindowBySubcommand,
-  type DashboardWaitSplit,
   type KachePressureModel,
   type MetricsWindowId,
   type StatusPoll,
@@ -70,6 +65,7 @@ import {
   waitMetricsView,
   waitVsRunView,
 } from '../../../dashboard/lib.js';
+import { statusResultSchema } from '../../../lib/protocol-schemas.js';
 
 /**
  * Framework App-route metadata. The compiler extracts it without evaluating
@@ -83,158 +79,23 @@ export const config = {
   template: './dashboard.html',
 } satisfies AppRouteConfig;
 
-interface SystemLoadShape {
-  readonly loadAvg1?: unknown;
-  readonly cores?: unknown;
-  readonly clampThresholdPerCore?: unknown;
-  readonly ioWaitPercent?: unknown;
-  readonly disks?: unknown;
-  readonly memAvailableBytes?: unknown;
-  readonly memClamp?: unknown;
-  readonly memFullAvg10?: unknown;
-  readonly memPressureLevel?: unknown;
-  readonly memSomeAvg10?: unknown;
-  readonly heavy?: unknown;
-}
+export type DashboardStatusResult = AppRouteResult<'tool:hauler/hauler_status'>;
+export type DashboardRequestRow = DashboardStatusResult['active'][number];
+type TicketResult = AppRouteResult<'tool:hauler/hauler_result'>;
+type SystemLoad = NonNullable<DashboardStatusResult['system']>;
+type StatusMetrics = NonNullable<DashboardStatusResult['metrics']>;
+type Savings = NonNullable<DashboardStatusResult['savings']>;
+type Kache = NonNullable<DashboardStatusResult['kache']>;
+type KacheRootRow = Kache['recentHeartbeatRoots'][number];
+type KacheTopCrateRow = Kache['topCrates'][number];
 
-interface DiskUtilShape {
-  readonly device?: unknown;
-  readonly utilPercent?: unknown;
-}
-
-interface StructuredContent {
-  readonly summary?: unknown;
-  readonly daemon?: unknown;
-  readonly pid?: unknown;
-  readonly maxConcurrent?: unknown;
-  readonly lanes?: unknown;
-  readonly active?: unknown;
-  readonly recent?: unknown;
-  readonly operation?: unknown;
-  readonly request?: unknown;
-  readonly structuredContent?: unknown;
-  readonly metrics?: unknown;
-  readonly savings?: unknown;
-  readonly system?: unknown;
-  readonly kache?: unknown;
-}
-
-/** The two `metrics` fields the widget reads; the ledger windows carry every timing it shows. */
-interface StatusMetricsShape {
-  readonly attach_mode?: Readonly<Record<string, unknown>>;
-  readonly windows?: unknown;
-}
-
-interface StatusMetricsWindowBySubcommandShape {
-  readonly subcommand?: unknown;
-  readonly profile?: unknown;
-  readonly count?: unknown;
-  readonly p50Ms?: unknown;
-  readonly maxMs?: unknown;
-  readonly phases?: unknown;
-}
-
-interface StatusMetricsWindowShape {
-  readonly id?: unknown;
-  readonly count?: unknown;
-  readonly done?: unknown;
-  readonly failed?: unknown;
-  readonly killed?: unknown;
-  readonly runP50Ms?: unknown;
-  readonly runP95Ms?: unknown;
-  readonly runMeanMs?: unknown;
-  readonly waitP50Ms?: unknown;
-  readonly waitP95Ms?: unknown;
-  readonly bySubcommand?: unknown;
-  readonly runTotalMs?: unknown;
-  readonly waitTotalMs?: unknown;
-  readonly waitSplit?: unknown;
-  readonly handBack?: unknown;
-}
-
-interface SavingsModeShape {
-  readonly mode?: unknown;
-  readonly ridersServed?: unknown;
-}
-
-interface SavingsTotalsShape {
-  readonly ridersServed?: unknown;
-  readonly savedComputeMs?: unknown;
-  readonly savedComputeExactMs?: unknown;
-  readonly savedComputeEstimatedMs?: unknown;
-  readonly savedLatencyMs?: unknown;
-  readonly negativeLatencyRiders?: unknown;
-}
-
-interface SavingsShape {
-  readonly byMode?: unknown;
-  readonly totals?: SavingsTotalsShape;
-}
-
-interface RequestRow {
-  readonly ticket?: unknown;
-  readonly status?: unknown;
-  readonly session?: unknown;
-  readonly host?: unknown;
-  readonly argv?: unknown;
-  readonly execArgv?: unknown;
-  readonly attachedTo?: unknown;
-  readonly attachMode?: unknown;
-  readonly waitMs?: unknown;
-  readonly runMs?: unknown;
-  readonly createdAtMs?: unknown;
-  readonly startedAtMs?: unknown;
-  readonly estimateMs?: unknown;
-  readonly delayed?: unknown;
-  readonly queue?: unknown;
-  readonly admissionHold?: unknown;
-  readonly quietMs?: unknown;
-  readonly stall?: unknown;
-  readonly workspaceRoot?: unknown;
-  readonly intentJson?: unknown;
-  readonly errorCount?: unknown;
-  readonly warningCount?: unknown;
-  /** A running row's bounded live-output preview; null on every other row (#95). */
-  readonly outputPreview?: unknown;
-}
-
-interface LaneRow {
-  readonly workspaceRoot?: unknown;
-  readonly queued?: unknown;
-  readonly runningTicket?: unknown;
-  readonly executingTickets?: unknown;
-}
-
-interface KacheRootRow {
-  readonly count?: unknown;
-  readonly root?: unknown;
-}
-
-interface KacheTopCrateRow {
-  readonly crate?: unknown;
-  readonly ms?: unknown;
-  readonly profile?: unknown;
-}
-
-interface KacheShape {
-  readonly available?: unknown;
-  readonly distinctCrates?: unknown;
-  readonly entryCount?: unknown;
-  readonly eventsFreshMs?: unknown;
-  readonly indexSizeBytes?: unknown;
-  readonly recentHeartbeatRoots?: unknown;
-  readonly topCrates?: unknown;
-  readonly pressure?: unknown;
-}
-
-interface PushedStatus {
-  readonly receivedAt: number;
-  readonly value: StructuredContent;
-}
+type PushedStatus =
+  | { readonly _tag: 'Accepted'; readonly receivedAt: number; readonly value: DashboardStatusResult }
+  | { readonly _tag: 'Rejected'; readonly error: string; readonly receivedAt: number };
 
 interface StatusSnapshot {
   readonly timestamp: number;
-  readonly value: StructuredContent | null;
+  readonly value: DashboardStatusResult | null;
 }
 
 type Initialization =
@@ -250,9 +111,6 @@ const client = createAppClient({
   timeoutMs: 15_000,
 });
 
-const asRecord = (value: unknown): StructuredContent | null =>
-  value !== null && typeof value === 'object' ? (value as StructuredContent) : null;
-
 class StatusRpcError extends Data.TaggedError('StatusRpcError')<{
   readonly cause: unknown;
 }> {
@@ -262,7 +120,7 @@ class StatusRpcError extends Data.TaggedError('StatusRpcError')<{
 }
 
 const fetchStatus = Effect.tryPromise({
-  try: async () => asRecord(await client.call('tool:hauler/hauler_status', { limit: 40 })),
+  try: async () => client.call('tool:hauler/hauler_status', { limit: 40 }),
   catch: (cause) => new StatusRpcError({ cause }),
 });
 
@@ -282,155 +140,8 @@ export const statusAtom = Atom.make(
  * record — the ledger tail once settled, the daemon's full live tail while
  * the run is in progress.
  */
-const fetchTicketRecord = async (ticketId: string): Promise<unknown> =>
-  asRecord(await client.call('tool:hauler/hauler_result', { ticket: ticketId }))?.request ?? null;
-
-const arrayOrEmpty = <T,>(value: unknown): readonly T[] => (Array.isArray(value) ? value : []);
-
-const asMetricsWindowId = (value: unknown): MetricsWindowId | null =>
-  value === 'hour' || value === 'day' || value === 'all' ? value : null;
-
-const numberOrNullField = (value: unknown): number | null =>
-  typeof value === 'number' ? value : null;
-
-const asFields = (value: unknown): Readonly<Record<string, unknown>> | null =>
-  value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Readonly<Record<string, unknown>>)
-    : null;
-
-// Readers for the untyped `metrics.windows` payload. The protocol promises
-// every field below on every window; a value missing one is not a window
-// and is skipped, so the section never renders zeros it did not receive.
-
-/** `null` when no leader handed back; `undefined` when the value is not the promised shape. */
-const asDashboardPhaseSplit = (value: unknown): DashboardPhaseSplit | null | undefined => {
-  if (value === null) {
-    return null;
-  }
-  const row = asFields(value);
-  if (
-    row === null ||
-    typeof row.count !== 'number' ||
-    typeof row.compileTotalMs !== 'number' ||
-    typeof row.executeTotalMs !== 'number'
-  ) {
-    return undefined;
-  }
-  return {
-    count: row.count,
-    compileP50Ms: numberOrNullField(row.compileP50Ms),
-    executeP50Ms: numberOrNullField(row.executeP50Ms),
-    compileTotalMs: row.compileTotalMs,
-    executeTotalMs: row.executeTotalMs,
-  };
-};
-
-const asDashboardWaitSplit = (value: unknown): DashboardWaitSplit | null => {
-  const row = asFields(value);
-  if (
-    row === null ||
-    typeof row.count !== 'number' ||
-    typeof row.laneBoundMs !== 'number' ||
-    typeof row.permitBoundMs !== 'number' ||
-    typeof row.otherMs !== 'number'
-  ) {
-    return null;
-  }
-  return {
-    count: row.count,
-    laneBoundMs: row.laneBoundMs,
-    otherMs: row.otherMs,
-    permitBoundMs: row.permitBoundMs,
-    permits: numberOrNullField(row.permits),
-  };
-};
-
-const asDashboardHandBack = (value: unknown): DashboardHandBack | null => {
-  const row = asFields(value);
-  return row === null || typeof row.leaders !== 'number' || typeof row.laneReleasedMs !== 'number'
-    ? null
-    : { laneReleasedMs: row.laneReleasedMs, leaders: row.leaders };
-};
-
-const asDashboardWindowBySubcommand = (
-  value: unknown,
-): DashboardMetricsWindowBySubcommand | null => {
-  const row = asRecord(value) as StatusMetricsWindowBySubcommandShape | null;
-  if (
-    row === null ||
-    typeof row.subcommand !== 'string' ||
-    (row.profile !== undefined && typeof row.profile !== 'string') ||
-    typeof row.count !== 'number' ||
-    (row.p50Ms !== null && typeof row.p50Ms !== 'number') ||
-    (row.maxMs !== null && typeof row.maxMs !== 'number')
-  ) {
-    return null;
-  }
-  const phases = asDashboardPhaseSplit(row.phases);
-  if (phases === undefined) {
-    return null;
-  }
-  return {
-    subcommand: row.subcommand,
-    ...(typeof row.profile === 'string' ? { profile: row.profile } : {}),
-    count: row.count,
-    p50Ms: row.p50Ms ?? null,
-    maxMs: row.maxMs ?? null,
-    phases,
-  };
-};
-
-const asDashboardWindow = (value: unknown): DashboardMetricsWindow | null => {
-  const row = asRecord(value) as StatusMetricsWindowShape | null;
-  const id = asMetricsWindowId(row?.id);
-  if (
-    row === null ||
-    id === null ||
-    typeof row.count !== 'number' ||
-    typeof row.done !== 'number' ||
-    typeof row.failed !== 'number' ||
-    typeof row.killed !== 'number' ||
-    (row.runP50Ms !== null && typeof row.runP50Ms !== 'number') ||
-    (row.runP95Ms !== null && typeof row.runP95Ms !== 'number') ||
-    (row.runMeanMs !== null && typeof row.runMeanMs !== 'number') ||
-    (row.waitP50Ms !== null && typeof row.waitP50Ms !== 'number') ||
-    (row.waitP95Ms !== null && typeof row.waitP95Ms !== 'number') ||
-    !Array.isArray(row.bySubcommand) ||
-    typeof row.runTotalMs !== 'number' ||
-    typeof row.waitTotalMs !== 'number'
-  ) {
-    return null;
-  }
-  const waitSplit = asDashboardWaitSplit(row.waitSplit);
-  const handBack = asDashboardHandBack(row.handBack);
-  if (waitSplit === null || handBack === null) {
-    return null;
-  }
-  return {
-    id,
-    count: row.count,
-    done: row.done,
-    failed: row.failed,
-    killed: row.killed,
-    runP50Ms: row.runP50Ms ?? null,
-    runP95Ms: row.runP95Ms ?? null,
-    runMeanMs: row.runMeanMs ?? null,
-    waitP50Ms: row.waitP50Ms ?? null,
-    waitP95Ms: row.waitP95Ms ?? null,
-    bySubcommand: row.bySubcommand
-      .map((entry) => asDashboardWindowBySubcommand(entry))
-      .filter((entry): entry is DashboardMetricsWindowBySubcommand => entry !== null),
-    runTotalMs: row.runTotalMs,
-    waitTotalMs: row.waitTotalMs,
-    waitSplit,
-    handBack,
-  };
-};
-
-const dashboardWindows = (value: unknown): readonly DashboardMetricsWindow[] =>
-  arrayOrEmpty(value)
-    .map((entry) => asDashboardWindow(entry))
-    .filter((entry): entry is DashboardMetricsWindow => entry !== null);
+const fetchTicketRecord = async (ticketId: string): Promise<TicketResult['request']> =>
+  (await client.call('tool:hauler/hauler_result', { ticket: ticketId })).request;
 
 const duration = (value: unknown): string => (typeof value === 'number' ? formatMs(value) : '—');
 const countValue = (value: unknown): string =>
@@ -449,7 +160,7 @@ const workspace = (value: unknown): ReactNode =>
     </span>
   );
 
-const who = (row: RequestRow): ReactNode => {
+const who = (row: DashboardRequestRow): ReactNode => {
   const host = typeof row.host === 'string' ? row.host : null;
   const session = typeof row.session === 'string' ? row.session : null;
   if (host === null && session === null) {
@@ -513,7 +224,7 @@ const elapsedCell = (
   );
 };
 
-const DiagBadges = ({ row }: { readonly row: RequestRow }): ReactNode => {
+const DiagBadges = ({ row }: { readonly row: DashboardRequestRow }): ReactNode => {
   const badges = diagnosticBadges(row.errorCount, row.warningCount);
   if (badges.length === 0) {
     return null;
@@ -577,7 +288,7 @@ const waitingCell = (
   );
 };
 
-const AttachChip = ({ row }: { readonly row: RequestRow }): ReactNode => {
+const AttachChip = ({ row }: { readonly row: DashboardRequestRow }): ReactNode => {
   if (typeof row.attachedTo !== 'string') {
     return null;
   }
@@ -620,7 +331,7 @@ const CommandText = ({
   );
 };
 
-const Command = ({ row }: { readonly row: RequestRow }): ReactNode => {
+const Command = ({ row }: { readonly row: DashboardRequestRow }): ReactNode => {
   const ranAs = ranAsFor(row.argv, row.execArgv);
   const execArgv = Array.isArray(row.execArgv)
     ? row.execArgv.filter((part): part is string => typeof part === 'string' && part !== DEMUX_FLAG)
@@ -651,7 +362,7 @@ const Command = ({ row }: { readonly row: RequestRow }): ReactNode => {
  * `outputPreview` (#95); nothing for rows without one. The drawer, not this
  * line, is where the whole live tail lives.
  */
-const OutputPreview = ({ row }: { readonly row: RequestRow }): ReactNode => {
+const OutputPreview = ({ row }: { readonly row: DashboardRequestRow }): ReactNode => {
   const line = outputPreviewLine(row);
   return line === null ? null : (
     <div className="tail-preview" title={typeof row.outputPreview === 'string' ? row.outputPreview : line}>
@@ -660,7 +371,7 @@ const OutputPreview = ({ row }: { readonly row: RequestRow }): ReactNode => {
   );
 };
 
-const requestCells = (row: RequestRow): readonly ReactNode[] => [
+const requestCells = (row: DashboardRequestRow): readonly ReactNode[] => [
   ticket(row.ticket),
   <><Command row={row} /><DiagBadges row={row} /><OutputPreview row={row} /></>,
   workspace(row.workspaceRoot),
@@ -779,8 +490,8 @@ const AdmissionMeter = ({
   );
 };
 
-const LoadStat = ({ system }: { readonly system: SystemLoadShape | null }): ReactNode => {
-  if (system === null || typeof system.loadAvg1 !== 'number' || typeof system.cores !== 'number') {
+const LoadStat = ({ system }: { readonly system: SystemLoad | null }): ReactNode => {
+  if (system === null) {
     return null;
   }
   const perCore = system.cores > 0 ? system.loadAvg1 / system.cores : 0;
@@ -799,7 +510,7 @@ const LoadStat = ({ system }: { readonly system: SystemLoadShape | null }): Reac
   );
 };
 
-const MemoryStat = ({ system }: { readonly system: SystemLoadShape | null }): ReactNode => {
+const MemoryStat = ({ system }: { readonly system: SystemLoad | null }): ReactNode => {
   const view = memoryStatView(system ?? {});
   const pressureLevel =
     typeof system?.memPressureLevel === 'number' ? system.memPressureLevel : null;
@@ -828,12 +539,9 @@ const MemoryStat = ({ system }: { readonly system: SystemLoadShape | null }): Re
  * fields when it has an honest Linux /proc delta, so absence renders nothing
  * rather than a fabricated zero.
  */
-const DiskIoStat = ({ system }: { readonly system: SystemLoadShape | null }): ReactNode => {
-  const ioWait = typeof system?.ioWaitPercent === 'number' ? system.ioWaitPercent : null;
-  const disks = (Array.isArray(system?.disks) ? system.disks : []).filter(
-    (disk: DiskUtilShape) =>
-      typeof disk.device === 'string' && typeof disk.utilPercent === 'number',
-  );
+const DiskIoStat = ({ system }: { readonly system: SystemLoad | null }): ReactNode => {
+  const ioWait = system?.ioWaitPercent ?? null;
+  const disks = system?.disks ?? [];
   if (ioWait === null && disks.length === 0) {
     return null;
   }
@@ -984,16 +692,10 @@ const TicketDrawer = ({
 const frequencyText = (entries: readonly (readonly [string, number])[]): string =>
   entries.map(([key, value]) => `${key} ${formatCompactNumber(value)}`).join(' · ');
 
-const ridersByModeText = (savings: SavingsShape): string | null => {
-  const byMode = arrayOrEmpty<SavingsModeShape>(savings.byMode);
-  const parts = byMode
-    .map((row) => {
-      if (typeof row.mode !== 'string' || typeof row.ridersServed !== 'number') {
-        return null;
-      }
-      return `${row.mode} ${formatCompactNumber(row.ridersServed)}`;
-    })
-    .filter((part): part is string => part !== null);
+const ridersByModeText = (savings: Savings): string | null => {
+  const parts = savings.byMode.map(
+    (row) => `${row.mode} ${formatCompactNumber(row.ridersServed)}`,
+  );
   return parts.length === 0 ? null : parts.join(' · ');
 };
 
@@ -1003,11 +705,11 @@ const MetricsSection = ({
   savings,
   rows,
 }: {
-  readonly finished: readonly RequestRow[];
-  readonly metrics: StatusMetricsShape | null;
-  readonly savings: SavingsShape | null;
+  readonly finished: readonly DashboardRequestRow[];
+  readonly metrics: StatusMetrics | null;
+  readonly savings: Savings | null;
   /** Every visible row (active + recent): attach savings needs leaders in flight too. */
-  readonly rows: readonly RequestRow[];
+  readonly rows: readonly DashboardRequestRow[];
 }): ReactNode => {
   const [selectedWindowId, setSelectedWindowId] = useState<MetricsWindowId>(
     defaultMetricsWindowId,
@@ -1016,7 +718,7 @@ const MetricsSection = ({
   // means no daemon metrics at all: the daemon is stopped or did not answer
   // and the rows on screen come from the ledger. Timings then derive from
   // those visible finished rows, honestly labelled as such, or stay blank.
-  const windows = dashboardWindows(metrics?.windows);
+  const windows = metrics?.windows ?? [];
   const pickedWindow = pickMetricsWindow(windows, selectedWindowId);
   const window = pickedWindow.window;
   const visibleWaits = waitMetricsView(
@@ -1048,27 +750,8 @@ const MetricsSection = ({
   const bySubcommandCaption =
     window === null ? `last ${finished.length} finished` : `${metricsWindowLabel(window.id)} window`;
   const visibleSavings = attachSavings(rows);
-  const totals = asRecord(savings?.totals) as SavingsTotalsShape | null;
-  const allTimeComputeMs =
-    totals !== null && typeof totals.savedComputeMs === 'number' ? totals.savedComputeMs : null;
-  const allTimeExactMs =
-    totals !== null && typeof totals.savedComputeExactMs === 'number' ? totals.savedComputeExactMs : null;
-  const allTimeEstimatedMs =
-    totals !== null && typeof totals.savedComputeEstimatedMs === 'number'
-      ? totals.savedComputeEstimatedMs
-      : null;
-  const allTimeLatencyMs =
-    totals !== null && typeof totals.savedLatencyMs === 'number' ? totals.savedLatencyMs : null;
-  const allTimeNegativeLatencyCount =
-    totals !== null && typeof totals.negativeLatencyRiders === 'number'
-      ? totals.negativeLatencyRiders
-      : null;
-  const hasLedgerSavings =
-    allTimeComputeMs !== null &&
-    allTimeExactMs !== null &&
-    allTimeEstimatedMs !== null &&
-    allTimeLatencyMs !== null &&
-    allTimeNegativeLatencyCount !== null;
+  const totals = savings?.totals ?? null;
+  const hasLedgerSavings = totals !== null;
   const fallbackSavedText =
     visibleSavings.savedExactMs > 0
       ? `${formatMs(visibleSavings.savedExactMs)}${
@@ -1079,21 +762,20 @@ const MetricsSection = ({
       : visibleSavings.savedEstimatedMs > 0
         ? `~${formatMs(visibleSavings.savedEstimatedMs)} est`
         : null;
-  const computeValue = hasLedgerSavings
-    ? formatMs(allTimeComputeMs)
-    : (fallbackSavedText ?? '—');
-  const computeSplitText = hasLedgerSavings
-    ? `${formatMs(allTimeExactMs)} exact + ~${formatMs(allTimeEstimatedMs)} est`
-    : null;
+  const computeValue = totals === null ? (fallbackSavedText ?? '—') : formatMs(totals.savedComputeMs);
+  const computeSplitText =
+    totals === null
+      ? null
+      : `${formatMs(totals.savedComputeExactMs)} exact + ~${formatMs(totals.savedComputeEstimatedMs)} est`;
   const latencyStat =
-    hasLedgerSavings && allTimeLatencyMs !== null
-      ? latencySavedStat(allTimeLatencyMs)
-      : { label: 'latency saved (all time)', value: '—' };
+    totals === null
+      ? { label: 'latency saved (all time)', value: '—' }
+      : latencySavedStat(totals.savedLatencyMs);
   const latencyTitle =
-    hasLedgerSavings && allTimeNegativeLatencyCount !== null
-      ? `counterfactual estimateMs minus actual time-to-result; negative means the rider waited longer than its own solo estimate (${formatCompactNumber(allTimeNegativeLatencyCount)} rider${allTimeNegativeLatencyCount === 1 ? '' : 's'} are negative)`
+    totals !== null
+      ? `counterfactual estimateMs minus actual time-to-result; negative means the rider waited longer than its own solo estimate (${formatCompactNumber(totals.negativeLatencyRiders)} rider${totals.negativeLatencyRiders === 1 ? '' : 's'} are negative)`
       : 'unavailable: the status carried no ledger savings; negative means the rider waited longer than its own solo estimate';
-  const ridersByMode = hasLedgerSavings && savings !== null ? ridersByModeText(savings) : null;
+  const ridersByMode = savings === null ? null : ridersByModeText(savings);
   const percentileText = (count: number, value: number | null): string =>
     count === 0 ? '—' : (count < percentileMinSamples || value === null)
       ? `n<${percentileMinSamples}`
@@ -1404,22 +1086,14 @@ const KachePressure = ({ pressure }: { readonly pressure: KachePressureModel | n
   );
 };
 
-const KacheSection = ({ nowMs, value }: { readonly nowMs: number; readonly value: unknown }): ReactNode => {
-  const kache = asRecord(value) as KacheShape | null;
-  if (kache?.available !== true) {
+const KacheSection = ({ nowMs, value }: { readonly nowMs: number; readonly value: Kache | null }): ReactNode => {
+  if (value?.available !== true) {
     return null;
   }
+  const kache = value;
   const pressure = kachePressureView(kache.pressure, nowMs);
-  const roots = arrayOrEmpty<KacheRootRow>(kache.recentHeartbeatRoots).filter(
-    (row) => typeof row.root === 'string' && typeof row.count === 'number',
-  );
-  const topCrates = arrayOrEmpty<KacheTopCrateRow>(kache.topCrates).filter(
-    (row) =>
-      typeof row.crate === 'string' &&
-      typeof row.profile === 'string' &&
-      typeof row.ms === 'number' &&
-      row.ms > 0,
-  );
+  const roots = kache.recentHeartbeatRoots;
+  const topCrates = kache.topCrates.filter((row) => row.ms > 0);
   return (
     <section className="kache-section">
       <h2>Kache <span className="count">(machine-wide)</span></h2>
@@ -1468,7 +1142,7 @@ const KacheColumns = ({
                 <h3>Compiling roots <span>(last 5m)</span></h3>
                 <div>
                   {roots.map((row, index) => {
-                    const root = typeof row.root === 'string' ? row.root : '';
+                    const root = row.root;
                     return (
                       <div className="compact-row" key={`${root}-${index}`}>
                         <span className="path" title={root}>{shortenPath(root)}</span>
@@ -1520,25 +1194,25 @@ const KacheColumns = ({
   );
 };
 
-const DashboardContent = ({ structured }: { readonly structured: StructuredContent | null }) => {
+const DashboardContent = ({ structured }: { readonly structured: DashboardStatusResult | null }) => {
   const nowMs = Date.now();
   const [drawer, setDrawer] = useState<DrawerState>({ _tag: 'Closed' });
   const drawerSeq = useRef(0);
-  const active = arrayOrEmpty<RequestRow>(structured?.active);
-  const recent = arrayOrEmpty<RequestRow>(structured?.recent);
-  const lanes = arrayOrEmpty<LaneRow>(structured?.lanes);
+  const active = structured?.active ?? [];
+  const recent = structured?.recent ?? [];
+  const lanes = structured?.lanes ?? [];
   const running = active.filter((row) => row.status === 'running');
   const queued = active.filter((row) => row.status === 'queued' || row.status === 'requested');
   const attached = active.filter((row) => typeof row.attachedTo === 'string');
-  const maxConcurrent = typeof structured?.maxConcurrent === 'number' ? structured.maxConcurrent : 0;
+  const maxConcurrent = structured?.maxConcurrent ?? 0;
   const queueRows = queued.concat(attached.filter((row) => row.status !== 'running'));
   const activeLanes = lanes.filter(laneIsActive);
   const finished = recent
-    .filter((row) => typeof row.status === 'string' && terminalStatuses.has(row.status))
+    .filter((row) => terminalStatuses.has(row.status))
     .slice(0, 20);
-  const metrics = (structured?.metrics ?? null) as StatusMetricsShape | null;
-  const savings = (structured?.savings ?? null) as SavingsShape | null;
-  const system = (structured?.system ?? null) as SystemLoadShape | null;
+  const metrics = structured?.metrics ?? null;
+  const savings = structured?.savings ?? null;
+  const system = structured?.system ?? null;
   const permitHolders = running.filter((row) => row.attachedTo == null).length;
   const riders = running.length - permitHolders;
   const laneCount =
@@ -1552,7 +1226,7 @@ const DashboardContent = ({ structured }: { readonly structured: StructuredConte
     drawerSeq.current += 1;
     setDrawer({ _tag: 'Closed' });
   };
-  const openTicket = (row: RequestRow): void => {
+  const openTicket = (row: DashboardRequestRow): void => {
     const base = ticketDetailFrom(row);
     if (base === null) {
       return;
@@ -1593,8 +1267,7 @@ const DashboardContent = ({ structured }: { readonly structured: StructuredConte
     };
     load();
   };
-  const selectRow = (row: RequestRow): (() => void) | undefined =>
-    typeof row.ticket === 'string' ? () => openTicket(row) : undefined;
+  const selectRow = (row: DashboardRequestRow): (() => void) => () => openTicket(row);
 
   const renderSection = (section: DashboardSection): ReactNode => {
     switch (section) {
@@ -1690,7 +1363,7 @@ const DashboardContent = ({ structured }: { readonly structured: StructuredConte
           />
         );
       case 'kache':
-        return <KacheSection key="kache" nowMs={nowMs} value={structured?.kache} />;
+        return <KacheSection key="kache" nowMs={nowMs} value={structured?.kache ?? null} />;
       case 'lanes':
         return (
           <section key="lanes">
@@ -1750,9 +1423,9 @@ const DashboardContent = ({ structured }: { readonly structured: StructuredConte
   );
 };
 
-type StatusPollResult = AsyncResult.AsyncResult<StatusPoll<StructuredContent | null>, unknown>;
+type StatusPollResult = AsyncResult.AsyncResult<StatusPoll<DashboardStatusResult>, unknown>;
 
-const pollSnapshot = (poll: StatusPoll<StructuredContent | null>): StatusSnapshot | null =>
+const pollSnapshot = (poll: StatusPoll<DashboardStatusResult>): StatusSnapshot | null =>
   poll.updatedAtMs === null ? null : { timestamp: poll.updatedAtMs, value: poll.value };
 
 const snapshotFrom = (result: StatusPollResult): StatusSnapshot | null => {
@@ -1809,9 +1482,15 @@ const Dashboard = ({ pushed }: { readonly pushed: PushedStatus | null }) => {
   const refresh = useAtomRefresh(statusAtom);
   const polled = snapshotFrom(result);
   const pollError = pollErrorFrom(result);
+  const acceptedPush = pushed?._tag === 'Accepted' ? pushed : null;
+  const openingError =
+    pushed?._tag === 'Rejected' && (polled === null || pushed.receivedAt >= polled.timestamp)
+      ? pushed.error
+      : null;
+  const error = pollError ?? openingError;
   const latest =
-    pushed !== null && (polled === null || pushed.receivedAt >= polled.timestamp)
-      ? pushed.value
+    acceptedPush !== null && (polled === null || acceptedPush.receivedAt >= polled.timestamp)
+      ? acceptedPush.value
       : (polled?.value ?? null);
   const summary =
     latest === null && result._tag === 'Initial'
@@ -1826,9 +1505,9 @@ const Dashboard = ({ pushed }: { readonly pushed: PushedStatus | null }) => {
         {summary}
         {result.waiting ? <span className="refreshing" title="Refreshing status">●</span> : null}
       </DashboardHeader>
-      {pollError !== null ? (
+      {error !== null ? (
         <div className="error-line">
-          Error: {pollError}{' '}
+          Error: {error}{' '}
           <button type="button" onClick={refresh}>Retry</button>
         </div>
       ) : null}
@@ -1849,10 +1528,17 @@ const DashboardApp = () => {
     let active = true;
     // The opening `hauler_status` result the host pushes beside the App.
     const stop = client.onToolResult('tool:hauler/hauler_status', (result) => {
-      const value = asRecord(result);
-      if (value !== null) {
-        setPushed({ receivedAt: Date.now(), value });
-      }
+      const parsed = statusResultSchema.safeParse(result);
+      const receivedAt = Date.now();
+      setPushed(
+        parsed.success
+          ? { _tag: 'Accepted', receivedAt, value: parsed.data }
+          : {
+              _tag: 'Rejected',
+              error: `Opening status payload rejected: ${parsed.error.issues.map((issue) => issue.message).join('; ')}`,
+              receivedAt,
+            },
+      );
     });
 
     setInitialization({ _tag: 'Initializing' });

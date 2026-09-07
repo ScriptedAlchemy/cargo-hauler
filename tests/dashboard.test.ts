@@ -10,7 +10,6 @@ import {
   DEMUX_FLAG,
   argvText,
   argvTitle,
-  asKachePressure,
   attachSavings,
   compactArgvText,
   defaultMetricsWindowId,
@@ -58,6 +57,7 @@ import {
   memoryStatView,
   admissionHoldDetail,
   heavyAdmissionNote,
+  type DashboardKachePressure,
   type DashboardMetricsWindow,
 } from '../src/dashboard/lib.js';
 
@@ -186,7 +186,7 @@ describe('pickMetricsWindow (window toggle and fallback)', () => {
       runMeanMs: 1_050,
       waitP50Ms: 40,
       waitP95Ms: 110,
-      bySubcommand: [{ subcommand: 'check', count: 3, p50Ms: 900, maxMs: 1_800, phases: null }],
+      bySubcommand: [{ subcommand: 'check', profile: 'debug', count: 3, p50Ms: 900, maxMs: 1_800, phases: null }],
       runTotalMs: 3_150,
       waitTotalMs: 180,
       waitSplit: { count: 3, laneBoundMs: 120, permitBoundMs: 0, otherMs: 60, permits: 5 },
@@ -203,7 +203,7 @@ describe('pickMetricsWindow (window toggle and fallback)', () => {
       runMeanMs: 1_600,
       waitP50Ms: 70,
       waitP95Ms: 300,
-      bySubcommand: [{ subcommand: 'check', count: 12, p50Ms: 1_200, maxMs: 2_700, phases: null }],
+      bySubcommand: [{ subcommand: 'check', profile: 'debug', count: 12, p50Ms: 1_200, maxMs: 2_700, phases: null }],
       runTotalMs: 19_200,
       waitTotalMs: 1_100,
       waitSplit: { count: 12, laneBoundMs: 800, permitBoundMs: 100, otherMs: 200, permits: 5 },
@@ -220,7 +220,7 @@ describe('pickMetricsWindow (window toggle and fallback)', () => {
       runMeanMs: 2_300,
       waitP50Ms: 120,
       waitP95Ms: 480,
-      bySubcommand: [{ subcommand: 'check', count: 55, p50Ms: 1_600, maxMs: 5_000, phases: null }],
+      bySubcommand: [{ subcommand: 'check', profile: 'debug', count: 55, p50Ms: 1_600, maxMs: 5_000, phases: null }],
       runTotalMs: 126_500,
       waitTotalMs: 9_400,
       waitSplit: { count: 55, laneBoundMs: 7_000, permitBoundMs: 1_400, otherMs: 1_000, permits: 5 },
@@ -1152,7 +1152,7 @@ describe('phaseSplitView (compile vs execution per command)', () => {
   });
 });
 
-describe('kache store pressure (widget adapter + panel model)', () => {
+describe('kache store pressure panel model', () => {
   const nowMs = Date.parse('2026-09-05T00:00:00Z');
   const pressure = {
     storeBytes: 541 * 1024 ** 3,
@@ -1172,15 +1172,10 @@ describe('kache store pressure (widget adapter + panel model)', () => {
       evictionErrorSample: 'database is locked',
     },
     keyTiming: { count: 4_096, meanMs: 1_020, p95Ms: 2_400 },
-  };
+  } as const satisfies DashboardKachePressure;
 
-  it('accepts the protocol shape and rejects anything else instead of inventing zeros', () => {
-    expect(asKachePressure(pressure)).toEqual(pressure);
-    expect(asKachePressure(undefined)).toBeNull();
-    expect(asKachePressure({ storeBytes: 1 })).toBeNull();
-    expect(asKachePressure({ ...pressure, limit: { kind: 'unknown', reason: 'made-up', detail: '' } })).toBeNull();
-    expect(asKachePressure({ ...pressure, gc: { kind: 'ran' } })).toBeNull();
-    expect(asKachePressure({ ...pressure, keyTiming: { count: 'many' } })).toMatchObject({ keyTiming: null });
+  it('is absent when the generated status result carries no pressure report', () => {
+    expect(kachePressureView(null, nowMs)).toBeNull();
   });
 
   it('warns when the store is over its limit and when the last GC skipped evictions', () => {
@@ -1250,8 +1245,4 @@ describe('kache store pressure (widget adapter + panel model)', () => {
     expect(model.warnings.map((warning) => warning.kind)).toEqual(['over-limit', 'gc-eviction-errors']);
   });
 
-  it('is null, never an empty store, when the payload carries no report of the promised shape', () => {
-    expect(kachePressureView(undefined, nowMs)).toBeNull();
-    expect(kachePressureView({ storeBytes: 1 }, nowMs)).toBeNull();
-  });
 });
