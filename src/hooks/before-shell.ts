@@ -1,6 +1,6 @@
 import { recordBestEffort, reportHookDiagnostic } from './best-effort.js';
 import { prepareShellCommand } from './inspect.js';
-import { resolveHaulerArgv } from './paths.js';
+import { resolveHaulerArgv } from './hauler-binding.js';
 import { probeActiveBuilds, type DaemonProbe } from './probe.js';
 import { appendHookRecord } from './record.js';
 import { recordDeniedAttempt } from './rpc.js';
@@ -158,7 +158,9 @@ const decideBeforeShell = async (
   }
 
   const rewritten = prepared.rewrite({
-    haulerArgv: services.haulerArgv ?? resolveHaulerArgv(),
+    haulerArgv: services.haulerArgv ?? (services.resolveHaulerArgv === undefined
+      ? resolveHaulerArgv({ fallback: 'path' })
+      : await services.resolveHaulerArgv()),
     host,
     session,
   });
