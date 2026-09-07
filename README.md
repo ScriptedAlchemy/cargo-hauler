@@ -521,7 +521,7 @@ an empty store.
 Requirements: Node 22.19 or newer, Cargo, and Linux or macOS (Windows is
 experimental: named-pipe transport, no PATH shim).
 
-The npm package ships one plugin root, `artifact/`, that every host reads —
+The npm package ships one plugin root, `dist/`, that every host reads —
 the Claude Code plugin with its local marketplace, the Codex plugin, the
 Cursor plugin with its `install.mjs`, and the Agent Plugins `portable`
 projection — plus three executables: `hauler` (the CLI), `cargo-hauler` (the
@@ -545,16 +545,18 @@ cargo-hauler-install install cursor --mode marketplace  # stage a local marketpl
 `cargo-hauler-install` runs the host's own plugin commands for you (below),
 detects an installed copy with the same version but different content and
 replaces it, and takes `--replace` (alias `--force`) to replace a different
-installed version. `install <host> --plan` prints the artifact identity
-without changing anything. `--json` prints the result for scripts.
+installed version. `doctor --host <host>` reports the real installed status
+without changing anything; `uninstall <host> --plan` reports the exact
+receipt-owned removals. Both accept `--json`.
 
 ### With the hosts' own plugin commands
 
-The same result without the installer, from the package or a build (paths are
-relative to `node_modules/cargo-hauler` or the checkout):
+The same result without the installer, from `dist/` in the package or
+`artifact/` in a checkout:
 
 ```sh
-cd artifact
+PLUGIN_ROOT="$(npm root -g)/cargo-hauler/dist" # use PLUGIN_ROOT=artifact in a checkout
+cd "$PLUGIN_ROOT"
 
 # Claude Code — a local marketplace plus a plugin install
 claude plugin marketplace add ./
@@ -572,7 +574,7 @@ node ./install.mjs --mode marketplace  # local marketplace repository
 Upgrading to a new version: `claude plugin marketplace update cargo-hauler-marketplace
 && claude plugin update cargo-hauler@cargo-hauler-marketplace`, `codex plugin
 remove … && codex plugin marketplace add ./ && codex plugin add …`, and
-`node artifact/install.mjs --replace`. `claude plugin update` is
+`node "$PLUGIN_ROOT/install.mjs" --replace`. `claude plugin update` is
 version-gated, so after a rebuild that did not bump the version use
 `claude plugin uninstall … --keep-data` and install again (the installer does
 this automatically). Restart or reload the host after installing.
@@ -584,9 +586,9 @@ pnpm install
 pnpm run build      # artifact/ (one root, every host) + dist/bin
 ```
 
-Then install with either method above from `artifact/`, and run
-`hauler install-shim` from the globally installed CLI for the PATH shim.
-Building needs the
+Then run `node dist/bin/cargo-hauler-install.js install <host>` or use the
+direct host commands above from `artifact/`, and run `hauler install-shim`
+from the globally installed CLI for the PATH shim. Building needs the
 repository's dev dependencies (including the agent-bundle framework, pinned as
 a pkg.pr.new preview until it is on npm); using the published package does
 not.
@@ -881,7 +883,7 @@ artifact build, at the harness proof levels:
 | script-dispatch | `script-dispatch` | the `hauler` entry through its `main` envelope as its own process |
 | mcp-in-memory | `mcp-surface`, `layout` | tool names, `outputSchema`, the dashboard resource link, `_meta.hauler`, and a live fixture broker over the in-memory transport |
 | packed-stdio | `packed-contract` | the built `artifact/` server as a real process against a live broker, every tool through the wire-contract matrix |
-| host-install | `packed-install` | `cargo-hauler-install install <host> --replace` into an isolated home for Claude, Codex, and Cursor; the installed root's MCP server as a real process and its `bin/cargo-hauler.mjs web` serving the dashboard |
+| host-install | `packed-install` | the npm tarball installed without source or framework dependencies; package-bound install for Claude, Codex, and Cursor; replacement, doctor, uninstall plan/removal, the installed MCP server, and dashboard web process |
 | workbench-surface | `workbench-surface` | what `agent-bundle dev` would show: catalog, provider, lifecycles per host, counts |
 
 Daemon-backed cases run a real broker in-process with a fake `cargo`
@@ -909,7 +911,7 @@ ships no preview harness of its own.
 
 agent-bundle does not yet have an npm release; this repository pins the
 [pkg.pr.new](https://pkg.pr.new) preview of main commit
-[`b435f7b91`](https://github.com/ScriptedAlchemy/agent-bundle/commit/b435f7b9179271cbff81d3e40d14ee342cbd65dd)
+[`78b966a8`](https://github.com/ScriptedAlchemy/agent-bundle/commit/78b966a8d1fe37134d6e2c77dd96adacd0624316)
 for both `agent-bundle` and `@agent-bundle/runtime`. `inspect` reports the
 `agent` component kind as unavailable on every host (agent-bundle G5
 deferral); this plugin defines no agents.
