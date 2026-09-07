@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "@agent-bundle/runtime": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@78b966a8d1fe37134d6e2c77dd96adacd0624316",
-    "@changesets/cli": "3.0.1",
+    "@changesets/cli": "3.0.2",
     "@effect/atom-react": "4.0.0-rc.112",
     "@effect/platform-node": "4.0.0-rc.112",
     "@effect/tsgo": "0.38.0",
