@@ -48,8 +48,8 @@ importers:
         specifier: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b435f7b9179271cbff81d3e40d14ee342cbd65dd
         version: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b435f7b9179271cbff81d3e40d14ee342cbd65dd(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b435f7b9179271cbff81d3e40d14ee342cbd65dd(@rspack/core@2.2.2(@swc/helpers@0.5.23))(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@rspack/core@2.2.2(@swc/helpers@0.5.23))(@rstest/core@0.11.11)(hono@4.13.5)(react@19.2.8)(typescript@7.0.2)
       agent-bundle-src:
-        specifier: github:ScriptedAlchemy/agent-bundle#b435f7b9179271cbff81d3e40d14ee342cbd65dd
-        version: agent-bundle-workspace@https://codeload.github.com/ScriptedAlchemy/agent-bundle/tar.gz/b435f7b9179271cbff81d3e40d14ee342cbd65dd
+        specifier: github:ScriptedAlchemy/agent-bundle#a2a3fbe9b83ec565704e128252ff187447c244f7
+        version: agent-bundle-workspace@https://codeload.github.com/ScriptedAlchemy/agent-bundle/tar.gz/a2a3fbe9b83ec565704e128252ff187447c244f7
       bashjsast:
         specifier: github:woolkingx/bashjsast#131f4b677d1906774fc49cfceab0ccb7b370b2e6
         version: https://codeload.github.com/woolkingx/bashjsast/tar.gz/131f4b677d1906774fc49cfceab0ccb7b370b2e6
@@ -839,8 +839,8 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  agent-bundle-workspace@https://codeload.github.com/ScriptedAlchemy/agent-bundle/tar.gz/b435f7b9179271cbff81d3e40d14ee342cbd65dd:
-    resolution: {gitHosted: true, integrity: sha512-/OChOmF0ZZ20NzlUe9dMcBHAhMkz9fVBf48s+Nhls+HKko59TU9+yF+/V0nJsUeJMWe/77afDhuNXEwB29uvFA==, tarball: https://codeload.github.com/ScriptedAlchemy/agent-bundle/tar.gz/b435f7b9179271cbff81d3e40d14ee342cbd65dd}
+  agent-bundle-workspace@https://codeload.github.com/ScriptedAlchemy/agent-bundle/tar.gz/a2a3fbe9b83ec565704e128252ff187447c244f7:
+    resolution: {gitHosted: true, integrity: sha512-iX5vid1lq5E4+t+qJ62z0vRltOjfdGQqFP3DadZbIYoTPtNnT1/LbZIHlQGILHLHLFVSR1bzHy6CfvGPuJUAoA==, tarball: https://codeload.github.com/ScriptedAlchemy/agent-bundle/tar.gz/a2a3fbe9b83ec565704e128252ff187447c244f7}
     version: 0.0.0
     engines: {node: '>=22.19.0'}
 
@@ -1885,7 +1885,7 @@ snapshots:
 
   acorn@8.18.0: {}
 
-  agent-bundle-workspace@https://codeload.github.com/ScriptedAlchemy/agent-bundle/tar.gz/b435f7b9179271cbff81d3e40d14ee342cbd65dd: {}
+  agent-bundle-workspace@https://codeload.github.com/ScriptedAlchemy/agent-bundle/tar.gz/a2a3fbe9b83ec565704e128252ff187447c244f7: {}
 
   agent-bundle@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b435f7b9179271cbff81d3e40d14ee342cbd65dd(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b435f7b9179271cbff81d3e40d14ee342cbd65dd(@rspack/core@2.2.2(@swc/helpers@0.5.23))(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@rspack/core@2.2.2(@swc/helpers@0.5.23))(@rstest/core@0.11.11)(hono@4.13.5)(react@19.2.8)(typescript@7.0.2):
     dependencies:
