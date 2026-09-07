@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.15
+
+### Patch Changes
+
+- 5f95b51: Stop changing source package modes before Agent Bundle validates install manifests. (#154)
+
 ## 0.6.14
 
 ### Patch Changes
