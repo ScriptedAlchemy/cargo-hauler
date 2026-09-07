@@ -29,6 +29,8 @@ export interface HookServices {
   readonly readCursor?: (session: string) => number;
   readonly record?: (event: HookRecord) => void | Promise<void>;
   readonly recordAttempt?: (attempt: DeniedAttempt) => void | Promise<void>;
+  /** Resolved lazily after the clean guard, so binding failure cannot discard a denial. */
+  readonly resolveHaulerArgv?: () => readonly string[] | Promise<readonly string[]>;
   readonly signal?: AbortSignal;
   readonly writeCursor?: (session: string, atMs: number) => void;
 }
