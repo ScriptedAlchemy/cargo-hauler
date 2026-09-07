@@ -49,7 +49,10 @@ describe('native shell projection survives recording failure', () => {
           expect(result.stdout.length).toBeGreaterThan(0);
           const output = JSON.parse(result.stdout);
           const native = host === 'claude' ? output.hookSpecificOutput : output;
-          expect(host === 'claude' ? native.permissionDecision : native.permission).toBe(mixed ? undefined : 'allow');
+          // Cursor's native rewrite contract requires permission: allow even
+          // for canonical continue. Claude keeps the no-decision distinction.
+          expect(host === 'claude' ? native.permissionDecision : native.permission)
+            .toBe(host === 'claude' && mixed ? undefined : 'allow');
           const updated = host === 'claude' ? native.updatedInput : native.updated_input;
           expect(updated.command).toContain('-- cargo test -p DO_NOT_LOG_SECRET');
           expect(updated.command.endsWith(' && echo outside')).toBe(mixed);
