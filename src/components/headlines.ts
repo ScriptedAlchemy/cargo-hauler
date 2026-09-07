@@ -37,10 +37,12 @@ export const diagnosticCounts = (
  * command with similar error text is still a failed run, not a blocked one.
  */
 export const failedPrerequisite = (
-  record: Pick<TicketSummary, 'status' | 'startedAtMs' | 'exitCode' | 'error'>,
+  record: Pick<TicketSummary, 'status' | 'startedAtMs' | 'exitCode' | 'error' | 'after'>,
 ): string | null => {
   if (record.status !== 'failed' || record.startedAtMs !== null || record.exitCode !== null) return null;
-  return /^prerequisite (cc-\d+) (?:failed|killed|denied|passthrough|unknown)$/u.exec(record.error ?? '')?.[1] ?? null;
+  const prerequisite =
+    /^prerequisite (cc-\d+) (?:failed|killed|denied|passthrough|unknown)$/u.exec(record.error ?? '')?.[1];
+  return prerequisite !== undefined && record.after.includes(prerequisite) ? prerequisite : null;
 };
 
 export const ticketHeadline = (record: TicketSummary, nowMs: number): string => {

@@ -52,7 +52,7 @@ describe('prerequisite failure guidance (#169)', () => {
   const unrelated: readonly Partial<RequestRecord>[] = [
     { startedAtMs: 1 }, { exitCode: 101 }, { error: 'compile failed' },
     { error: 'prerequisite cc-9395 failed\nother text' }, { error: null },
-    { error: 'prerequisite cc-9395 done' },
+    { error: 'prerequisite cc-9395 done' }, { after: [], error: 'prerequisite cc-9395 failed' },
   ];
   for (const override of unrelated) {
     it(`keeps existing failed-run guidance for ${JSON.stringify(override)}`, () => {
