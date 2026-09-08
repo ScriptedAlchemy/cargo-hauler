@@ -10,7 +10,11 @@ import * as Schedule from 'effect/Schedule';
 import type * as Scope from 'effect/Scope';
 
 import { SpawnDaemonError } from '../src/client/ensure-daemon.js';
-import { runExecClient, unreachablePassthroughMode } from '../src/client/exec.js';
+import {
+  connectionLostExitCode,
+  runExecClient,
+  unreachablePassthroughMode,
+} from '../src/client/exec.js';
 import {
   ControlTimeoutError,
   DaemonUnreachableError,
@@ -24,6 +28,7 @@ import {
   type AckMessage,
   type ClientMessage,
   type EstimateSource,
+  type RequestRecord,
   type ServerMessage,
   type StatusResultMessage,
 } from '../src/daemon/protocol.js';
@@ -51,6 +56,19 @@ const terminalOf = ({
   stdout: { color, kind: stdout },
 });
 
+/** A settled ledger row as the daemon returns it to a reattaching client. */
+const record = (overrides: Partial<RequestRecord> = {}): RequestRecord => ({
+  after: [], argv: ['cargo', 'build'], attachMode: null, attachedTo: null,
+  background: false, createdAtMs: 1, cwd: '/tmp/ws', diagnostics: [],
+  error: null, errorCount: 0, estimateMs: null, execArgv: null, exitCode: null,
+  finishedAtMs: 2, holdStop: false, host: null, id: 1, intentJson: null,
+  intentKey: null, laneKey: 'ws:target', outputPath: null, outputTail: null,
+  queuedAtMs: 1, runMs: null, savedComputeMs: null, savedComputeSource: null,
+  savedLatencyMs: null, session: null, signal: null, startedAtMs: null,
+  status: 'killed', targetDir: '/tmp/ws/target', ticket: 'cc-1', waitMs: 1,
+  warningCount: 0, workspaceRoot: '/tmp/ws', ...overrides,
+});
+
 interface ScriptedDaemonOptions {
   readonly ack: {
     readonly etaMs: number;
@@ -64,6 +82,11 @@ interface ScriptedDaemonOptions {
   readonly closeAfterAck?: boolean;
   /** Written after the `kill-result` when the client asks to kill its ticket. */
   readonly afterKill?: readonly ServerMessage[];
+  /**
+   * Written when the client comes back with `reattach` (#187); `'unsupported'`
+   * answers as a daemon from before the message existed does. Unset: silence.
+   */
+  readonly reattach?: 'unsupported' | readonly ServerMessage[];
 }
 
 /**
@@ -131,6 +154,21 @@ const scriptedDaemon = (
                 );
                 for (const next of options.afterKill ?? []) {
                   socket.write(encodeServerMessage(next));
+                }
+              }
+              if (message.type === 'reattach') {
+                if (options.reattach === 'unsupported') {
+                  socket.write(
+                    encodeServerMessage({
+                      code: 'bad-message',
+                      id: message.id,
+                      message: 'Invalid discriminator value',
+                      type: 'error',
+                    }),
+                  );
+                }
+                for (const next of options.reattach === 'unsupported' ? [] : (options.reattach ?? [])) {
+                  socket.write(encodeServerMessage({ ...next, id: message.id }));
                 }
               }
             }
@@ -496,29 +534,98 @@ describe('runExecClient', () => {
       expect(collected.stderr()).toContain('[cargo-hauler] ticket cc-1 killed (SIGTERM)');
     }));
 
-  it.live('names the ticket when the connection drops after the ack', () =>
-    Effect.gen(function* () {
-      const fixture = yield* scopedFixture(5);
-      mkdirSync(fixture.config.stateDir, { recursive: true });
-      yield* scriptedDaemon(fixture.config.socketPath, {
-        ack: { etaMs: 1_000, etaSource: 'default' },
-        closeAfterAck: true,
-      });
-      const collected = collectIo();
-      const result = yield* runExecClient({
-        argv: ['cargo', 'build'],
-        autoSpawn: false,
-        config: fixture.config,
-        cwd: fixture.ws1,
-        io: collected.io,
+  describe('connection lost after the ack (#187)', () => {
+    const lostAfterAck = (reattach: ScriptedDaemonOptions['reattach']) =>
+      Effect.gen(function* () {
+        const fixture = yield* scopedFixture(5);
+        mkdirSync(fixture.config.stateDir, { recursive: true });
+        const daemon = yield* scriptedDaemon(fixture.config.socketPath, {
+          ack: { etaMs: 1_000, etaSource: 'default' },
+          closeAfterAck: true,
+          ...(reattach === undefined ? {} : { reattach }),
+        });
+        const collected = collectIo();
+        const result = yield* runExecClient({
+          argv: ['cargo', 'build'],
+          autoSpawn: false,
+          config: fixture.config,
+          cwd: fixture.ws1,
+          io: collected.io,
+        });
+        expect(collected.stderr()).not.toContain('continues');
+        expect(collected.stderr()).toContain(
+          '[cargo-hauler] connection to daemon lost; reattaching to ticket cc-1',
+        );
+        expect(daemon.sent().map((message) => message.type)).toEqual(['exec', 'reattach']);
+        return { collected, result };
       });
 
-      // The ticket is still running in the daemon; the caller needs its id.
-      expect(result).toEqual({ exitCode: 1, mode: 'brokered', ticket: 'cc-1' });
-      expect(collected.stderr()).toContain(
-        '[cargo-hauler] connection to daemon lost; ticket cc-1 continues — hauler result cc-1',
-      );
-    }));
+    it.live('fails closed with exit 69 when the daemon predates reattach', () =>
+      Effect.gen(function* () {
+        const { collected, result } = yield* lostAfterAck('unsupported');
+        expect(result).toEqual({ exitCode: connectionLostExitCode, mode: 'brokered', ticket: 'cc-1' });
+        expect(collected.stderr()).toContain(
+          '[cargo-hauler] brokered run aborted: daemon connection lost; ticket cc-1 could not be reattached: this daemon does not support reattach',
+        );
+      }));
+
+    it.live('fails closed with exit 69 when the daemon does not know the ticket', () =>
+      Effect.gen(function* () {
+        const { collected, result } = yield* lostAfterAck([
+          { id: 'x', outcome: 'unknown', ticket: 'cc-1', type: 'reattach-result' },
+        ]);
+        expect(result).toEqual({ exitCode: connectionLostExitCode, mode: 'brokered', ticket: 'cc-1' });
+        expect(collected.stderr()).toContain(
+          '[cargo-hauler] brokered run aborted: daemon connection lost; ticket cc-1 is not known to the daemon',
+        );
+      }));
+
+    it.live('exits with cargo’s code when the ticket finished while it was away', () =>
+      Effect.gen(function* () {
+        const { collected, result } = yield* lostAfterAck([
+          {
+            id: 'x',
+            outcome: 'terminal',
+            request: record({
+              exitCode: 7,
+              finishedAtMs: 3,
+              outputPath: '/logs/cc-1.log',
+              startedAtMs: 2,
+              status: 'failed',
+              ticket: 'cc-1',
+            }),
+            ticket: 'cc-1',
+            type: 'reattach-result',
+          },
+        ]);
+        expect(result).toEqual({ exitCode: 7, mode: 'brokered', ticket: 'cc-1' });
+        expect(collected.stderr()).toContain(
+          '[cargo-hauler] ticket cc-1 finished while this client was disconnected; full log: /logs/cc-1.log',
+        );
+      }));
+
+    it.live('fails closed when the finished ticket never ran cargo', () =>
+      Effect.gen(function* () {
+        const { collected, result } = yield* lostAfterAck([
+          {
+            id: 'x',
+            outcome: 'terminal',
+            request: record({
+              error: 'orphaned by daemon restart',
+              signal: 'SIGTERM',
+              status: 'killed',
+              ticket: 'cc-1',
+            }),
+            ticket: 'cc-1',
+            type: 'reattach-result',
+          },
+        ]);
+        expect(result).toEqual({ exitCode: connectionLostExitCode, mode: 'brokered', ticket: 'cc-1' });
+        expect(collected.stderr()).toContain(
+          '[cargo-hauler] brokered run aborted: daemon connection lost; ticket cc-1 killed: orphaned by daemon restart',
+        );
+      }));
+  });
 
   it.live('kills its own ticket and exits 130 when interrupted during a brokered run', () =>
     Effect.gen(function* () {

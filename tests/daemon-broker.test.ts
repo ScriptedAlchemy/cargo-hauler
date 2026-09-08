@@ -431,9 +431,14 @@ describe('hauler daemon', () => {
       );
     }));
 
+  // With the reattach grace window off, a disconnect kills queued work at
+  // once — the pre-#187 policy, still selectable; tests/daemon-reattach.test.ts
+  // covers the default window.
+  const immediateKill = { CARGO_HAULER_REATTACH_GRACE_MS: '0' };
+
   it.live('abandons queued work when its client disconnects but finishes running work', () =>
     Effect.gen(function* () {
-      const fixture = yield* scopedDaemon(5);
+      const fixture = yield* scopedDaemon(5, immediateKill);
       const holderMessages = yield* execRequest(fixture, {
         cwd: fixture.ws1,
         sleep: '1.5',
@@ -474,7 +479,7 @@ describe('hauler daemon', () => {
 
   it.live('makes disconnect kill and startup mutually exclusive', () =>
     Effect.gen(function* () {
-      const fixture = yield* scopedDaemon(1);
+      const fixture = yield* scopedDaemon(1, immediateKill);
       const runningMessages = yield* execRequest(fixture, {
         cwd: fixture.ws1,
         argv: ['cargo', 'check', '-p', 'already-started'],

@@ -93,7 +93,8 @@ export interface Attachment {
   mode: AttachMode;
   readonly input: SubmitInput;
   readonly intent: NormalizedCargoIntent;
-  readonly callbacks: SubmitCallbacks;
+  /** Rebound by `reattach` (#187); every fan-out reads it at delivery time. */
+  callbacks: SubmitCallbacks;
   readonly createdAtMs: number;
   readonly estimateMs: number;
   readonly estimateSource: EstimateSource;
@@ -161,7 +162,8 @@ export interface Job {
   readonly laneKey: string;
   readonly input: SubmitInput;
   readonly intent: NormalizedCargoIntent;
-  readonly callbacks: SubmitCallbacks;
+  /** Rebound by `reattach` (#187); every fan-out reads it at delivery time. */
+  callbacks: SubmitCallbacks;
   readonly killSignal: Deferred.Deferred<void>;
   readonly state: Ref.Ref<JobState>;
   readonly queuedAtMs: number;
@@ -206,8 +208,13 @@ export interface Job {
   pid: number | null;
   /** Stall verdict from the last sampler pass; null while the run shows progress. */
   stall: StallReport | null;
-  /** True once the connection that submitted this leader disconnected while it was running. */
+  /** True while the connection that submitted this leader is gone and nobody has reattached. */
   ownerGone: boolean;
+  /**
+   * Bumped on every disconnect and reattach, so the grace timer a
+   * disconnect armed can tell whether it is still the current one (#187).
+   */
+  ownerEpoch: number;
   /** Ledger `error` for a kill of the running process when the executor reports none (auto-kill). */
   killReason: string | null;
   /** Fail-fast signal captured at submission (topology stat, cached). */

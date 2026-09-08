@@ -62,6 +62,7 @@ const configAt = (stateDir: string): DaemonConfigShape => ({
   stallEstimateFactor: 3,
   stallIdleMs: null,
   stallAutoKill: true,
+  reattachGraceMs: 30_000,
 });
 
 describe('spawnDetachedDaemon', () => {

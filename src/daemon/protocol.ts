@@ -246,7 +246,12 @@ export interface RequestRecord {
   readonly admissionHold?: AdmissionHold;
   /** Present while the running leader (or the leader this request rides) looks stalled. */
   readonly stall?: StallReport;
-  /** True once the connection that submitted this running request has disconnected. */
+  /**
+   * True while the connection that submitted this request is gone and no
+   * client has reattached (#46, #187): a running leader is then a stall
+   * auto-kill candidate; a queued one is killed once the reattach grace
+   * window passes.
+   */
   readonly orphaned?: boolean;
 }
 
@@ -345,6 +350,27 @@ export const resultRequestSchema = z.object({
   ticket: z.string().min(1),
 });
 
+/**
+ * A client whose streaming connection dropped asks to own its ticket again
+ * (#187). The daemon answers `reattach-result`; for an active ticket it then
+ * replays the output the client has not seen and streams the rest as for a
+ * fresh `exec`. Every field but `ticket` is optional so an older client's
+ * message stays valid as the schema grows; an older daemon answers the
+ * unknown type with `error bad-message`, which the client reads as
+ * "reattach unsupported".
+ */
+export const reattachRequestSchema = z.object({
+  type: z.literal('reattach'),
+  id: z.string().min(1),
+  ticket: z.string().min(1),
+  /**
+   * Bytes of this ticket's output the client already received (both channels,
+   * decoded). The daemon replays from there; anything before the replay
+   * buffer's oldest retained byte is reported as `missedBytes`.
+   */
+  fromByte: z.number().int().min(0).optional(),
+});
+
 export const sessionPendingRequestSchema = z.object({
   type: z.literal('session-pending'),
   id: z.string().min(1),
@@ -393,6 +419,7 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
   detachRequestSchema,
   awaitRequestSchema,
   resultRequestSchema,
+  reattachRequestSchema,
   sessionPendingRequestSchema,
   sessionCompletedRequestSchema,
   killRequestSchema,
@@ -406,6 +433,7 @@ export type AttemptRequest = z.infer<typeof attemptRequestSchema>;
 export type DetachRequest = z.infer<typeof detachRequestSchema>;
 export type AwaitRequest = z.infer<typeof awaitRequestSchema>;
 export type ResultRequest = z.infer<typeof resultRequestSchema>;
+export type ReattachRequest = z.infer<typeof reattachRequestSchema>;
 export type SessionPendingRequest = z.infer<typeof sessionPendingRequestSchema>;
 export type SessionCompletedRequest = z.infer<typeof sessionCompletedRequestSchema>;
 export type KillRequest = z.infer<typeof killRequestSchema>;
@@ -865,6 +893,34 @@ export interface ResultResultMessage {
   readonly request: RequestRecord | null;
 }
 
+/**
+ * The daemon's answer to `reattach` (#187). `active`: the ticket is queued
+ * or running and now belongs to this connection; `output` messages for
+ * anything the client missed follow, then live output and `exit`.
+ * `terminal`: the ticket already settled, `request` is its record.
+ * `unknown`: no such ticket in this daemon's ledger.
+ */
+export interface ReattachResultMessage {
+  readonly type: 'reattach-result';
+  readonly id: string;
+  readonly ticket: string;
+  readonly outcome: 'active' | 'terminal' | 'unknown';
+  /** Present for `active`. */
+  readonly state?: 'queued' | 'running';
+  /** Present for an `active` ticket riding another run. */
+  readonly attachedTo?: string;
+  /**
+   * For `active`: output bytes emitted before `fromByte` that the replay
+   * buffer no longer holds and so cannot be resent; `null` when the amount
+   * cannot be determined (a rider whose leader's buffer overflowed).
+   */
+  readonly missedBytes?: number | null;
+  /** For `active`: the on-disk full log, where the missed bytes can be read. */
+  readonly outputPath?: string | null;
+  /** Present for `terminal`. */
+  readonly request?: RequestRecord;
+}
+
 export interface SessionPendingRecord {
   readonly createdAtMs: number;
   readonly estimateMs: number | null;
@@ -910,6 +966,7 @@ export type ServerMessage =
   | DetachResultMessage
   | AwaitResultMessage
   | ResultResultMessage
+  | ReattachResultMessage
   | SessionPendingResultMessage
   | SessionCompletedResultMessage;
 

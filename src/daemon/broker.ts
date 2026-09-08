@@ -26,7 +26,13 @@ import { makeDependencyRuntime } from './dependencies.js';
 import { createSystemIoSampler } from './disk-stats.js';
 import { TailBuffer } from './executor.js';
 import { normalizeCargoIntent } from './intent-normalizer.js';
-import { isTerminalStatus, makeAttachment, remainingEstimateMs } from './job-state.js';
+import {
+  attachmentReceives,
+  guarded,
+  isTerminalStatus,
+  makeAttachment,
+  remainingEstimateMs,
+} from './job-state.js';
 import type {
   Attachment,
   Job,
@@ -49,6 +55,8 @@ import type {
   StatusReport,
   StatusRow,
 } from './protocol.js';
+import { replaySince } from './replay.js';
+import type { ReplayChunk } from './replay.js';
 import { memoryClampState } from './scheduler.js';
 import { sharedTargetMessage, sharedTargetWith } from './shared-target.js';
 import { StallProbe, makeStallMonitor } from './stall.js';
@@ -98,9 +106,34 @@ export interface SubmitResult {
 
 export interface KillOptions {
   readonly onlyIfQueued?: boolean;
-  /** Ledger `error` for a running leader killed by the daemon itself (stall auto-kill). */
+  /** Ledger `error` for a leader killed by the daemon itself (stall auto-kill, expired reattach grace). */
   readonly reason?: string;
 }
+
+export interface ReattachInput {
+  /** Output bytes the client already received; replay starts there. */
+  readonly fromByte: number;
+  /** The new connection's callbacks; `onRegistered` binds ownership as for `submit`. */
+  readonly callbacks: SubmitCallbacks;
+  /**
+   * Called once the ticket is rebound and before any replayed output, so the
+   * connection can announce the outcome ahead of the chunks that follow.
+   */
+  readonly onActive: (info: ReattachActive) => Effect.Effect<void>;
+}
+
+export interface ReattachActive {
+  readonly state: 'queued' | 'running';
+  readonly attachedTo?: string;
+  /** Bytes after `fromByte` the replay buffer no longer held; null when unknowable. */
+  readonly missedBytes: number | null;
+  readonly outputPath: string | null;
+}
+
+export type ReattachOutcome =
+  | { readonly kind: 'active'; readonly info: ReattachActive }
+  | { readonly kind: 'terminal'; readonly record: RequestRecord }
+  | { readonly kind: 'unknown' };
 
 export class CargoIntentError extends Data.TaggedError('CargoIntentError')<{
   readonly message: string;
@@ -126,6 +159,20 @@ export interface BrokerApi {
    * False for riders, queued work, and unknown tickets.
    */
   readonly markOwnerGone: (ticket: string) => Effect.Effect<boolean>;
+  /**
+   * The connection that submitted `ticket` ended without detaching (#187).
+   * A running leader is marked owner-gone; a queued one keeps its place for
+   * `reattachGraceMs` and is killed as abandoned if nobody reattaches
+   * (immediately when the grace is 0). Riders and unknown tickets: nothing.
+   */
+  readonly ownerDisconnected: (ticket: string) => Effect.Effect<void>;
+  /**
+   * Rebind an in-flight ticket to a new connection (#187): clears
+   * owner-gone, replays the output past `fromByte` the buffer still holds,
+   * then streams live. A settled ticket answers its record; an unknown one
+   * is rejected.
+   */
+  readonly reattach: (ticket: string, input: ReattachInput) => Effect.Effect<ReattachOutcome>;
   /** Record that the submitting client stopped streaming the ticket; false when the ticket is unknown. */
   readonly detach: (ticket: string) => Effect.Effect<boolean>;
   /** The status report minus `version`, which the server stamps from its own build. */
@@ -574,6 +621,11 @@ export const BrokerLive: Layer.Layer<
           return yield* killAttachment(entry);
         }
         const job = entry.job;
+        const nameReason = Effect.sync(() => {
+          if (options?.reason !== undefined && job.killReason === null) {
+            job.killReason = options.reason;
+          }
+        });
         if (options?.onlyIfQueued === true) {
           const claimed = yield* Ref.modify(
             job.state,
@@ -583,6 +635,7 @@ export const BrokerLive: Layer.Layer<
           if (!claimed) {
             return false;
           }
+          yield* nameReason;
           yield* Deferred.succeed(job.killSignal, undefined);
           return true;
         }
@@ -606,12 +659,8 @@ export const BrokerLive: Layer.Layer<
             }
           },
         );
-        if (claim.inFlight && options?.reason !== undefined && job.killReason === null) {
-          yield* Effect.sync(() => {
-            job.killReason = options.reason ?? null;
-          });
-        }
         if (claim.signal) {
+          yield* nameReason;
           yield* Deferred.succeed(job.killSignal, undefined);
         }
         return claim.signal;
@@ -629,6 +678,131 @@ export const BrokerLive: Layer.Layer<
         }
         entry.job.ownerGone = true;
         return true;
+      });
+
+    const graceSeconds = `${config.reattachGraceMs / 1000}s`;
+    const abandonedReason = `killed while queued: submitter disconnected and did not reattach within ${graceSeconds}`;
+
+    const ownerDisconnected = (ticket: string): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        const entry = directory.get(ticket);
+        if (entry === undefined || entry.kind !== 'leader') {
+          return;
+        }
+        const job = entry.job;
+        if (Ref.getUnsafe(job.state) !== 'queued') {
+          yield* markOwnerGone(ticket);
+          return;
+        }
+        if (config.reattachGraceMs === 0) {
+          yield* kill(ticket, { onlyIfQueued: true });
+          return;
+        }
+        // The disconnect is usually a daemon restart or a dropped socket,
+        // not the caller giving up: hold the queue position (the job may
+        // even start meanwhile) and let the same client reattach. The
+        // epoch tells this timer from one a later disconnect arms.
+        const epoch = yield* Effect.sync(() => {
+          job.ownerGone = true;
+          job.ownerEpoch += 1;
+          return job.ownerEpoch;
+        });
+        yield* Effect.forkIn(
+          Effect.sleep(config.reattachGraceMs).pipe(
+            Effect.andThen(
+              Effect.suspend(() =>
+                job.ownerGone && job.ownerEpoch === epoch
+                  ? Effect.asVoid(kill(ticket, { onlyIfQueued: true, reason: abandonedReason }))
+                  : Effect.void,
+              ),
+            ),
+          ),
+          daemonScope,
+        );
+      });
+
+    const reattach = (ticket: string, input: ReattachInput): Effect.Effect<ReattachOutcome> =>
+      Effect.gen(function* () {
+        const entry = directory.get(ticket);
+        if (entry === undefined) {
+          const record = yield* ledger.getRequestByTicket(ticket);
+          return record !== null && isTerminalStatus(record.status)
+            ? { kind: 'terminal' as const, record }
+            : { kind: 'unknown' as const };
+        }
+        const real = input.callbacks;
+        const target: { callbacks: SubmitCallbacks } =
+          entry.kind === 'leader' ? entry.job : entry.attachment;
+        const leader = entry.kind === 'leader' ? entry.job : entry.leader;
+        // Until the replay is out, live fan-out lands in `pending` rather
+        // than racing ahead of it; `settleJob`'s exit waits there too.
+        const pending: Effect.Effect<void>[] = [];
+        const defer =
+          <Info>(deliver: (info: Info) => Effect.Effect<void>) =>
+          (info: Info): Effect.Effect<void> =>
+            Effect.sync(() => {
+              pending.push(deliver(info));
+            });
+        const gated: SubmitCallbacks = {
+          onStarted: defer(real.onStarted),
+          onOutput: defer(real.onOutput),
+          onExit: defer(real.onExit),
+          onRequeued: defer(real.onRequeued ?? (() => Effect.void)),
+        };
+        // One frame with the replay snapshot, as `emitChunk` reads the
+        // callbacks in the frame that records each chunk.
+        const { info, replay } = yield* Effect.sync(() => {
+          target.callbacks = gated;
+          if (entry.kind === 'leader') {
+            entry.job.ownerGone = false;
+            entry.job.ownerEpoch += 1;
+          }
+          // A rider still receiving its registration replay has no offset
+          // of its own yet; the in-flight replay simply continues to the
+          // new callbacks. Scoped riders saw only their audience's chunks.
+          const admit =
+            entry.kind === 'attachment' && entry.attachment.mode !== 'identity'
+              ? (chunk: ReplayChunk) => attachmentReceives(entry.attachment, chunk.audience)
+              : undefined;
+          const since =
+            entry.kind === 'attachment' && !entry.attachment.live
+              ? { chunks: [], missedBytes: 0 }
+              : replaySince(leader.replay.snapshot(), input.fromByte, admit);
+          const active: ReattachActive = {
+            state: leader.startedAtMs === null ? 'queued' : 'running',
+            ...(entry.kind === 'attachment' ? { attachedTo: leader.ticket } : {}),
+            missedBytes: since.missedBytes,
+            outputPath: leader.log?.path ?? null,
+          };
+          return { info: active, replay: since.chunks };
+        });
+        const registered = yield* registerOwnership(real, ticket);
+        yield* input.onActive(info);
+        yield* Effect.forEach(
+          replay,
+          (chunk) =>
+            guarded(real.onOutput({ ticket, channel: chunk.channel, data: chunk.encodedData })),
+          { discard: true },
+        );
+        while (true) {
+          const batch = yield* Effect.sync(() => {
+            const taken = pending.splice(0);
+            if (taken.length === 0) {
+              target.callbacks = real;
+            }
+            return taken;
+          });
+          if (batch.length === 0) {
+            break;
+          }
+          yield* Effect.forEach(batch, guarded, { discard: true });
+        }
+        if (!registered) {
+          // The new connection closed before it could own the ticket: it is
+          // as gone as the one before it.
+          yield* ownerDisconnected(ticket);
+        }
+        return { kind: 'active' as const, info };
       });
 
     const stallProbe = yield* StallProbe;
@@ -813,6 +987,8 @@ export const BrokerLive: Layer.Layer<
       recordAttempt,
       kill,
       markOwnerGone,
+      ownerDisconnected,
+      reattach,
       detach,
       report,
       getTicket,

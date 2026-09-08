@@ -2,6 +2,7 @@ import { describe, expect, it } from 'effect-rstest';
 
 import {
   awaitCeilingMs,
+  clientMessageSchema,
   requestStatuses,
   statusRequestSchema,
 } from '../src/daemon/protocol.js';
@@ -658,5 +659,42 @@ describe('await wait ceiling (issues #3, #32)', () => {
     // holds the budget to it.
     expect(ticketInputSchema.parse({ maxWaitMs: awaitCeilingMs, ticket: 'cc-1' }).maxWaitMs).toBe(awaitCeilingMs);
     expect(() => ticketInputSchema.parse({ maxWaitMs: awaitCeilingMs + 1, ticket: 'cc-1' })).toThrow();
+  });
+});
+
+describe('reattach message contract (#187)', () => {
+  it('accepts the bare message and every optional field', () => {
+    expect(clientMessageSchema.parse({ type: 'reattach', id: 'r1', ticket: 'cc-1' })).toEqual({
+      type: 'reattach',
+      id: 'r1',
+      ticket: 'cc-1',
+    });
+    expect(
+      clientMessageSchema.parse({
+        type: 'reattach',
+        id: 'r1',
+        ticket: 'cc-1',
+        fromByte: 128,
+      }),
+    ).toMatchObject({ fromByte: 128 });
+  });
+
+  it('rejects an offset that is not a whole byte count, and a message without a ticket', () => {
+    expect(
+      clientMessageSchema.safeParse({ type: 'reattach', id: 'r1', ticket: 'cc-1', fromByte: -1 }).success,
+    ).toBe(false);
+    expect(
+      clientMessageSchema.safeParse({ type: 'reattach', id: 'r1', ticket: 'cc-1', fromByte: 1.5 }).success,
+    ).toBe(false);
+    expect(clientMessageSchema.safeParse({ type: 'reattach', id: 'r1' }).success).toBe(false);
+  });
+
+  it('is a message the pre-#187 union does not know, so old daemons answer bad-message', () => {
+    // The union is discriminated on `type`: an unknown type fails parsing at
+    // the discriminator, which server.ts answers with `error bad-message`
+    // under the request id. That reply is what the client reads as
+    // "reattach unsupported".
+    const parsed = clientMessageSchema.safeParse({ type: 'reattach-v2', id: 'r1', ticket: 'cc-1' });
+    expect(parsed.success).toBe(false);
   });
 });

@@ -289,6 +289,7 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
           pid: null,
           stall: null,
           ownerGone: false,
+          ownerEpoch: 0,
           killReason: null,
           editedRecently,
           depClosure,
@@ -664,8 +665,10 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
         }),
       );
 
+    // A daemon-initiated kill of a queued job (reattach grace expired, #187)
+    // names its cause on the job; a client's `hauler kill` leaves it null.
     const finishKilledBeforeRun = (lane: Lane, job: Job): Effect.Effect<void> =>
-      settleJob(lane, job, 'killed', null, null, 'killed while queued', Date.now());
+      settleJob(lane, job, 'killed', null, null, job.killReason ?? 'killed while queued', Date.now());
 
     const failPendingJob = (lane: Lane, job: Job, error: string): Effect.Effect<void> =>
       Effect.gen(function* () {
@@ -1246,9 +1249,13 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
         const ownEstimateMs =
           entry.kind === 'leader' ? entry.job.estimateMs : entry.attachment.estimateMs;
         const delayed = queuedWaitIsDelayed(Math.max(0, atMs - ownCreatedAtMs), ownEstimateMs);
-        // A lane head parked at the admission gate is neither pending nor running.
-        const held =
-          leader.admissionHold === null ? {} : { admissionHold: leader.admissionHold };
+        // A lane head parked at the admission gate is neither pending nor
+        // running. A queued leader whose submitter dropped is waiting for a
+        // reattach (#187) and says so.
+        const held = {
+          ...(leader.admissionHold === null ? {} : { admissionHold: leader.admissionHold }),
+          ...(entry.kind === 'leader' && entry.job.ownerGone ? { orphaned: true as const } : {}),
+        };
         const lane = lanes.get(leader.laneKey);
         if (lane === undefined) {
           return delayed ? { delayed: true, ...held, ...estimates } : { ...held, ...estimates };

@@ -113,6 +113,18 @@ type TerminationSignal = 'SIGINT' | 'SIGTERM';
 
 const terminationSignals: readonly TerminationSignal[] = ['SIGINT', 'SIGTERM'];
 
+/**
+ * `EX_UNAVAILABLE` (sysexits): the connection to the daemon was lost after
+ * the ticket was accepted and the run could not be reattached, so there is
+ * no cargo result to report (#187). Distinct from cargo's own codes, from
+ * `2` (rejected intent), `75` (auto-backgrounded), and `130`/`143` (signals).
+ */
+export const connectionLostExitCode = 69;
+
+/** Reconnect attempts after a lost connection, one second apart, before failing closed. */
+const reattachAttempts = 5;
+const reattachRetryDelay = '1 second';
+
 /** Shell convention for a signaled exit: 128 + the signal number (130 for SIGINT, 143 for SIGTERM). */
 const signalExitCode = (signal: string | null): number | null => {
   if (signal === null) {
@@ -292,6 +304,23 @@ const detachAckTimeout = '2 seconds';
 /** How long to wait for the daemon to confirm a kill before hanging up on a signal. */
 const killAckTimeout = '2 seconds';
 
+/**
+ * Output bytes this client has received for its ticket, across connections:
+ * after a reconnect the daemon replays from here (#187).
+ *
+ * ponytail: counts what arrived, including a daemon-side "output truncated
+ * for slow client" notice, so a client that fell behind before the drop may
+ * be replayed a little more or less than exactly the gap.
+ */
+interface OutputCursor {
+  outputBytes: number;
+}
+
+/** What the client sends first on a connection: a new request, or a claim on a ticket it already owns. */
+type InitialRequest =
+  | { readonly kind: 'exec' }
+  | { readonly kind: 'reattach'; readonly ticket: string };
+
 /** Per-connection state the message handler and the signal relay share. */
 interface StreamState {
   readonly ticket: Ref.Ref<string | null>;
@@ -305,13 +334,36 @@ interface StreamState {
   /** The signal this client received, when the run ended because of one. */
   readonly interruptedBy: Ref.Ref<TerminationSignal | null>;
   readonly detach: (ticket: string) => Effect.Effect<void>;
+  readonly cursor: OutputCursor;
+  /** The ticket this connection is reclaiming, when it opened with `reattach`. */
+  readonly reattaching: string | null;
 }
 
-const describeExit = (message: ExitMessage): string => {
+const describeExit = (
+  message: Pick<ExitMessage, 'ticket' | 'signal' | 'error'> & { readonly status: string },
+): string => {
   const signal = message.signal === null ? '' : ` (${message.signal})`;
   const error = message.error === null ? '' : `: ${message.error}`;
   return `[cargo-hauler] ticket ${message.ticket} ${message.status}${signal}${error}\n`;
 };
+
+/** The one fail-closed line: the caller learns the run has no result, and why. */
+const abortRun = (
+  options: ExecOptions,
+  state: StreamState,
+  ticket: string,
+  detail: string,
+): Effect.Effect<void> =>
+  Effect.gen(function* () {
+    options.io.writeStderr(
+      `[cargo-hauler] brokered run aborted: daemon connection lost; ticket ${ticket} ${detail}\n`,
+    );
+    yield* Deferred.succeed(state.finished, {
+      exitCode: connectionLostExitCode,
+      mode: 'brokered' as const,
+      ticket,
+    });
+  });
 
 const handleServerMessage = (
   options: ExecOptions,
@@ -404,10 +456,13 @@ const handleServerMessage = (
           formatProgressLine({ kind: 'started', ticket: message.ticket, waitMs: message.waitMs }),
         );
         return;
-      case 'output':
+      case 'output': {
         yield* Ref.set(state.lastOutputAtMs, Date.now());
-        writeChannel(options.io, message.channel, Buffer.from(message.data, 'base64'));
+        const data = Buffer.from(message.data, 'base64');
+        state.cursor.outputBytes += data.byteLength;
+        writeChannel(options.io, message.channel, data);
         return;
+      }
       case 'exit': {
         yield* Ref.set(state.ticket, message.ticket);
         // A kill, a daemon shutdown, or a spawn failure all used to reach the
@@ -427,12 +482,99 @@ const handleServerMessage = (
         return;
       }
       case 'error':
+        if (state.reattaching !== null) {
+          // A daemon from before `reattach` answers the unknown message type
+          // with bad-message; either way there is no ticket to resume.
+          yield* abortRun(
+            options,
+            state,
+            state.reattaching,
+            message.code === 'bad-message'
+              ? 'could not be reattached: this daemon does not support reattach (restart it with `hauler daemon restart`)'
+              : `could not be reattached: ${message.message}`,
+          );
+          return;
+        }
         options.io.writeStderr(`[cargo-hauler] ${message.message}\n`);
         yield* Deferred.succeed(state.finished, {
           exitCode: message.code === 'bad-intent' ? 2 : 1,
           mode: 'brokered' as const,
         });
         return;
+      case 'reattach-result':
+        yield* Ref.set(state.ticket, message.ticket);
+        switch (message.outcome) {
+          case 'active': {
+            const running = message.state === 'running';
+            yield* Ref.set(state.phase, running ? 'running' : 'queued');
+            if (running) {
+              yield* Ref.set(state.startedAtMs, Date.now());
+            }
+            const riding = message.attachedTo === undefined ? '' : `, attached to ${message.attachedTo}`;
+            options.io.writeStderr(
+              `[cargo-hauler] reattached to ticket ${message.ticket} (${message.state ?? 'active'}${riding})\n`,
+            );
+            const log = message.outputPath ? `; full log: ${message.outputPath}` : '';
+            if (message.missedBytes === null) {
+              options.io.writeStderr(
+                `[cargo-hauler] some output may have been missed while reconnecting (replay buffer overflowed)${log}\n`,
+              );
+            } else if ((message.missedBytes ?? 0) > 0) {
+              options.io.writeStderr(
+                `[cargo-hauler] ${message.missedBytes} bytes of output missed while reconnecting${log}\n`,
+              );
+            }
+            return;
+          }
+          case 'terminal': {
+            const record = message.request;
+            if (record === undefined) {
+              yield* abortRun(options, state, message.ticket, 'settled but the daemon sent no record');
+              return;
+            }
+            // Cargo ran and ended: the caller gets its result, as if the
+            // connection had held. A ticket that never started (killed while
+            // queued, daemon shutdown, orphaned by restart) has no cargo
+            // result — the SIGTERM a shutdown stamps on it is not one either.
+            if (
+              record.startedAtMs === null ||
+              (record.exitCode === null && record.signal === null)
+            ) {
+              yield* abortRun(
+                options,
+                state,
+                message.ticket,
+                `${record.status}${record.error === null ? '' : `: ${record.error}`}`,
+              );
+              return;
+            }
+            if (record.status !== 'done') {
+              options.io.writeStderr(describeExit(record));
+            }
+            options.io.writeStderr(
+              `[cargo-hauler] ticket ${message.ticket} finished while this client was disconnected${
+                record.outputPath === null ? '' : `; full log: ${record.outputPath}`
+              }\n`,
+            );
+            const interrupted = yield* Ref.get(state.interruptedBy);
+            yield* Deferred.succeed(state.finished, {
+              exitCode:
+                interrupted === null
+                  ? (record.exitCode ?? signalExitCode(record.signal) ?? 1)
+                  : terminationExitCode(interrupted),
+              mode: 'brokered' as const,
+              ticket: message.ticket,
+            });
+            return;
+          }
+          case 'unknown':
+            yield* abortRun(options, state, message.ticket, 'is not known to the daemon');
+            return;
+          default: {
+            const exhaustive: never = message.outcome;
+            return exhaustive;
+          }
+        }
       case 'detach-result':
         if (!message.detached) {
           options.io.writeStderr(
@@ -463,6 +605,8 @@ const handleServerMessage = (
 const streamBrokered = (
   options: ExecOptions,
   config: DaemonConfigShape,
+  request: InitialRequest,
+  cursor: OutputCursor,
 ): Effect.Effect<
   RunExecResult,
   DaemonUnreachableError | ControlTimeoutError | ConnectionClosedError,
@@ -473,7 +617,7 @@ const streamBrokered = (
     const lines = new LineBuffer();
     const opened = yield* Deferred.make<void>();
     const finished = yield* Deferred.make<RunExecResult>();
-    const ticket = yield* Ref.make<string | null>(null);
+    const ticket = yield* Ref.make<string | null>(request.kind === 'reattach' ? request.ticket : null);
     const submittedAtMs = Date.now();
     const id = shortId();
 
@@ -487,6 +631,7 @@ const streamBrokered = (
     const write = yield* socket.writer;
 
     const state: StreamState = {
+      cursor,
       detach: (target) =>
         write(encodeClientMessage({ type: 'detach', id: `${id}-detach`, ticket: target })).pipe(
           Effect.ignore,
@@ -500,6 +645,7 @@ const streamBrokered = (
       killAcknowledged: yield* Deferred.make<void>(),
       lastOutputAtMs: yield* Ref.make(submittedAtMs),
       phase: yield* Ref.make<'queued' | 'running'>('queued'),
+      reattaching: request.kind === 'reattach' ? request.ticket : null,
       startedAtMs: yield* Ref.make<number | null>(null),
       ticket,
     };
@@ -604,22 +750,26 @@ const streamBrokered = (
     yield* Deferred.await(opened).pipe(Effect.raceFirst(Fiber.join(pumpFiber)));
 
     yield* write(
-      encodeClientMessage({
-        type: 'exec',
-        id,
-        ...(options.allowSharedTarget === true ? { allowSharedTarget: true } : {}),
-        argv: [...options.argv],
-        cwd: options.cwd,
-        ...(options.env === undefined ? {} : { env: { ...options.env } }),
-        ...(options.host === undefined ? {} : { host: options.host }),
-        ...(options.session === undefined ? {} : { session: options.session }),
-        ...(options.workspaceRoot === undefined ? {} : { workspaceRoot: options.workspaceRoot }),
-        ...(options.background === true ? { background: true } : {}),
-        ...(options.mergeStderr ? { mergeStderr: true } : {}),
-        ...(options.after === undefined || options.after.length === 0
-          ? {}
-          : { after: [...options.after] }),
-      }),
+      encodeClientMessage(
+        request.kind === 'reattach'
+          ? { type: 'reattach', id, ticket: request.ticket, fromByte: cursor.outputBytes }
+          : {
+              type: 'exec',
+              id,
+              ...(options.allowSharedTarget === true ? { allowSharedTarget: true } : {}),
+              argv: [...options.argv],
+              cwd: options.cwd,
+              ...(options.env === undefined ? {} : { env: { ...options.env } }),
+              ...(options.host === undefined ? {} : { host: options.host }),
+              ...(options.session === undefined ? {} : { session: options.session }),
+              ...(options.workspaceRoot === undefined ? {} : { workspaceRoot: options.workspaceRoot }),
+              ...(options.background === true ? { background: true } : {}),
+              ...(options.mergeStderr ? { mergeStderr: true } : {}),
+              ...(options.after === undefined || options.after.length === 0
+                ? {}
+                : { after: [...options.after] }),
+            },
+      ),
     ).pipe(Effect.mapError((error) => mapOpenError(error, config.socketPath)));
 
     const heartbeatMs = options.heartbeatMs ?? defaultHeartbeatMs;
@@ -671,11 +821,24 @@ const streamBrokered = (
     return result;
   });
 
+/** The result a connection that closed after the daemon's `exit` still carries. */
+const exitFromReceived = (received: readonly ServerMessage[]): RunExecResult | null => {
+  const exit = received.find((message): message is ExitMessage => message.type === 'exit');
+  return exit === undefined
+    ? null
+    : {
+        exitCode: exit.exitCode ?? signalExitCode(exit.signal) ?? 1,
+        mode: 'brokered' as const,
+        ticket: exit.ticket,
+      };
+};
+
 const brokeredOrUnreachable = (
   options: ExecOptions,
   config: DaemonConfigShape,
-): Effect.Effect<RunExecResult, DaemonUnreachableError> =>
-  Effect.scoped(streamBrokered(options, config)).pipe(
+): Effect.Effect<RunExecResult, DaemonUnreachableError> => {
+  const cursor: OutputCursor = { outputBytes: 0 };
+  return Effect.scoped(streamBrokered(options, config, { kind: 'exec' }, cursor)).pipe(
     // The socket exists but nobody accepted within the open timeout: the
     // daemon is alive and overloaded. Running cargo directly here would put an
     // unbrokered build on an already saturated machine, so keep knocking.
@@ -685,31 +848,27 @@ const brokeredOrUnreachable = (
     }),
     Effect.catchTags({
       ConnectionClosed: (closed) => {
-        const exit = closed.received.find(
-          (message): message is ExitMessage => message.type === 'exit',
-        );
-        if (exit !== undefined) {
-          return Effect.succeed({
-            exitCode: exit.exitCode ?? signalExitCode(exit.signal) ?? 1,
-            mode: 'brokered' as const,
-            ticket: exit.ticket,
-          });
+        const exit = exitFromReceived(closed.received);
+        if (exit !== null) {
+          return Effect.succeed(exit);
         }
         if (closed.received.length === 0) {
           return Effect.fail(
             new DaemonUnreachableError({ cause: closed, socketPath: config.socketPath }),
           );
         }
-        // The daemon owns a ticket for this run and will finish it without
-        // us; the caller needs its id to collect the result.
+        // The daemon owns a ticket for this run: take it back (#187). Its
+        // queue position, output so far, and result are all still there
+        // unless the daemon itself went away, in which case the reattach
+        // says so and this run fails closed instead of claiming a result.
         const ack = closed.received.find(
           (message): message is AckMessage => message.type === 'ack',
         );
         if (ack !== undefined) {
           options.io.writeStderr(
-            `[cargo-hauler] connection to daemon lost; ticket ${ack.ticket} continues — hauler result ${ack.ticket}\n`,
+            `[cargo-hauler] connection to daemon lost; reattaching to ticket ${ack.ticket}…\n`,
           );
-          return Effect.succeed({ exitCode: 1, mode: 'brokered' as const, ticket: ack.ticket });
+          return reattachLoop(options, config, ack.ticket, cursor, 1);
         }
         options.io.writeStderr('[cargo-hauler] connection to daemon lost before it accepted the request\n');
         return Effect.succeed({ exitCode: 1, mode: 'brokered' as const });
@@ -718,6 +877,54 @@ const brokeredOrUnreachable = (
         Effect.fail(new DaemonUnreachableError({ cause: timeout, socketPath: config.socketPath })),
     }),
   );
+};
+
+/**
+ * Reconnect and reclaim `ticket`, a bounded number of times. Each attempt
+ * runs the same daemon-ensuring step as a fresh exec, so a daemon that was
+ * restarted or replaced comes back up first. Never falls open to a direct
+ * run: the ticket may still be building, and a second cargo on the same
+ * target dir is not what the caller asked for.
+ */
+const reattachLoop = (
+  options: ExecOptions,
+  config: DaemonConfigShape,
+  ticket: string,
+  cursor: OutputCursor,
+  attempt: number,
+): Effect.Effect<RunExecResult> =>
+  Effect.gen(function* () {
+    const abort = (detail: string): RunExecResult => {
+      options.io.writeStderr(
+        `[cargo-hauler] brokered run aborted: daemon connection lost; ticket ${ticket} ${detail}\n`,
+      );
+      return { exitCode: connectionLostExitCode, mode: 'brokered' as const, ticket };
+    };
+    if (options.autoSpawn !== false) {
+      const direct = yield* ensureForExec(options, config);
+      if (direct !== null) {
+        return abort(`cannot be reattached: ${direct.reason}`);
+      }
+    }
+    const outcome = yield* Effect.scoped(
+      streamBrokered(options, config, { kind: 'reattach', ticket }, cursor),
+    ).pipe(Effect.result);
+    if (outcome._tag === 'Success') {
+      return outcome.success;
+    }
+    const failure = outcome.failure;
+    if (failure._tag === 'ConnectionClosed') {
+      const exit = exitFromReceived(failure.received);
+      if (exit !== null) {
+        return exit;
+      }
+    }
+    if (attempt >= reattachAttempts) {
+      return abort(`could not be reattached: daemon unreachable after ${attempt} attempts`);
+    }
+    yield* Effect.sleep(reattachRetryDelay);
+    return yield* reattachLoop(options, config, ticket, cursor, attempt + 1);
+  });
 
 /**
  * Auto-start and the one-version rule share one call, made before the first

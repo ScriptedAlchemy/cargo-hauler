@@ -77,7 +77,7 @@ The CLI is `hauler` on PATH from `npm i -g cargo-hauler`. Never run
 
 | Command | Behavior |
 | --- | --- |
-| `hauler exec [--session ID] [--host HOST] [--cwd DIR] [--bg] [--after TICKET[,TICKET…]] [--allow-shared-target] -- <cargo …>` | Submit Cargo through the daemon and stream output; hooks rewrite commands to this form. A relative `--cwd` is resolved against the caller's directory. `--after` (repeatable or comma-separated) keeps the request queued until every named ticket has finished; it fails with `prerequisite cc-N <status>` if one of them fails or is killed, and an unknown ticket is rejected as a bad intent. `--allow-shared-target` accepts the stale-artifact risk described below and prints a warning. Exits with cargo's code; `130`/`143` after a SIGINT/SIGTERM (the ticket is killed first); `75` when auto-backgrounded. |
+| `hauler exec [--session ID] [--host HOST] [--cwd DIR] [--bg] [--after TICKET[,TICKET…]] [--allow-shared-target] -- <cargo …>` | Submit Cargo through the daemon and stream output; hooks rewrite commands to this form. A relative `--cwd` is resolved against the caller's directory. `--after` (repeatable or comma-separated) keeps the request queued until every named ticket has finished; it fails with `prerequisite cc-N <status>` if one of them fails or is killed, and an unknown ticket is rejected as a bad intent. `--allow-shared-target` accepts the stale-artifact risk described below and prints a warning. Exits with cargo's code; `130`/`143` after a SIGINT/SIGTERM (the ticket is killed first); `75` when auto-backgrounded; `69` when the daemon connection was lost and the ticket could not be reattached (see below). |
 | `hauler status [--limit N] [--cwd DIR] [--session ID] [--lane KEY] [--ticket ID …] [--status S …] [--command-contains TEXT]` | Queue, active runs, lanes, admission, kache, optionally filtered. Lanes sharing one external target directory across workspace roots carry `sharedTargetWith` and render a warning naming the target and roots. Rows are bounded summaries: no row carries an output tail; a running row carries `outputPreview`, the last 8 lines (at most 512 bytes) of its live output, cut at a line boundary, and every other row has `outputPreview: null`. Read a ticket's whole tail with `hauler result`. |
 | `hauler log [--limit N]` | Recent requests from the ledger, as the same bounded summary rows. |
 | `hauler last` | The most recent request, as a detail record (from the daemon while it is running, otherwise from the ledger) — its output tail included. |
@@ -390,9 +390,32 @@ answer, and exits `130` or `143`; in a direct run it terminates the cargo
 process group the same way. A ticket that ends other than `done` is reported
 on stderr as `ticket cc-N <status>[ (signal)][: reason]`, and its exit code is
 cargo's, `128 + signal` for a signaled run, or `1` when the daemon could not
-start cargo at all. If the connection drops after the ticket was accepted, the
-client prints `connection to daemon lost; ticket cc-N continues — hauler
-result cc-N` and exits `1`; the daemon finishes the ticket on its own.
+start cargo at all.
+
+If the connection drops after the ticket was accepted (a daemon restart or
+replacement, a dropped socket), the client keeps the ticket rather than the
+connection: it prints `connection to daemon lost; reattaching to ticket
+cc-N…`, reconnects — starting the daemon again if it is gone, a few attempts
+one second apart — and sends `reattach`. The daemon meanwhile holds a ticket
+whose submitter vanished: one still queued keeps its place for
+`CARGO_HAULER_REATTACH_GRACE_MS` (30 s; it may start in the meantime) and is
+killed as `killed while queued: submitter disconnected and did not reattach
+within 30s` only if nobody comes back; one already running continues, marked
+orphaned as before. A reattach rebinds the ticket to the new connection,
+clears the orphan flag, replays the output the client had not yet received
+from the replay buffer, and streams the rest, so the exit code is cargo's as
+if nothing had happened; output the buffer no longer holds is announced as
+`N bytes of output missed while reconnecting; full log: <path>` rather than
+invented. A ticket that finished in the meantime yields its exit code and log
+path. When the ticket cannot be reattached — it never ran cargo and was
+killed at the daemon's shutdown, `orphaned by daemon restart`, unknown to the
+daemon that answered, the daemon predates the message, or no daemon answered
+within the budget — the client exits `69` (`EX_UNAVAILABLE`) with `brokered
+run aborted: daemon connection lost; ticket cc-N <reason>`; it never claims
+the build ran. `CARGO_HAULER_REATTACH_GRACE_MS=0` restores the earlier policy
+of killing a queued ticket the moment its connection closes. `--bg` and
+auto-backgrounded tickets are detached, not owned, and are untouched by any
+of this.
 
 A deadlocked test binary holds its lane for ever at 0% CPU with nothing on
 stdout, and neither the estimate overrun nor the output silence alone can
@@ -635,6 +658,7 @@ Per-host notes and hook timeouts are in [docs/install.md](docs/install.md).
 | `CARGO_HAULER_STALL_ESTIMATE_FACTOR` | `3` | A running ticket becomes a stall candidate once its elapsed time exceeds this multiple of its estimate. |
 | `CARGO_HAULER_STALL_IDLE_MS` | `600000` | Window with no process-tree CPU time and no output after which a stall candidate is flagged `stalled`; `0` or `off` disables stall detection. |
 | `CARGO_HAULER_STALL_AUTO_KILL` | Enabled | Kill a stalled ticket automatically once the connection that submitted it has disconnected. `0`, `false`, `off`, or `no` only flags it. |
+| `CARGO_HAULER_REATTACH_GRACE_MS` | `30000` | How long a queued ticket keeps its place after its submitting connection dropped, waiting for the client to `reattach`; then it is killed as abandoned. `0` kills it the moment the connection closes. |
 | `CARGO_HAULER_STOP_WAIT_MS` | `30000` | Maximum wait for one stop-hook invocation; values above the 7200000 ms await ceiling are clamped. |
 | `CARGO_HAULER_LEDGER_RETENTION_DAYS` | `30` | Finished ledger rows older than this many days are deleted when the daemon starts; `0` disables the age limit. |
 | `CARGO_HAULER_LEDGER_MAX_ROWS` | `50000` | Total ledger rows beyond which the oldest finished rows are deleted when the daemon starts; `0` disables the row cap. Pruned rows take their `tickets/<ticket>.log` files with them. |
