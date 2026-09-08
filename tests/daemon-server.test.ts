@@ -14,6 +14,8 @@ const brokerWith = (overrides: Partial<BrokerApi> = {}): BrokerApi => ({
   getTicket: () => Effect.succeed(null),
   kill: () => Effect.succeed(true),
   markOwnerGone: () => Effect.succeed(false),
+  ownerDisconnected: () => Effect.void,
+  reattach: () => Effect.succeed({ kind: 'unknown' }),
   recordAttempt: () => Effect.succeed({ ticket: 'cc-attempt' }),
   report: () => Effect.die(new Error('status exploded')),
   sessionCompleted: () => Effect.succeed([]),
@@ -217,11 +219,11 @@ describe('daemon connection detach', () => {
     }));
 });
 
-describe('daemon connection disconnect cleanup (#46)', () => {
-  it.live('marks a still-running owned ticket orphaned once the connection is gone', () =>
+describe('daemon connection disconnect cleanup (#46, #187)', () => {
+  it.live('hands every owned ticket to the broker once the connection is gone, and nothing else', () =>
     Effect.gen(function* () {
-      const killed: { ticket: string; onlyIfQueued: boolean | undefined }[] = [];
-      const orphaned: string[] = [];
+      const killed: string[] = [];
+      const disconnected: string[] = [];
       yield* runMessages(
         [
           `${JSON.stringify({
@@ -230,28 +232,137 @@ describe('daemon connection disconnect cleanup (#46)', () => {
             argv: ['cargo', 'test', '-p', 'sealed'],
             cwd: '/tmp/workspace',
           })}\n`,
+          // Background work is never owned by the connection.
+          `${JSON.stringify({
+            type: 'exec',
+            id: 'exec-2',
+            argv: ['cargo', 'build'],
+            cwd: '/tmp/workspace',
+            background: true,
+          })}\n`,
         ],
         brokerWith({
-          kill: (ticket, options) =>
+          kill: (ticket) =>
             Effect.sync(() => {
-              killed.push({ onlyIfQueued: options?.onlyIfQueued, ticket });
-              // Already running: the queued-only kill declines.
+              killed.push(ticket);
               return false;
             }),
-          markOwnerGone: (ticket) =>
+          ownerDisconnected: (ticket) =>
             Effect.sync(() => {
-              orphaned.push(ticket);
-              return true;
+              disconnected.push(ticket);
             }),
-          submit: (_input, callbacks) =>
-            (callbacks.onRegistered ?? (() => Effect.succeed(true)))('cc-3062').pipe(
-              Effect.as({ laneKey: 'lane', position: 0, ticket: 'cc-3062' }),
+          submit: (input, callbacks) => {
+            const ticket = input.background === true ? 'cc-bg' : 'cc-3062';
+            return (callbacks.onRegistered ?? (() => Effect.succeed(true)))(ticket).pipe(
+              Effect.as({ laneKey: 'lane', position: 0, ticket }),
+            );
+          },
+        }),
+      );
+
+      // The policy (grace window, orphan flag) lives in the broker; the
+      // connection no longer kills anything itself.
+      expect(killed).toEqual([]);
+      expect(disconnected).toEqual(['cc-3062']);
+    }));
+});
+
+describe('daemon connection reattach (#187)', () => {
+  it.live('announces an active reattach before the replayed output and rebinds ownership', () =>
+    Effect.gen(function* () {
+      const disconnected: string[] = [];
+      const replies = yield* runMessages(
+        [`${JSON.stringify({ type: 'reattach', id: 're-1', ticket: 'cc-7', fromByte: 12 })}\n`],
+        brokerWith({
+          ownerDisconnected: (ticket) =>
+            Effect.sync(() => {
+              disconnected.push(ticket);
+            }),
+          reattach: (ticket, input) =>
+            Effect.gen(function* () {
+              expect(ticket).toBe('cc-7');
+              expect(input.fromByte).toBe(12);
+              const owned = yield* (input.callbacks.onRegistered ?? (() => Effect.succeed(true)))(ticket);
+              expect(owned).toBe(true);
+              yield* input.onActive({ state: 'running', missedBytes: 3, outputPath: '/logs/cc-7.log' });
+              yield* input.callbacks.onOutput({
+                ticket,
+                channel: 'stdout',
+                data: Buffer.from('rest\n').toString('base64'),
+              });
+              yield* input.callbacks.onExit({
+                ticket,
+                status: 'done',
+                exitCode: 0,
+                signal: null,
+                waitMs: 1,
+                runMs: 2,
+                error: null,
+              });
+              return { kind: 'active', info: { state: 'running', missedBytes: 3, outputPath: '/logs/cc-7.log' } };
+            }),
+        }),
+      );
+
+      expect(replies.map((reply) => reply.type)).toEqual(['reattach-result', 'output', 'exit']);
+      expect(replies[0]).toEqual({
+        type: 'reattach-result',
+        id: 're-1',
+        ticket: 'cc-7',
+        outcome: 'active',
+        state: 'running',
+        missedBytes: 3,
+        outputPath: '/logs/cc-7.log',
+      });
+      expect(replies[2]).toMatchObject({ type: 'exit', id: 're-1', ticket: 'cc-7', exitCode: 0 });
+      // The exit released ownership before the connection closed: nothing to hand back.
+      expect(disconnected).toEqual([]);
+    }));
+
+  it.live('answers terminal and unknown tickets without touching ownership', () =>
+    Effect.gen(function* () {
+      const record = { ticket: 'cc-8', status: 'failed', exitCode: 101 };
+      const replies = yield* runMessages(
+        [
+          `${JSON.stringify({ type: 'reattach', id: 're-t', ticket: 'cc-8' })}\n`,
+          `${JSON.stringify({ type: 'reattach', id: 're-u', ticket: 'cc-9' })}\n`,
+        ],
+        brokerWith({
+          reattach: (ticket) =>
+            Effect.succeed(
+              ticket === 'cc-8'
+                ? { kind: 'terminal', record: record as never }
+                : { kind: 'unknown' },
             ),
         }),
       );
 
-      expect(killed).toEqual([{ onlyIfQueued: true, ticket: 'cc-3062' }]);
-      expect(orphaned).toEqual(['cc-3062']);
+      expect(replies).toContainEqual({
+        type: 'reattach-result',
+        id: 're-t',
+        ticket: 'cc-8',
+        outcome: 'terminal',
+        request: record,
+      });
+      expect(replies).toContainEqual({
+        type: 'reattach-result',
+        id: 're-u',
+        ticket: 'cc-9',
+        outcome: 'unknown',
+      });
+    }));
+
+  it.live('a daemon without reattach answers the message with bad-message under its id', () =>
+    Effect.gen(function* () {
+      // What every daemon before #187 does with a `reattach` line: the
+      // discriminated union has no such type, so the reply is bad-message
+      // carrying the request id — which the client reads as "unsupported".
+      const replies = yield* runMessages(
+        [`${JSON.stringify({ type: 'reattach-v2', id: 're-old', ticket: 'cc-1' })}\n`],
+        brokerWith(),
+      );
+      expect(replies).toHaveLength(1);
+      expect(replies[0]).toMatchObject({ type: 'error', id: 're-old', code: 'bad-message' });
     }));
 });
 

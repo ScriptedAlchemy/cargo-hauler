@@ -65,3 +65,48 @@ export class ReplayBuffer {
     return { chunks: this.#chunks.slice(this.#head), droppedBytes: this.#dropped };
   }
 }
+
+export interface ReplaySince {
+  /** The chunks (the first possibly sliced) starting at the requested byte offset. */
+  readonly chunks: readonly ReplayChunk[];
+  /**
+   * Bytes at or after the offset that were emitted but no longer retained.
+   * `null` when the offset cannot be aligned with what is retained (a
+   * filtered view whose dropped chunks may or may not have been visible).
+   */
+  readonly missedBytes: number | null;
+}
+
+/**
+ * What a reattaching client (#187) that already received `fromByte` bytes of
+ * a ticket's output still needs from the buffer. `admit` restricts the view
+ * to the chunks the client was ever sent (a scoped rider's audience filter);
+ * with a filter the offsets are only meaningful while nothing has been
+ * dropped, since a dropped chunk's audience is gone with it.
+ */
+export const replaySince = (
+  snapshot: ReplaySnapshot,
+  fromByte: number,
+  admit?: (chunk: ReplayChunk) => boolean,
+): ReplaySince => {
+  if (admit !== undefined && snapshot.droppedBytes > 0) {
+    return { chunks: [], missedBytes: null };
+  }
+  const filtered = admit === undefined ? snapshot.chunks : snapshot.chunks.filter(admit);
+  let offset = snapshot.droppedBytes;
+  const missedBytes = Math.max(0, offset - fromByte);
+  const chunks: ReplayChunk[] = [];
+  for (const chunk of filtered) {
+    const end = offset + chunk.data.byteLength;
+    if (end > fromByte) {
+      if (offset >= fromByte) {
+        chunks.push(chunk);
+      } else {
+        const data = chunk.data.subarray(fromByte - offset);
+        chunks.push({ ...chunk, data, encodedData: Buffer.from(data).toString('base64') });
+      }
+    }
+    offset = end;
+  }
+  return { chunks, missedBytes };
+};

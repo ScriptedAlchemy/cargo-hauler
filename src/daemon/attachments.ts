@@ -17,7 +17,7 @@ import {
   requeueReasonFor,
   settlementStep,
 } from './job-state.js';
-import type { Attachment, ExitInfo, Job } from './job-state.js';
+import type { Attachment, ExitInfo, Job, SubmitCallbacks } from './job-state.js';
 import type { LedgerApi } from './ledger.js';
 import type { AttachMode, AttachRejectionGate, FinishedStatus } from './protocol.js';
 import type { ReplayAudience, ReplayChunk } from './replay.js';
@@ -139,18 +139,22 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
   ): Effect.Effect<void> =>
     Effect.gen(function* () {
       const encodedData = Buffer.from(data).toString('base64');
-      const liveAttachments = yield* Effect.sync(() => {
+      // The callbacks are read in the same frame that records the chunk in
+      // the replay buffer: a `reattach` (#187) snapshots that buffer and
+      // rebinds the callbacks in one frame too, so a chunk is either in the
+      // snapshot or delivered to the new owner, never both, never neither.
+      const { leaderCallbacks, liveAttachments } = yield* Effect.sync(() => {
         job.lastOutputAtMs = Date.now();
         job.replay.push(channel, data, audience, encodedData);
         job.tail.push(data);
         job.log?.write(data);
-        const live: Attachment[] = [];
+        const live: { readonly attachment: Attachment; readonly callbacks: SubmitCallbacks }[] = [];
         for (const attachment of job.attachments.values()) {
           if (!attachmentReceives(attachment, audience)) {
             continue;
           }
           if (attachment.live) {
-            live.push(attachment);
+            live.push({ attachment, callbacks: attachment.callbacks });
           } else {
             attachment.pendingLive.push({
               channel,
@@ -160,18 +164,16 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
             });
           }
         }
-        return live;
+        return { leaderCallbacks: job.callbacks, liveAttachments: live };
       });
-      yield* guarded(
-        job.callbacks.onOutput({ ticket: job.ticket, channel, data: encodedData }),
-      );
+      yield* guarded(leaderCallbacks.onOutput({ ticket: job.ticket, channel, data: encodedData }));
       yield* Effect.forEach(
         liveAttachments,
-        (attachment) =>
+        ({ attachment, callbacks }) =>
           Effect.sync(() => attachment.tail.push(data)).pipe(
             Effect.andThen(
               guarded(
-                attachment.callbacks.onOutput({
+                callbacks.onOutput({
                   ticket: attachment.ticket,
                   channel,
                   data: encodedData,

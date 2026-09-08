@@ -13,10 +13,12 @@ import { LineBufferOverflowError } from '../lib/ndjson.js';
 import { compareVersions } from '../lib/version-order.js';
 
 import type { BrokerApi } from './broker.js';
+import type { SubmitCallbacks } from './job-state.js';
 import type {
   ClientMessage,
   ExecRequest,
   OutputMessage,
+  ReattachRequest,
   ServerMessage,
 } from './protocol.js';
 import { LineBuffer, clientMessageSchema, encodeServerMessage } from './protocol.js';
@@ -294,6 +296,57 @@ export const makeConnectionHandler =
           ),
         );
 
+        /**
+         * The streaming callbacks for a ticket this connection owns, keyed by
+         * the request id the client will match replies on. `background`
+         * requests are never owned: nobody streams their exit.
+         */
+        const streamCallbacks = (id: string, background: boolean): SubmitCallbacks => ({
+          onRegistered: (ticket) =>
+            Effect.sync(() => {
+              if (background) {
+                return true;
+              }
+              if (connection.closed) {
+                return false;
+              }
+              ownTickets.add(ticket);
+              return true;
+            }),
+          onStarted: (info) =>
+            send({ type: 'started', id, ticket: info.ticket, waitMs: info.waitMs }),
+          onOutput: (info) =>
+            send({
+              type: 'output',
+              id,
+              ticket: info.ticket,
+              channel: info.channel,
+              data: info.data,
+            }),
+          onExit: (info) =>
+            Effect.gen(function* () {
+              yield* Effect.sync(() => ownTickets.delete(info.ticket));
+              yield* send({
+                type: 'exit',
+                id,
+                ticket: info.ticket,
+                status: info.status,
+                exitCode: info.exitCode,
+                signal: info.signal,
+                waitMs: info.waitMs,
+                runMs: info.runMs,
+                error: info.error,
+              });
+            }),
+          onRequeued: (info) =>
+            send({
+              type: 'requeued',
+              id,
+              ticket: info.ticket,
+              reason: info.reason,
+            }),
+        });
+
         const handleExec = (message: ExecRequest): Effect.Effect<void> =>
           Effect.gen(function* () {
             const submitted = yield* Effect.result(
@@ -310,51 +363,7 @@ export const makeConnectionHandler =
                   mergeStderr: message.mergeStderr,
                   after: message.after,
                 },
-                {
-                  onRegistered: (ticket) =>
-                    Effect.sync(() => {
-                      if (message.background === true) {
-                        return true;
-                      }
-                      if (connection.closed) {
-                        return false;
-                      }
-                      ownTickets.add(ticket);
-                      return true;
-                    }),
-                  onStarted: (info) =>
-                    send({ type: 'started', id: message.id, ticket: info.ticket, waitMs: info.waitMs }),
-                  onOutput: (info) =>
-                    send({
-                      type: 'output',
-                      id: message.id,
-                      ticket: info.ticket,
-                      channel: info.channel,
-                      data: info.data,
-                    }),
-                  onExit: (info) =>
-                    Effect.gen(function* () {
-                      yield* Effect.sync(() => ownTickets.delete(info.ticket));
-                      yield* send({
-                        type: 'exit',
-                        id: message.id,
-                        ticket: info.ticket,
-                        status: info.status,
-                        exitCode: info.exitCode,
-                        signal: info.signal,
-                        waitMs: info.waitMs,
-                        runMs: info.runMs,
-                        error: info.error,
-                      });
-                    }),
-                  onRequeued: (info) =>
-                    send({
-                      type: 'requeued',
-                      id: message.id,
-                      ticket: info.ticket,
-                      reason: info.reason,
-                    }),
-                },
+                streamCallbacks(message.id, message.background === true),
               ),
             );
             if (submitted._tag === 'Failure') {
@@ -369,6 +378,52 @@ export const makeConnectionHandler =
             // `SubmitResult` is the ack's payload key for key; the broker
             // already omits every optional it did not set.
             yield* send({ type: 'ack', id: message.id, ...submitted.success });
+          });
+
+        // Forked like exec: the replay of a large buffer must not hold up a
+        // kill arriving on the same socket.
+        const handleReattach = (message: ReattachRequest): Effect.Effect<void> =>
+          Effect.gen(function* () {
+            const outcome = yield* options.broker.reattach(message.ticket, {
+              callbacks: streamCallbacks(message.id, false),
+              fromByte: message.fromByte ?? 0,
+              onActive: (info) =>
+                send({
+                  type: 'reattach-result',
+                  id: message.id,
+                  ticket: message.ticket,
+                  outcome: 'active',
+                  state: info.state,
+                  ...(info.attachedTo === undefined ? {} : { attachedTo: info.attachedTo }),
+                  missedBytes: info.missedBytes,
+                  outputPath: info.outputPath,
+                }),
+            });
+            switch (outcome.kind) {
+              case 'active':
+                return;
+              case 'terminal':
+                yield* send({
+                  type: 'reattach-result',
+                  id: message.id,
+                  ticket: message.ticket,
+                  outcome: 'terminal',
+                  request: outcome.record,
+                });
+                return;
+              case 'unknown':
+                yield* send({
+                  type: 'reattach-result',
+                  id: message.id,
+                  ticket: message.ticket,
+                  outcome: 'unknown',
+                });
+                return;
+              default: {
+                const exhaustive: never = outcome;
+                return exhaustive;
+              }
+            }
           });
 
         const handleMessage = (message: ClientMessage): Effect.Effect<void, never, Scope.Scope> => {
@@ -455,6 +510,14 @@ export const makeConnectionHandler =
                 const request = yield* options.broker.getTicket(message.ticket);
                 yield* send({ type: 'result-result', id: message.id, request });
               });
+            case 'reattach':
+              return Effect.asVoid(
+                Effect.forkScoped(
+                  handleReattach(message).pipe(
+                    Effect.catchCause(recoverHandlerDefect(message.id, 'reattach handler')),
+                  ),
+                ),
+              );
             case 'session-pending':
               return Effect.gen(function* () {
                 const requests = yield* options.broker.sessionPending(message.session);
@@ -585,21 +648,15 @@ export const makeConnectionHandler =
                   connection.closed = true;
                   return [...ownTickets];
                 });
-                // Queued-but-unstarted work from a dead client is abandoned;
-                // running work continues so its result lands in the ledger,
-                // but is marked orphaned so a later stall may end it (#46).
-                yield* Effect.forEach(
-                  tickets,
-                  (ticket) =>
-                    options.broker
-                      .kill(ticket, { onlyIfQueued: true })
-                      .pipe(
-                        Effect.flatMap((killed) =>
-                          killed ? Effect.void : Effect.asVoid(options.broker.markOwnerGone(ticket)),
-                        ),
-                      ),
-                  { discard: true },
-                );
+                // Owned work outlives the connection: a queued ticket keeps
+                // its place for the reattach grace window before it is
+                // killed as abandoned (#187); a running one continues so its
+                // result lands in the ledger, marked orphaned so a later
+                // stall may end it (#46). A `reattach` on a new connection
+                // takes either back.
+                yield* Effect.forEach(tickets, options.broker.ownerDisconnected, {
+                  discard: true,
+                });
               }),
             ),
           );

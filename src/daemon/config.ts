@@ -129,6 +129,13 @@ export interface DaemonConfigShape {
    * (CARGO_HAULER_STALL_AUTO_KILL; `0`/`off` only flags it).
    */
   readonly stallAutoKill: boolean;
+  /**
+   * How long a queued ticket whose submitting connection dropped keeps its
+   * place in the lane waiting for that client to `reattach` before it is
+   * killed as abandoned (CARGO_HAULER_REATTACH_GRACE_MS; `0` kills it the
+   * moment the connection ends, as before #187).
+   */
+  readonly reattachGraceMs: number;
 }
 
 export class DaemonConfig extends Context.Service<DaemonConfig, DaemonConfigShape>()(
@@ -152,6 +159,7 @@ const defaultLedgerRetentionDays = 30;
 const defaultLedgerMaxRows = 50_000;
 const defaultStallEstimateFactor = 3;
 const defaultStallIdleMs = 10 * 60_000;
+const defaultReattachGraceMs = 30_000;
 const gibibyte = 1024 ** 3;
 const defaultTicketLogMaxBytes = 64 * 1024 * 1024;
 
@@ -459,6 +467,11 @@ export const resolveDaemonConfigWithWarnings = (
       integer: true,
     }),
     stallAutoKill: flag(pick(env, 'CARGO_HAULER_STALL_AUTO_KILL'), true),
+    reattachGraceMs: number(
+      pick(env, 'CARGO_HAULER_REATTACH_GRACE_MS'),
+      defaultReattachGraceMs,
+      { integer: true, min: 0 },
+    ),
   };
   return { config, warnings };
 };
