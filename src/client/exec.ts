@@ -306,13 +306,12 @@ const killAckTimeout = '2 seconds';
 
 /**
  * Output bytes this client has received for its ticket, across connections:
- * after a reconnect the daemon replays from here (#187).
- *
- * ponytail: counts what arrived, including a daemon-side "output truncated
- * for slow client" notice, so a client that fell behind before the drop may
- * be replayed a little more or less than exactly the gap.
+ * after a reconnect the daemon replays from here (#187). Daemon notices that
+ * replace dropped output carry `cursorBytes: 0` and make the prefix inexact.
  */
 interface OutputCursor {
+  /** False once the delivered output is no longer a contiguous Cargo prefix. */
+  exact: boolean;
   outputBytes: number;
 }
 
@@ -459,7 +458,11 @@ const handleServerMessage = (
       case 'output': {
         yield* Ref.set(state.lastOutputAtMs, Date.now());
         const data = Buffer.from(message.data, 'base64');
-        state.cursor.outputBytes += data.byteLength;
+        if (message.cursorBytes === 0) {
+          state.cursor.exact = false;
+        } else if (state.cursor.exact) {
+          state.cursor.outputBytes += message.cursorBytes ?? data.byteLength;
+        }
         writeChannel(options.io, message.channel, data);
         return;
       }
@@ -505,6 +508,21 @@ const handleServerMessage = (
         yield* Ref.set(state.ticket, message.ticket);
         switch (message.outcome) {
           case 'active': {
+            const log = message.outputPath ? `; full log: ${message.outputPath}` : '';
+            if (
+              !state.cursor.exact ||
+              message.missedBytes === undefined ||
+              message.missedBytes === null ||
+              message.missedBytes > 0
+            ) {
+              yield* abortRun(
+                options,
+                state,
+                message.ticket,
+                `output could not be replayed completely${log}`,
+              );
+              return;
+            }
             const running = message.state === 'running';
             yield* Ref.set(state.phase, running ? 'running' : 'queued');
             if (running) {
@@ -514,16 +532,6 @@ const handleServerMessage = (
             options.io.writeStderr(
               `[cargo-hauler] reattached to ticket ${message.ticket} (${message.state ?? 'active'}${riding})\n`,
             );
-            const log = message.outputPath ? `; full log: ${message.outputPath}` : '';
-            if (message.missedBytes === null) {
-              options.io.writeStderr(
-                `[cargo-hauler] some output may have been missed while reconnecting (replay buffer overflowed)${log}\n`,
-              );
-            } else if ((message.missedBytes ?? 0) > 0) {
-              options.io.writeStderr(
-                `[cargo-hauler] ${message.missedBytes} bytes of output missed while reconnecting${log}\n`,
-              );
-            }
             return;
           }
           case 'terminal': {
@@ -532,10 +540,10 @@ const handleServerMessage = (
               yield* abortRun(options, state, message.ticket, 'settled but the daemon sent no record');
               return;
             }
-            // Cargo ran and ended: the caller gets its result, as if the
-            // connection had held. A ticket that never started (killed while
-            // queued, daemon shutdown, orphaned by restart) has no cargo
-            // result — the SIGTERM a shutdown stamps on it is not one either.
+            // A ticket that never started has no cargo result. A ticket that
+            // did start but finished while disconnected has a status, but no
+            // channel-preserving replay left to restore machine-readable
+            // stdout, so returning its code would claim a complete result.
             if (
               record.startedAtMs === null ||
               (record.exitCode === null && record.signal === null)
@@ -548,23 +556,14 @@ const handleServerMessage = (
               );
               return;
             }
-            if (record.status !== 'done') {
-              options.io.writeStderr(describeExit(record));
-            }
-            options.io.writeStderr(
-              `[cargo-hauler] ticket ${message.ticket} finished while this client was disconnected${
+            yield* abortRun(
+              options,
+              state,
+              message.ticket,
+              `finished before its output stream could be reattached${
                 record.outputPath === null ? '' : `; full log: ${record.outputPath}`
-              }\n`,
+              }`,
             );
-            const interrupted = yield* Ref.get(state.interruptedBy);
-            yield* Deferred.succeed(state.finished, {
-              exitCode:
-                interrupted === null
-                  ? (record.exitCode ?? signalExitCode(record.signal) ?? 1)
-                  : terminationExitCode(interrupted),
-              mode: 'brokered' as const,
-              ticket: message.ticket,
-            });
             return;
           }
           case 'unknown':
@@ -837,7 +836,7 @@ const brokeredOrUnreachable = (
   options: ExecOptions,
   config: DaemonConfigShape,
 ): Effect.Effect<RunExecResult, DaemonUnreachableError> => {
-  const cursor: OutputCursor = { outputBytes: 0 };
+  const cursor: OutputCursor = { exact: true, outputBytes: 0 };
   return Effect.scoped(streamBrokered(options, config, { kind: 'exec' }, cursor)).pipe(
     // The socket exists but nobody accepted within the open timeout: the
     // daemon is alive and overloaded. Running cargo directly here would put an

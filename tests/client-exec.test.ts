@@ -535,12 +535,16 @@ describe('runExecClient', () => {
     }));
 
   describe('connection lost after the ack (#187)', () => {
-    const lostAfterAck = (reattach: ScriptedDaemonOptions['reattach']) =>
+    const lostAfterAck = (
+      reattach: ScriptedDaemonOptions['reattach'],
+      after: readonly ServerMessage[] = [],
+    ) =>
       Effect.gen(function* () {
         const fixture = yield* scopedFixture(5);
         mkdirSync(fixture.config.stateDir, { recursive: true });
         const daemon = yield* scriptedDaemon(fixture.config.socketPath, {
           ack: { etaMs: 1_000, etaSource: 'default' },
+          after,
           closeAfterAck: true,
           ...(reattach === undefined ? {} : { reattach }),
         });
@@ -557,7 +561,7 @@ describe('runExecClient', () => {
           '[cargo-hauler] connection to daemon lost; reattaching to ticket cc-1',
         );
         expect(daemon.sent().map((message) => message.type)).toEqual(['exec', 'reattach']);
-        return { collected, result };
+        return { collected, result, sent: daemon.sent };
       });
 
     it.live('fails closed with exit 69 when the daemon predates reattach', () =>
@@ -580,7 +584,71 @@ describe('runExecClient', () => {
         );
       }));
 
-    it.live('exits with cargo’s code when the ticket finished while it was away', () =>
+    it.live('fails closed after a slow-client truncation notice even if later output arrives', () =>
+      Effect.gen(function* () {
+        const cargoOutput = Buffer.from('cargo-output\n');
+        const laterOutput = Buffer.from('later-output\n');
+        const notice = Buffer.from(
+          '[cargo-hauler] output truncated for slow client: 128 bytes dropped\n',
+        );
+        const { collected, result, sent } = yield* lostAfterAck(
+          [
+            {
+              id: 'x',
+              missedBytes: 0,
+              outcome: 'active',
+              outputPath: null,
+              state: 'running',
+              ticket: 'cc-1',
+              type: 'reattach-result',
+            },
+            {
+              error: null,
+              exitCode: 0,
+              id: 'x',
+              runMs: 1,
+              signal: null,
+              status: 'done',
+              ticket: 'cc-1',
+              type: 'exit',
+              waitMs: 1,
+            },
+          ],
+          [
+            {
+              channel: 'stdout',
+              data: cargoOutput.toString('base64'),
+              id: 'x',
+              ticket: 'cc-1',
+              type: 'output',
+            },
+            {
+              channel: 'stderr',
+              cursorBytes: 0,
+              data: notice.toString('base64'),
+              id: 'x',
+              ticket: 'cc-1',
+              type: 'output',
+            },
+            {
+              channel: 'stdout',
+              data: laterOutput.toString('base64'),
+              id: 'x',
+              ticket: 'cc-1',
+              type: 'output',
+            },
+          ],
+        );
+        expect(sent().some((message) => message.type === 'reattach')).toBe(true);
+        expect(result).toEqual({
+          exitCode: connectionLostExitCode,
+          mode: 'brokered',
+          ticket: 'cc-1',
+        });
+        expect(collected.stderr()).toContain('output could not be replayed completely');
+      }));
+
+    it.live('fails closed when the ticket finished before its output stream was reattached', () =>
       Effect.gen(function* () {
         const { collected, result } = yield* lostAfterAck([
           {
@@ -598,9 +666,9 @@ describe('runExecClient', () => {
             type: 'reattach-result',
           },
         ]);
-        expect(result).toEqual({ exitCode: 7, mode: 'brokered', ticket: 'cc-1' });
+        expect(result).toEqual({ exitCode: connectionLostExitCode, mode: 'brokered', ticket: 'cc-1' });
         expect(collected.stderr()).toContain(
-          '[cargo-hauler] ticket cc-1 finished while this client was disconnected; full log: /logs/cc-1.log',
+          '[cargo-hauler] brokered run aborted: daemon connection lost; ticket cc-1 finished before its output stream could be reattached; full log: /logs/cc-1.log',
         );
       }));
 

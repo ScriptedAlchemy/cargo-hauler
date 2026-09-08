@@ -1,10 +1,12 @@
-import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'effect-rstest';
+import * as Data from 'effect/Data';
 import * as Deferred from 'effect/Deferred';
 import * as Effect from 'effect/Effect';
 import * as Fiber from 'effect/Fiber';
+import * as Schedule from 'effect/Schedule';
 
 import { Broker } from '../src/daemon/broker.js';
 import type { BrokerApi, SubmitResult } from '../src/daemon/broker.js';
@@ -12,6 +14,13 @@ import type { ExitInfo, SubmitCallbacks, SubmitInput } from '../src/daemon/job-s
 
 import { brokerFixture } from './broker-fixture.js';
 import type { Fixture } from './harness.js';
+
+class FilePending extends Data.TaggedError('FilePending')<{ readonly path: string }> {}
+
+const waitForFile = (path: string): Effect.Effect<void, FilePending> =>
+  Effect.suspend(() =>
+    existsSync(path) ? Effect.void : Effect.fail(new FilePending({ path })),
+  ).pipe(Effect.retry(Schedule.spaced('10 millis').pipe(Schedule.upTo({ times: 1_000 }))));
 
 const cargoEnv = (
   fixture: Fixture,
@@ -229,6 +238,198 @@ describe('kill while parked (#51)', () => {
         }),
       ).pipe(Effect.provide(layer));
     }));
+});
+
+describe('reattach ownership races (#187)', () => {
+  it.live('keeps the newest owner when an older reattach finishes late', () =>
+    Effect.gen(function* () {
+      const { fixture, layer } = yield* brokerFixture(1);
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const broker = yield* Broker;
+          const readyFile = join(fixture.root, 'reattach.ready');
+          const releaseFile = join(fixture.root, 'reattach.release');
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              writeFileSync(releaseFile, '');
+            }),
+          );
+          const submitted = yield* submitTracked(broker, {
+            argv: ['cargo', 'test', '-p', 'owner-race'],
+            cwd: fixture.ws1,
+            env: cargoEnv(fixture, {
+              FAKE_LATE_OUT: 'late-owner',
+              FAKE_READY_FILE: readyFile,
+              FAKE_RELEASE_FILE: releaseFile,
+            }),
+          });
+          yield* Deferred.await(submitted.started);
+          yield* waitForFile(readyFile);
+
+          const firstRegistered = yield* Deferred.make<void>();
+          const releaseFirst = yield* Deferred.make<void>();
+          const secondActive = yield* Deferred.make<void>();
+          const exitOwner = yield* Deferred.make<'first' | 'second'>();
+          const firstOutput: string[] = [];
+          const secondOutput: string[] = [];
+          const callbacks = (
+            owner: 'first' | 'second',
+            output: string[],
+            onRegistered: () => Effect.Effect<boolean>,
+          ): SubmitCallbacks => ({
+            onRegistered,
+            onStarted: () => Effect.void,
+            onOutput: (info) =>
+              Effect.sync(() => {
+                output.push(Buffer.from(info.data, 'base64').toString('utf8'));
+              }),
+            onExit: () => Effect.asVoid(Deferred.succeed(exitOwner, owner)),
+          });
+          const first = yield* Effect.forkChild(
+            broker.reattach(submitted.submitted.ticket, {
+              callbacks: callbacks('first', firstOutput, () =>
+                Deferred.succeed(firstRegistered, undefined).pipe(
+                  Effect.andThen(Deferred.await(releaseFirst)),
+                  Effect.as(false),
+                ),
+              ),
+              fromByte: 0,
+              onActive: () => Effect.void,
+            }),
+          );
+          yield* Deferred.await(firstRegistered);
+          const second = yield* Effect.forkChild(
+            broker.reattach(submitted.submitted.ticket, {
+              callbacks: callbacks('second', secondOutput, () => Effect.succeed(true)),
+              fromByte: 0,
+              onActive: () => Effect.asVoid(Deferred.succeed(secondActive, undefined)),
+            }),
+          );
+          yield* Effect.yieldNow;
+          yield* Deferred.succeed(releaseFirst, undefined);
+          yield* Deferred.await(secondActive).pipe(Effect.timeout('5 seconds'));
+
+          writeFileSync(releaseFile, '');
+          expect(yield* Deferred.await(exitOwner).pipe(Effect.timeout('5 seconds'))).toBe('second');
+          expect(secondOutput.join('')).toContain('late-owner');
+          expect(firstOutput.join('')).not.toContain('late-owner');
+          yield* Fiber.join(first);
+          yield* Fiber.join(second);
+        }),
+      ).pipe(Effect.provide(layer));
+    }), 20_000);
+
+  it.live('ignores a closed stale handler that starts after the live owner attached', () =>
+    Effect.gen(function* () {
+      const { fixture, layer } = yield* brokerFixture(1);
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const broker = yield* Broker;
+          const readyFile = join(fixture.root, 'stale.ready');
+          const releaseFile = join(fixture.root, 'stale.release');
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              writeFileSync(releaseFile, '');
+            }),
+          );
+          const submitted = yield* submitTracked(broker, {
+            argv: ['cargo', 'test', '-p', 'stale-owner'],
+            cwd: fixture.ws1,
+            env: cargoEnv(fixture, {
+              FAKE_LATE_OUT: 'latest-owner',
+              FAKE_READY_FILE: readyFile,
+              FAKE_RELEASE_FILE: releaseFile,
+            }),
+          });
+          yield* Deferred.await(submitted.started);
+          yield* waitForFile(readyFile);
+
+          const exitOwner = yield* Deferred.make<'live' | 'stale'>();
+          const liveOutput: string[] = [];
+          const staleOutput: string[] = [];
+          const callbacks = (
+            owner: 'live' | 'stale',
+            output: string[],
+            registered: boolean,
+          ): SubmitCallbacks => ({
+            onRegistered: () => Effect.succeed(registered),
+            onStarted: () => Effect.void,
+            onOutput: (info) =>
+              Effect.sync(() => {
+                output.push(Buffer.from(info.data, 'base64').toString('utf8'));
+              }),
+            onExit: () => Effect.asVoid(Deferred.succeed(exitOwner, owner)),
+          });
+          yield* broker.reattach(submitted.submitted.ticket, {
+            callbacks: callbacks('live', liveOutput, true),
+            fromByte: 0,
+            onActive: () => Effect.void,
+          });
+          yield* broker.reattach(submitted.submitted.ticket, {
+            callbacks: callbacks('stale', staleOutput, false),
+            fromByte: 0,
+            onActive: () => Effect.void,
+          });
+
+          writeFileSync(releaseFile, '');
+          expect(yield* Deferred.await(exitOwner).pipe(Effect.timeout('5 seconds'))).toBe('live');
+          expect(liveOutput.join('')).toContain('latest-owner');
+          expect(staleOutput.join('')).not.toContain('latest-owner');
+        }),
+      ).pipe(Effect.provide(layer));
+    }), 20_000);
+
+  it.live('ignores disconnect cleanup from the owner replaced by a newer connection', () =>
+    Effect.gen(function* () {
+      const { fixture, layer } = yield* brokerFixture(1);
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const broker = yield* Broker;
+          const readyFile = join(fixture.root, 'owner-token.ready');
+          const releaseFile = join(fixture.root, 'owner-token.release');
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              writeFileSync(releaseFile, '');
+            }),
+          );
+          const submitted = yield* submitTracked(broker, {
+            argv: ['cargo', 'test', '-p', 'owner-token'],
+            cwd: fixture.ws1,
+            env: cargoEnv(fixture, {
+              FAKE_LATE_OUT: 'new-owner-output',
+              FAKE_READY_FILE: readyFile,
+              FAKE_RELEASE_FILE: releaseFile,
+            }),
+          });
+          yield* Deferred.await(submitted.started);
+          yield* waitForFile(readyFile);
+
+          const exitOwner = yield* Deferred.make<'old' | 'new'>();
+          const callbacks = (owner: 'old' | 'new'): SubmitCallbacks => ({
+            ownerId: owner,
+            onRegistered: () => Effect.succeed(true),
+            onStarted: () => Effect.void,
+            onOutput: () => Effect.void,
+            onExit: () => Effect.asVoid(Deferred.succeed(exitOwner, owner)),
+          });
+          yield* broker.reattach(submitted.submitted.ticket, {
+            callbacks: callbacks('old'),
+            fromByte: 0,
+            onActive: () => Effect.void,
+          });
+          yield* broker.reattach(submitted.submitted.ticket, {
+            callbacks: callbacks('new'),
+            fromByte: 0,
+            onActive: () => Effect.void,
+          });
+
+          yield* broker.ownerDisconnected(submitted.submitted.ticket, 'old');
+          expect((yield* broker.getTicket(submitted.submitted.ticket))?.orphaned).toBeUndefined();
+          writeFileSync(releaseFile, '');
+          expect(yield* Deferred.await(exitOwner).pipe(Effect.timeout('5 seconds'))).toBe('new');
+        }),
+      ).pipe(Effect.provide(layer));
+    }), 20_000);
 });
 
 describe('attachment registration races (#52)', () => {

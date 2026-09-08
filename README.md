@@ -403,11 +403,12 @@ killed as `killed while queued: submitter disconnected and did not reattach
 within 30s` only if nobody comes back; one already running continues, marked
 orphaned as before. A reattach rebinds the ticket to the new connection,
 clears the orphan flag, replays the output the client had not yet received
-from the replay buffer, and streams the rest, so the exit code is cargo's as
-if nothing had happened; output the buffer no longer holds is announced as
-`N bytes of output missed while reconnecting; full log: <path>` rather than
-invented. A ticket that finished in the meantime yields its exit code and log
-path. When the ticket cannot be reattached — it never ran cargo and was
+from the replay buffer, and streams the rest, so the exit code is cargo's only
+when the complete stdout/stderr stream was restored. If the replay buffer no
+longer holds every missed byte, or the ticket finished before its output
+stream could be rebound, the client names the full log and fails closed rather
+than return success with truncated machine-readable output. When the ticket
+cannot be reattached — its output is incomplete, it never ran cargo and was
 killed at the daemon's shutdown, `orphaned by daemon restart`, unknown to the
 daemon that answered, the daemon predates the message, or no daemon answered
 within the budget — the client exits `69` (`EX_UNAVAILABLE`) with `brokered
