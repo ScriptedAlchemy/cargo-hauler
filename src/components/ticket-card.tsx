@@ -2,6 +2,7 @@ import React from 'react';
 
 import type { RequestRecord } from '../daemon/protocol.js';
 
+import { BatchTestSummary } from './batch-test-summary.js';
 import { BuildDiagnostics } from './build-diagnostics.js';
 import { ticketHeadline } from './headlines.js';
 import { LogTail } from './log-tail.js';
@@ -47,6 +48,7 @@ export const TicketCard = ({ hideTail = false, nowMs, record, tailLines }: Ticke
         ]}
       />
       <BuildDiagnostics record={record} />
+      <BatchTestSummary record={record} />
       {hideTail ? null : (
         <LogTail live={record.outputTailLive === true} text={record.outputTail} {...(tailLines === undefined ? {} : { maxLines: tailLines })} />
       )}
