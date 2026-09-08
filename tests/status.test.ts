@@ -5,7 +5,7 @@ import { join, sep } from 'node:path';
 import { describe, expect, it } from 'effect-rstest';
 
 import { resolveDaemonConfig } from '../src/daemon/config.js';
-import { resolveHookSocketPath, resolveHookStateDir } from '../src/hooks/paths.js';
+import { resolveHookSocketPath } from '../src/hooks/paths.js';
 import {
   daemonSocketPath,
   defaultKacheIndexPath,
@@ -48,7 +48,6 @@ describe('portable state root', () => {
     const env = { CARGO_HAULER_STATE_DIR: '/fast/cache/cargo-hauler' };
     expect(resolveStateDir(env)).toBe('/fast/cache/cargo-hauler');
     expect(resolveDaemonConfig(env).stateDir).toBe('/fast/cache/cargo-hauler');
-    expect(resolveHookStateDir(env)).toBe('/fast/cache/cargo-hauler');
   });
 
   it('treats an empty hauler override as unset', () => {
@@ -56,7 +55,6 @@ describe('portable state root', () => {
     const expected = defaultStateDir(env);
     expect(resolveStateDir(env)).toBe(expected);
     expect(resolveDaemonConfig(env).stateDir).toBe(expected);
-    expect(resolveHookStateDir(env)).toBe(expected);
   });
 
   it('resolves the state dir from the environment alone, never by probing for existing directories', () => {
@@ -70,7 +68,6 @@ describe('portable state root', () => {
       const expected = join(cacheRoot, 'cargo-hauler');
       expect(resolveStateDir(env)).toBe(expected);
       expect(resolveDaemonConfig(env).stateDir).toBe(expected);
-      expect(resolveHookStateDir(env)).toBe(expected);
     } finally {
       rmSync(cacheRoot, { recursive: true, force: true });
     }
@@ -79,7 +76,7 @@ describe('portable state root', () => {
   it('keeps daemon config and hook clients on the same default', () => {
     const env = {};
     const config = resolveDaemonConfig(env);
-    expect(config.stateDir).toBe(resolveHookStateDir(env));
+    expect(config.stateDir).toBe(resolveStateDir(env));
     expect(config.stateDir).toBe(defaultStateDir(env));
     expect(config.socketPath).toBe(join(config.stateDir, 'daemon.sock'));
   });

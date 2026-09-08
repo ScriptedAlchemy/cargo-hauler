@@ -429,17 +429,7 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
 ]);
 
 export type ExecRequest = z.infer<typeof execRequestSchema>;
-export type AttemptRequest = z.infer<typeof attemptRequestSchema>;
-export type DetachRequest = z.infer<typeof detachRequestSchema>;
-export type AwaitRequest = z.infer<typeof awaitRequestSchema>;
-export type ResultRequest = z.infer<typeof resultRequestSchema>;
 export type ReattachRequest = z.infer<typeof reattachRequestSchema>;
-export type SessionPendingRequest = z.infer<typeof sessionPendingRequestSchema>;
-export type SessionCompletedRequest = z.infer<typeof sessionCompletedRequestSchema>;
-export type KillRequest = z.infer<typeof killRequestSchema>;
-export type StatusRequest = z.infer<typeof statusRequestSchema>;
-export type PingRequest = z.infer<typeof pingRequestSchema>;
-export type ShutdownRequest = z.infer<typeof shutdownRequestSchema>;
 export type ClientMessage = z.infer<typeof clientMessageSchema>;
 
 export interface LaneStatus {

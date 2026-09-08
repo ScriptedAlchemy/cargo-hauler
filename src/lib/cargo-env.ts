@@ -34,15 +34,3 @@ export const isRelevantCargoEnvironmentVariable = (name: string): boolean =>
     name.startsWith('CARGO_') ||
     name.startsWith('RUST') ||
     targetToolPattern.test(name));
-
-/**
- * The variables the client ships to the daemon for the spawned cargo. The
- * caller's whole environment travels, minus the hauler-internal settings, so
- * a brokered `FOO=bar cargo build` behaves like the direct invocation: build
- * scripts, `env!()`, `cargo run` and `cargo test` processes see the same
- * variables the caller exported. Identity is decided separately by
- * {@link isRelevantCargoEnvironmentVariable}; session noise such as TERM,
- * NO_COLOR, or a prompt variable is forwarded but never splits an intent.
- */
-export const isTransportedEnvironmentVariable = (name: string): boolean =>
-  !isHaulerInternalEnvironmentVariable(name);

@@ -7,7 +7,6 @@ import {
   awaitTicket,
   awaitTicketWithProgress,
   fetchTicket,
-  submitBackground,
   submitBackgroundAck,
 } from '../src/client/tickets.js';
 import { awaitCeilingMs } from '../src/daemon/protocol.js';
@@ -117,7 +116,7 @@ describe('awaitTicket', () => {
     }));
 });
 
-describe('submitBackground', () => {
+describe('submitBackgroundAck', () => {
   it.live('fails, without submitting, when a daemon of another version outlived the shutdown grace', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
@@ -164,10 +163,10 @@ describe('submitBackground', () => {
       // `request` ships no caller env: the in-process daemon must find the
       // fake cargo through its own environment.
       yield* scopedEnv({ CARGO_HAULER_CARGO_BIN: `${fixture.binDir}/cargo` });
-      const viaRequest = yield* submitBackground(
+      const viaRequest = yield* submitBackgroundAck(
         { argv: ['cargo', 'build', '-p', 'via-request'], cwd: fixture.ws1, session: 's1' },
         fixture.config,
-      );
+      ).pipe(Effect.map((ack) => ack?.ticket ?? null));
       const viaExec = yield* runExecClient({
         argv: ['cargo', 'build', '-p', 'via-exec'],
         autoSpawn: false,

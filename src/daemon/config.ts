@@ -2,8 +2,6 @@ import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
 
 import * as Context from 'effect/Context';
-import * as Effect from 'effect/Effect';
-import * as Layer from 'effect/Layer';
 
 import { daemonSocketPath, defaultKacheIndexPath, resolveStateDir } from '../status.js';
 import { parseJobserverModeSetting, type JobserverModeSetting } from './jobserver.js';
@@ -496,15 +494,3 @@ export const resolveDaemonConfig = (
   }
   return resolved.config;
 };
-
-/** Daemon layer: rejected overrides land in the daemon log at Warning. */
-export const DaemonConfigLive: Layer.Layer<DaemonConfig> = Layer.effect(
-  DaemonConfig,
-  Effect.gen(function* () {
-    const resolved = resolveDaemonConfigWithWarnings();
-    for (const warning of resolved.warnings) {
-      yield* Effect.logWarning(warning);
-    }
-    return resolved.config;
-  }),
-);

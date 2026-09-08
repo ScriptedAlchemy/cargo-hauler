@@ -62,6 +62,3 @@ export const ticketHeadline = (record: TicketSummary, nowMs: number): string => 
       : '';
   return `${record.ticket} ${record.status}${timing}${estimate}${stalled}${exit}${outcome} — ${commandText(record)}`;
 };
-
-export const requestCountHeadline = (count: number, noun: string): string =>
-  count === 0 ? `no ${noun}s recorded` : countWord(count, noun);

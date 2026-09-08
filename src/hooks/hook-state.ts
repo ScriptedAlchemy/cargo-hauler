@@ -4,8 +4,7 @@ import { join } from 'node:path';
 import { lockSync } from 'proper-lockfile';
 
 import { isRecord } from '../lib/guards.js';
-
-import { resolveHookStateDir } from './paths.js';
+import { resolveStateDir } from '../status.js';
 
 /**
  * On-disk shape of `hook-state.json`, shared by every session's hooks:
@@ -133,13 +132,13 @@ const saveState = (stateDir: string, state: HookState): void => {
   }
 };
 
-export const readCursor = (session: string, stateDir: string = resolveHookStateDir()): number =>
+export const readCursor = (session: string, stateDir: string = resolveStateDir()): number =>
   loadState(stateDir).cursors[session] ?? 0;
 
 export const writeCursor = (
   session: string,
   atMs: number,
-  stateDir: string = resolveHookStateDir(),
+  stateDir: string = resolveStateDir(),
 ): void => {
   withStateLock(stateDir, () => {
     const state = loadState(stateDir);
@@ -148,14 +147,14 @@ export const writeCursor = (
   });
 };
 
-export const readDenyCount = (ticket: string, stateDir: string = resolveHookStateDir()): number =>
+export const readDenyCount = (ticket: string, stateDir: string = resolveStateDir()): number =>
   loadState(stateDir).denies[ticket] ?? 0;
 
 /** Counts one more stop denial for `ticket` on behalf of `session`, which then owns the counter. */
 export const incrementDenyCount = (
   ticket: string,
   session: string,
-  stateDir: string = resolveHookStateDir(),
+  stateDir: string = resolveStateDir(),
 ): number =>
   withStateLock(stateDir, () => {
     const state = loadState(stateDir);
@@ -174,7 +173,7 @@ export const incrementDenyCount = (
 export const pruneDenyCounts = (
   session: string,
   keep: readonly string[],
-  stateDir: string = resolveHookStateDir(),
+  stateDir: string = resolveStateDir(),
 ): void => {
   withStateLock(stateDir, () => {
     const state = loadState(stateDir);
