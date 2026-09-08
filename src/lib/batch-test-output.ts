@@ -1,6 +1,7 @@
 import { open } from 'node:fs/promises';
 import { StringDecoder } from 'node:string_decoder';
 
+import { testNameFilters } from '../daemon/batch.js';
 import { parseCargoArgv } from '../daemon/intent-normalizer.js';
 import type { RequestRecord } from '../daemon/protocol.js';
 
@@ -29,15 +30,20 @@ const maxLabelLength = 512;
 export const isSharedTestRun = (
   record: Pick<RequestRecord, 'argv' | 'execArgv' | 'attachMode'>,
 ): boolean => {
-  if (record.execArgv === null) return false;
+  if (record.attachMode !== 'batch' && record.execArgv === null) return false;
   const requested = parseCargoArgv(record.argv);
+  if (record.attachMode === 'batch') {
+    return requested.subcommand === 'test' || requested.subcommand === 'nextest';
+  }
+  if (requested.subcommand !== 'test') return false;
+  if (record.execArgv === null) return false;
   const actual = parseCargoArgv(record.execArgv);
-  if (requested.subcommand !== 'test' || actual.subcommand !== 'test') return false;
+  if (actual.subcommand !== 'test') return false;
   const same = (left: readonly string[], right: readonly string[]) =>
     left.length === right.length && left.every((value, index) => value === right[index]);
-  return record.attachMode === 'batch' || requested.workspace !== actual.workspace ||
+  return requested.workspace !== actual.workspace ||
     !same(requested.packages, actual.packages) || !same(requested.excludes, actual.excludes) ||
-    !same(requested.testFilters, actual.testFilters);
+    !same(testNameFilters(requested), testNameFilters(actual));
 };
 
 /**

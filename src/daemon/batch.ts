@@ -237,7 +237,9 @@ const filterInsertOffset = (passthrough: readonly string[]): number => {
  * `cargo test <NAME>` and the bare filters after `--` reach the test
  * binaries the same way (cargo forwards both, in that order).
  */
-const testNameFilters = (intent: NormalizedCargoIntent): readonly string[] => [
+export const testNameFilters = (
+  intent: Pick<NormalizedCargoIntent, 'testFilters' | 'passthrough'>,
+): readonly string[] => [
   ...intent.testFilters,
   ...(classifyTestTrailer(intent.passthrough)?.filters ?? []),
 ];

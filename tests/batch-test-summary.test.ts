@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'effect-rstest';
 import { Children, isValidElement, type ReactElement, type ReactNode } from 'react';
 
@@ -18,9 +22,10 @@ const record = (overrides: Partial<RequestRecord> = {}): RequestRecord => ({
   workspaceRoot: '/tmp/ws', ...overrides,
 });
 
-const shared = () => record({
+const shared = (overrides: Partial<RequestRecord> = {}) => record({
   argv: ['cargo', 'test', '-p', 'a'], execArgv: ['cargo', 'test', '-p', 'a', '-p', 'b'],
   attachMode: 'batch', attachedTo: 'cc-9499', status: 'done', exitCode: 0, error: null,
+  ...overrides,
 });
 
 const text = (node: ReactNode): string => {
@@ -37,6 +42,27 @@ describe('shared test-run report component', () => {
     expect(text(rendered)).toContain('union of test filters');
     expect(text(rendered)).toContain('log is missing or unreadable');
     expect(text(rendered)).toContain('tail alone cannot establish');
+  });
+
+  it('shows a batch rider every observed binary and points to its leader invocation', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'hauler-batch-summary-'));
+    try {
+      const outputPath = join(root, 'cc-9499.log');
+      writeFileSync(outputPath, [
+        'Running unittests src/lib.rs (target/debug/deps/a-1)',
+        'test result: ok. 4 passed; 0 failed; 0 ignored; finished in 0.01s',
+        'Running unittests src/lib.rs (target/debug/deps/b-2)',
+        'test result: ok. 41 passed; 0 failed; 0 ignored; finished in 0.02s',
+      ].join('\n'));
+      const rendered = await BatchTestSummary({
+        record: shared({ execArgv: null, outputPath }),
+      });
+      expect(text(rendered)).toContain("cc-9499's composite invocation");
+      expect(text(rendered)).toContain('4 passed');
+      expect(text(rendered)).toContain('41 passed');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('does not read logs or render shared advice for an ordinary run', async () => {

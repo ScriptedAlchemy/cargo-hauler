@@ -100,7 +100,22 @@ describe('batched test report attribution (#178)', () => {
     expect(isSharedTestRun({ argv, execArgv, attachMode: null })).toBe(true);
     expect(isSharedTestRun({ argv, execArgv, attachMode: 'batch' })).toBe(true);
     expect(isSharedTestRun({ argv, execArgv: argv, attachMode: null })).toBe(false);
-    expect(isSharedTestRun({ argv, execArgv: null, attachMode: 'batch' })).toBe(false);
+    expect(isSharedTestRun({ argv, execArgv: null, attachMode: 'batch' })).toBe(true);
+    expect(isSharedTestRun({
+      argv: ['cargo', 'nextest', 'run', '-p', 'a'],
+      execArgv: null,
+      attachMode: 'batch',
+    })).toBe(true);
+    expect(isSharedTestRun({
+      argv: ['cargo', 'test', '-p', 'a', '--', 'filter_a'],
+      execArgv: ['cargo', 'test', '-p', 'a', '--', 'filter_a', 'filter_b'],
+      attachMode: null,
+    })).toBe(true);
+    expect(isSharedTestRun({
+      argv: ['./reset.sh', '&&', 'cargo', 'clean'],
+      execArgv: null,
+      attachMode: null,
+    })).toBe(false);
     expect(isSharedTestRun({ argv: ['cargo', 'build'], execArgv: ['cargo', 'build', '-p', 'a'], attachMode: 'batch' })).toBe(false);
   });
 });

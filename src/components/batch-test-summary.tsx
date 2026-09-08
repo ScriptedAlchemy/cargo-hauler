@@ -10,11 +10,14 @@ import { CodeBlock, Heading } from './primitives.js';
 export const BatchTestSummary = async ({ record }: { readonly record: RequestRecord }) => {
   if (!isSharedTestRun(record)) return null;
   const output = await loadBatchTestOutput(record.outputPath);
+  const invocation = record.execArgv === null && record.attachedTo !== null
+    ? `${record.attachedTo}'s composite invocation; inspect that ticket's Ran as row for the exact command`
+    : 'the composite invocation shown in Ran as';
   return (
     <>
       <Heading>Shared test-run summaries (all observed binaries)</Heading>
       <Agent.Context>
-        {`This ticket used the composite invocation shown in Ran as. Its output and exit are shared, not a separately executed per-package run. Folding may widen packages and apply the union of test filters across binaries; these counts are not counts for this ticket's original filter alone. The trailing output below can belong to another binary.`}
+        {`This ticket used ${invocation}. Its output and exit are shared, not a separately executed per-package run. Folding may widen packages and apply the union of test filters across binaries; these counts are not counts for this ticket's original filter alone. The trailing output below can belong to another binary.`}
       </Agent.Context>
       {output.summaries.length === 0 ? (
         <Agent.Text>
