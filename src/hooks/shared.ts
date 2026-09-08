@@ -14,14 +14,24 @@ export interface HookContext {
   readonly target?: string;
 }
 
+/** Safe observability codes; never include commands, arguments, or exception text. */
+export type HookDiagnostic =
+  | 'probe-failed'
+  | 'decision-failed'
+  | `${'record' | 'recordAttempt'}-${'failed' | 'timeout' | 'cancelled'}`;
+
 export interface HookServices {
   readonly completedSince?: (session: string, sinceMs: number) => Promise<readonly FinishedTicket[]>;
+  readonly diagnostic?: (code: HookDiagnostic) => void | Promise<void>;
   readonly haulerArgv?: readonly string[];
   readonly nowMs?: () => number;
   readonly probeDaemon?: () => DaemonProbe | Promise<DaemonProbe>;
   readonly readCursor?: (session: string) => number;
   readonly record?: (event: HookRecord) => void | Promise<void>;
   readonly recordAttempt?: (attempt: DeniedAttempt) => void | Promise<void>;
+  /** Resolved lazily after the clean guard, so binding failure cannot discard a denial. */
+  readonly resolveHaulerArgv?: () => readonly string[] | Promise<readonly string[]>;
+  readonly signal?: AbortSignal;
   readonly writeCursor?: (session: string, atMs: number) => void;
 }
 

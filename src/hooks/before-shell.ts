@@ -1,5 +1,6 @@
+import { recordBestEffort, reportHookDiagnostic } from './best-effort.js';
 import { prepareShellCommand } from './inspect.js';
-import { resolveHaulerArgv } from './paths.js';
+import { resolveHaulerArgv } from './hauler-binding.js';
 import { probeActiveBuilds, type DaemonProbe } from './probe.js';
 import { appendHookRecord } from './record.js';
 import { recordDeniedAttempt } from './rpc.js';
@@ -55,12 +56,14 @@ interface DenyCleanInput {
   readonly nowMs: () => number;
   readonly record: NonNullable<HookServices['record']>;
   readonly session: string;
+  readonly services: HookServices;
   readonly submitAttempt: NonNullable<HookServices['recordAttempt']>;
   readonly toolName: string | undefined;
 }
 
 const denyClean = async (input: DenyCleanInput): Promise<BeforeShellResult> => {
-  await input.record({
+  const result: BeforeShellResult = { outcome: 'deny', reason: denyCleanReason };
+  await recordBestEffort(() => input.record({
     atMs: input.nowMs(),
     command: input.command,
     host: input.host,
@@ -70,21 +73,16 @@ const denyClean = async (input: DenyCleanInput): Promise<BeforeShellResult> => {
     session: input.session,
     ...(input.cwd === undefined ? {} : { cwd: input.cwd }),
     ...(input.toolName === undefined ? {} : { toolName: input.toolName }),
-  });
-  try {
-    void Promise.resolve(
-      input.submitAttempt({
-        argv: attemptArgv(input.command),
-        cwd: input.cwd ?? process.cwd(),
-        host: input.host,
-        reason: denyCleanReason,
-        session: input.session,
-      }),
-    ).catch(() => undefined);
-  } catch {
-    // Attempt telemetry is strictly fail-open at the hook boundary.
-  }
-  return { outcome: 'deny', reason: denyCleanReason };
+  }), input.services);
+  // Attempt telemetry remains detached, with rejection and timeout observed.
+  void recordBestEffort(() => input.submitAttempt({
+    argv: attemptArgv(input.command),
+    cwd: input.cwd ?? process.cwd(),
+    host: input.host,
+    reason: denyCleanReason,
+    session: input.session,
+  }), input.services, 'recordAttempt');
+  return result;
 };
 
 const decideBeforeShell = async (
@@ -123,7 +121,11 @@ const decideBeforeShell = async (
     try {
       verdict = await probe();
     } catch {
-      verdict = 'absent';
+      // Unknown is not absence. Preserve the existing host-decided policy:
+      // no explicit allow, no invented active-build verdict, and no rewrite
+      // that could start a daemon solely because its probe failed.
+      reportHookDiagnostic(services, 'probe-failed');
+      return continueResult();
     }
     switch (verdict) {
       case 'idle':
@@ -144,6 +146,7 @@ const decideBeforeShell = async (
           nowMs,
           record,
           session,
+          services,
           submitAttempt: services.recordAttempt ?? recordDeniedAttempt,
           toolName: event.toolName,
         });
@@ -155,7 +158,9 @@ const decideBeforeShell = async (
   }
 
   const rewritten = prepared.rewrite({
-    haulerArgv: services.haulerArgv ?? resolveHaulerArgv(),
+    haulerArgv: services.haulerArgv ?? (services.resolveHaulerArgv === undefined
+      ? resolveHaulerArgv({ fallback: 'path' })
+      : await services.resolveHaulerArgv()),
     host,
     session,
   });
@@ -172,7 +177,8 @@ const decideBeforeShell = async (
   // rewritten input to the host's own permission flow, exactly as it would
   // have decided the original.
   const outcome = inspection.ungoverned ? 'continue' : 'allow';
-  await record({
+  const result: BeforeShellResult = { outcome, updatedInput: toolInput };
+  await recordBestEffort(() => record({
     atMs: nowMs(),
     command,
     host,
@@ -182,8 +188,8 @@ const decideBeforeShell = async (
     session,
     ...(cwd === undefined ? {} : { cwd }),
     ...(event.toolName === undefined ? {} : { toolName: event.toolName }),
-  });
-  return { outcome, updatedInput: toolInput };
+  }), services);
+  return result;
 };
 
 export const handleBeforeShell = async (
@@ -194,6 +200,9 @@ export const handleBeforeShell = async (
   try {
     return await decideBeforeShell(event, context, services);
   } catch {
+    // Parsing/binding failures before a decision remain host-decided. Known
+    // protective decisions cannot arrive here through a recording failure.
+    reportHookDiagnostic(services, 'decision-failed');
     return continueResult();
   }
 };

@@ -1,12 +1,13 @@
 import { spawn } from 'node:child_process';
 import { createConnection } from 'node:net';
+import { fileURLToPath } from 'node:url';
 
 import { version } from 'agent-bundle/meta';
 
 import { socketErrorCode } from '../lib/socket-errors.js';
 
 import { asFinishedTicket, type FinishedTicket } from './finished-ticket.js';
-import { resolveHaulerArgv, resolveHookSocketPath } from './paths.js';
+import { resolveHookSocketPath } from './paths.js';
 import { isRecord } from './shared.js';
 
 export type { FinishedTicket };
@@ -126,9 +127,14 @@ const requestOnce = (
     });
   });
 
-const replaceStaleDaemon = (): Promise<{ readonly detail: string; readonly replaced: boolean }> =>
-  new Promise((resolve) => {
-    const [command, ...args] = resolveHaulerArgv();
+const replaceStaleDaemon = (): Promise<{ readonly detail: string; readonly replaced: boolean }> => {
+  // This RPC runs from a generated artifact hook. Its declared companion
+  // script is code-relative, not state-relative or PATH-selected. Do not
+  // import the runtime root resolver here: preflight builds inline even a
+  // dynamic import and would pull the rendering runtime into the fast path.
+  const command = process.execPath;
+  const args = [fileURLToPath(new URL('../scripts/hauler.mjs', import.meta.url))];
+  return new Promise((resolve) => {
     const child = spawn(command, [...args, 'daemon', 'start'], {
       killSignal: 'SIGTERM',
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -151,6 +157,7 @@ const replaceStaleDaemon = (): Promise<{ readonly detail: string; readonly repla
       });
     });
   });
+};
 
 export interface RequestOutcomeDependencies {
   readonly replaceStaleDaemon: () => Promise<{
