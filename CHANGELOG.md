@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.1
+
+### Patch Changes
+
+- 9a50169: Fail closed with exit 69 when a reattached `hauler exec` cannot restore the complete Cargo output stream, and serialize overlapping reattach claims so a stale connection cannot replace the latest ticket owner (#187).
+
 ## 0.7.0
 
 ### Minor Changes
