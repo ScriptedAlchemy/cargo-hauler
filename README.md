@@ -771,7 +771,7 @@ assertion share one derivation.
 
 | Component | Renders |
 | --- | --- |
-| `<TicketCard>` | one ticket: headline, attribution, lane, queue position, attach mode, timings, exit, then `<BuildDiagnostics>` and `<LogTail>` |
+| `<TicketCard>` | one ticket: headline, attribution, lane, queue position, attach mode, timings, exit, then `<BuildDiagnostics>`, `<BatchTestSummary>`, and `<LogTail>` |
 | `<TicketList>` | the in-flight and recent tables of status, and the whole of log |
 | `<LaneBoard>` | busy lanes with their leader ticket, its command, and how long it has run |
 | `<AdmissionState>` | permits in use, load, memory clamp, sharing savings; calls out a paused admission gate |
@@ -779,6 +779,7 @@ assertion share one derivation.
 | `<LogTail>` | the captured output tail of a detail record, labelled live while the run is in progress; summary rows carry only `outputPreview` and render no tail |
 | `<FullOutput>` | where the ticket's whole output log lives and how large it is; under `full`, the log itself in code-block chunks |
 | `<BuildDiagnostics>` | an index of cargo `error[E…]`/`warning:` blocks (level / code / message / location) followed by every captured block verbatim |
+| `<BatchTestSummary>` | every observed binary result from a shared test log, with explicit composite-run and partial-evidence warnings |
 | `<DashboardLink>` | where the MCP App lives and how to open it elsewhere |
 | `<TicketGuidance>` | what to do next, one component per ticket status |
 | `<LineageFooter>` | the shell footer |
