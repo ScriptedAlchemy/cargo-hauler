@@ -31,6 +31,18 @@ export const diagnosticCounts = (
     ? null
     : `${countWord(record.errorCount, 'error')}, ${countWord(record.warningCount, 'warning')}`;
 
+/**
+ * The dependency watcher records `prerequisite cc-N <status>` when it fails
+ * a queued job without starting it. Check the lifecycle too: an executed
+ * command with similar error text is still a failed run, not a blocked one.
+ */
+export const failedPrerequisite = (
+  record: Pick<TicketSummary, 'status' | 'startedAtMs' | 'exitCode' | 'error'>,
+): string | null => {
+  if (record.status !== 'failed' || record.startedAtMs !== null || record.exitCode !== null) return null;
+  return /^prerequisite (cc-\d+) (?:failed|killed|denied|passthrough|unknown)$/u.exec(record.error ?? '')?.[1] ?? null;
+};
+
 export const ticketHeadline = (record: TicketSummary, nowMs: number): string => {
   const elapsed = elapsedMs(record, nowMs);
   const timing = elapsed === null ? '' : ` ${formatMs(elapsed)}`;
@@ -41,7 +53,9 @@ export const ticketHeadline = (record: TicketSummary, nowMs: number): string => 
   const exit =
     record.exitCode === null || record.status === 'done' ? '' : ` exit=${record.exitCode}`;
   const counts = diagnosticCounts(record);
-  const outcome = counts === null ? '' : ` — ${counts}`;
+  const outcome = failedPrerequisite(record) !== null
+    ? ` — never ran: ${record.error}`
+    : counts === null ? '' : ` — ${counts}`;
   const stalled =
     record.status === 'running' && record.stall !== undefined
       ? ` · stalled ${formatMs(record.stall.idleMs)}`

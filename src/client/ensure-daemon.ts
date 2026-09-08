@@ -27,7 +27,7 @@ import {
 } from '../daemon/shutdown.js';
 import type { ExitWaitOptions, ShutdownAck } from '../daemon/shutdown.js';
 import { isNewerVersion } from '../lib/version-order.js';
-import { resolveHaulerArgv } from '../hooks/paths.js';
+import { resolveHaulerArgv } from '../hooks/hauler-binding.js';
 import { absentSocketCodes, socketErrorCode } from '../lib/socket-errors.js';
 import { isHaulerInternalEnvironmentVariable } from '../lib/cargo-env.js';
 
@@ -119,7 +119,7 @@ export interface DaemonEntryOptions {
  * running script itself.
  */
 export const resolveDaemonEntry = (options: DaemonEntryOptions): string => {
-  const [, script] = resolveHaulerArgv(options.env);
+  const [, script] = resolveHaulerArgv({ env: options.env, cwd: options.cwd, fallback: 'path' });
   if (script !== undefined) {
     const absolute = resolve(options.cwd, script);
     if (options.exists(absolute)) {
