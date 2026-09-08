@@ -43,9 +43,6 @@ plugin internals, not CLI entry points.
   summaries: a running row carries `outputPreview` (its last few lines),
   never the whole output tail. Read one ticket's tail with `hauler result
   cc-N` / `hauler_result`.
-- Do not hand-roll `CARGO_TARGET_DIR` isolation or scratch clones to dodge
-  locks. The daemon already serializes per (workspace, target dir); a private
-  target dir only defeats attach/coverage sharing and multiplies compiles.
 - Long builds: `hauler exec --bg -- cargo …` or `hauler_request`.
   Wait with `hauler await cc-N --max-wait-ms N` (one call waits up to the
   daemon's 2 h ceiling; call it again to keep waiting), or call `hauler_await`
