@@ -69,11 +69,9 @@ describe('hauler daemon', () => {
         extraEnv: { CARGO_TARGET_DIR: targetDir },
       });
       const messages = yield* execRequest(fixture, {
+        allowSharedTarget: true,
         cwd: fixture.ws2,
-        extraEnv: {
-          CARGO_HAULER_ALLOW_SHARED_TARGET: '1',
-          CARGO_TARGET_DIR: targetDir,
-        },
+        extraEnv: { CARGO_TARGET_DIR: targetDir },
       });
       const ack = messages.find((message): message is AckMessage => message.type === 'ack');
       expect(ack?.warning).toContain('WARNING');

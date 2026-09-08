@@ -396,7 +396,7 @@ const sha256 = (value: string): string => createHash('sha256').update(value).dig
  * cannot be realpathed, canonicalize the nearest existing ancestor and
  * re-append the missing segments.
  */
-export const canonicalPath = (path: string): string => {
+const canonicalPath = (path: string): string => {
   const absolutePath = resolve(path);
   let current = absolutePath;
   const pending: string[] = [];

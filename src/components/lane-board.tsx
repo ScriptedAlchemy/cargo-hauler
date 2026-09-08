@@ -2,6 +2,7 @@ import { Agent } from '@agent-bundle/runtime';
 import React from 'react';
 
 import type { LaneStatus, TicketSummary } from '../daemon/protocol.js';
+import { sharedTargetWarning } from '../lib/shared-target.js';
 import { countWord } from '../lib/text.js';
 
 import { Heading, Table } from './primitives.js';
@@ -26,9 +27,7 @@ export const LaneBoard = ({ active, lanes, nowMs }: LaneBoardProps) => {
   return (
     <>
       {model.sharedTargets.map((shared) => (
-        <Agent.Context key={shared.targetDir}>
-          {`WARNING: target dir ${shared.targetDir} is shared across workspace roots ${shared.workspaceRoots.join(', ')}; Cargo artifact filenames can collide and run stale binaries.`}
-        </Agent.Context>
+        <Agent.Context key={shared.targetDir}>{sharedTargetWarning(shared)}</Agent.Context>
       ))}
       {model.rows.length === 0 ? (
         <EmptyState>{`${countWord(lanes.length, 'lane')} known, none busy.`}</EmptyState>

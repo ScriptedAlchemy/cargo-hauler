@@ -181,7 +181,7 @@ export const submitTicketRequest = async (
             ...(ack.waitEtaMs === undefined ? {} : { waitEtaMs: ack.waitEtaMs }),
           },
         }),
-    summary: `${ack.ticket} submitted${placement === null ? '' : `, ${placement}`}`,
+    summary: `${ack.ticket} submitted${placement === null ? '' : `, ${placement}`}${ack.warning === undefined ? '' : `\n${ack.warning}`}`,
     ticket: ack.ticket,
     ...(ack.waitingFor === undefined ? {} : { waitingFor: [...ack.waitingFor] }),
   };

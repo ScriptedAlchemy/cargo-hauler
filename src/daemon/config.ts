@@ -243,6 +243,10 @@ const isDisableToken = (raw: string): boolean => disableTokens.has(raw.trim().to
 const falseTokens = new Set(['0', 'false', 'off', 'no']);
 const trueTokens = new Set(['1', 'true', 'on', 'yes']);
 
+/** The `flag()` spellings that mean on, for a client reading one `CARGO_HAULER_*` switch without the whole config. */
+export const isEnabledFlag = (raw: string | undefined): boolean =>
+  raw !== undefined && trueTokens.has(raw.trim().toLowerCase());
+
 const pick = (env: Readonly<Record<string, string | undefined>>, name: string): EnvValue => ({
   name,
   raw: env[name],

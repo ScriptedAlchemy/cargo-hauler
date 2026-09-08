@@ -294,6 +294,8 @@ export interface BackgroundSubmitAck {
   readonly waitingFor?: readonly string[];
   /** Set when the request rode an in-flight run instead of queueing. */
   readonly attachedTo?: string;
+  /** The daemon's one loud line for an accepted shared target dir (#185). */
+  readonly warning?: string;
 }
 
 /**
@@ -342,6 +344,7 @@ export const submitBackgroundAck = (
             ...(message.waitEtaMs === undefined ? {} : { waitEtaMs: message.waitEtaMs }),
             ...(message.waitingFor === undefined ? {} : { waitingFor: message.waitingFor }),
             ...(message.attachedTo === undefined ? {} : { attachedTo: message.attachedTo }),
+            ...(message.warning === undefined ? {} : { warning: message.warning }),
           },
     ),
   );

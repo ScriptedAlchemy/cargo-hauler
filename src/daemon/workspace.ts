@@ -1,10 +1,16 @@
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 import { optionParts } from '../lib/argv.js';
 
 const cargoConfigFileNames = ['config.toml', 'config'] as const;
 const workspaceRootCacheLimit = 256;
+
+/** True when `child` is `parent` or lies below it (a sibling named `..foo` is outside). */
+export const isPathInside = (parent: string, child: string): boolean => {
+  const step = relative(resolve(parent), resolve(child));
+  return step === '' || (step !== '..' && !step.startsWith(`..${sep}`) && !isAbsolute(step));
+};
 
 const sectionHeaderPattern = /^\[([^\]]+)\]$/u;
 const targetDirPattern = /^target-dir\s*=\s*(?:"([^"]*)"|'([^']*)')$/u;
@@ -337,7 +343,7 @@ const isWorkspaceMember = (
   }
   const table = parseWorkspaceTable(workspaceContents);
   const relativePackage = relative(resolve(workspaceDir), resolve(packageDir));
-  const underWorkspace = relativePackage.length > 0 && !relativePackage.startsWith('..') && !isAbsolute(relativePackage);
+  const underWorkspace = relativePackage.length > 0 && isPathInside(workspaceDir, packageDir);
   if (underWorkspace && table.exclude.some((pattern) => matchWorkspaceGlob(pattern, relativePackage))) {
     return false;
   }
