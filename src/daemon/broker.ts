@@ -277,7 +277,7 @@ export const BrokerLive: Layer.Layer<
               input.allowSharedTarget === true ||
               input.env?.CARGO_HAULER_ALLOW_SHARED_TARGET === '1';
             if (warning !== undefined && !allowed) {
-              return yield* new CargoIntentError({ message: `Refusing ${warning}` });
+              return yield* new CargoIntentError({ message: `Refusing to run: ${warning}` });
             }
             const lane = yield* lanesRuntime.getOrCreateLane(
               laneKey,
