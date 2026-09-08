@@ -14,6 +14,7 @@ import {
 } from '../lib/format.js';
 import { kachePressureModel } from '../lib/kache-pressure-model.js';
 import type { KachePressureModel, KachePressureWarning } from '../lib/kache-pressure-model.js';
+import { sharedTargetWarning } from '../lib/shared-target.js';
 
 export { formatBytes, formatMs, pathBasename, relativeTime, shortenPath };
 export { kachePressureModel };
@@ -1089,12 +1090,28 @@ export const laneIsActive = (lane: {
   (Array.isArray(lane.executingTickets) && lane.executingTickets.length > 0) ||
   (Array.isArray(lane.sharedTargetWith) && lane.sharedTargetWith.length > 0);
 
-export const sharedTargetDetail = (sharedTargetWith: unknown): string | null =>
-  Array.isArray(sharedTargetWith) &&
-  sharedTargetWith.length > 0 &&
-  sharedTargetWith.every((root) => typeof root === 'string')
-    ? `WARNING: shared with ${sharedTargetWith.join(', ')}; Cargo artifacts can collide`
-    : null;
+/**
+ * The daemon's shared-target flag on an untyped lane row (#185): the other
+ * workspace roots and the one-wording warning for the cell's tooltip, or null
+ * when the lane carries no flag.
+ */
+export const sharedTargetCell = (lane: {
+  readonly workspaceRoot?: unknown;
+  readonly targetDir?: unknown;
+  readonly sharedTargetWith?: unknown;
+}): { readonly roots: readonly string[]; readonly warning: string } | null => {
+  const roots = Array.isArray(lane.sharedTargetWith) ? lane.sharedTargetWith.map(String) : [];
+  if (roots.length === 0 || typeof lane.targetDir !== 'string' || typeof lane.workspaceRoot !== 'string') {
+    return null;
+  }
+  return {
+    roots,
+    warning: sharedTargetWarning({
+      targetDir: lane.targetDir,
+      workspaceRoots: [lane.workspaceRoot, ...roots].sort(),
+    }),
+  };
+};
 
 /**
  * Time hauler's attach coalescing saved, from the rows on screen. This is

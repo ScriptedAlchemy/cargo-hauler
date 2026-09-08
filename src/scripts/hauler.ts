@@ -10,6 +10,7 @@ import * as Effect from 'effect/Effect';
 import { buildTransportedEnv } from '../client/env.js';
 import { runExecClient, type RunExecOptions, type RunExecResult } from '../client/exec.js';
 import { ExecUsageError, parseExecArgv } from '../client/parse.js';
+import { isEnabledFlag } from '../daemon/config.js';
 import { daemonExitCode, parseDaemonSubcommand, runDaemonControl } from '../daemon/lifecycle.js';
 import {
   defaultShimDir,
@@ -115,7 +116,7 @@ const runExecCommand = async (argv: readonly string[], options: ScriptOptions): 
   const session = parsed.session ?? envSession;
   return Effect.runPromise(
     exec({
-      ...(parsed.allowSharedTarget || env.CARGO_HAULER_ALLOW_SHARED_TARGET === '1'
+      ...(parsed.allowSharedTarget || isEnabledFlag(env.CARGO_HAULER_ALLOW_SHARED_TARGET)
         ? { allowSharedTarget: true }
         : {}),
       argv: parsed.cargoArgv,

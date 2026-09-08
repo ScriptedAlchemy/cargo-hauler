@@ -2,7 +2,7 @@ import * as Effect from 'effect/Effect';
 
 import { fetchTicket } from '../client/tickets.js';
 import type { DaemonConfigShape } from '../daemon/config.js';
-import type { LaneStatus, RequestRecord } from '../daemon/protocol.js';
+import type { RequestRecord } from '../daemon/protocol.js';
 import { displayRequestRecord, displayStatusRows, loadHaulerSnapshot, loadLedgerRequest } from '../query.js';
 
 import type {
@@ -30,28 +30,6 @@ const loadSnapshot = (limit: number, options: InspectOptions) =>
     }),
     options.signal,
   );
-
-const sharedTargetSummary = (lanes: readonly LaneStatus[]): string => {
-  const seen = new Set<string>();
-  const warnings: string[] = [];
-  for (const lane of lanes) {
-    if (
-      lane.sharedTargetWith === undefined ||
-      lane.sharedTargetWith.length === 0 ||
-      seen.has(lane.targetDir)
-    ) {
-      continue;
-    }
-    seen.add(lane.targetDir);
-    warnings.push(
-      `WARNING: target dir ${lane.targetDir} is shared across workspace roots ${[
-        lane.workspaceRoot,
-        ...lane.sharedTargetWith,
-      ].join(', ')}`,
-    );
-  }
-  return warnings.length === 0 ? '' : `\n${warnings.join('\n')}`;
-};
 
 /**
  * `hauler last`: the newest ticket named by the status listing, read as a
@@ -118,7 +96,6 @@ export const loadStatusResult = async (
     active: displayStatusRows(active),
     operation: 'status',
     recent: displayStatusRows(recent),
-    summary:
-      statusSummary(snapshot.daemon, active, recent) + sharedTargetSummary(snapshot.lanes),
+    summary: statusSummary(snapshot.daemon, active, recent),
   };
 };

@@ -197,6 +197,7 @@ export interface ExecOptions {
   readonly exit?: string;
   readonly lateOut?: string;
   readonly extraEnv?: Readonly<Record<string, string>>;
+  readonly allowSharedTarget?: boolean;
   readonly isTerminal?: (message: ServerMessage) => boolean;
   readonly timeoutMs?: number;
 }
@@ -231,6 +232,7 @@ export const execRequest = (fixture: Fixture, options: ExecOptions) => {
       env,
       ...(options.session === undefined ? {} : { session: options.session }),
       ...(options.host === undefined ? {} : { host: options.host }),
+      ...(options.allowSharedTarget === true ? { allowSharedTarget: true } : {}),
     },
     isTerminal:
       options.isTerminal ?? ((message) => message.type === 'exit' || message.type === 'error'),

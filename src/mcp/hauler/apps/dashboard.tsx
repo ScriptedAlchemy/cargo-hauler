@@ -48,7 +48,7 @@ import {
   remainingEstimateMs,
   resolveTicketDetail,
   sectionOrder,
-  sharedTargetDetail,
+  sharedTargetCell,
   shortenPath,
   stalledHint,
   subcommandDisplayLabel,
@@ -160,6 +160,16 @@ const workspace = (value: unknown): ReactNode =>
       {pathBasename(value)}
     </span>
   );
+const sharedTarget = (lane: Parameters<typeof sharedTargetCell>[0]): ReactNode => {
+  const shared = sharedTargetCell(lane);
+  return shared === null ? (
+    '—'
+  ) : (
+    <span className="path" title={shared.warning}>
+      {shared.roots.map(pathBasename).join(', ')}
+    </span>
+  );
+};
 
 const who = (row: DashboardRequestRow): ReactNode => {
   const host = typeof row.host === 'string' ? row.host : null;
@@ -1377,7 +1387,7 @@ const DashboardContent = ({ structured }: { readonly structured: DashboardStatus
                 cells: [
                   workspace(lane.workspaceRoot),
                   workspace(lane.targetDir),
-                  sharedTargetDetail(lane.sharedTargetWith) ?? '—',
+                  sharedTarget(lane),
                   ticket(typeof lane.runningTicket === 'string' ? lane.runningTicket : null),
                   typeof lane.queued === 'number' ? String(lane.queued) : '—',
                   Array.isArray(lane.executingTickets) && lane.executingTickets.length > 0

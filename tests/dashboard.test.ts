@@ -43,7 +43,7 @@ import {
   resolveTicketDetail,
   rowSubcommand,
   sectionOrder,
-  sharedTargetDetail,
+  sharedTargetCell,
   shortenPath,
   stalledHint,
   latencySavedStat,
@@ -61,6 +61,7 @@ import {
   type DashboardKachePressure,
   type DashboardMetricsWindow,
 } from '../src/dashboard/lib.js';
+import { sharedTargetWarning } from '../src/lib/shared-target.js';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 
@@ -179,10 +180,16 @@ describe('shared target lane warning', () => {
       queued: 0,
       runningTicket: null,
       sharedTargetWith: ['/work/two'],
+      targetDir: '/cache/target',
+      workspaceRoot: '/work/one',
     };
     expect(laneIsActive(lane)).toBe(true);
-    expect(sharedTargetDetail(lane.sharedTargetWith)).toContain('/work/two');
-    expect(sharedTargetDetail(undefined)).toBeNull();
+    const cell = sharedTargetCell(lane);
+    expect(cell?.roots).toEqual(['/work/two']);
+    expect(cell?.warning).toBe(
+      sharedTargetWarning({ targetDir: '/cache/target', workspaceRoots: ['/work/one', '/work/two'] }),
+    );
+    expect(sharedTargetCell({ ...lane, sharedTargetWith: undefined })).toBeNull();
   });
 });
 

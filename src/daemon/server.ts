@@ -362,6 +362,7 @@ export const makeConnectionHandler =
                   holdStop: message.holdStop,
                   mergeStderr: message.mergeStderr,
                   after: message.after,
+                  allowSharedTarget: message.allowSharedTarget,
                 },
                 streamCallbacks(message.id, message.background === true),
               ),

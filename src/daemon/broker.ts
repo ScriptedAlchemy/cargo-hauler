@@ -11,6 +11,8 @@ import * as Ref from 'effect/Ref';
 import * as Semaphore from 'effect/Semaphore';
 import * as ChildProcessSpawner from 'effect/unstable/process/ChildProcessSpawner';
 
+import { sharedTargetRefusal } from '../lib/shared-target.js';
+
 import {
   attachModeMetric,
   attachRejectionMetric,
@@ -58,7 +60,7 @@ import type {
 import { replaySince } from './replay.js';
 import type { ReplayChunk } from './replay.js';
 import { memoryClampState } from './scheduler.js';
-import { sharedTargetMessage, sharedTargetWith } from './shared-target.js';
+import { sharedTargetWith } from './shared-target.js';
 import { StallProbe, makeStallMonitor } from './stall.js';
 import { statusTailPreviewLimits, tailPreview } from './tail-preview.js';
 import { makeTicketDirectory } from './ticket-directory.js';
@@ -229,22 +231,30 @@ export const BrokerLive: Layer.Layer<
     });
     const laneRegistration = yield* Semaphore.make(1);
 
-    const recordRejectedIntent = (
-      input: SubmitInput,
-      createdAtMs: number,
-      message: string,
-    ): Effect.Effect<void> =>
-      Effect.asVoid(
-        ledger.recordAttempt({
-          atMs: createdAtMs,
-          session: input.session ?? null,
-          host: input.host ?? null,
-          cwd: input.cwd,
+    const recordAttempt = (
+      input: AttemptInput,
+    ): Effect.Effect<{ readonly ticket: string }> =>
+      ledger
+        .recordAttempt({
           argv: input.argv,
+          atMs: Date.now(),
+          cwd: input.cwd,
+          error: input.reason,
+          host: input.host ?? null,
+          session: input.session ?? null,
           status: 'denied',
-          error: message,
-        }),
-      );
+        })
+        .pipe(Effect.map(({ ticket }) => ({ ticket })));
+
+    /** A request refused before cargo ran is a `denied` row, so `hauler log` shows it as such. */
+    const recordingRejection =
+      (input: SubmitInput) =>
+      <A, R>(effect: Effect.Effect<A, CargoIntentError, R>): Effect.Effect<A, CargoIntentError, R> =>
+        effect.pipe(
+          Effect.tapError((error) =>
+            Effect.uninterruptible(recordAttempt({ ...input, reason: error.message })),
+          ),
+        );
 
     // Normalization and lane creation stay interruptible: forking the lane
     // worker inside an uninterruptible region would make the worker fiber
@@ -280,11 +290,7 @@ export const BrokerLive: Layer.Layer<
         // like an unparseable command rather than silently waiting forever.
         const prerequisites = yield* dependencies.resolve(rawInput.after).pipe(
           Effect.mapError((error) => new CargoIntentError({ message: error.message })),
-          Effect.tapError((error) =>
-            Effect.uninterruptible(
-              recordRejectedIntent(rawInput, createdAtMs, error.message),
-            ),
-          ),
+          recordingRejection(rawInput),
         );
         const input: SubmitInput = { ...rawInput, after: prerequisites.after };
         const normalized = yield* Effect.try({
@@ -303,44 +309,31 @@ export const BrokerLive: Layer.Layer<
             new CargoIntentError({
               message: cause instanceof Error ? cause.message : String(cause),
             }),
-        }).pipe(
-          Effect.tapError((error) =>
-            Effect.uninterruptible(
-              recordRejectedIntent(input, createdAtMs, error.message),
-            ),
-          ),
-        );
+        }).pipe(recordingRejection(input));
         const laneKey = laneKeyFor(normalized.workspaceRoot, normalized.targetDir);
-        const registration = yield* laneRegistration.withPermits(1)(
+        // Detection and lane creation under one permit: two first submits
+        // from different roots to one outside target must not both pass.
+        const { lane, warning } = yield* laneRegistration.withPermits(1)(
           Effect.gen(function* () {
-            const knownLanes = yield* lanesRuntime.laneStatuses();
-            const sharedWith = sharedTargetWith(normalized, knownLanes);
-            const warning =
-              sharedWith.length === 0
-                ? undefined
-                : sharedTargetMessage(normalized, sharedWith);
-            const allowed =
-              config.allowSharedTarget ||
-              input.allowSharedTarget === true ||
-              input.env?.CARGO_HAULER_ALLOW_SHARED_TARGET === '1';
-            if (warning !== undefined && !allowed) {
-              return yield* new CargoIntentError({ message: `Refusing to run: ${warning}` });
+            const sharedWith = sharedTargetWith(normalized, yield* lanesRuntime.laneStatuses());
+            if (sharedWith.length > 0 && !config.allowSharedTarget && input.allowSharedTarget !== true) {
+              return yield* new CargoIntentError({
+                message: `Refusing to run: ${sharedTargetRefusal(normalized, sharedWith)}`,
+              });
             }
             const lane = yield* lanesRuntime.getOrCreateLane(
               laneKey,
               normalized.workspaceRoot,
               normalized.targetDir,
             );
-            return { lane, warning };
+            return {
+              lane,
+              ...(sharedWith.length === 0
+                ? {}
+                : { warning: `WARNING: ${sharedTargetRefusal(normalized, sharedWith)}` }),
+            };
           }),
-        ).pipe(
-          Effect.tapError((error) =>
-            Effect.uninterruptible(
-              recordRejectedIntent(input, createdAtMs, error.message),
-            ),
-          ),
-        );
-        const { lane, warning } = registration;
+        ).pipe(recordingRejection(input));
         return yield* Effect.uninterruptible(
           Effect.gen(function* () {
             const holdStop =
@@ -404,7 +397,7 @@ export const BrokerLive: Layer.Layer<
               return {
                 ticket: created.ticket,
                 laneKey,
-                ...(warning === undefined ? {} : { warning: `WARNING: ${warning}` }),
+                ...(warning === undefined ? {} : { warning }),
                 position: 0,
                 attachedTo: registered.leader.ticket,
                 attachMode: registered.mode,
@@ -441,7 +434,7 @@ export const BrokerLive: Layer.Layer<
             return {
               ticket: created.ticket,
               laneKey,
-              ...(warning === undefined ? {} : { warning: `WARNING: ${warning}` }),
+              ...(warning === undefined ? {} : { warning }),
               position: queued.queue?.position ?? enqueuedPosition,
               etaMs: job.estimateMs,
               etaSource: job.estimateSource,
@@ -520,21 +513,6 @@ export const BrokerLive: Layer.Layer<
 
     const getTicket = (ticket: string): Effect.Effect<RequestRecord | null> =>
       ledger.getRequestByTicket(ticket).pipe(Effect.flatMap((record) => withLiveStatus(record)));
-
-    const recordAttempt = (
-      input: AttemptInput,
-    ): Effect.Effect<{ readonly ticket: string }> =>
-      ledger
-        .recordAttempt({
-          argv: input.argv,
-          atMs: Date.now(),
-          cwd: input.cwd,
-          error: input.reason,
-          host: input.host ?? null,
-          session: input.session ?? null,
-          status: 'denied',
-        })
-        .pipe(Effect.map(({ ticket }) => ({ ticket })));
 
     const awaitTicket = (ticket: string, maxWaitMs: number): Effect.Effect<AwaitTicketResult> =>
       Effect.acquireUseRelease(
