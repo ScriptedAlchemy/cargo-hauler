@@ -48,6 +48,7 @@ import {
   remainingEstimateMs,
   resolveTicketDetail,
   sectionOrder,
+  sharedTargetDetail,
   shortenPath,
   stalledHint,
   subcommandDisplayLabel,
@@ -1370,11 +1371,13 @@ const DashboardContent = ({ structured }: { readonly structured: DashboardStatus
             <h2>Lanes <span className="count">({laneCount})</span></h2>
             <Table
               empty="No active lanes."
-              headers={['workspace', 'running', 'queued', 'executing']}
-              numericColumns={[2]}
+              headers={['workspace', 'target', 'shared target', 'running', 'queued', 'executing']}
+              numericColumns={[4]}
               rows={activeLanes.map((lane) => ({
                 cells: [
                   workspace(lane.workspaceRoot),
+                  workspace(lane.targetDir),
+                  sharedTargetDetail(lane.sharedTargetWith) ?? '—',
                   ticket(typeof lane.runningTicket === 'string' ? lane.runningTicket : null),
                   typeof lane.queued === 'number' ? String(lane.queued) : '—',
                   Array.isArray(lane.executingTickets) && lane.executingTickets.length > 0

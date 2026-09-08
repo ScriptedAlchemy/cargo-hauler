@@ -77,8 +77,8 @@ The CLI is `hauler` on PATH from `npm i -g cargo-hauler`. Never run
 
 | Command | Behavior |
 | --- | --- |
-| `hauler exec [--session ID] [--host HOST] [--cwd DIR] [--bg] [--after TICKET[,TICKET…]] -- <cargo …>` | Submit Cargo through the daemon and stream output; hooks rewrite commands to this form. A relative `--cwd` is resolved against the caller's directory. `--after` (repeatable or comma-separated) keeps the request queued until every named ticket has finished; it fails with `prerequisite cc-N <status>` if one of them fails or is killed, and an unknown ticket is rejected as a bad intent. Exits with cargo's code; `130`/`143` after a SIGINT/SIGTERM (the ticket is killed first); `75` when auto-backgrounded. |
-| `hauler status [--limit N] [--cwd DIR] [--session ID] [--lane KEY] [--ticket ID …] [--status S …] [--command-contains TEXT]` | Queue, active runs, lanes, admission, kache, optionally filtered. Rows are bounded summaries: no row carries an output tail; a running row carries `outputPreview`, the last 8 lines (at most 512 bytes) of its live output, cut at a line boundary, and every other row has `outputPreview: null`. Read a ticket's whole tail with `hauler result`. |
+| `hauler exec [--session ID] [--host HOST] [--cwd DIR] [--bg] [--after TICKET[,TICKET…]] [--allow-shared-target] -- <cargo …>` | Submit Cargo through the daemon and stream output; hooks rewrite commands to this form. A relative `--cwd` is resolved against the caller's directory. `--after` (repeatable or comma-separated) keeps the request queued until every named ticket has finished; it fails with `prerequisite cc-N <status>` if one of them fails or is killed, and an unknown ticket is rejected as a bad intent. `--allow-shared-target` accepts the stale-artifact risk described below and prints a warning. Exits with cargo's code; `130`/`143` after a SIGINT/SIGTERM (the ticket is killed first); `75` when auto-backgrounded. |
+| `hauler status [--limit N] [--cwd DIR] [--session ID] [--lane KEY] [--ticket ID …] [--status S …] [--command-contains TEXT]` | Queue, active runs, lanes, admission, kache, optionally filtered. Lanes sharing one external target directory across workspace roots carry `sharedTargetWith` and render a warning naming the target and roots. Rows are bounded summaries: no row carries an output tail; a running row carries `outputPreview`, the last 8 lines (at most 512 bytes) of its live output, cut at a line boundary, and every other row has `outputPreview: null`. Read a ticket's whole tail with `hauler result`. |
 | `hauler log [--limit N]` | Recent requests from the ledger, as the same bounded summary rows. |
 | `hauler last` | The most recent request, as a detail record (from the daemon while it is running, otherwise from the ledger) — its output tail included. |
 | `hauler await <ticket> [--max-wait-ms N]` | Long-poll until the ticket finishes or the wait expires (default 30 s, ceiling 2 h per call — the daemon's await ceiling; call again to keep waiting). A host with its own per-call deadline still bounds one call: Codex stops a tool call at `tool_timeout_sec` (60 s unless raised). |
@@ -186,6 +186,14 @@ since the shared jobserver already bounds compile parallelism and the pressure
 arms defer admission under load. Attached requests (riders) do not hold
 permits; the admission meter counts permit holders and reports riders
 separately.
+
+Different workspace roots must not share a target directory outside the
+requesting workspace by default. Cargo's `-C metadata` hash is relative to the
+workspace root, so same-layout git worktrees can write identical artifact
+filenames there; whichever worktree compiled last may then be treated as fresh
+and run by another. This is a stale-binary collision, not a kache miss. Use a
+target directory per worktree, or opt in with `--allow-shared-target` /
+`CARGO_HAULER_ALLOW_SHARED_TARGET=1` when that risk is intentional.
 
 Within a lane, the daemon can reduce work in three ways:
 
@@ -327,6 +335,7 @@ own `-j` flag or `CARGO_BUILD_JOBS` always wins over both.
 | --- | --- |
 | Work sharing | Identical requests attach, covered checks and compile-only `test --no-run` requests attach, and compatible queued compile or test requests fold. |
 | Lane isolation | A workspace-root and target-directory pair is serialized independently from other lanes. |
+| Shared target safety | If different workspace roots use the same target directory outside the requesting workspace, the daemon refuses the later request unless explicitly allowed and status flags both lanes. |
 | Admission | Per-core load, Linux CPU PSI, Linux memory PSI and `MemAvailable`, macOS VM pressure, configured thresholds, and the global permit cap control new starts. |
 | Parallelism | One daemon-owned jobserver FIFO shared by every spawned Cargo; a per-run `CARGO_BUILD_JOBS` grant only when the FIFO could not be armed. |
 | Scheduling | Per-phase EWMA estimates (compile vs execute), optional kache priors, fan-out, dependency topology, recent edits, and request age determine lane order; `--after cc-N` holds a request until the named tickets settle. |
@@ -606,6 +615,7 @@ Per-host notes and hook timeouts are in [docs/install.md](docs/install.md).
 | `CARGO_HAULER_CARGO_BIN` | `$CARGO_HOME/bin/cargo` | Cargo binary for daemon-started work; bare `cargo` is the last fallback. Never resolved through `PATH`. Read from the daemon's own environment (export it where the daemon starts, or before `hauler daemon start`); clients do not forward it. |
 | `CARGO_HAULER_MAX_CONCURRENT` | cores ÷ 8, clamped to 5–16 | Global admission permits for Cargo processes across all lanes; an integer >= 1. |
 | `CARGO_HAULER_OVERLAP_EXECUTION` | `1` | Hand a lane to its next request once a `test`/`nextest`/`bench`/`run` leader reports its build finished, overlapping the next compile with the leader's execution phase. `0` keeps a lane strictly one process at a time. |
+| `CARGO_HAULER_ALLOW_SHARED_TARGET` | `0` | Allow different workspace roots to use one external target directory. The daemon still warns and status flags the lanes because Cargo artifacts can collide. Set on the request as `1`, or in the daemon environment to allow all requests. |
 | `CARGO_HAULER_JOBS_GRANT` | `max(4, cores / max concurrent)` | `CARGO_BUILD_JOBS` added to each Cargo process only while the shared jobserver FIFO is not armed; an armed daemon injects `MAKEFLAGS` instead and leaves `CARGO_BUILD_JOBS` unset. `0` disables injection. |
 | `CARGO_HAULER_JOBSERVER` | `auto` | Machine-wide fifo jobserver for daemon-spawned cargo: `auto` arms it only when the host `make` is 4.4+ (or absent) because older makes reject `--jobserver-auth=fifo:` in build scripts; `fifo` forces it on, `off` disables it (per-run `CARGO_BUILD_JOBS` grants apply instead). |
 | `CARGO_HAULER_LOAD_THRESHOLD` | Disabled | Per-core one-minute load threshold for deferring new admissions. |

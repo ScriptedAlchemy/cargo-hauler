@@ -50,7 +50,7 @@ const KilledGuidance: GuidanceComponent = ({ names, record }) => (
 );
 
 const DeniedGuidance: GuidanceComponent = ({ record }) => (
-  <Agent.Context>{`${record.ticket} was denied by a hook: ${record.error ?? 'see error above'}.`}</Agent.Context>
+  <Agent.Context>{`${record.ticket} was denied before cargo ran: ${record.error ?? 'see error above'}.`}</Agent.Context>
 );
 
 const PassthroughGuidance: GuidanceComponent = ({ record }) => (

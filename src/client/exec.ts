@@ -55,6 +55,7 @@ export interface ExecIo {
 }
 
 export interface RunExecOptions {
+  readonly allowSharedTarget?: boolean;
   /** Tickets that must settle before this request may start (`--after`). */
   readonly after?: readonly string[];
   readonly argv: readonly string[];
@@ -321,6 +322,9 @@ const handleServerMessage = (
     switch (message.type) {
       case 'ack': {
         yield* Ref.set(state.ticket, message.ticket);
+        if (message.warning !== undefined) {
+          options.io.writeStderr(`[cargo-hauler] ${message.warning}\n`);
+        }
         const waitEtaMs = message.waitEtaMs ?? 0;
         // A default prior says "unknown"; showing it as a runtime would be a guess.
         const measuredEtaMs =
@@ -603,6 +607,7 @@ const streamBrokered = (
       encodeClientMessage({
         type: 'exec',
         id,
+        ...(options.allowSharedTarget === true ? { allowSharedTarget: true } : {}),
         argv: [...options.argv],
         cwd: options.cwd,
         ...(options.env === undefined ? {} : { env: { ...options.env } }),

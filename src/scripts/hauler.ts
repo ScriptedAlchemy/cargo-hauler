@@ -33,7 +33,8 @@ import {
 const usage = `Usage: hauler <command>
 
 Commands:
-  exec [--session ID] [--host HOST] [--cwd DIR] [--bg] [--after TICKET[,TICKET…]] -- <cargo command>
+  exec [--session ID] [--host HOST] [--cwd DIR] [--bg] [--after TICKET[,TICKET…]]
+       [--allow-shared-target] -- <cargo command>
       Run cargo through the hauler daemon; --after queues it until those
       tickets finish (it fails if one of them fails or is killed)
   daemon <run|start|stop|status|restart>
@@ -108,16 +109,20 @@ const runExecCommand = async (argv: readonly string[], options: ScriptOptions): 
     writeStdout: options.writeStdout ?? defaultWriteStdout,
   };
   const exec = options.runExec ?? runExecClient;
-  const envHost = process.env.CARGO_HAULER_HOST;
-  const envSession = process.env.CARGO_HAULER_SESSION;
+  const env = options.env ?? process.env;
+  const envHost = env.CARGO_HAULER_HOST;
+  const envSession = env.CARGO_HAULER_SESSION;
   const session = parsed.session ?? envSession;
   return Effect.runPromise(
     exec({
+      ...(parsed.allowSharedTarget || env.CARGO_HAULER_ALLOW_SHARED_TARGET === '1'
+        ? { allowSharedTarget: true }
+        : {}),
       argv: parsed.cargoArgv,
       // Resolved here: the daemon would otherwise resolve a relative --cwd
       // against its own working directory, not the caller's.
       cwd: resolve(parsed.cwd ?? process.cwd()),
-      env: buildTransportedEnv(process.env),
+      env: buildTransportedEnv(env),
       host: parsed.host ?? envHost ?? 'cli',
       io,
       ...(parsed.background ? { background: true } : {}),

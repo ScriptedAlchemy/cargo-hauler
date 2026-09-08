@@ -56,6 +56,7 @@ interface ScriptedDaemonOptions {
     readonly etaMs: number;
     readonly etaSource: EstimateSource;
     readonly waitEtaMs?: number;
+    readonly warning?: string;
   };
   /** Written right after the ack. */
   readonly after?: readonly ServerMessage[];
@@ -96,6 +97,7 @@ const scriptedDaemon = (
                   position: 0,
                   ticket: 'cc-1',
                   type: 'ack',
+                  ...(options.ack.warning === undefined ? {} : { warning: options.ack.warning }),
                   ...(options.ack.waitEtaMs === undefined
                     ? {}
                     : { waitEtaMs: options.ack.waitEtaMs }),
@@ -202,6 +204,33 @@ describe('runExecClient', () => {
       expect(collected.stderr()).toMatch(/ticket cc-\d+ started \(waited \d+ms\)/u);
     }));
 
+  it.live('exits 2 and prints the shared-target refusal from the daemon', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(5);
+      const targetDir = join(fixture.root, 'shared-target');
+      yield* runExecClient({
+        argv: ['cargo', 'check'],
+        autoSpawn: false,
+        config: fixture.config,
+        cwd: fixture.ws1,
+        env: fakeCargoEnv(fixture, { CARGO_TARGET_DIR: targetDir }),
+        io: collectIo().io,
+      });
+      const collected = collectIo();
+      const result = yield* runExecClient({
+        argv: ['cargo', 'check'],
+        autoSpawn: false,
+        config: fixture.config,
+        cwd: fixture.ws2,
+        env: fakeCargoEnv(fixture, { CARGO_TARGET_DIR: targetDir }),
+        io: collected.io,
+      });
+      expect(result).toEqual({ exitCode: 2, mode: 'brokered' });
+      expect(collected.stderr()).toContain('-C metadata');
+      expect(collected.stderr()).toContain(fixture.ws1);
+      expect(collected.stderr()).toContain(fixture.ws2);
+    }));
+
   it.live('stays foreground on a cold-start default estimate, however large', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedFixture(5);
@@ -235,6 +264,41 @@ describe('runExecClient', () => {
       expect(result).toEqual({ exitCode: 101, mode: 'brokered', ticket: 'cc-1' });
       expect(daemon.sent().map((message) => message.type)).toEqual(['exec']);
       expect(collected.stderr()).not.toContain('submitted in background');
+    }));
+
+  it.live('prints a daemon shared-target warning on stderr before cargo output', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedFixture(5);
+      mkdirSync(fixture.config.stateDir, { recursive: true });
+      yield* scriptedDaemon(fixture.config.socketPath, {
+        ack: {
+          etaMs: 1_000,
+          etaSource: 'default',
+          warning: 'WARNING: unsafe shared target',
+        },
+        after: [
+          {
+            error: null,
+            exitCode: 0,
+            id: 'x',
+            runMs: 1,
+            signal: null,
+            status: 'done',
+            ticket: 'cc-1',
+            type: 'exit',
+            waitMs: 1,
+          },
+        ],
+      });
+      const collected = collectIo();
+      yield* runExecClient({
+        argv: ['cargo', 'check', '--quiet'],
+        autoSpawn: false,
+        config: fixture.config,
+        cwd: fixture.ws1,
+        io: collected.io,
+      });
+      expect(collected.stderr()).toContain('[cargo-hauler] WARNING: unsafe shared target');
     }));
 
   it.live('auto-backgrounds on a measured estimate over the host cap and exits 75', () =>

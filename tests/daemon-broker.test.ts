@@ -30,6 +30,82 @@ import {
 } from './harness.js';
 
 describe('hauler daemon', () => {
+  it.live('refuses an external target shared by another workspace root', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(5);
+      const targetDir = join(fixture.root, 'shared-target');
+      yield* execRequest(fixture, {
+        cwd: fixture.ws1,
+        extraEnv: { CARGO_TARGET_DIR: targetDir },
+      });
+
+      const messages = yield* execRequest(fixture, {
+        cwd: fixture.ws2,
+        extraEnv: { CARGO_TARGET_DIR: `${targetDir}/` },
+      });
+      const denied = messages.find(
+        (message): message is ErrorMessage => message.type === 'error',
+      );
+      expect(denied?.code).toBe('bad-intent');
+      expect(denied?.message).toContain('-C metadata');
+      expect(denied?.message).toContain('artifact');
+      expect(denied?.message).toContain(fixture.ws1);
+      expect(denied?.message).toContain(fixture.ws2);
+      expect(denied?.message).toContain(targetDir);
+      const report = yield* pollReport(fixture, (candidate) =>
+        candidate.recent.some(
+          (record) => record.status === 'denied' && record.error?.includes(targetDir) === true,
+        ),
+      );
+      expect(report.recent.some((record) => record.status === 'denied')).toBe(true);
+    }));
+
+  it.live('allows an explicit shared-target opt-in, warns, and flags both lanes', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(5);
+      const targetDir = join(fixture.root, 'shared-target');
+      yield* execRequest(fixture, {
+        cwd: fixture.ws1,
+        extraEnv: { CARGO_TARGET_DIR: targetDir },
+      });
+      const messages = yield* execRequest(fixture, {
+        cwd: fixture.ws2,
+        extraEnv: {
+          CARGO_HAULER_ALLOW_SHARED_TARGET: '1',
+          CARGO_TARGET_DIR: targetDir,
+        },
+      });
+      const ack = messages.find((message): message is AckMessage => message.type === 'ack');
+      expect(ack?.warning).toContain('WARNING');
+      expect(ack?.warning).toContain('stale-binary');
+
+      const report = yield* fetchReport(fixture);
+      const shared = report.lanes.filter((lane) => lane.targetDir === targetDir);
+      expect(shared).toHaveLength(2);
+      expect(shared.map((lane) => lane.sharedTargetWith)).toEqual(
+        expect.arrayContaining([[fixture.ws2], [fixture.ws1]]),
+      );
+    }));
+
+  it.live('never flags different targets in one workspace or workspace-internal targets', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(5);
+      yield* execRequest(fixture, {
+        cwd: fixture.ws1,
+        extraEnv: { CARGO_TARGET_DIR: join(fixture.root, 'target-one') },
+      });
+      yield* execRequest(fixture, {
+        cwd: fixture.ws1,
+        extraEnv: { CARGO_TARGET_DIR: join(fixture.root, 'target-two') },
+      });
+      yield* execRequest(fixture, {
+        cwd: fixture.ws2,
+        extraEnv: { CARGO_TARGET_DIR: join(fixture.ws2, 'target') },
+      });
+      const report = yield* fetchReport(fixture);
+      expect(report.lanes.every((lane) => lane.sharedTargetWith === undefined)).toBe(true);
+    }));
+
   it('uses the greater of twice the estimate and ten minutes for delayed waits', () => {
     expect(queuedWaitIsDelayed(600_000, 60_000)).toBe(false);
     expect(queuedWaitIsDelayed(600_001, 60_000)).toBe(true);
@@ -454,11 +530,11 @@ describe('hauler daemon', () => {
       expect(error?.message).toContain('subcommand');
 
       const report = yield* pollReport(fixture, (candidate) =>
-        candidate.recent.some((record) => record.status === 'failed'),
+        candidate.recent.some((record) => record.status === 'denied'),
       );
-      const failed = report.recent.find((record) => record.status === 'failed');
-      expect(failed?.laneKey).toBe('invalid');
-      expect(failed?.error).toContain('subcommand');
+      const denied = report.recent.find((record) => record.status === 'denied');
+      expect(denied?.laneKey).toBe('attempt');
+      expect(denied?.error).toContain('subcommand');
     }));
 
   it.live('enforces the daemon singleton and shuts down over the socket', () =>

@@ -43,6 +43,7 @@ import {
   resolveTicketDetail,
   rowSubcommand,
   sectionOrder,
+  sharedTargetDetail,
   shortenPath,
   stalledHint,
   latencySavedStat,
@@ -168,6 +169,20 @@ describe('sectionOrder (stable layout)', () => {
 
   it('keeps every section mounted so live polling never shifts layout', () => {
     expect(sectionOrder).toEqual(fullOrder);
+  });
+});
+
+describe('shared target lane warning', () => {
+  it('keeps a flagged idle lane visible and names the other workspace root', () => {
+    const lane = {
+      executingTickets: [],
+      queued: 0,
+      runningTicket: null,
+      sharedTargetWith: ['/work/two'],
+    };
+    expect(laneIsActive(lane)).toBe(true);
+    expect(sharedTargetDetail(lane.sharedTargetWith)).toContain('/work/two');
+    expect(sharedTargetDetail(undefined)).toBeNull();
   });
 });
 

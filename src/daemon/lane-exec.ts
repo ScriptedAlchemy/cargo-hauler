@@ -79,6 +79,7 @@ import {
   selectNextIndex,
 } from './scheduler.js';
 import type { AdmissionLoadInput } from './scheduler.js';
+import { sharedTargetWith } from './shared-target.js';
 import type { TicketDirectory } from './ticket-directory.js';
 import { openTicketLog } from './ticket-log.js';
 import type { TopologyApi } from './topology.js';
@@ -1075,16 +1076,21 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
       );
 
     const laneStatuses = (): Effect.Effect<readonly LaneStatus[]> =>
-      Effect.sync(() =>
-        [...lanes.values()].map((lane) => ({
-          key: lane.key,
-          workspaceRoot: lane.workspaceRoot,
-          targetDir: lane.targetDir,
-          queued: lane.pending.length,
-          runningTicket: lane.running,
-          executingTickets: [...lane.executing],
-        })),
-      );
+      Effect.sync(() => {
+        const knownLanes = [...lanes.values()];
+        return knownLanes.map((lane) => {
+          const sharedWith = sharedTargetWith(lane, knownLanes);
+          return {
+            key: lane.key,
+            workspaceRoot: lane.workspaceRoot,
+            targetDir: lane.targetDir,
+            ...(sharedWith.length === 0 ? {} : { sharedTargetWith: sharedWith }),
+            queued: lane.pending.length,
+            runningTicket: lane.running,
+            executingTickets: [...lane.executing],
+          };
+        });
+      });
 
     /**
      * `pending` is the whole lane queue, blocked jobs included: a job waiting
