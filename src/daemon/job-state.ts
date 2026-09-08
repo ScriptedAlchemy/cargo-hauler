@@ -50,6 +50,8 @@ export interface OutputInfo {
   readonly ticket: string;
   readonly channel: 'stdout' | 'stderr';
   readonly data: string;
+  /** Reattach cursor advance; zero for a notice replacing dropped Cargo bytes. */
+  readonly cursorBytes?: number;
 }
 
 export interface ExitInfo {
@@ -73,6 +75,8 @@ export interface RequeuedInfo {
  * failing callback can never take a lane down.
  */
 export interface SubmitCallbacks {
+  /** Connection identity used to reject stale disconnect cleanup after reattach. */
+  readonly ownerId?: string;
   /**
    * Registers connection ownership in the same uninterruptible commit that
    * creates the ticket. False means the connection already closed.
@@ -210,6 +214,8 @@ export interface Job {
   stall: StallReport | null;
   /** True while the connection that submitted this leader is gone and nobody has reattached. */
   ownerGone: boolean;
+  /** Connection that most recently registered ownership; null for background work. */
+  ownerId: string | null;
   /**
    * Bumped on every disconnect and reattach, so the grace timer a
    * disconnect armed can tell whether it is still the current one (#187).

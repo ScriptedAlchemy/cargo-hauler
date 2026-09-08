@@ -192,6 +192,7 @@ export class ConnectionOutputBuffer {
       id: message.id,
       ticket: message.ticket,
       channel: 'stderr',
+      cursorBytes: 0,
       data: Buffer.from(
         `[cargo-hauler] output truncated for slow client: ${this.#droppedPayloadBytes} bytes dropped\n`,
       ).toString('base64'),
@@ -228,6 +229,7 @@ export const makeConnectionHandler =
   (socket: Socket.Socket): Effect.Effect<void> =>
     Effect.scoped(
       Effect.gen(function* () {
+        const ownerId = randomUUID();
         const write = yield* socket.writer;
         const outbound = new ConnectionOutputBuffer();
         const outboundWake = yield* Queue.dropping<void>(1);
@@ -302,6 +304,7 @@ export const makeConnectionHandler =
          * requests are never owned: nobody streams their exit.
          */
         const streamCallbacks = (id: string, background: boolean): SubmitCallbacks => ({
+          ...(background ? {} : { ownerId }),
           onRegistered: (ticket) =>
             Effect.sync(() => {
               if (background) {
@@ -322,6 +325,7 @@ export const makeConnectionHandler =
               ticket: info.ticket,
               channel: info.channel,
               data: info.data,
+              ...(info.cursorBytes === undefined ? {} : { cursorBytes: info.cursorBytes }),
             }),
           onExit: (info) =>
             Effect.gen(function* () {
@@ -655,9 +659,11 @@ export const makeConnectionHandler =
                 // result lands in the ledger, marked orphaned so a later
                 // stall may end it (#46). A `reattach` on a new connection
                 // takes either back.
-                yield* Effect.forEach(tickets, options.broker.ownerDisconnected, {
-                  discard: true,
-                });
+                yield* Effect.forEach(
+                  tickets,
+                  (ticket) => options.broker.ownerDisconnected(ticket, ownerId),
+                  { discard: true },
+                );
               }),
             ),
           );

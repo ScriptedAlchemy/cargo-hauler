@@ -92,6 +92,10 @@ interface SocketProxy {
   readonly connections: () => number;
   /** Destroy every live pair: client and daemon both see the peer vanish. */
   readonly severAll: () => void;
+  /** Accept new clients without connecting them to the daemon yet. */
+  readonly pauseNewConnections: () => void;
+  /** Connect every client held by `pauseNewConnections`. */
+  readonly resumeNewConnections: () => void;
   /**
    * Stop forwarding daemon→client bytes on the connections open right now.
    * Whatever the daemon says on them from here (a goodbye `exit`, say) never
@@ -106,12 +110,14 @@ const socketProxy = (daemonSocketPath: string): Effect.Effect<SocketProxy, never
   Effect.gen(function* () {
     const socketPath = `${daemonSocketPath}.proxy`;
     const pairs = new Set<Socket>();
+    const waiting = new Set<Socket>();
     const muters = new Set<() => void>();
     let accepted = 0;
+    let paused = false;
+    let bridge: (client: Socket) => void = () => undefined;
     yield* Effect.acquireRelease(
       Effect.callback<Server>((resume) => {
-        const listener = createServer((client) => {
-          accepted += 1;
+        bridge = (client: Socket): void => {
           const upstream = createConnection(daemonSocketPath);
           pairs.add(client);
           pairs.add(upstream);
@@ -130,11 +136,26 @@ const socketProxy = (daemonSocketPath: string): Effect.Effect<SocketProxy, never
             upstream.destroy();
             pairs.delete(client);
             pairs.delete(upstream);
+            waiting.delete(client);
           };
           client.on('close', close);
           upstream.on('close', close);
           client.on('error', () => undefined);
           upstream.on('error', () => undefined);
+        };
+        const listener = createServer((client) => {
+          accepted += 1;
+          pairs.add(client);
+          if (paused) {
+            waiting.add(client);
+            client.on('close', () => {
+              pairs.delete(client);
+              waiting.delete(client);
+            });
+            client.on('error', () => undefined);
+            return;
+          }
+          bridge(client);
         });
         listener.listen(socketPath, () => resume(Effect.succeed(listener)));
       }),
@@ -153,6 +174,18 @@ const socketProxy = (daemonSocketPath: string): Effect.Effect<SocketProxy, never
           mute();
         }
         muters.clear();
+      },
+      pauseNewConnections: () => {
+        paused = true;
+      },
+      resumeNewConnections: () => {
+        paused = false;
+        for (const client of waiting) {
+          waiting.delete(client);
+          if (!client.destroyed) {
+            bridge(client);
+          }
+        }
       },
       severAll: () => {
         for (const socket of pairs) {
@@ -396,6 +429,35 @@ describe('reattach after a lost connection (#187)', () => {
       expect(findExit(messages).status).toBe('done');
     }), 30_000);
 
+  it.live('marks a late rider replay-truncation notice as zero-cursor output', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(1, { CARGO_HAULER_REPLAY_BUFFER_BYTES: '64' });
+      const env = { FAKE_OUTPUT_BYTES: '4096', FAKE_SLEEP: '1.5' };
+      const first = yield* rawConnection(fixture.config.socketPath);
+      yield* submitRaw(first, fixture, ['cargo', 'test'], env);
+      const outputBytesReceived = (): number =>
+        first
+          .received()
+          .reduce(
+            (total, message) =>
+              message.type === 'output'
+                ? total + Buffer.from(message.data, 'base64').byteLength
+                : total,
+            0,
+          );
+      yield* first.waitFor((message) => message.type === 'output' && outputBytesReceived() > 64);
+
+      const rider = yield* rawConnection(fixture.config.socketPath);
+      yield* submitRaw(rider, fixture, ['cargo', 'test'], env);
+      const notice = yield* rider.waitFor(
+        (message) =>
+          message.type === 'output' &&
+          Buffer.from(message.data, 'base64').toString('utf8').includes('replay truncated'),
+      );
+      expect(notice).toMatchObject({ type: 'output', cursorBytes: 0 });
+      yield* rider.waitFor((message) => message.type === 'exit');
+    }), 30_000);
+
   it.live('answers a finished ticket with its record', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(1);
@@ -474,6 +536,84 @@ describe('reattach after a lost connection (#187)', () => {
       expect(collected.stderr()).toContain('(running)');
       const ticks = [...collected.stdout().matchAll(/fake-tick:(\d+)/gu)].map((match) => Number(match[1]));
       expect(ticks).toEqual(Array.from({ length: 20 }, (_, index) => index));
+    }), 30_000);
+
+  it.live('runExecClient fails closed when the replay buffer cannot restore every output byte', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(1, { CARGO_HAULER_REPLAY_BUFFER_BYTES: '64' });
+      const proxy = yield* socketProxy(fixture.config.socketPath);
+      const collected = collectIo();
+      const run = yield* Effect.forkScoped(
+        runExecClient({
+          argv: ['cargo', 'test'],
+          autoSpawn: false,
+          config: { ...fixture.config, socketPath: proxy.socketPath },
+          cwd: fixture.ws1,
+          env: fakeCargoEnv(fixture, {
+            FAKE_OUTPUT_COUNT: '50',
+            FAKE_OUTPUT_INTERVAL: '0.02',
+            FAKE_SLEEP: '2',
+          }),
+          io: collected.io,
+        }),
+      );
+      yield* waitUntil(() => collected.stdout().includes('fake-tick:3'));
+      const ticket = /ticket (cc-\d+) (?:queued|started)/u.exec(collected.stderr())?.[1] ?? '';
+      expect(ticket).toMatch(/^cc-\d+$/u);
+      proxy.pauseNewConnections();
+      proxy.severAll();
+      yield* pollReport(fixture, (report) =>
+        report.active.some(
+          (record) =>
+            record.ticket === ticket && (record.outputPreview?.includes('fake-tick:30') ?? false),
+        ),
+      );
+      proxy.resumeNewConnections();
+
+      expect(yield* Fiber.join(run)).toEqual({
+        exitCode: connectionLostExitCode,
+        mode: 'brokered',
+        ticket,
+      });
+      expect(collected.stderr()).toContain('brokered run aborted: daemon connection lost');
+      expect(collected.stderr()).toContain('output could not be replayed completely');
+    }), 30_000);
+
+  it.live('runExecClient fails closed when the ticket finishes before output can be reattached', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(1);
+      const proxy = yield* socketProxy(fixture.config.socketPath);
+      const collected = collectIo();
+      const run = yield* Effect.forkScoped(
+        runExecClient({
+          argv: ['cargo', 'test'],
+          autoSpawn: false,
+          config: { ...fixture.config, socketPath: proxy.socketPath },
+          cwd: fixture.ws1,
+          env: fakeCargoEnv(fixture, {
+            FAKE_OUTPUT_COUNT: '5',
+            FAKE_OUTPUT_INTERVAL: '0.02',
+          }),
+          io: collected.io,
+        }),
+      );
+      yield* waitUntil(() => collected.stdout().includes('fake-tick:1'));
+      const ticket = /ticket (cc-\d+) (?:queued|started)/u.exec(collected.stderr())?.[1] ?? '';
+      expect(ticket).toMatch(/^cc-\d+$/u);
+      proxy.pauseNewConnections();
+      proxy.severAll();
+      yield* pollReport(fixture, (report) =>
+        report.recent.some((record) => record.ticket === ticket && record.status === 'done'),
+      );
+      proxy.resumeNewConnections();
+
+      expect(yield* Fiber.join(run)).toEqual({
+        exitCode: connectionLostExitCode,
+        mode: 'brokered',
+        ticket,
+      });
+      expect(collected.stderr()).toContain('brokered run aborted: daemon connection lost');
+      expect(collected.stderr()).toContain('finished before its output stream could be reattached');
     }), 30_000);
 
   it.live('a daemon restart mid-queue fails closed with the abort message and exit 69, never "continues"', () =>

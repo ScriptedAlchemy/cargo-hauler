@@ -810,6 +810,8 @@ export interface OutputMessage {
   readonly channel: 'stdout' | 'stderr';
   /** Base64-encoded bytes so arbitrary cargo output survives JSON framing. */
   readonly data: string;
+  /** Reattach cursor advance; zero for daemon notices that replace dropped Cargo bytes. */
+  readonly cursorBytes?: number;
 }
 
 export interface ExitMessage {

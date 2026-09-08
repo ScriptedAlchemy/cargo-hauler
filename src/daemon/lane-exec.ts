@@ -289,6 +289,7 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
           pid: null,
           stall: null,
           ownerGone: false,
+          ownerId: callbacks.ownerId ?? null,
           ownerEpoch: 0,
           killReason: null,
           editedRecently,

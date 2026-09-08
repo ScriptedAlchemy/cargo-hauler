@@ -105,6 +105,7 @@ describe('daemon connection output buffering', () => {
         Buffer.from(message.data, 'base64').toString('utf8').includes('output truncated'),
     );
     expect(notices).toHaveLength(1);
+    expect(notices[0]).toMatchObject({ cursorBytes: 0 });
     expect(Buffer.from(notices[0]?.data ?? '', 'base64').toString('utf8')).toContain(
       'slow client',
     );

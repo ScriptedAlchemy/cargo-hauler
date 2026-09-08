@@ -34,11 +34,12 @@ plugin internals, not CLI entry points.
   wait; do not kill it as stalled.
 - `connection to daemon lost; reattaching to ticket cc-N…` on stderr is not a
   failure: the client reconnects (restarting the daemon if needed), reclaims
-  its ticket, and finishes with cargo's exit code. Only `brokered run
-  aborted: daemon connection lost; ticket cc-N <reason>` with exit `69` means
-  the run did not produce a cargo result — the reason says why (killed at a
-  daemon shutdown, orphaned by a restart, an older daemon without reattach).
-  Resubmit the command; there are no diagnostics to fix.
+  its ticket, and finishes with cargo's exit code when the complete output
+  stream can be replayed. `brokered run aborted: daemon connection lost;
+  ticket cc-N <reason>` with exit `69` means the run did not produce a usable
+  cargo result — the reason says why (incomplete output, killed at a daemon
+  shutdown, orphaned by a restart, an older daemon without reattach). Resubmit
+  the command; there are no diagnostics to fix.
 - Scope work with `-p <crate>` instead of workspace-wide `--all-features` when
   a single crate answers the question.
 - Prefer `hauler status`, `hauler last`, and the `hauler_status` MCP

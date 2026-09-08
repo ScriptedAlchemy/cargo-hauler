@@ -167,7 +167,7 @@ export interface BrokerApi {
    * `reattachGraceMs` and is killed as abandoned if nobody reattaches
    * (immediately when the grace is 0). Riders and unknown tickets: nothing.
    */
-  readonly ownerDisconnected: (ticket: string) => Effect.Effect<void>;
+  readonly ownerDisconnected: (ticket: string, ownerId?: string) => Effect.Effect<void>;
   /**
    * Rebind an in-flight ticket to a new connection (#187): clears
    * owner-gone, replays the output past `fromByte` the buffer still holds,
@@ -230,6 +230,9 @@ export const BrokerLive: Layer.Layer<
       ledger,
     });
     const laneRegistration = yield* Semaphore.make(1);
+    // ponytail: reconnects serialize daemon-wide; use per-ticket locks only
+    // if concurrent reconnect throughput becomes measurable.
+    const reattachRegistration = yield* Semaphore.make(1);
 
     const recordAttempt = (
       input: AttemptInput,
@@ -661,13 +664,16 @@ export const BrokerLive: Layer.Layer<
     const graceSeconds = `${config.reattachGraceMs / 1000}s`;
     const abandonedReason = `killed while queued: submitter disconnected and did not reattach within ${graceSeconds}`;
 
-    const ownerDisconnected = (ticket: string): Effect.Effect<void> =>
+    const ownerDisconnected = (ticket: string, ownerId?: string): Effect.Effect<void> =>
       Effect.gen(function* () {
         const entry = directory.get(ticket);
         if (entry === undefined || entry.kind !== 'leader') {
           return;
         }
         const job = entry.job;
+        if (ownerId !== undefined && job.ownerId !== ownerId) {
+          return;
+        }
         if (Ref.getUnsafe(job.state) !== 'queued') {
           yield* markOwnerGone(ticket);
           return;
@@ -712,6 +718,20 @@ export const BrokerLive: Layer.Layer<
         const target: { callbacks: SubmitCallbacks } =
           entry.kind === 'leader' ? entry.job : entry.attachment;
         const leader = entry.kind === 'leader' ? entry.job : entry.leader;
+        const registered = yield* registerOwnership(real, ticket);
+        if (!registered) {
+          const state: ReattachActive['state'] =
+            leader.startedAtMs === null ? 'queued' : 'running';
+          return {
+            kind: 'active' as const,
+            info: {
+              state,
+              ...(entry.kind === 'attachment' ? { attachedTo: leader.ticket } : {}),
+              missedBytes: null,
+              outputPath: leader.log?.path ?? null,
+            },
+          };
+        }
         // Until the replay is out, live fan-out lands in `pending` rather
         // than racing ahead of it; `settleJob`'s exit waits there too.
         const pending: Effect.Effect<void>[] = [];
@@ -729,10 +749,14 @@ export const BrokerLive: Layer.Layer<
         };
         // One frame with the replay snapshot, as `emitChunk` reads the
         // callbacks in the frame that records each chunk.
-        const { info, replay } = yield* Effect.sync(() => {
+        const active = yield* Effect.sync(() => {
+          if (directory.get(ticket) !== entry || Ref.getUnsafe(leader.state) === 'finished') {
+            return null;
+          }
           target.callbacks = gated;
           if (entry.kind === 'leader') {
             entry.job.ownerGone = false;
+            entry.job.ownerId = real.ownerId ?? null;
             entry.job.ownerEpoch += 1;
           }
           // A rider still receiving its registration replay has no offset
@@ -746,15 +770,21 @@ export const BrokerLive: Layer.Layer<
             entry.kind === 'attachment' && !entry.attachment.live
               ? { chunks: [], missedBytes: 0 }
               : replaySince(leader.replay.snapshot(), input.fromByte, admit);
-          const active: ReattachActive = {
+          const info: ReattachActive = {
             state: leader.startedAtMs === null ? 'queued' : 'running',
             ...(entry.kind === 'attachment' ? { attachedTo: leader.ticket } : {}),
             missedBytes: since.missedBytes,
             outputPath: leader.log?.path ?? null,
           };
-          return { info: active, replay: since.chunks };
+          return { info, replay: since.chunks };
         });
-        const registered = yield* registerOwnership(real, ticket);
+        if (active === null) {
+          const record = yield* ledger.getRequestByTicket(ticket);
+          return record !== null && isTerminalStatus(record.status)
+            ? { kind: 'terminal' as const, record }
+            : { kind: 'unknown' as const };
+        }
+        const { info, replay } = active;
         yield* input.onActive(info);
         yield* Effect.forEach(
           replay,
@@ -775,13 +805,17 @@ export const BrokerLive: Layer.Layer<
           }
           yield* Effect.forEach(batch, guarded, { discard: true });
         }
-        if (!registered) {
-          // The new connection closed before it could own the ticket: it is
-          // as gone as the one before it.
-          yield* ownerDisconnected(ticket);
+        // The socket may have closed after the pre-mutation ownership check
+        // while replay was in flight. Recheck the idempotent connection claim
+        // so a dead callback set cannot leave the ticket owner-present.
+        if (!(yield* registerOwnership(real, ticket))) {
+          yield* ownerDisconnected(ticket, real.ownerId);
         }
         return { kind: 'active' as const, info };
-      });
+      }).pipe(
+        Effect.uninterruptible,
+        reattachRegistration.withPermits(1),
+      );
 
     const stallProbe = yield* StallProbe;
     yield* Effect.forkIn(
