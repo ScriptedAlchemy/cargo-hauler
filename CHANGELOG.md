@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.6.17
+
+### Patch Changes
+
+- 9da56e4: Preserve shell-hook denials and governed rewrites when telemetry fails, times out,
+  or is cancelled. Bound recording waits and emit command-free diagnostics. Keep
+  probe errors explicitly host-decided rather than reporting confirmed daemon absence.
+- fcedc8c: Bind shell rewrites to the semantic request's observed plugin code root. Delegate
+  standalone root validation to the public framework resolver with explicit fallback
+  policies, and remove the product's native host environment precedence chain. (#181)
+- 6595017: Report prerequisite-blocked tickets as never run in result/await headlines and
+  guidance. Explain how to rerun the prerequisite and resubmit instead of claiming
+  there are diagnostics to fix or that a retry must attach to the blocked ticket. (#177)
+- 217c4c4: Report all observed test-binary summaries from shared test logs in result,
+  await, and last, with explicit composite-output and widened-filter labels
+  instead of another package's final output tail. (#180)
+
 ## 0.6.16
 
 ### Patch Changes
