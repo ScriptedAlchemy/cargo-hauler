@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.7.0
+
+### Minor Changes
+
+- 80939ab: A `hauler exec` whose daemon connection drops after the ticket was accepted now
+  reattaches instead of giving up. The client prints `connection to daemon lost;
+  reattaching to ticket cc-N…`, reconnects (starting the daemon again if it is
+  gone, a few attempts one second apart), and sends the new `reattach` message;
+  the daemon rebinds the ticket, replays the output the client had not yet
+  received, and streams the rest, so the caller's exit code is cargo's as if the
+  connection had held. Output the replay buffer no longer holds is announced as
+  `N bytes of output missed while reconnecting; full log: <path>`, never
+  invented. A ticket that finished in the meantime yields its exit code and log
+  path.
+  
+  The daemon no longer kills a queued ticket the moment its submitter
+  disconnects: it keeps its queue position (and may start) for
+  `CARGO_HAULER_REATTACH_GRACE_MS` (default 30000; `0` restores the immediate
+  kill) and is killed as `killed while queued: submitter disconnected and did
+  not reattach within 30s` only if nobody reattaches. A running ticket continues
+  as before, marked orphaned; a reattach clears the flag.
+  
+  When the ticket cannot be reattached — it never ran cargo and was killed at
+  the daemon's shutdown or `orphaned by daemon restart`, the daemon does not
+  know it, the daemon predates this release and answers the message with
+  `bad-message`, or no daemon answered within the budget — the client fails
+  closed with `brokered run aborted: daemon connection lost; ticket cc-N
+  <reason>` and the new exit code `69` (`EX_UNAVAILABLE`), distinct from cargo's
+  `1` and from `2`/`75`/`130`/`143`. It no longer prints `ticket cc-N continues
+  — hauler result cc-N` and exits `1` while the daemon records `killed while
+  queued`. `--bg` and auto-backgrounded tickets are detached, not owned, and
+  are unchanged. (#187)
+- 3758d82: Refuse a target directory shared across workspace roots (#185). When a request's target dir lies outside its own workspace and another lane with a different workspace root already uses that dir, the daemon refuses it as a bad intent (client exit 2) with a message naming both roots, the dir, and the mechanism: cargo's `-C metadata` hash is relative to the workspace root, so same-layout worktrees write identical artifact filenames into a shared target dir and whichever compiled last runs as "fresh" in the others — a stale-binary collision, not a kache miss. `hauler exec --allow-shared-target` or `CARGO_HAULER_ALLOW_SHARED_TARGET=1` (per request, or in the daemon's environment for all requests) admits the request with one warning line on stderr that cargo's `--quiet` cannot hide. `hauler status` and the dashboard flag every lane on a shared dir with `sharedTargetWith` (optional; older daemons omit it). Refused intents — this one and the existing bad-intent rejections — are now ledgered as `denied` rows instead of `failed` runs under lane `invalid`, so `hauler log` no longer shows a command that never ran as a failed run.
+
+### Patch Changes
+
+- f84e901: `hauler exec --allow-shared-target` (and `CARGO_HAULER_ALLOW_SHARED_TARGET=1`
+  in the caller's environment) now reaches the daemon: the server dropped the
+  request field, so only the daemon-side setting could admit a shared target dir.
+  The shared-target warning has one wording everywhere — the daemon's refusal
+  and ack line, the lane board, and the dashboard's lane cell (other roots, full
+  text on hover) — and `hauler request` shows the daemon's warning in its summary
+  when the daemon admitted a shared target. The `hauler status` summary string
+  no longer carries extra warning lines the document never rendered; the lane
+  board is where the warning shows.
+  Detection no longer re-resolves already-canonical lane paths on every submit
+  and status poll.
+
 ## 0.6.18
 
 ### Patch Changes
