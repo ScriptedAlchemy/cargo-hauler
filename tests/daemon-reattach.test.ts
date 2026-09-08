@@ -374,8 +374,18 @@ describe('reattach after a lost connection (#187)', () => {
         FAKE_OUTPUT_BYTES: '4096',
         FAKE_SLEEP: '1.5',
       });
-      // Only once the bulk has actually been emitted is there anything to lose.
-      yield* first.waitFor((message) => message.type === 'output');
+      // Only once more than the buffer's 64 bytes have reached this client is
+      // there anything to lose: macOS `head -c` hands the bulk over in small
+      // writes, so the first output message alone may fit the buffer.
+      const outputBytesReceived = (): number =>
+        first
+          .received()
+          .reduce(
+            (total, message) =>
+              message.type === 'output' ? total + Buffer.from(message.data, 'base64').byteLength : total,
+            0,
+          );
+      yield* first.waitFor((message) => message.type === 'output' && outputBytesReceived() > 64);
       first.drop();
 
       // The client claims it saw nothing: everything before the buffer's tail is gone.
