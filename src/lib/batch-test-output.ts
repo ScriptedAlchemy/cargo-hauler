@@ -31,19 +31,23 @@ export const isSharedTestRun = (
   record: Pick<RequestRecord, 'argv' | 'execArgv' | 'attachMode'>,
 ): boolean => {
   if (record.attachMode !== 'batch' && record.execArgv === null) return false;
-  const requested = parseCargoArgv(record.argv);
-  if (record.attachMode === 'batch') {
-    return requested.subcommand === 'test' || requested.subcommand === 'nextest';
+  try {
+    const requested = parseCargoArgv(record.argv);
+    if (record.attachMode === 'batch') {
+      return requested.subcommand === 'test' || requested.subcommand === 'nextest';
+    }
+    if ((requested.subcommand !== 'test' && requested.subcommand !== 'nextest') ||
+        record.execArgv === null) return false;
+    const actual = parseCargoArgv(record.execArgv);
+    if (actual.subcommand !== requested.subcommand) return false;
+    const same = (left: readonly string[], right: readonly string[]) =>
+      left.length === right.length && left.every((value, index) => value === right[index]);
+    return requested.workspace !== actual.workspace ||
+      !same(requested.packages, actual.packages) || !same(requested.excludes, actual.excludes) ||
+      requested.subcommand === 'test' && !same(testNameFilters(requested), testNameFilters(actual));
+  } catch {
+    return false;
   }
-  if (requested.subcommand !== 'test') return false;
-  if (record.execArgv === null) return false;
-  const actual = parseCargoArgv(record.execArgv);
-  if (actual.subcommand !== 'test') return false;
-  const same = (left: readonly string[], right: readonly string[]) =>
-    left.length === right.length && left.every((value, index) => value === right[index]);
-  return requested.workspace !== actual.workspace ||
-    !same(requested.packages, actual.packages) || !same(requested.excludes, actual.excludes) ||
-    !same(testNameFilters(requested), testNameFilters(actual));
 };
 
 /**

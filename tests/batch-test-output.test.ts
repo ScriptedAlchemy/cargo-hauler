@@ -107,6 +107,11 @@ describe('batched test report attribution (#178)', () => {
       attachMode: 'batch',
     })).toBe(true);
     expect(isSharedTestRun({
+      argv: ['cargo', 'nextest', 'run', '-p', 'a'],
+      execArgv: ['cargo', 'nextest', 'run', '-p', 'a', '-p', 'b', '--no-fail-fast'],
+      attachMode: null,
+    })).toBe(true);
+    expect(isSharedTestRun({
       argv: ['cargo', 'test', '-p', 'a', '--', 'filter_a'],
       execArgv: ['cargo', 'test', '-p', 'a', '--', 'filter_a', 'filter_b'],
       attachMode: null,
@@ -114,6 +119,11 @@ describe('batched test report attribution (#178)', () => {
     expect(isSharedTestRun({
       argv: ['./reset.sh', '&&', 'cargo', 'clean'],
       execArgv: null,
+      attachMode: null,
+    })).toBe(false);
+    expect(isSharedTestRun({
+      argv: ['/old/rustup', 'test'],
+      execArgv: ['/old/rustup', 'test'],
       attachMode: null,
     })).toBe(false);
     expect(isSharedTestRun({ argv: ['cargo', 'build'], execArgv: ['cargo', 'build', '-p', 'a'], attachMode: 'batch' })).toBe(false);
