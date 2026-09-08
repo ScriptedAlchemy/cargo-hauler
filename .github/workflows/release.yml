@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Check out repository
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -42,7 +42,7 @@ jobs:
         run: pnpm check
 
       - name: Create release pull request or publish
-        uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           version-script: pnpm release:version
           publish-script: pnpm release:publish
