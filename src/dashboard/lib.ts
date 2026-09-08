@@ -1082,10 +1082,19 @@ export const laneIsActive = (lane: {
   readonly queued?: unknown;
   readonly runningTicket?: unknown;
   readonly executingTickets?: unknown;
+  readonly sharedTargetWith?: unknown;
 }): boolean =>
   (typeof lane.queued === 'number' && lane.queued > 0) ||
   typeof lane.runningTicket === 'string' ||
-  (Array.isArray(lane.executingTickets) && lane.executingTickets.length > 0);
+  (Array.isArray(lane.executingTickets) && lane.executingTickets.length > 0) ||
+  (Array.isArray(lane.sharedTargetWith) && lane.sharedTargetWith.length > 0);
+
+export const sharedTargetDetail = (sharedTargetWith: unknown): string | null =>
+  Array.isArray(sharedTargetWith) &&
+  sharedTargetWith.length > 0 &&
+  sharedTargetWith.every((root) => typeof root === 'string')
+    ? `WARNING: shared with ${sharedTargetWith.join(', ')}; Cargo artifacts can collide`
+    : null;
 
 /**
  * Time hauler's attach coalescing saved, from the rows on screen. This is

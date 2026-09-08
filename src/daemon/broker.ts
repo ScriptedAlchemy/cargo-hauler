@@ -8,6 +8,7 @@ import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
 import * as Metric from 'effect/Metric';
 import * as Ref from 'effect/Ref';
+import * as Semaphore from 'effect/Semaphore';
 import * as ChildProcessSpawner from 'effect/unstable/process/ChildProcessSpawner';
 
 import {
@@ -49,6 +50,7 @@ import type {
   StatusRow,
 } from './protocol.js';
 import { memoryClampState } from './scheduler.js';
+import { sharedTargetMessage, sharedTargetWith } from './shared-target.js';
 import { StallProbe, makeStallMonitor } from './stall.js';
 import { statusTailPreviewLimits, tailPreview } from './tail-preview.js';
 import { makeTicketDirectory } from './ticket-directory.js';
@@ -78,6 +80,7 @@ export interface AttemptInput {
 export interface SubmitResult {
   readonly ticket: string;
   readonly laneKey: string;
+  readonly warning?: string;
   /** Leaders expected to run before this one in its lane (running head included). */
   readonly position: number;
   /** The tickets `position` counts, in expected run order. */
@@ -140,8 +143,6 @@ export interface BrokerApi {
 
 export class Broker extends Context.Service<Broker, BrokerApi>()('cargo-hauler/Broker') {}
 
-const invalidLaneKey = 'invalid';
-
 export const BrokerLive: Layer.Layer<
   Broker,
   never,
@@ -179,32 +180,24 @@ export const BrokerLive: Layer.Layer<
       failPendingJob: lanesRuntime.failPendingJob,
       ledger,
     });
+    const laneRegistration = yield* Semaphore.make(1);
 
     const recordRejectedIntent = (
       input: SubmitInput,
-      workspaceRoot: string,
       createdAtMs: number,
       message: string,
     ): Effect.Effect<void> =>
-      Effect.gen(function* () {
-        const created = yield* ledger.createRequest({
-          createdAtMs,
+      Effect.asVoid(
+        ledger.recordAttempt({
+          atMs: createdAtMs,
           session: input.session ?? null,
           host: input.host ?? null,
           cwd: input.cwd,
-          workspaceRoot,
-          targetDir: '',
-          laneKey: invalidLaneKey,
           argv: input.argv,
-          intentKey: null,
-          intentJson: null,
-        });
-        yield* ledger.markFinished(created.id, {
-          status: 'failed',
-          atMs: createdAtMs,
+          status: 'denied',
           error: message,
-        });
-      });
+        }),
+      );
 
     // Normalization and lane creation stay interruptible: forking the lane
     // worker inside an uninterruptible region would make the worker fiber
@@ -242,7 +235,7 @@ export const BrokerLive: Layer.Layer<
           Effect.mapError((error) => new CargoIntentError({ message: error.message })),
           Effect.tapError((error) =>
             Effect.uninterruptible(
-              recordRejectedIntent(rawInput, workspaceRoot, createdAtMs, error.message),
+              recordRejectedIntent(rawInput, createdAtMs, error.message),
             ),
           ),
         );
@@ -266,16 +259,41 @@ export const BrokerLive: Layer.Layer<
         }).pipe(
           Effect.tapError((error) =>
             Effect.uninterruptible(
-              recordRejectedIntent(input, workspaceRoot, createdAtMs, error.message),
+              recordRejectedIntent(input, createdAtMs, error.message),
             ),
           ),
         );
         const laneKey = laneKeyFor(normalized.workspaceRoot, normalized.targetDir);
-        const lane = yield* lanesRuntime.getOrCreateLane(
-          laneKey,
-          normalized.workspaceRoot,
-          normalized.targetDir,
+        const registration = yield* laneRegistration.withPermits(1)(
+          Effect.gen(function* () {
+            const knownLanes = yield* lanesRuntime.laneStatuses();
+            const sharedWith = sharedTargetWith(normalized, knownLanes);
+            const warning =
+              sharedWith.length === 0
+                ? undefined
+                : sharedTargetMessage(normalized, sharedWith);
+            const allowed =
+              config.allowSharedTarget ||
+              input.allowSharedTarget === true ||
+              input.env?.CARGO_HAULER_ALLOW_SHARED_TARGET === '1';
+            if (warning !== undefined && !allowed) {
+              return yield* new CargoIntentError({ message: `Refusing ${warning}` });
+            }
+            const lane = yield* lanesRuntime.getOrCreateLane(
+              laneKey,
+              normalized.workspaceRoot,
+              normalized.targetDir,
+            );
+            return { lane, warning };
+          }),
+        ).pipe(
+          Effect.tapError((error) =>
+            Effect.uninterruptible(
+              recordRejectedIntent(input, createdAtMs, error.message),
+            ),
+          ),
         );
+        const { lane, warning } = registration;
         return yield* Effect.uninterruptible(
           Effect.gen(function* () {
             const holdStop =
@@ -339,6 +357,7 @@ export const BrokerLive: Layer.Layer<
               return {
                 ticket: created.ticket,
                 laneKey,
+                ...(warning === undefined ? {} : { warning: `WARNING: ${warning}` }),
                 position: 0,
                 attachedTo: registered.leader.ticket,
                 attachMode: registered.mode,
@@ -375,6 +394,7 @@ export const BrokerLive: Layer.Layer<
             return {
               ticket: created.ticket,
               laneKey,
+              ...(warning === undefined ? {} : { warning: `WARNING: ${warning}` }),
               position: queued.queue?.position ?? enqueuedPosition,
               etaMs: job.estimateMs,
               etaSource: job.estimateSource,

@@ -207,9 +207,28 @@ describe('laneBoardModel and admissionModel', () => {
   it('lists busy lanes with their leader and counts idle ones', () => {
     const model = laneBoardModel(lanes, [record()], nowMs);
     expect(model.idleLanes).toBe(1);
+    expect(model.sharedTargets).toEqual([]);
     expect(model.rows).toEqual([
-      { executing: null, name: 'ws (target)', queued: 2, running: 'cc-7', runningCommand: 'cargo check -p foo', runningFor: '1m', stalled: null },
+      { executing: null, name: 'ws (target)', queued: 2, running: 'cc-7', runningCommand: 'cargo check -p foo', runningFor: '1m', sharedWith: null, stalled: null },
     ]);
+  });
+
+  it('groups shared-target warnings and marks the affected lane row', () => {
+    const flagged = [
+      {
+        ...lanes[0]!,
+        sharedTargetWith: ['/home/me/work/ws-two'],
+        targetDir: '/cache/target',
+      },
+    ];
+    const model = laneBoardModel(flagged, [record()], nowMs);
+    expect(model.sharedTargets).toEqual([
+      {
+        targetDir: '/cache/target',
+        workspaceRoots: ['/home/me/work/ws', '/home/me/work/ws-two'],
+      },
+    ]);
+    expect(model.rows[0]?.sharedWith).toBe('/home/me/work/ws-two');
   });
 
   it('marks a stalled lane head on its row (#46)', () => {

@@ -249,6 +249,15 @@ describe('status report contract', () => {
     expect(parsed.recent[0]?.savedComputeMs).toBeNull();
   });
 
+  it('accepts the optional shared-target lane field and older lanes without it', () => {
+    expect(statusReportSchema.parse(report).lanes[0]?.sharedTargetWith).toBeUndefined();
+    const flagged = statusReportSchema.parse({
+      ...report,
+      lanes: [{ ...report.lanes[0], sharedTargetWith: ['/other/ws'] }],
+    });
+    expect(flagged.lanes[0]?.sharedTargetWith).toEqual(['/other/ws']);
+  });
+
   it('rejects a report without the daemon version', () => {
     expect(statusReportSchema.safeParse(reportBody).success).toBe(false);
   });

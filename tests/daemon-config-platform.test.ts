@@ -26,6 +26,13 @@ describe('daemon config platform posture', () => {
     expect(resolveDaemonConfig({ CARGO_HAULER_BATCH_WINDOW_MS: '275' }).batchWindowMs).toBe(275);
   });
 
+  it('requires an explicit opt-in for target directories shared across workspaces', () => {
+    expect(resolveDaemonConfig({}).allowSharedTarget).toBe(false);
+    expect(
+      resolveDaemonConfig({ CARGO_HAULER_ALLOW_SHARED_TARGET: '1' }).allowSharedTarget,
+    ).toBe(true);
+  });
+
   it('enables machine-tuned memory defaults only where signals exist', () => {
     expect(resolveDaemonConfig({}, 'linux')).toMatchObject({
       memAvailableMinBytes: 8 * 1024 ** 3,

@@ -113,6 +113,20 @@ describe('hauler script', () => {
     expect(() => JSON.parse(result.text)).toThrow();
   });
 
+  it('passes the shared-target opt-in from the flag or request environment', async () => {
+    const seen: boolean[] = [];
+    const runExec = (options: RunExecOptions) => {
+      seen.push(options.allowSharedTarget === true);
+      return Effect.succeed({ exitCode: 0, mode: 'brokered' as const });
+    };
+    await run(['exec', '--allow-shared-target', '--', 'cargo', 'check'], { runExec });
+    await run(['exec', '--', 'cargo', 'check'], {
+      env: { CARGO_HAULER_ALLOW_SHARED_TARGET: '1' },
+      runExec,
+    });
+    expect(seen).toEqual([true, true]);
+  });
+
   it('reads the exec host and session from CARGO_HAULER_HOST and CARGO_HAULER_SESSION', async () => {
     await withEnv(
       { CARGO_HAULER_HOST: 'env-host', CARGO_HAULER_SESSION: 'env-session' },

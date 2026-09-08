@@ -109,11 +109,16 @@ export interface LaneRowModel {
   readonly runningFor: string | null;
   /** `stalled 12m` when the daemon flagged the lane head (#46). */
   readonly stalled: string | null;
+  readonly sharedWith: string | null;
 }
 
 export interface LaneBoardModel {
   readonly rows: readonly LaneRowModel[];
   readonly idleLanes: number;
+  readonly sharedTargets: readonly {
+    readonly targetDir: string;
+    readonly workspaceRoots: readonly string[];
+  }[];
 }
 
 export const laneName = (lane: Pick<LaneStatus, 'workspaceRoot' | 'targetDir'>): string =>
@@ -131,8 +136,24 @@ export const laneBoardModel = (
       lane.runningTicket !== null ||
       lane.executingTickets.length > 0,
   );
+  const sharedByTarget = new Map<string, Set<string>>();
+  for (const lane of lanes) {
+    if (lane.sharedTargetWith === undefined || lane.sharedTargetWith.length === 0) {
+      continue;
+    }
+    const roots = sharedByTarget.get(lane.targetDir) ?? new Set<string>();
+    roots.add(lane.workspaceRoot);
+    for (const root of lane.sharedTargetWith) {
+      roots.add(root);
+    }
+    sharedByTarget.set(lane.targetDir, roots);
+  }
   return {
     idleLanes: lanes.length - busy.length,
+    sharedTargets: [...sharedByTarget].map(([targetDir, roots]) => ({
+      targetDir,
+      workspaceRoots: [...roots].sort(),
+    })),
     rows: busy.map((lane) => {
       const leader = lane.runningTicket === null ? undefined : byTicket.get(lane.runningTicket);
       const executing = lane.executingTickets;
@@ -145,6 +166,10 @@ export const laneBoardModel = (
         runningFor: leader?.startedAtMs === null || leader?.startedAtMs === undefined
           ? null
           : formatMs(Math.max(0, nowMs - leader.startedAtMs)),
+        sharedWith:
+          lane.sharedTargetWith === undefined || lane.sharedTargetWith.length === 0
+            ? null
+            : lane.sharedTargetWith.join(', '),
         stalled: leader?.stall === undefined ? null : `stalled ${formatMs(leader.stall.idleMs)}`,
       };
     }),

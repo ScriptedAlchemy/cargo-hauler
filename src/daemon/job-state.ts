@@ -26,6 +26,7 @@ import type { TicketLogWriter } from './ticket-log.js';
  */
 
 export interface SubmitInput {
+  readonly allowSharedTarget?: boolean | undefined;
   readonly argv: readonly string[];
   readonly cwd: string;
   readonly workspaceRoot?: string | undefined;

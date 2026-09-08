@@ -297,6 +297,7 @@ export interface TransitionRecord {
 export const execRequestSchema = z.object({
   type: z.literal('exec'),
   id: z.string().min(1),
+  allowSharedTarget: z.boolean().optional(),
   argv: z.array(z.string()).min(1),
   cwd: z.string().min(1),
   workspaceRoot: z.string().min(1).optional(),
@@ -417,6 +418,8 @@ export interface LaneStatus {
   readonly key: string;
   readonly workspaceRoot: string;
   readonly targetDir: string;
+  /** Other workspace roots using this external target directory. */
+  readonly sharedTargetWith?: readonly string[];
   readonly queued: number;
   readonly runningTicket: string | null;
   /**
@@ -732,6 +735,8 @@ export interface AckMessage {
   readonly id: string;
   readonly ticket: string;
   readonly laneKey: string;
+  /** Loud client-side warning for an explicitly accepted unsafe target directory. */
+  readonly warning?: string;
   /**
    * Leaders expected to run before this one in its lane at submission time:
    * the running head plus the schedulable queued jobs ahead of it.

@@ -8,6 +8,7 @@ export class ExecUsageError extends Error {
 }
 
 export interface ParsedExecArgv {
+  readonly allowSharedTarget: boolean;
   readonly background: boolean;
   readonly cargoArgv: readonly string[];
   readonly cwd?: string;
@@ -46,6 +47,7 @@ export const parseTicketList = (values: readonly string[]): readonly string[] =>
  * Everything after `--`, or the remaining tokens, is the cargo command.
  */
 export const parseExecArgv = (argv: readonly string[]): ParsedExecArgv => {
+  let allowSharedTarget = false;
   let background = false;
   let cwd: string | undefined;
   let host: string | undefined;
@@ -61,6 +63,10 @@ export const parseExecArgv = (argv: readonly string[]): ParsedExecArgv => {
     }
     if (argument === '--bg') {
       background = true;
+      continue;
+    }
+    if (argument === '--allow-shared-target') {
+      allowSharedTarget = true;
       continue;
     }
     if (isValuedFlag(argument)) {
@@ -102,6 +108,7 @@ export const parseExecArgv = (argv: readonly string[]): ParsedExecArgv => {
 
   const after = parseTicketList(afterValues);
   return {
+    allowSharedTarget,
     background,
     cargoArgv,
     ...(cwd === undefined ? {} : { cwd }),

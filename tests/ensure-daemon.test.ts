@@ -45,6 +45,7 @@ const configAt = (stateDir: string): DaemonConfigShape => ({
   jobsGrant: 1,
   batchEnabled: false,
   batchWindowMs: 0,
+  allowSharedTarget: false,
   overlapExecution: true,
   loadThresholdPerCore: null,
   loadMinConcurrent: 2,

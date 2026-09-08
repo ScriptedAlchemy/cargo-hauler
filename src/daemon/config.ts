@@ -49,6 +49,11 @@ export interface DaemonConfigShape {
    */
   readonly batchWindowMs: number;
   /**
+   * Permit target directories shared across workspace roots despite Cargo's
+   * colliding artifact names (CARGO_HAULER_ALLOW_SHARED_TARGET; off by default).
+   */
+  readonly allowSharedTarget: boolean;
+  /**
    * Hand a lane to its next request as soon as a test/bench/run leader
    * reports its build finished — cargo releases the build-directory lock
    * there — so the next compile overlaps the leader's execution phase
@@ -411,6 +416,7 @@ export const resolveDaemonConfigWithWarnings = (
       defaultBatchWindowMs,
       { integer: true, min: 0 },
     ),
+    allowSharedTarget: flag(pick(env, 'CARGO_HAULER_ALLOW_SHARED_TARGET'), false),
     overlapExecution: flag(pick(env, 'CARGO_HAULER_OVERLAP_EXECUTION'), true),
     loadThresholdPerCore: optionalNumber(pick(env, 'CARGO_HAULER_LOAD_THRESHOLD'), null),
     loadMinConcurrent: number(pick(env, 'CARGO_HAULER_LOAD_MIN'), defaultLoadMinConcurrent, {

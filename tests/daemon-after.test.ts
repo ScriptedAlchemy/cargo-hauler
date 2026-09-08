@@ -224,7 +224,9 @@ describe('explicit ticket dependencies (--after)', () => {
         }),
       ).pipe(Effect.provide(layer));
       const recent = yield* ledger.recentRequests(10);
-      expect(recent.filter((record) => record.laneKey === 'invalid' && record.status === 'failed')).toHaveLength(2);
+      expect(
+        recent.filter((record) => record.laneKey === 'attempt' && record.status === 'denied'),
+      ).toHaveLength(2);
     }));
 
   it.live('resolves prerequisites that already settled at submit time', () =>

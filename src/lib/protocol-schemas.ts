@@ -135,6 +135,7 @@ const laneStatusSchema = z.object({
   executingTickets: z.array(z.string()),
   targetDir: z.string(),
   workspaceRoot: z.string(),
+  sharedTargetWith: z.array(z.string()).optional(),
 }) satisfies z.ZodType<LaneStatus>;
 
 const frequencyMetricSchema = z.record(z.string(), z.number().int().nonnegative());

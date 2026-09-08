@@ -1,3 +1,4 @@
+import { Agent } from '@agent-bundle/runtime';
 import React from 'react';
 
 import type { LaneStatus, TicketSummary } from '../daemon/protocol.js';
@@ -19,25 +20,35 @@ export interface LaneBoardProps {
  */
 export const LaneBoard = ({ active, lanes, nowMs }: LaneBoardProps) => {
   const model = laneBoardModel(lanes, active, nowMs);
-  if (model.rows.length === 0) {
-    return lanes.length === 0
-      ? null
-      : <EmptyState>{`${countWord(lanes.length, 'lane')} known, none busy.`}</EmptyState>;
+  if (lanes.length === 0) {
+    return null;
   }
   return (
     <>
-      <Heading>Lanes</Heading>
-      <Table
-        columns={['Lane', 'Running', 'For', 'Command', 'Queued', 'Executing']}
-        rows={model.rows.map((row) => [
-          row.name,
-          row.running,
-          row.runningFor === null ? '—' : `${row.runningFor}${row.stalled === null ? '' : ` · ${row.stalled}`}`,
-          row.runningCommand ?? '—',
-          String(row.queued),
-          row.executing ?? '—',
-        ])}
-      />
+      {model.sharedTargets.map((shared) => (
+        <Agent.Context key={shared.targetDir}>
+          {`WARNING: target dir ${shared.targetDir} is shared across workspace roots ${shared.workspaceRoots.join(', ')}; Cargo artifact filenames can collide and run stale binaries.`}
+        </Agent.Context>
+      ))}
+      {model.rows.length === 0 ? (
+        <EmptyState>{`${countWord(lanes.length, 'lane')} known, none busy.`}</EmptyState>
+      ) : (
+        <>
+          <Heading>Lanes</Heading>
+          <Table
+            columns={['Lane', 'Running', 'For', 'Command', 'Queued', 'Executing', 'Shared target with']}
+            rows={model.rows.map((row) => [
+              row.name,
+              row.running,
+              row.runningFor === null ? '—' : `${row.runningFor}${row.stalled === null ? '' : ` · ${row.stalled}`}`,
+              row.runningCommand ?? '—',
+              String(row.queued),
+              row.executing ?? '—',
+              row.sharedWith ?? '—',
+            ])}
+          />
+        </>
+      )}
     </>
   );
 };
