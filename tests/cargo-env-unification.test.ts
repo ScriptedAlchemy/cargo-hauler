@@ -5,7 +5,6 @@ import { digestCargoEnvironment } from '../src/daemon/intent-normalizer.js';
 import {
   isHaulerInternalEnvironmentVariable,
   isRelevantCargoEnvironmentVariable,
-  isTransportedEnvironmentVariable,
 } from '../src/lib/cargo-env.js';
 
 describe('cargo environment relevance', () => {
@@ -41,7 +40,6 @@ describe('cargo environment relevance', () => {
     // it forwards all of them; identity stays on the cargo/rustc knobs so
     // sessions differing only in shell noise still coalesce.
     for (const name of ['FOO', 'TRACEDECAY_SKIP_DASHBOARD_BUILD', 'PATH', 'HOME', 'PWD']) {
-      expect(isTransportedEnvironmentVariable(name)).toBe(true);
       expect(isRelevantCargoEnvironmentVariable(name)).toBe(false);
     }
     const base = { RUSTFLAGS: '-Dwarnings' };
@@ -53,7 +51,6 @@ describe('cargo environment relevance', () => {
   it('keeps hauler-internal settings out of transport and identity', () => {
     for (const name of ['CARGO_HAULER_STATE_DIR', 'CARGO_HAULER_CARGO_BIN', 'CARGO_HAULER_HOST']) {
       expect(isHaulerInternalEnvironmentVariable(name)).toBe(true);
-      expect(isTransportedEnvironmentVariable(name)).toBe(false);
       expect(isRelevantCargoEnvironmentVariable(name)).toBe(false);
     }
     expect(isHaulerInternalEnvironmentVariable('CARGO_TARGET_DIR')).toBe(false);
@@ -70,7 +67,6 @@ describe('cargo environment relevance', () => {
 
   it('transports color-decision variables without letting them into identity', () => {
     for (const name of ['CLICOLOR', 'CLICOLOR_FORCE', 'FORCE_COLOR', 'NO_COLOR', 'TERM']) {
-      expect(isTransportedEnvironmentVariable(name)).toBe(true);
       expect(isRelevantCargoEnvironmentVariable(name)).toBe(false);
     }
     // Sessions differing only in color/terminal env must still coalesce.

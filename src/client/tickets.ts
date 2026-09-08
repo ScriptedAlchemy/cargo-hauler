@@ -348,10 +348,3 @@ export const submitBackgroundAck = (
           },
     ),
   );
-
-/** `submitBackgroundAck` reduced to the ticket, for callers that only need the id. */
-export const submitBackground = (
-  input: BackgroundSubmitInput,
-  config: DaemonConfigShape = resolveDaemonConfig(),
-): Effect.Effect<string | null, TicketSocketError> =>
-  submitBackgroundAck(input, config).pipe(Effect.map((ack) => ack?.ticket ?? null));

@@ -17,16 +17,9 @@ import type { HaulerDaemonContext } from '../../src/providers/hauler-daemon.js';
 export const withIsolatedStateDir = async <A>(body: (stateDir: string) => Promise<A>): Promise<A> => {
   const root = mkdtempSync(join(tmpdir(), 'hauler-route-unit-'));
   const stateDir = join(root, 'state');
-  const previous = process.env.CARGO_HAULER_STATE_DIR;
-  process.env.CARGO_HAULER_STATE_DIR = stateDir;
   try {
-    return await body(stateDir);
+    return await withStateDir(stateDir, () => body(stateDir));
   } finally {
-    if (previous === undefined) {
-      delete process.env.CARGO_HAULER_STATE_DIR;
-    } else {
-      process.env.CARGO_HAULER_STATE_DIR = previous;
-    }
     rmSync(root, { recursive: true, force: true });
   }
 };

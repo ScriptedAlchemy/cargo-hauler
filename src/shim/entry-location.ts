@@ -6,7 +6,8 @@ export type HaulerEntryLocation =
   | { readonly kind: 'npm-bin'; readonly path: string }
   | { readonly kind: 'other'; readonly path: string | null };
 
-const canonical = (path: string): string => {
+/** The real, absolute path; the path as given when it does not exist. */
+export const canonical = (path: string): string => {
   const absolute = resolve(path);
   try {
     return realpathSync(absolute);

@@ -1,6 +1,8 @@
-import { chmodSync, existsSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { delimiter, isAbsolute, join, resolve } from 'node:path';
+
+import { canonical } from './entry-location.js';
 
 export interface RenderShimOptions {
   readonly haulerArgv: readonly string[];
@@ -65,14 +67,6 @@ exec ${hauler} exec --host shim -- ${cargo} "$@"
 };
 
 export const defaultShimDir = (): string => join(homedir(), '.local', 'bin');
-
-const canonical = (path: string): string => {
-  try {
-    return realpathSync(path);
-  } catch {
-    return resolve(path);
-  }
-};
 
 /**
  * Resolves the real cargo to an ABSOLUTE path, skipping anything inside the

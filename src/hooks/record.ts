@@ -1,7 +1,7 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { resolveHookStateDir } from './paths.js';
+import { resolveStateDir } from '../status.js';
 
 export interface HookRecord {
   readonly atMs: number;
@@ -21,7 +21,7 @@ export const hookEventsFileName = 'hook-events.jsonl';
 
 export const appendHookRecord = (
   record: HookRecord,
-  stateDir: string = resolveHookStateDir(),
+  stateDir: string = resolveStateDir(),
 ): void => {
   mkdirSync(stateDir, { recursive: true });
   appendFileSync(join(stateDir, hookEventsFileName), `${JSON.stringify(record)}\n`);

@@ -635,7 +635,6 @@ export interface ResultFetchResult {
   readonly ticket: string;
 }
 
-export type TicketLineage = z.infer<typeof ticketLineageSchema>;
 export type TicketAttribution = z.infer<typeof ticketAttributionSchema>;
 export type RequestQueue = z.infer<typeof requestQueueSchema>;
 
@@ -652,7 +651,6 @@ export interface RequestSubmitResult {
 
 export type LimitInput = z.infer<typeof limitInputSchema>;
 export type StatusInput = z.infer<typeof statusInputSchema>;
-export type DaemonInput = z.infer<typeof daemonInputSchema>;
 export type TicketInput = z.infer<typeof ticketInputSchema>;
 export type ResultInput = z.infer<typeof resultInputSchema>;
 export type RequestInput = z.infer<typeof requestInputSchema>;

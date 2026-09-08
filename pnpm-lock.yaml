@@ -124,9 +124,6 @@ importers:
       '@effect/tsgo':
         specifier: 0.38.0
         version: 0.38.0
-      '@modelcontextprotocol/server':
-        specifier: 2.0.0
-        version: 2.0.0
       '@rstest/browser':
         specifier: 0.11.12
         version: 0.11.12(@rstest/core@0.11.12)(playwright@1.63.0)

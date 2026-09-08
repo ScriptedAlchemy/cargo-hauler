@@ -572,8 +572,6 @@ export interface KacheSnapshotReader {
 
 export interface CreateKacheSnapshotReaderOptions {
   readonly maxEventBytes?: number;
-  /** Milliseconds of line parsing between event-loop yields. */
-  readonly parseSliceMs?: number;
   /** Environment consulted for `KACHE_CONFIG` / `KACHE_MAX_SIZE`; defaults to the daemon's. */
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** Home directory for `~` and the default kache config location. */
@@ -606,7 +604,6 @@ export const createKacheSnapshotReader = (
     options.maxEventBytes > 0
       ? Math.floor(options.maxEventBytes)
       : defaultEventTailBytes;
-  const parseSliceMs = Math.max(0, options.parseSliceMs ?? defaultParseSliceMs);
   const aggregator = new EventTailAggregator();
   let cursor: EventsCursor | undefined;
   let indexCache: { readonly fingerprint: string; readonly result: IndexReadResult } | undefined;
@@ -623,7 +620,7 @@ export const createKacheSnapshotReader = (
       sinceCheck += 1;
       if (sinceCheck >= parseSliceCheckEvery) {
         sinceCheck = 0;
-        if (performance.now() - sliceStartedAt >= parseSliceMs) {
+        if (performance.now() - sliceStartedAt >= defaultParseSliceMs) {
           await yieldToEventLoop();
           sliceStartedAt = performance.now();
         }

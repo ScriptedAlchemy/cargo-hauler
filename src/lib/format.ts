@@ -55,11 +55,8 @@ export const formatBytes = (bytes: number): string => {
   return `${unit === 0 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`;
 };
 
-export const pathBasename = (path: string): string => {
-  const segments = path.split('/').filter((segment) => segment.length > 0);
-  const last = segments[segments.length - 1];
-  return last === undefined ? path : last;
-};
+/** Hand-rolled rather than `node:path`: this module also runs in the browser dashboard. */
+export const pathBasename = (path: string): string => path.split('/').filter(Boolean).at(-1) ?? path;
 
 export const shortenPath = (path: string, maxLength = 38): string => {
   const homed = path.replace(/^\/(?:home|Users)\/[^/]+/u, '~');

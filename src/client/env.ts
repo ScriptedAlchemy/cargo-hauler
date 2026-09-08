@@ -1,4 +1,4 @@
-import { isTransportedEnvironmentVariable } from '../lib/cargo-env.js';
+import { isHaulerInternalEnvironmentVariable } from '../lib/cargo-env.js';
 
 const jobserverFlagNames = new Set(['CARGO_MAKEFLAGS', 'MAKEFLAGS', 'MFLAGS']);
 
@@ -36,7 +36,7 @@ export const buildTransportedEnv = (
     if (jobserverFlagNames.has(key) && carriesDescriptorJobserver(value)) {
       continue;
     }
-    if (isTransportedEnvironmentVariable(key)) {
+    if (!isHaulerInternalEnvironmentVariable(key)) {
       transported[key] = value;
     }
   }
