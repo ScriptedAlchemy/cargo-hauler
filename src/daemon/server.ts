@@ -5,6 +5,7 @@ import * as Deferred from 'effect/Deferred';
 import * as Effect from 'effect/Effect';
 import * as Queue from 'effect/Queue';
 import * as Result from 'effect/Result';
+import * as Semaphore from 'effect/Semaphore';
 import type * as Scope from 'effect/Scope';
 import type * as Socket from 'effect/unstable/socket/Socket';
 
@@ -19,13 +20,22 @@ import type {
   OutputMessage,
   ServerMessage,
 } from './protocol.js';
-import { LineBuffer, clientMessageSchema, encodeServerMessage } from './protocol.js';
+import {
+  LineBuffer,
+  clientMessageSchema,
+  encodeServerMessage,
+  ownerReconnectExpiredError,
+} from './protocol.js';
 
 export interface ConnectionHandlerOptions {
   readonly broker: BrokerApi;
   readonly shutdownLatch: Deferred.Deferred<void>;
   readonly startedAtMs: number;
   readonly version: string;
+  /** How long an accepted foreground owner may reconnect before cleanup. */
+  readonly ownerReconnectGraceMs: number;
+  /** Daemon lifetime for disconnect cleanups that outlive one socket. */
+  readonly ownerScope?: Scope.Scope;
   /** Largest NDJSON line accepted from a client before the connection is closed (default 16 MiB). */
   readonly maxLineBytes?: number;
 }
@@ -221,10 +231,13 @@ const extractId = (value: unknown): string | null => {
  * through a queue with a single writer fiber, keeping NDJSON lines whole under
  * concurrency.
  */
-export const makeConnectionHandler =
-  (options: ConnectionHandlerOptions) =>
-  (socket: Socket.Socket): Effect.Effect<void> =>
-    Effect.scoped(
+export const makeConnectionHandler = (options: ConnectionHandlerOptions) => {
+  const ownerConnections = new Map<string, string>();
+  const ownership = Semaphore.makeUnsafe(1);
+  const ownerReconnectGraceMs = options.ownerReconnectGraceMs;
+  return (socket: Socket.Socket): Effect.Effect<void> => {
+    const connectionId = randomUUID();
+    return Effect.scoped(
       Effect.gen(function* () {
         const write = yield* socket.writer;
         const outbound = new ConnectionOutputBuffer();
@@ -312,16 +325,19 @@ export const makeConnectionHandler =
                 },
                 {
                   onRegistered: (ticket) =>
-                    Effect.sync(() => {
-                      if (message.background === true) {
+                    ownership.withPermits(1)(
+                      Effect.sync(() => {
+                        if (message.background === true) {
+                          return true;
+                        }
+                        if (connection.closed) {
+                          return false;
+                        }
+                        ownTickets.add(ticket);
+                        ownerConnections.set(ticket, connectionId);
                         return true;
-                      }
-                      if (connection.closed) {
-                        return false;
-                      }
-                      ownTickets.add(ticket);
-                      return true;
-                    }),
+                      }),
+                    ),
                   onStarted: (info) =>
                     send({ type: 'started', id: message.id, ticket: info.ticket, waitMs: info.waitMs }),
                   onOutput: (info) =>
@@ -334,7 +350,14 @@ export const makeConnectionHandler =
                     }),
                   onExit: (info) =>
                     Effect.gen(function* () {
-                      yield* Effect.sync(() => ownTickets.delete(info.ticket));
+                      yield* ownership.withPermits(1)(
+                        Effect.sync(() => {
+                          ownTickets.delete(info.ticket);
+                          if (ownerConnections.get(info.ticket) === connectionId) {
+                            ownerConnections.delete(info.ticket);
+                          }
+                        }),
+                      );
                       yield* send({
                         type: 'exit',
                         id: message.id,
@@ -420,7 +443,15 @@ export const makeConnectionHandler =
               });
             case 'detach':
               return Effect.gen(function* () {
-                const detached = ownTickets.delete(message.ticket);
+                const detached = yield* ownership.withPermits(1)(
+                  Effect.sync(() => {
+                    const owned = ownTickets.delete(message.ticket);
+                    if (owned && ownerConnections.get(message.ticket) === connectionId) {
+                      ownerConnections.delete(message.ticket);
+                    }
+                    return owned;
+                  }),
+                );
                 // Recorded even when this connection never owned the ticket:
                 // the client is telling us nobody will stream its exit.
                 yield* options.broker.detach(message.ticket);
@@ -435,6 +466,26 @@ export const makeConnectionHandler =
               return Effect.asVoid(
                 Effect.forkScoped(
                   Effect.gen(function* () {
+                    if (message.reattach === true) {
+                      yield* ownership.withPermits(1)(
+                        Effect.gen(function* () {
+                          yield* Effect.sync(() => {
+                            ownerConnections.set(message.ticket, connectionId);
+                            ownTickets.add(message.ticket);
+                          });
+                          const active = yield* options.broker.markOwnerPresent(message.ticket);
+                          if (active) {
+                            return;
+                          }
+                          yield* Effect.sync(() => {
+                            ownTickets.delete(message.ticket);
+                            if (ownerConnections.get(message.ticket) === connectionId) {
+                              ownerConnections.delete(message.ticket);
+                            }
+                          });
+                        }),
+                      );
+                    }
                     const waited = yield* options.broker.awaitTicket(
                       message.ticket,
                       message.maxWaitMs ?? 30_000,
@@ -585,23 +636,41 @@ export const makeConnectionHandler =
                   connection.closed = true;
                   return [...ownTickets];
                 });
-                // Queued-but-unstarted work from a dead client is abandoned;
-                // running work continues so its result lands in the ledger,
-                // but is marked orphaned so a later stall may end it (#46).
-                yield* Effect.forEach(
+                const cleanup = Effect.forEach(
                   tickets,
                   (ticket) =>
-                    options.broker
-                      .kill(ticket, { onlyIfQueued: true })
-                      .pipe(
-                        Effect.flatMap((killed) =>
-                          killed ? Effect.void : Effect.asVoid(options.broker.markOwnerGone(ticket)),
-                        ),
-                      ),
+                    ownership.withPermits(1)(
+                      Effect.gen(function* () {
+                        if (ownerConnections.get(ticket) !== connectionId) {
+                          return;
+                        }
+                        const killed = yield* options.broker.kill(ticket, {
+                          onlyIfQueued: true,
+                          reason: ownerReconnectExpiredError,
+                        });
+                        if (!killed) {
+                          yield* options.broker.markOwnerGone(ticket);
+                        }
+                        if (ownerConnections.get(ticket) === connectionId) {
+                          ownerConnections.delete(ticket);
+                        }
+                      }),
+                    ),
                   { discard: true },
                 );
+                const delayed =
+                  ownerReconnectGraceMs <= 0
+                    ? cleanup
+                    : Effect.sleep(`${ownerReconnectGraceMs} millis`).pipe(
+                        Effect.andThen(cleanup),
+                      );
+                yield* options.ownerScope === undefined
+                  ? delayed
+                  : Effect.asVoid(Effect.forkIn(delayed, options.ownerScope));
               }),
             ),
           );
       }),
-    ).pipe(Effect.annotateLogs({ connectionId: randomUUID() }));
+    ).pipe(Effect.annotateLogs({ connectionId }));
+  };
+};

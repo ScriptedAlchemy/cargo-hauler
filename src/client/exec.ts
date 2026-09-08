@@ -33,13 +33,27 @@ import type {
   AckMessage,
   ExitMessage,
   PassthroughSpoolRecord,
+  RequeuedMessage,
+  RequestRecord,
   ServerMessage,
+  StartedMessage,
+} from '../daemon/protocol.js';
+import {
+  awaitCeilingMs,
+  daemonShutdownError,
+  execReconnectGraceMs,
+  orphanedByRestartError,
+  ownerReconnectExpiredError,
 } from '../daemon/protocol.js';
 
 import { AnsiStreamStripper } from '../lib/ansi.js';
 import { shortId } from '../lib/id.js';
 
-import { ensureDaemonRunning, type EnsureDaemonError } from './ensure-daemon.js';
+import {
+  ensureDaemonRunning,
+  ensureDaemonVersion,
+  type EnsureDaemonError,
+} from './ensure-daemon.js';
 import {
   autoBackgroundExitCode,
   hostShellCapMs,
@@ -48,6 +62,12 @@ import {
 } from './host-cap.js';
 import { localQueryReason } from './local-invocation.js';
 import { formatProgressLine } from './progress.js';
+import {
+  killTicket,
+  reattachTicket,
+  type EnsureTicketDaemon,
+  type TicketSocketError,
+} from './tickets.js';
 
 export interface ExecIo {
   readonly writeStderr: (data: string | Uint8Array) => void;
@@ -123,6 +143,25 @@ const signalExitCode = (signal: string | null): number | null => {
 };
 
 const terminationExitCode = (signal: TerminationSignal): number => signalExitCode(signal) ?? 1;
+
+const shouldRetryReconnect = (error: TicketSocketError): boolean => {
+  switch (error._tag) {
+    case 'ConnectionClosed':
+    case 'ControlTimeout':
+    case 'DaemonReplacementFailed':
+    case 'DaemonUnreachable':
+    case 'SpawnDaemonError':
+      return true;
+    case 'DaemonNewer':
+    case 'DaemonNotReplaced':
+    case 'DaemonRejected':
+      return false;
+    default: {
+      const exhaustive: never = error;
+      return exhaustive;
+    }
+  }
+};
 
 /**
  * Resolves with the first SIGINT/SIGTERM delivered to this process. Handlers
@@ -307,7 +346,9 @@ interface StreamState {
   readonly detach: (ticket: string) => Effect.Effect<void>;
 }
 
-const describeExit = (message: ExitMessage): string => {
+const describeExit = (
+  message: Pick<ExitMessage, 'error' | 'signal' | 'status' | 'ticket'>,
+): string => {
   const signal = message.signal === null ? '' : ` (${message.signal})`;
   const error = message.error === null ? '' : `: ${message.error}`;
   return `[cargo-hauler] ticket ${message.ticket} ${message.status}${signal}${error}\n`;
@@ -377,8 +418,8 @@ const handleServerMessage = (
             }),
           );
           if (autoBackground) {
-            // Disconnecting before the daemon reads the detach would make it
-            // kill a still-queued ticket as abandoned client work.
+            // Wait until the daemon records the foreground-to-background
+            // handoff; otherwise it marks the ticket's owner disconnected.
             yield* Ref.set(state.handshake.requested, true);
             yield* state.detach(message.ticket);
           }
@@ -671,6 +712,118 @@ const streamBrokered = (
     return result;
   });
 
+const abortLostTicket = (
+  options: ExecOptions,
+  ticket?: string,
+): RunExecResult => {
+  options.io.writeStderr(
+    ticket === undefined
+      ? '[cargo-hauler] brokered run aborted: daemon connection lost before the ticket could be recovered\n'
+      : `[cargo-hauler] brokered run aborted: daemon connection lost; ticket ${ticket} could not be recovered\n`,
+  );
+  return {
+    exitCode: autoBackgroundExitCode,
+    mode: 'brokered',
+    ...(ticket === undefined ? {} : { ticket }),
+  };
+};
+
+const recoveredTicketResult = (
+  options: ExecOptions,
+  ticket: string,
+  record: RequestRecord | null,
+): RunExecResult => {
+  if (
+    record === null ||
+    record.error === daemonShutdownError ||
+    record.error === orphanedByRestartError ||
+    record.error === ownerReconnectExpiredError
+  ) {
+    return abortLostTicket(options, ticket);
+  }
+  switch (record.status) {
+    case 'done':
+      return {
+        exitCode: record.exitCode ?? signalExitCode(record.signal) ?? 1,
+        mode: 'brokered',
+        ticket,
+      };
+    case 'failed':
+    case 'killed':
+      options.io.writeStderr(
+        describeExit({
+          error: record.error,
+          signal: record.signal,
+          status: record.status,
+          ticket,
+        }),
+      );
+      return {
+        exitCode: record.exitCode ?? signalExitCode(record.signal) ?? 1,
+        mode: 'brokered',
+        ticket,
+      };
+    case 'denied':
+    case 'passthrough':
+    case 'queued':
+    case 'requested':
+    case 'running':
+      return abortLostTicket(options, ticket);
+    default: {
+      const exhaustive: never = record.status;
+      return exhaustive;
+    }
+  }
+};
+
+const recoverAcceptedTicket = (
+  options: ExecOptions,
+  config: DaemonConfigShape,
+  ticket: string,
+): Effect.Effect<RunExecResult> =>
+  Effect.gen(function* () {
+    options.io.writeStderr(
+      `[cargo-hauler] connection to daemon lost; reconnecting to ticket ${ticket}\n`,
+    );
+    const customEnsure = options.ensureDaemon;
+    const ensure: EnsureTicketDaemon =
+      options.autoSpawn === false
+        ? ensureDaemonVersion
+        : customEnsure === undefined
+          ? ensureDaemonRunning
+          : () => customEnsure();
+    const awaitTerminal = (): Effect.Effect<RequestRecord | null, TicketSocketError> =>
+      reattachTicket(ticket, awaitCeilingMs, config, ensure).pipe(
+        Effect.retry({
+          schedule: Schedule.spaced('100 millis').pipe(
+            Schedule.upTo({ duration: `${execReconnectGraceMs} millis` }),
+          ),
+          while: shouldRetryReconnect,
+        }),
+        Effect.flatMap((waited) =>
+          waited.timedOut ? Effect.suspend(awaitTerminal) : Effect.succeed(waited.request),
+        ),
+      );
+    const recovered = awaitTerminal().pipe(
+      Effect.map((record) => recoveredTicketResult(options, ticket, record)),
+      Effect.orElseSucceed(() => abortLostTicket(options, ticket)),
+    );
+    const interrupted = awaitTerminationSignal.pipe(
+      Effect.flatMap((signal) =>
+        Effect.gen(function* () {
+          options.io.writeStderr(`[cargo-hauler] ${signal}: stopping ticket ${ticket}\n`);
+          yield* killTicket(ticket, config).pipe(Effect.ignore);
+          return {
+            exitCode: terminationExitCode(signal),
+            mode: 'brokered' as const,
+            ticket,
+          };
+        }),
+      ),
+    );
+    return yield* recovered.pipe(Effect.raceFirst(interrupted));
+  });
+
 const brokeredOrUnreachable = (
   options: ExecOptions,
   config: DaemonConfigShape,
@@ -695,24 +848,14 @@ const brokeredOrUnreachable = (
             ticket: exit.ticket,
           });
         }
-        if (closed.received.length === 0) {
-          return Effect.fail(
-            new DaemonUnreachableError({ cause: closed, socketPath: config.socketPath }),
-          );
-        }
-        // The daemon owns a ticket for this run and will finish it without
-        // us; the caller needs its id to collect the result.
-        const ack = closed.received.find(
-          (message): message is AckMessage => message.type === 'ack',
+        const accepted = closed.received.find(
+          (message): message is AckMessage | RequeuedMessage | StartedMessage =>
+            message.type === 'ack' || message.type === 'requeued' || message.type === 'started',
         );
-        if (ack !== undefined) {
-          options.io.writeStderr(
-            `[cargo-hauler] connection to daemon lost; ticket ${ack.ticket} continues — hauler result ${ack.ticket}\n`,
-          );
-          return Effect.succeed({ exitCode: 1, mode: 'brokered' as const, ticket: ack.ticket });
+        if (accepted !== undefined) {
+          return recoverAcceptedTicket(options, config, accepted.ticket);
         }
-        options.io.writeStderr('[cargo-hauler] connection to daemon lost before it accepted the request\n');
-        return Effect.succeed({ exitCode: 1, mode: 'brokered' as const });
+        return Effect.succeed(abortLostTicket(options));
       },
       ControlTimeout: (timeout) =>
         Effect.fail(new DaemonUnreachableError({ cause: timeout, socketPath: config.socketPath })),

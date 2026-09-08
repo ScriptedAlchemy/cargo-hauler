@@ -20,7 +20,7 @@ import type { DaemonConfigShape } from './config.js';
 import { CostModelLive } from './cost.js';
 import { KacheStatusLive } from './kache-status.js';
 import { Ledger, LedgerLive } from './ledger.js';
-import { orphanedByRestartError } from './protocol.js';
+import { execReconnectGraceMs, orphanedByRestartError } from './protocol.js';
 import { makeConnectionHandler } from './server.js';
 import type { SingletonLockError } from './singleton.js';
 import { acquireSingletonLockWith } from './singleton.js';
@@ -135,8 +135,11 @@ const daemonProgram = Effect.gen(function* () {
   yield* Effect.logInfo(
     `cargo-hauler daemon listening on ${config.socketPath} (pid ${process.pid}${suffix})`,
   );
+  const ownerScope = yield* Effect.scope;
   const handler = makeConnectionHandler({
     broker,
+    ownerReconnectGraceMs: execReconnectGraceMs,
+    ownerScope,
     shutdownLatch,
     startedAtMs: Date.now(),
     version: daemonVersion,

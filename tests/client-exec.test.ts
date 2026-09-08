@@ -60,8 +60,6 @@ interface ScriptedDaemonOptions {
   };
   /** Written right after the ack. */
   readonly after?: readonly ServerMessage[];
-  /** Hang up right after the ack, as a crashing daemon would. */
-  readonly closeAfterAck?: boolean;
   /** Written after the `kill-result` when the client asks to kill its ticket. */
   readonly afterKill?: readonly ServerMessage[];
 }
@@ -105,9 +103,6 @@ const scriptedDaemon = (
                 socket.write(encodeServerMessage(reply));
                 for (const next of options.after ?? []) {
                   socket.write(encodeServerMessage(next));
-                }
-                if (options.closeAfterAck === true) {
-                  socket.end();
                 }
               }
               if (message.type === 'detach') {
@@ -320,8 +315,8 @@ describe('runExecClient', () => {
 
       // EX_TEMPFAIL: `cargo build && ./target/debug/x` must not run the binary.
       expect(result).toEqual({ exitCode: 75, mode: 'brokered', ticket: 'cc-1' });
-      // The daemon must have seen the detach before the client hung up;
-      // otherwise a still-queued ticket is killed as abandoned on disconnect.
+      // The daemon must record the foreground-to-background handoff before
+      // the client hangs up, or it marks the ticket's owner disconnected.
       expect(daemon.sent().map((message) => message.type)).toEqual(['exec', 'detach']);
       expect(collected.stderr()).toContain('exceeds the claude shell cap');
       expect(collected.stderr()).toContain('exit 75');
@@ -494,30 +489,6 @@ describe('runExecClient', () => {
 
       expect(result).toEqual({ exitCode: 143, mode: 'brokered', ticket: 'cc-1' });
       expect(collected.stderr()).toContain('[cargo-hauler] ticket cc-1 killed (SIGTERM)');
-    }));
-
-  it.live('names the ticket when the connection drops after the ack', () =>
-    Effect.gen(function* () {
-      const fixture = yield* scopedFixture(5);
-      mkdirSync(fixture.config.stateDir, { recursive: true });
-      yield* scriptedDaemon(fixture.config.socketPath, {
-        ack: { etaMs: 1_000, etaSource: 'default' },
-        closeAfterAck: true,
-      });
-      const collected = collectIo();
-      const result = yield* runExecClient({
-        argv: ['cargo', 'build'],
-        autoSpawn: false,
-        config: fixture.config,
-        cwd: fixture.ws1,
-        io: collected.io,
-      });
-
-      // The ticket is still running in the daemon; the caller needs its id.
-      expect(result).toEqual({ exitCode: 1, mode: 'brokered', ticket: 'cc-1' });
-      expect(collected.stderr()).toContain(
-        '[cargo-hauler] connection to daemon lost; ticket cc-1 continues — hauler result cc-1',
-      );
     }));
 
   it.live('kills its own ticket and exits 130 when interrupted during a brokered run', () =>

@@ -97,8 +97,9 @@ export interface SubmitResult {
 }
 
 export interface KillOptions {
+  /** Refuse to signal a job that already crossed from the queue into startup. */
   readonly onlyIfQueued?: boolean;
-  /** Ledger `error` for a running leader killed by the daemon itself (stall auto-kill). */
+  /** Ledger `error` for a leader killed by the daemon itself. */
   readonly reason?: string;
 }
 
@@ -121,11 +122,13 @@ export interface BrokerApi {
   ) => Effect.Effect<{ readonly ticket: string }>;
   readonly kill: (ticket: string, options?: KillOptions) => Effect.Effect<boolean>;
   /**
-   * Record that the connection owning a running leader is gone (#46): the
-   * run continues, but a later stall verdict may kill it automatically.
-   * False for riders, queued work, and unknown tickets.
+   * Record that the connection owning an active leader is gone (#46). Queued
+   * work keeps its place; once running, a later stall verdict may kill it.
+   * False for riders and unknown or finished tickets.
    */
   readonly markOwnerGone: (ticket: string) => Effect.Effect<boolean>;
+  /** Restore foreground ownership after an exec client reconnects to an active ticket. */
+  readonly markOwnerPresent: (ticket: string) => Effect.Effect<boolean>;
   /** Record that the submitting client stopped streaming the ticket; false when the ticket is unknown. */
   readonly detach: (ticket: string) => Effect.Effect<boolean>;
   /** The status report minus `version`, which the server stamps from its own build. */
@@ -566,8 +569,8 @@ export const BrokerLive: Layer.Layer<
           return false;
         }
         if (entry.kind === 'attachment') {
-          // Attachments hold no compute; disconnect cleanup (onlyIfQueued)
-          // leaves them alive so their result still lands in the ledger.
+          // A rider holds no process or queue slot of its own. Disconnect
+          // expiry applies only to the leader that owns the work.
           if (options?.onlyIfQueued === true) {
             return false;
           }
@@ -582,6 +585,11 @@ export const BrokerLive: Layer.Layer<
           );
           if (!claimed) {
             return false;
+          }
+          if (options.reason !== undefined && job.killReason === null) {
+            yield* Effect.sync(() => {
+              job.killReason = options.reason ?? null;
+            });
           }
           yield* Deferred.succeed(job.killSignal, undefined);
           return true;
@@ -624,10 +632,22 @@ export const BrokerLive: Layer.Layer<
           return false;
         }
         const state = Ref.getUnsafe(entry.job.state);
-        if (state !== 'starting' && state !== 'running') {
+        if (state !== 'queued' && state !== 'starting' && state !== 'running') {
           return false;
         }
         entry.job.ownerGone = true;
+        return true;
+      });
+
+    const markOwnerPresent = (ticket: string): Effect.Effect<boolean> =>
+      Effect.sync(() => {
+        const entry = directory.get(ticket);
+        if (entry === undefined) {
+          return false;
+        }
+        if (entry.kind === 'leader') {
+          entry.job.ownerGone = false;
+        }
         return true;
       });
 
@@ -813,6 +833,7 @@ export const BrokerLive: Layer.Layer<
       recordAttempt,
       kill,
       markOwnerGone,
+      markOwnerPresent,
       detach,
       report,
       getTicket,

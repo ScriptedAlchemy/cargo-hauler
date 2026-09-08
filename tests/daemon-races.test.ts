@@ -9,6 +9,7 @@ import * as Fiber from 'effect/Fiber';
 import { Broker } from '../src/daemon/broker.js';
 import type { BrokerApi, SubmitResult } from '../src/daemon/broker.js';
 import type { ExitInfo, SubmitCallbacks, SubmitInput } from '../src/daemon/job-state.js';
+import { ownerReconnectExpiredError } from '../src/daemon/protocol.js';
 
 import { brokerFixture } from './broker-fixture.js';
 import type { Fixture } from './harness.js';
@@ -132,7 +133,7 @@ describe('kill while parked (#51)', () => {
       ).pipe(Effect.provide(layer));
     }));
 
-  it.live('does not fold a kill-requested pending job into a batch', () =>
+  it.live('does not fold a reconnect-expired pending job into a batch', () =>
     Effect.gen(function* () {
       const { fixture, layer } = yield* brokerFixture(1);
       yield* Effect.scoped(
@@ -168,14 +169,18 @@ describe('kill while parked (#51)', () => {
           });
           expect(rider.submitted.attachedTo).toBe(survivor.submitted.ticket);
 
-          // Disconnect-style cleanup leaves the job in the lane's pending list.
-          expect(yield* broker.kill(doomed.submitted.ticket, { onlyIfQueued: true })).toBe(true);
+          expect(
+            yield* broker.kill(doomed.submitted.ticket, {
+              onlyIfQueued: true,
+              reason: ownerReconnectExpiredError,
+            }),
+          ).toBe(true);
           yield* broker.kill(holder.submitted.ticket);
 
           const doomedResult = yield* broker.awaitTicket(doomed.submitted.ticket, 8_000);
           expect(doomedResult.timedOut).toBe(false);
           expect(doomedResult.record?.status).toBe('killed');
-          expect(doomedResult.record?.error).toBe('killed while queued');
+          expect(doomedResult.record?.error).toBe(ownerReconnectExpiredError);
           expect(doomedResult.record?.attachedTo).toBeNull();
 
           const survivorResult = yield* broker.awaitTicket(survivor.submitted.ticket, 8_000);

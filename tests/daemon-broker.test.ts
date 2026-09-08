@@ -431,7 +431,7 @@ describe('hauler daemon', () => {
       );
     }));
 
-  it.live('abandons queued work when its client disconnects but finishes running work', () =>
+  it.live('preserves queued work when its client disconnects', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
       const holderMessages = yield* execRequest(fixture, {
@@ -448,7 +448,7 @@ describe('hauler daemon', () => {
       // would attach to the holder and survive the disconnect by design).
       const queuedMessages = yield* execRequest(fixture, {
         cwd: fixture.ws1,
-        argv: ['cargo', 'check', '-p', 'abandon-probe'],
+        argv: ['cargo', 'check', '-p', 'reconnect-probe'],
         isTerminal: (message) => message.type === 'ack',
       });
       const queuedTicket =
@@ -458,12 +458,11 @@ describe('hauler daemon', () => {
       const report = yield* pollReport(
         fixture,
         (candidate) =>
-          candidate.recent.find((record) => record.ticket === queuedTicket)?.status ===
-          'killed',
+          candidate.recent.find((record) => record.ticket === queuedTicket)?.status === 'done',
       );
       const queuedRecord = report.recent.find((record) => record.ticket === queuedTicket);
-      expect(queuedRecord?.startedAtMs).toBeNull();
-      expect(queuedRecord?.error).toBe('killed while queued');
+      expect(queuedRecord?.startedAtMs).not.toBeNull();
+      expect(queuedRecord?.error).toBeNull();
 
       yield* pollReport(
         fixture,
@@ -472,7 +471,7 @@ describe('hauler daemon', () => {
       );
     }));
 
-  it.live('makes disconnect kill and startup mutually exclusive', () =>
+  it.live('lets an ownerless queued ticket start after the permit is released', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(1);
       const runningMessages = yield* execRequest(fixture, {
@@ -514,8 +513,8 @@ describe('hauler daemon', () => {
       const queued = report.recent.find((record) => record.ticket === queuedTicket);
       expect(running?.status).toBe('done');
       expect(running?.startedAtMs).not.toBeNull();
-      expect(queued?.status).toBe('killed');
-      expect(queued?.startedAtMs).toBeNull();
+      expect(queued?.status).toBe('done');
+      expect(queued?.startedAtMs).not.toBeNull();
       expect(queued).not.toHaveProperty('outputTail');
     }));
 

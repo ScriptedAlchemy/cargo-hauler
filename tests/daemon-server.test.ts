@@ -5,6 +5,7 @@ import * as Effect from 'effect/Effect';
 
 import type { BrokerApi } from '../src/daemon/broker.js';
 import type { OutputMessage, ServerMessage } from '../src/daemon/protocol.js';
+import { ownerReconnectExpiredError } from '../src/daemon/protocol.js';
 import { ConnectionOutputBuffer, makeConnectionHandler } from '../src/daemon/server.js';
 
 const brokerWith = (overrides: Partial<BrokerApi> = {}): BrokerApi => ({
@@ -14,6 +15,7 @@ const brokerWith = (overrides: Partial<BrokerApi> = {}): BrokerApi => ({
   getTicket: () => Effect.succeed(null),
   kill: () => Effect.succeed(true),
   markOwnerGone: () => Effect.succeed(false),
+  markOwnerPresent: () => Effect.succeed(false),
   recordAttempt: () => Effect.succeed({ ticket: 'cc-attempt' }),
   report: () => Effect.die(new Error('status exploded')),
   sessionCompleted: () => Effect.succeed([]),
@@ -22,7 +24,11 @@ const brokerWith = (overrides: Partial<BrokerApi> = {}): BrokerApi => ({
   ...overrides,
 });
 
-const runMessages = (messages: readonly string[], broker: BrokerApi) =>
+const runMessages = (
+  messages: readonly string[],
+  broker: BrokerApi,
+  ownerReconnectGraceMs = 0,
+) =>
   Effect.gen(function* () {
     const written = yield* Deferred.make<void>();
     const replies: ServerMessage[] = [];
@@ -51,6 +57,7 @@ const runMessages = (messages: readonly string[], broker: BrokerApi) =>
     const shutdownLatch = yield* Deferred.make<void>();
     yield* makeConnectionHandler({
       broker,
+      ownerReconnectGraceMs,
       shutdownLatch,
       startedAtMs: 0,
       version: 'test',
@@ -179,6 +186,7 @@ describe('daemon connection line cap', () => {
       yield* makeConnectionHandler({
         broker: brokerWith(),
         maxLineBytes: 128,
+        ownerReconnectGraceMs: 0,
         shutdownLatch,
         startedAtMs: 0,
         version: 'test',
@@ -218,9 +226,52 @@ describe('daemon connection detach', () => {
 });
 
 describe('daemon connection disconnect cleanup (#46)', () => {
-  it.live('marks a still-running owned ticket orphaned once the connection is gone', () =>
+  it.live('cancels queued work only after its reconnect window expires', () =>
     Effect.gen(function* () {
-      const killed: { ticket: string; onlyIfQueued: boolean | undefined }[] = [];
+      const killed: Array<{
+        readonly onlyIfQueued: boolean | undefined;
+        readonly reason: string | undefined;
+        readonly ticket: string;
+      }> = [];
+      yield* runMessages(
+        [
+          `${JSON.stringify({
+            type: 'exec',
+            id: 'exec-1',
+            argv: ['cargo', 'test', '-p', 'queued'],
+            cwd: '/tmp/workspace',
+          })}\n`,
+        ],
+        brokerWith({
+          kill: (ticket, options) =>
+            Effect.sync(() => {
+              killed.push({
+                onlyIfQueued: options?.onlyIfQueued,
+                reason: options?.reason,
+                ticket,
+              });
+              return true;
+            }),
+          markOwnerGone: () => Effect.die(new Error('queued cleanup must kill')),
+          submit: (_input, callbacks) =>
+            (callbacks.onRegistered ?? (() => Effect.succeed(true)))('cc-3061').pipe(
+              Effect.as({ laneKey: 'lane', position: 0, ticket: 'cc-3061' }),
+            ),
+        }),
+        10,
+      );
+
+      expect(killed).toEqual([
+        {
+          onlyIfQueued: true,
+          reason: ownerReconnectExpiredError,
+          ticket: 'cc-3061',
+        },
+      ]);
+    }));
+
+  it.live('marks a running owned ticket orphaned after the reconnect window', () =>
+    Effect.gen(function* () {
       const orphaned: string[] = [];
       yield* runMessages(
         [
@@ -232,12 +283,7 @@ describe('daemon connection disconnect cleanup (#46)', () => {
           })}\n`,
         ],
         brokerWith({
-          kill: (ticket, options) =>
-            Effect.sync(() => {
-              killed.push({ onlyIfQueued: options?.onlyIfQueued, ticket });
-              // Already running: the queued-only kill declines.
-              return false;
-            }),
+          kill: () => Effect.succeed(false),
           markOwnerGone: (ticket) =>
             Effect.sync(() => {
               orphaned.push(ticket);
@@ -250,7 +296,6 @@ describe('daemon connection disconnect cleanup (#46)', () => {
         }),
       );
 
-      expect(killed).toEqual([{ onlyIfQueued: true, ticket: 'cc-3062' }]);
       expect(orphaned).toEqual(['cc-3062']);
     }));
 });
@@ -409,6 +454,7 @@ describe('directional shutdown', () => {
       const shutdownLatch = yield* Deferred.make<void>();
       yield* makeConnectionHandler({
         broker: brokerWith(),
+        ownerReconnectGraceMs: 0,
         shutdownLatch,
         startedAtMs: 0,
         version: '0.6.7',

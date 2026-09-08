@@ -77,7 +77,7 @@ The CLI is `hauler` on PATH from `npm i -g cargo-hauler`. Never run
 
 | Command | Behavior |
 | --- | --- |
-| `hauler exec [--session ID] [--host HOST] [--cwd DIR] [--bg] [--after TICKET[,TICKET…]] [--allow-shared-target] -- <cargo …>` | Submit Cargo through the daemon and stream output; hooks rewrite commands to this form. A relative `--cwd` is resolved against the caller's directory. `--after` (repeatable or comma-separated) keeps the request queued until every named ticket has finished; it fails with `prerequisite cc-N <status>` if one of them fails or is killed, and an unknown ticket is rejected as a bad intent. `--allow-shared-target` accepts the stale-artifact risk described below and prints a warning. Exits with cargo's code; `130`/`143` after a SIGINT/SIGTERM (the ticket is killed first); `75` when auto-backgrounded. |
+| `hauler exec [--session ID] [--host HOST] [--cwd DIR] [--bg] [--after TICKET[,TICKET…]] [--allow-shared-target] -- <cargo …>` | Submit Cargo through the daemon and stream output; hooks rewrite commands to this form. A relative `--cwd` is resolved against the caller's directory. `--after` (repeatable or comma-separated) keeps the request queued until every named ticket has finished; it fails with `prerequisite cc-N <status>` if one of them fails or is killed, and an unknown ticket is rejected as a bad intent. `--allow-shared-target` accepts the stale-artifact risk described below and prints a warning. Exits with cargo's code; `130`/`143` after a SIGINT/SIGTERM (the ticket is killed first); `75` when auto-backgrounded or when a lost daemon connection cannot recover its ticket. |
 | `hauler status [--limit N] [--cwd DIR] [--session ID] [--lane KEY] [--ticket ID …] [--status S …] [--command-contains TEXT]` | Queue, active runs, lanes, admission, kache, optionally filtered. Lanes sharing one external target directory across workspace roots carry `sharedTargetWith` and render a warning naming the target and roots. Rows are bounded summaries: no row carries an output tail; a running row carries `outputPreview`, the last 8 lines (at most 512 bytes) of its live output, cut at a line boundary, and every other row has `outputPreview: null`. Read a ticket's whole tail with `hauler result`. |
 | `hauler log [--limit N]` | Recent requests from the ledger, as the same bounded summary rows. |
 | `hauler last` | The most recent request, as a detail record (from the daemon while it is running, otherwise from the ledger) — its output tail included. |
@@ -390,9 +390,14 @@ answer, and exits `130` or `143`; in a direct run it terminates the cargo
 process group the same way. A ticket that ends other than `done` is reported
 on stderr as `ticket cc-N <status>[ (signal)][: reason]`, and its exit code is
 cargo's, `128 + signal` for a signaled run, or `1` when the daemon could not
-start cargo at all. If the connection drops after the ticket was accepted, the
-client prints `connection to daemon lost; ticket cc-N continues — hauler
-result cc-N` and exits `1`; the daemon finishes the ticket on its own.
+start cargo at all. If the transport drops after the ticket was accepted, the
+client reconnects for a bounded ten-second window and resumes awaiting that
+same ticket without resubmitting Cargo; queued work keeps its queue position
+during that window and is cancelled only if no owner reattaches. The
+synchronous caller receives Cargo's eventual exit result. If the daemon or
+ticket did not survive, the client prints `brokered run aborted: daemon
+connection lost` and exits `75` (`EX_TEMPFAIL`) instead of claiming the ticket
+continues or presenting the loss as a compile failure.
 
 A deadlocked test binary holds its lane for ever at 0% CPU with nothing on
 stdout, and neither the estimate overrun nor the output silence alone can

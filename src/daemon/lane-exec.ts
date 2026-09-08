@@ -70,6 +70,7 @@ import type {
   RunPhase,
   StallReport,
 } from './protocol.js';
+import { daemonShutdownError } from './protocol.js';
 import { ReplayBuffer } from './replay.js';
 import {
   admissionDecision,
@@ -665,7 +666,15 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
       );
 
     const finishKilledBeforeRun = (lane: Lane, job: Job): Effect.Effect<void> =>
-      settleJob(lane, job, 'killed', null, null, 'killed while queued', Date.now());
+      settleJob(
+        lane,
+        job,
+        'killed',
+        null,
+        null,
+        job.killReason ?? 'killed while queued',
+        Date.now(),
+      );
 
     const failPendingJob = (lane: Lane, job: Job, error: string): Effect.Effect<void> =>
       Effect.gen(function* () {
@@ -684,7 +693,7 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
       });
 
     const settleInterruptedJob = (job: Job): Effect.Effect<void> =>
-      settleJob(null, job, 'killed', null, 'SIGTERM', 'daemon shutdown', Date.now()).pipe(
+      settleJob(null, job, 'killed', null, 'SIGTERM', daemonShutdownError, Date.now()).pipe(
         Effect.ignore,
       );
 

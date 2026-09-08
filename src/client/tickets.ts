@@ -51,6 +51,10 @@ export type TicketSocketError =
   | EnsureDaemonError
   | DaemonRejectedError;
 
+export type EnsureTicketDaemon = (
+  config: DaemonConfigShape,
+) => Effect.Effect<unknown, EnsureDaemonError>;
+
 const nullableRecordSchema = requestRecordSchema.nullable();
 
 /**
@@ -73,7 +77,7 @@ const requestReply = <T extends ServerMessage>(
   message: ClientMessage,
   timeoutMs: number,
   guard: (message: ServerMessage) => message is T,
-  ensure?: (config: DaemonConfigShape) => Effect.Effect<unknown, EnsureDaemonError>,
+  ensure?: EnsureTicketDaemon,
 ): Effect.Effect<T | undefined, TicketSocketError> =>
   (ensure ?? ((target) =>
     ensureDaemonVersion(target, defaultEnsureDependencies, Math.min(timeoutMs, 5_000))))(config).pipe(
@@ -252,19 +256,22 @@ export const awaitTicketWithProgress = (
   return awaitTicket(ticket, maxWaitMs, config).pipe(Effect.raceFirst(beat));
 };
 
-export const awaitTicket = (
+const requestAwaitTicket = (
   ticket: string,
   maxWaitMs: number,
-  config: DaemonConfigShape = resolveDaemonConfig(),
+  config: DaemonConfigShape,
+  reattach: boolean,
+  ensure?: EnsureTicketDaemon,
 ): Effect.Effect<
   { readonly request: RequestRecord | null; readonly timedOut: boolean },
   TicketSocketError
 > =>
   requestReply(
     config,
-    { id: shortId(), maxWaitMs, ticket, type: 'await' },
+    { id: shortId(), maxWaitMs, ticket, type: 'await', ...(reattach ? { reattach: true } : {}) },
     maxWaitMs + 2_000,
     (message): message is AwaitResultMessage => message.type === 'await-result',
+    ensure,
   ).pipe(
     Effect.flatMap((result) =>
       readRecord(result?.request ?? null).pipe(
@@ -272,6 +279,26 @@ export const awaitTicket = (
       ),
     ),
   );
+
+export const awaitTicket = (
+  ticket: string,
+  maxWaitMs: number,
+  config: DaemonConfigShape = resolveDaemonConfig(),
+): Effect.Effect<
+  { readonly request: RequestRecord | null; readonly timedOut: boolean },
+  TicketSocketError
+> => requestAwaitTicket(ticket, maxWaitMs, config, false);
+
+/** Resume a foreground exec wait without submitting a second Cargo request. */
+export const reattachTicket = (
+  ticket: string,
+  maxWaitMs: number,
+  config: DaemonConfigShape = resolveDaemonConfig(),
+  ensure: EnsureTicketDaemon = ensureDaemonRunning,
+): Effect.Effect<
+  { readonly request: RequestRecord | null; readonly timedOut: boolean },
+  TicketSocketError
+> => requestAwaitTicket(ticket, maxWaitMs, config, true, ensure);
 
 export interface BackgroundSubmitInput {
   readonly argv: readonly string[];

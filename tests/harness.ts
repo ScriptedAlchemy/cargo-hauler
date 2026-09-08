@@ -25,6 +25,11 @@ const fakeCargoScript = `#!/usr/bin/env bash
 echo "fake-out:$*"
 echo "fake-err:$*" >&2
 echo "fake-jobs:\${CARGO_BUILD_JOBS:-none}" >&2
+if [ -n "\${FAKE_COUNT_FILE:-}" ]; then echo "\$\$" >> "\$FAKE_COUNT_FILE"; fi
+if [ -n "\${FAKE_READY_FILE:-}" ]; then : > "\$FAKE_READY_FILE"; fi
+if [ -n "\${FAKE_RELEASE_FILE:-}" ]; then
+  while [ ! -e "\$FAKE_RELEASE_FILE" ]; do sleep 0.01; done
+fi
 if [ -n "\${FAKE_OUTPUT_BYTES:-}" ]; then
   yes "fake-bulk:0123456789abcdef0123456789abcdef0123456789abcdef" | head -c "\$FAKE_OUTPUT_BYTES"
 fi

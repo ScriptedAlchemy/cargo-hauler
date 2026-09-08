@@ -164,8 +164,8 @@ export const makeDependencyRuntime = (deps: DependencyRuntimeDeps): DependencyRu
           (failure): Effect.Effect<WatchOutcome> => Effect.succeed({ kind: 'failed', failure }),
         ),
       );
-      // A kill (client disconnect, `hauler kill`) must not wait for the
-      // prerequisite: the lane settles the claimed job as soon as it wakes.
+      // An explicit kill must not wait for the prerequisite: the lane settles
+      // the claimed job as soon as it wakes.
       const killed = Deferred.await(job.killSignal).pipe(
         Effect.map((): WatchOutcome => ({ kind: 'killed' })),
       );

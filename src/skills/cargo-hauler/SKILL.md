@@ -99,7 +99,12 @@ plugin internals, not CLI entry points.
   The lane briefly holds a batchable head (150ms by default) so requests
   launched together can fold before the first process starts; set
   `CARGO_HAULER_BATCH_WINDOW_MS=0` to disable that window.
-- If the daemon is unreachable, fail open: run the original cargo command.
+- If the daemon is unreachable before it accepts a ticket, fail open: run the
+  original cargo command. If a foreground ticket was accepted before its
+  transport dropped, the client reconnects and resumes awaiting that same
+  ticket without resubmitting; queued work keeps its place during the
+  ten-second reconnect window. An unrecoverable ticket exits `75` with
+  `brokered run aborted: daemon connection lost`.
 - Optional PATH shim (`hauler install-shim`) catches cargo inside scripts.
   Its submissions show as `host=shim` in the ledger and the dashboard's who
   column — scripted or terminal cargo, not an agent hook rewrite.

@@ -20,6 +20,7 @@ import {
 import type { Attachment, ExitInfo, Job } from './job-state.js';
 import type { LedgerApi } from './ledger.js';
 import type { AttachMode, AttachRejectionGate, FinishedStatus } from './protocol.js';
+import { daemonShutdownError } from './protocol.js';
 import type { ReplayAudience, ReplayChunk } from './replay.js';
 import { calculateServedSavings, nonNegativeMs } from './savings.js';
 import type { ServedSavings } from './savings.js';
@@ -856,7 +857,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
           status: 'killed',
           exitCode: null,
           signal: null,
-          error: 'daemon shutdown',
+          error: daemonShutdownError,
         });
       };
       // One follower's defect must not strand the followers after it.

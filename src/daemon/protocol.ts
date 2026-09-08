@@ -246,7 +246,7 @@ export interface RequestRecord {
   readonly admissionHold?: AdmissionHold;
   /** Present while the running leader (or the leader this request rides) looks stalled. */
   readonly stall?: StallReport;
-  /** True once the connection that submitted this running request has disconnected. */
+  /** True while the connection owning this active request is disconnected. */
   readonly orphaned?: boolean;
 }
 
@@ -331,12 +331,16 @@ export const detachRequestSchema = z.object({
 
 /** Await ceiling (2h) — the single source for daemon wire and operation schemas. */
 export const awaitCeilingMs = 7_200_000;
+/** Accepted foreground tickets keep their owner slot this long while the client reconnects. */
+export const execReconnectGraceMs = 10_000;
 
 export const awaitRequestSchema = z.object({
   type: z.literal('await'),
   id: z.string().min(1),
   ticket: z.string().min(1),
   maxWaitMs: z.number().int().min(0).max(awaitCeilingMs).optional(),
+  /** Restore foreground ownership while an exec client resumes after losing its transport. */
+  reattach: z.boolean().optional(),
 });
 
 export const resultRequestSchema = z.object({
@@ -929,6 +933,8 @@ export const parseServerMessageLine = (line: string): ServerMessage =>
  * across a restart. Clients read it to explain the `killed` status.
  */
 export const orphanedByRestartError = 'orphaned by daemon restart';
+export const daemonShutdownError = 'daemon shutdown';
+export const ownerReconnectExpiredError = 'owner reconnect window expired while queued';
 
 export const isOrphanedByRestart = (record: Pick<RequestRecord, 'status' | 'error'>): boolean =>
   record.status === 'killed' && record.error === orphanedByRestartError;

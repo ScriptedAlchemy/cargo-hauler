@@ -17,6 +17,14 @@ import { dirname, join, resolve } from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it } from 'effect-rstest';
 import { openInstalledHostMcpServer, testManifest } from 'agent-bundle/test';
+import * as Effect from 'effect/Effect';
+import * as Schedule from 'effect/Schedule';
+
+import { pingDaemon } from '../../src/daemon/control.js';
+import { runDaemon } from '../../src/daemon/main.js';
+
+import { disconnectOnceProxy } from '../disconnect-proxy.js';
+import { fakeCargoEnv, scopedEnv, scopedFixture } from '../harness.js';
 
 /**
  * Host-install proof from the actual npm shape: pack a source staging copy,
@@ -132,6 +140,30 @@ const runInstaller = (argv: readonly string[], env: Record<string, string> = pro
   return { status: result.status, stderr: result.stderr, stdout: result.stdout };
 };
 
+const runProcess = (
+  command: string,
+  argv: readonly string[],
+  env: Record<string, string>,
+  cwd = consumer,
+): Promise<Invocation> =>
+  new Promise((resolvePromise, reject) => {
+    const child = spawn(command, [...argv], {
+      cwd,
+      env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stderr = '';
+    let stdout = '';
+    child.stderr.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString('utf8');
+    });
+    child.stdout.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString('utf8');
+    });
+    child.once('error', reject);
+    child.once('exit', (status) => resolvePromise({ status, stderr, stdout }));
+  });
+
 beforeAll(() => {
   fixtureRoot = mkdtempSync(join(tmpdir(), 'hauler-packed-install-'));
   sourceRoot = join(fixtureRoot, 'source');
@@ -210,6 +242,56 @@ describe('packed install', () => {
     expect(approximatePlan.status).toBe(2);
     expect(approximatePlan.stderr).toContain("unknown option '--plan'");
   });
+
+  it('returns Cargo’s result through the packed PATH shim after a post-ack disconnect', async () => {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const fixture = yield* scopedFixture(1);
+          const cargo = join(fixture.binDir, 'cargo');
+          yield* scopedEnv({ CARGO_HAULER_CARGO_BIN: cargo });
+          const daemonConfig = {
+            ...fixture.config,
+            socketPath: join(fixture.config.stateDir, 'daemon-internal.sock'),
+          };
+          yield* Effect.forkScoped(runDaemon(daemonConfig));
+          yield* pingDaemon(daemonConfig.socketPath, 500).pipe(
+            Effect.retry(Schedule.spaced('20 millis').pipe(Schedule.upTo({ times: 500 }))),
+          );
+          const proxy = yield* disconnectOnceProxy(
+            daemonConfig,
+            'ack',
+            fixture.config.socketPath,
+          );
+          const shimDir = join(fixture.root, 'shim');
+          mkdirSync(shimDir);
+          const hauler = join(pluginRoot, 'bin', 'hauler.js');
+          const env = {
+            ...(process.env as Record<string, string>),
+            ...fakeCargoEnv(fixture, { FAKE_EXIT: '17' }),
+            CARGO_HAULER_STATE_DIR: fixture.config.stateDir,
+          };
+          const installed = spawnSync(
+            process.execPath,
+            [hauler, 'install-shim', '--dir', shimDir, '--real-cargo', cargo],
+            { encoding: 'utf8', env: { ...env, PATH: fixture.binDir } },
+          );
+          expect(installed.status).toBe(0);
+
+          const result = yield* Effect.promise(() =>
+            runProcess(join(shimDir, 'cargo'), ['check', '-p', 'packed-reconnect'], env, fixture.ws1),
+          );
+          const ticket = yield* Effect.promise(() => proxy.dropped);
+          expect(result.status).toBe(17);
+          expect(result.stderr).toContain(
+            `connection to daemon lost; reconnecting to ticket ${ticket}`,
+          );
+          expect(result.stderr).not.toContain('continues — hauler result');
+          expect(proxy.messages().filter((message) => message.type === 'exec')).toHaveLength(1);
+        }),
+      ),
+    );
+  }, 30_000);
 
   const hosts: readonly Host[] = ['claude', 'codex', 'cursor'];
 

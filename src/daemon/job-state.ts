@@ -208,7 +208,7 @@ export interface Job {
   stall: StallReport | null;
   /** True once the connection that submitted this leader disconnected while it was running. */
   ownerGone: boolean;
-  /** Ledger `error` for a kill of the running process when the executor reports none (auto-kill). */
+  /** Ledger `error` for a daemon-initiated queued or running kill. */
   killReason: string | null;
   /** Fail-fast signal captured at submission (topology stat, cached). */
   readonly editedRecently: boolean;
