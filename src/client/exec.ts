@@ -756,7 +756,6 @@ const streamBrokered = (
           : {
               type: 'exec',
               id,
-              ...(options.allowSharedTarget === true ? { allowSharedTarget: true } : {}),
               argv: [...options.argv],
               cwd: options.cwd,
               ...(options.env === undefined ? {} : { env: { ...options.env } }),
@@ -764,6 +763,7 @@ const streamBrokered = (
               ...(options.session === undefined ? {} : { session: options.session }),
               ...(options.workspaceRoot === undefined ? {} : { workspaceRoot: options.workspaceRoot }),
               ...(options.background === true ? { background: true } : {}),
+              ...(options.allowSharedTarget === true ? { allowSharedTarget: true } : {}),
               ...(options.mergeStderr ? { mergeStderr: true } : {}),
               ...(options.after === undefined || options.after.length === 0
                 ? {}

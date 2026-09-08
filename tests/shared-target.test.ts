@@ -12,13 +12,15 @@ const lane = (workspaceRoot: string, targetDir: string, sharedTargetWith?: reado
 // One grouping and one wording feed the lane board, `hauler status`, and the
 // dashboard; the daemon's refusal and ack warning share the mechanism text.
 describe('sharedTargetGroups', () => {
-  it('groups flagged lanes by target dir with every root, sorted, skipping unflagged lanes', () => {
+  it('groups flagged lanes by target dir once, roots sorted, skipping unflagged lanes', () => {
+    // As the daemon emits them: every flagged lane names all the other roots.
     expect(
       sharedTargetGroups([
-        lane('/work/two', '/cache/target', ['/work/one']),
+        lane('/work/two', '/cache/target', ['/work/one', '/work/three']),
         lane('/work/solo', '/work/solo/target'),
         lane('/work/one', '/cache/target', ['/work/two', '/work/three']),
         lane('/work/a', '/cache/other', ['/work/b']),
+        lane('/work/three', '/cache/target', ['/work/one', '/work/two']),
         lane('/work/empty', '/cache/empty', []),
       ]),
     ).toEqual([

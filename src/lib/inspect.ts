@@ -12,7 +12,6 @@ import type {
   StatusInput,
   StatusResult,
 } from './protocol-schemas.js';
-import { sharedTargetGroups, sharedTargetWarning } from './shared-target.js';
 import { filterStatusRows, hasStatusFilters, statusSummary } from './status-filter.js';
 import { runTicketEffect } from './ticket-errors.js';
 
@@ -97,9 +96,6 @@ export const loadStatusResult = async (
     active: displayStatusRows(active),
     operation: 'status',
     recent: displayStatusRows(recent),
-    summary: [
-      statusSummary(snapshot.daemon, active, recent),
-      ...sharedTargetGroups(snapshot.lanes).map(sharedTargetWarning),
-    ].join('\n'),
+    summary: statusSummary(snapshot.daemon, active, recent),
   };
 };

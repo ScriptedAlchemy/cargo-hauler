@@ -18,26 +18,24 @@ export interface SharedTargetGroup {
   readonly workspaceRoots: readonly string[];
 }
 
-/** Flagged lanes grouped by target dir, in first-seen order, each with the full set of roots. */
+/**
+ * Flagged lanes grouped by target dir, in first-seen order. The daemon computes
+ * `sharedTargetWith` for every lane against every other, so the first flagged
+ * lane on a dir already names the whole set of roots.
+ */
 export const sharedTargetGroups = (
   lanes: readonly Pick<LaneStatus, 'targetDir' | 'workspaceRoot' | 'sharedTargetWith'>[],
 ): readonly SharedTargetGroup[] => {
-  const rootsByTarget = new Map<string, Set<string>>();
+  const groups = new Map<string, SharedTargetGroup>();
   for (const lane of lanes) {
-    if (lane.sharedTargetWith === undefined || lane.sharedTargetWith.length === 0) {
-      continue;
+    if (lane.sharedTargetWith?.length && !groups.has(lane.targetDir)) {
+      groups.set(lane.targetDir, {
+        targetDir: lane.targetDir,
+        workspaceRoots: [lane.workspaceRoot, ...lane.sharedTargetWith].sort(),
+      });
     }
-    const roots = rootsByTarget.get(lane.targetDir) ?? new Set<string>();
-    roots.add(lane.workspaceRoot);
-    for (const root of lane.sharedTargetWith) {
-      roots.add(root);
-    }
-    rootsByTarget.set(lane.targetDir, roots);
   }
-  return [...rootsByTarget].map(([targetDir, roots]) => ({
-    targetDir,
-    workspaceRoots: [...roots].sort(),
-  }));
+  return [...groups.values()];
 };
 
 export const sharedTargetMechanism =

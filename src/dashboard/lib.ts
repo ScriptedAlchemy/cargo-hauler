@@ -1100,9 +1100,7 @@ export const sharedTargetCell = (lane: {
   readonly targetDir?: unknown;
   readonly sharedTargetWith?: unknown;
 }): { readonly roots: readonly string[]; readonly warning: string } | null => {
-  const roots = Array.isArray(lane.sharedTargetWith)
-    ? lane.sharedTargetWith.filter((root): root is string => typeof root === 'string')
-    : [];
+  const roots = Array.isArray(lane.sharedTargetWith) ? lane.sharedTargetWith.map(String) : [];
   if (roots.length === 0 || typeof lane.targetDir !== 'string' || typeof lane.workspaceRoot !== 'string') {
     return null;
   }
