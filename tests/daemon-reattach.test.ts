@@ -429,6 +429,35 @@ describe('reattach after a lost connection (#187)', () => {
       expect(findExit(messages).status).toBe('done');
     }), 30_000);
 
+  it.live('marks a late rider replay-truncation notice as zero-cursor output', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(1, { CARGO_HAULER_REPLAY_BUFFER_BYTES: '64' });
+      const env = { FAKE_OUTPUT_BYTES: '4096', FAKE_SLEEP: '1.5' };
+      const first = yield* rawConnection(fixture.config.socketPath);
+      yield* submitRaw(first, fixture, ['cargo', 'test'], env);
+      const outputBytesReceived = (): number =>
+        first
+          .received()
+          .reduce(
+            (total, message) =>
+              message.type === 'output'
+                ? total + Buffer.from(message.data, 'base64').byteLength
+                : total,
+            0,
+          );
+      yield* first.waitFor((message) => message.type === 'output' && outputBytesReceived() > 64);
+
+      const rider = yield* rawConnection(fixture.config.socketPath);
+      yield* submitRaw(rider, fixture, ['cargo', 'test'], env);
+      const notice = yield* rider.waitFor(
+        (message) =>
+          message.type === 'output' &&
+          Buffer.from(message.data, 'base64').toString('utf8').includes('replay truncated'),
+      );
+      expect(notice).toMatchObject({ type: 'output', cursorBytes: 0 });
+      yield* rider.waitFor((message) => message.type === 'exit');
+    }), 30_000);
+
   it.live('answers a finished ticket with its record', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(1);

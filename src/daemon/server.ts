@@ -325,6 +325,7 @@ export const makeConnectionHandler =
               ticket: info.ticket,
               channel: info.channel,
               data: info.data,
+              ...(info.cursorBytes === undefined ? {} : { cursorBytes: info.cursorBytes }),
             }),
           onExit: (info) =>
             Effect.gen(function* () {

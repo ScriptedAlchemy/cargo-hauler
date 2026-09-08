@@ -648,6 +648,49 @@ describe('runExecClient', () => {
         expect(collected.stderr()).toContain('output could not be replayed completely');
       }));
 
+    it.live('fails closed when replay itself is truncated after the active result', () =>
+      Effect.gen(function* () {
+        const notice = Buffer.from(
+          '[cargo-hauler] replay truncated: 128 earlier output bytes dropped\n',
+        );
+        const { collected, result } = yield* lostAfterAck([
+          {
+            id: 'x',
+            missedBytes: 0,
+            outcome: 'active',
+            outputPath: '/logs/cc-1.log',
+            state: 'running',
+            ticket: 'cc-1',
+            type: 'reattach-result',
+          },
+          {
+            channel: 'stderr',
+            cursorBytes: 0,
+            data: notice.toString('base64'),
+            id: 'x',
+            ticket: 'cc-1',
+            type: 'output',
+          },
+          {
+            error: null,
+            exitCode: 0,
+            id: 'x',
+            runMs: 1,
+            signal: null,
+            status: 'done',
+            ticket: 'cc-1',
+            type: 'exit',
+            waitMs: 1,
+          },
+        ]);
+        expect(result).toEqual({
+          exitCode: connectionLostExitCode,
+          mode: 'brokered',
+          ticket: 'cc-1',
+        });
+        expect(collected.stderr()).toContain('output could not be replayed completely');
+      }));
+
     it.live('fails closed when the ticket finished before its output stream was reattached', () =>
       Effect.gen(function* () {
         const { collected, result } = yield* lostAfterAck([

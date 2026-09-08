@@ -266,7 +266,8 @@ describe('packed install', () => {
           yield* scopedEnv({ CARGO_HAULER_CARGO_BIN: cargo });
           const daemonConfig = {
             ...fixture.config,
-            socketPath: join(fixture.config.stateDir, 'daemon-internal.sock'),
+            // Keep below macOS's 104-byte unix-socket path limit.
+            socketPath: join(fixture.root, 'd.sock'),
           };
           yield* Effect.forkScoped(runDaemon(daemonConfig));
           yield* pingDaemon(daemonConfig.socketPath, 500).pipe(

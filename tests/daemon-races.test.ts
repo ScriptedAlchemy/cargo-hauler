@@ -430,6 +430,66 @@ describe('reattach ownership races (#187)', () => {
         }),
       ).pipe(Effect.provide(layer));
     }), 20_000);
+
+  it.live('returns the terminal record when the ticket settles during ownership registration', () =>
+    Effect.gen(function* () {
+      const { fixture, layer } = yield* brokerFixture(1);
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const broker = yield* Broker;
+          const readyFile = join(fixture.root, 'settle-race.ready');
+          const releaseFile = join(fixture.root, 'settle-race.release');
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              writeFileSync(releaseFile, '');
+            }),
+          );
+          const submitted = yield* submitTracked(broker, {
+            argv: ['cargo', 'test', '-p', 'settle-race'],
+            cwd: fixture.ws1,
+            env: cargoEnv(fixture, {
+              FAKE_READY_FILE: readyFile,
+              FAKE_RELEASE_FILE: releaseFile,
+            }),
+          });
+          yield* Deferred.await(submitted.started);
+          yield* waitForFile(readyFile);
+
+          const registrationStarted = yield* Deferred.make<void>();
+          const releaseRegistration = yield* Deferred.make<void>();
+          let activeCalled = false;
+          const reattach = yield* Effect.forkChild(
+            broker.reattach(submitted.submitted.ticket, {
+              callbacks: {
+                ownerId: 'settling-owner',
+                onRegistered: () =>
+                  Deferred.succeed(registrationStarted, undefined).pipe(
+                    Effect.andThen(Deferred.await(releaseRegistration)),
+                    Effect.as(true),
+                  ),
+                onStarted: () => Effect.void,
+                onOutput: () => Effect.void,
+                onExit: () => Effect.void,
+              },
+              fromByte: 0,
+              onActive: () =>
+                Effect.sync(() => {
+                  activeCalled = true;
+                }),
+            }),
+          );
+          yield* Deferred.await(registrationStarted);
+          writeFileSync(releaseFile, '');
+          const settled = yield* broker.awaitTicket(submitted.submitted.ticket, 5_000);
+          expect(settled.record?.status).toBe('done');
+          yield* Deferred.succeed(releaseRegistration, undefined);
+
+          const outcome = yield* Fiber.join(reattach);
+          expect(outcome.kind).toBe('terminal');
+          expect(activeCalled).toBe(false);
+        }),
+      ).pipe(Effect.provide(layer));
+    }), 20_000);
 });
 
 describe('attachment registration races (#52)', () => {

@@ -50,6 +50,8 @@ export interface OutputInfo {
   readonly ticket: string;
   readonly channel: 'stdout' | 'stderr';
   readonly data: string;
+  /** Reattach cursor advance; zero for a notice replacing dropped Cargo bytes. */
+  readonly cursorBytes?: number;
 }
 
 export interface ExitInfo {

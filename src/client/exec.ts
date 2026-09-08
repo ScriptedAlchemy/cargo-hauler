@@ -468,6 +468,15 @@ const handleServerMessage = (
       }
       case 'exit': {
         yield* Ref.set(state.ticket, message.ticket);
+        if (state.reattaching !== null && !state.cursor.exact) {
+          yield* abortRun(
+            options,
+            state,
+            message.ticket,
+            'output could not be replayed completely',
+          );
+          return;
+        }
         // A kill, a daemon shutdown, or a spawn failure all used to reach the
         // caller as a bare exit 1 with no line to tell them apart.
         if (message.status !== 'done') {

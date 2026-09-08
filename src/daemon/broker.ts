@@ -749,7 +749,10 @@ export const BrokerLive: Layer.Layer<
         };
         // One frame with the replay snapshot, as `emitChunk` reads the
         // callbacks in the frame that records each chunk.
-        const { info, replay } = yield* Effect.sync(() => {
+        const active = yield* Effect.sync(() => {
+          if (directory.get(ticket) !== entry || Ref.getUnsafe(leader.state) === 'finished') {
+            return null;
+          }
           target.callbacks = gated;
           if (entry.kind === 'leader') {
             entry.job.ownerGone = false;
@@ -767,14 +770,21 @@ export const BrokerLive: Layer.Layer<
             entry.kind === 'attachment' && !entry.attachment.live
               ? { chunks: [], missedBytes: 0 }
               : replaySince(leader.replay.snapshot(), input.fromByte, admit);
-          const active: ReattachActive = {
+          const info: ReattachActive = {
             state: leader.startedAtMs === null ? 'queued' : 'running',
             ...(entry.kind === 'attachment' ? { attachedTo: leader.ticket } : {}),
             missedBytes: since.missedBytes,
             outputPath: leader.log?.path ?? null,
           };
-          return { info: active, replay: since.chunks };
+          return { info, replay: since.chunks };
         });
+        if (active === null) {
+          const record = yield* ledger.getRequestByTicket(ticket);
+          return record !== null && isTerminalStatus(record.status)
+            ? { kind: 'terminal' as const, record }
+            : { kind: 'unknown' as const };
+        }
+        const { info, replay } = active;
         yield* input.onActive(info);
         yield* Effect.forEach(
           replay,

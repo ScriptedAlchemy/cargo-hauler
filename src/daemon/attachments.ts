@@ -233,6 +233,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
           attachment.callbacks.onOutput({
             ticket: attachment.ticket,
             channel: 'stderr',
+            cursorBytes: 0,
             data: encodedNotice,
           }),
         );
