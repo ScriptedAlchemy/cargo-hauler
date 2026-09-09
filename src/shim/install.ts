@@ -1,6 +1,16 @@
-import { chmodSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  linkSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
-import { delimiter, isAbsolute, join, resolve } from 'node:path';
+import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 
 import { canonical } from './entry-location.js';
 
@@ -82,7 +92,9 @@ export const resolveRealCargo = (
   const canonicalDest = canonical(destDir);
   const insideDest = (path: string): boolean => {
     const resolved = canonical(path);
-    return resolved === join(canonicalDest, 'cargo') || resolved.startsWith(`${canonicalDest}/`);
+    // The destination may still be a symlink to real cargo before install.
+    // Do not embed that entry: replacing it would make the shim call itself.
+    return canonical(dirname(path)) === canonicalDest || resolved.startsWith(`${canonicalDest}/`);
   };
   if (isAbsolute(realCargo)) {
     // An explicit absolute path is the operator's call; only self-reference
@@ -152,11 +164,26 @@ export const installCargoShim = (options: InstallShimOptions): InstallShimResult
   const destDir = options.destDir ?? defaultShimDir();
   mkdirSync(destDir, { recursive: true });
   const path = join(destDir, 'cargo');
-  if (existsSync(path) && options.force !== true) {
+  if (lstatSync(path, { throwIfNoEntry: false }) !== undefined && options.force !== true) {
     throw new Error(`cargo already exists at ${path}; pass --force to replace it`);
   }
   const realCargo = resolveRealCargo(options.realCargo, destDir);
-  writeFileSync(path, renderCargoShim({ ...options, realCargo }));
-  chmodSync(path, 0o755);
+  // Publish a complete executable without following symlinks or modifying
+  // other hard links to an existing cargo binary. Staging beside the final
+  // path keeps rename/link on the same filesystem.
+  const stagingDir = mkdtempSync(join(destDir, '.cargo-hauler-shim-'));
+  try {
+    const staged = join(stagingDir, 'cargo');
+    writeFileSync(staged, renderCargoShim({ ...options, realCargo }), { flag: 'wx' });
+    chmodSync(staged, 0o755);
+    if (options.force === true) {
+      renameSync(staged, path);
+    } else {
+      // Unlike rename, link fails if an entry appeared after the lstat above.
+      linkSync(staged, path);
+    }
+  } finally {
+    rmSync(stagingDir, { recursive: true, force: true });
+  }
   return { haulerScript: shimHaulerEntry(options.haulerArgv), path, realCargo };
 };
