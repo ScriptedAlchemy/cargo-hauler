@@ -27,6 +27,7 @@ import type {
   StatusReport,
   StatusRow,
 } from '../daemon/protocol.js';
+import type { ShutdownOutcome } from '../daemon/shutdown.js';
 
 const requestStatusSchema = z.enum(requestStatuses);
 
@@ -424,12 +425,14 @@ export interface DaemonResult {
   readonly operation: 'daemon';
   readonly pid: number | null;
   /**
-   * `restart`, and a `start` that had to replace a daemon of another version:
-   * the pid that was serving before, null when none was.
+   * `restart`: the pid that was serving before. `stop`: the pid targeted by
+   * the request. `start` and `status`: a daemon left serving after replacement
+   * failed.
    */
   readonly previousPid?: number | null;
   readonly report: StatusReport | null;
-  readonly running: boolean;
+  readonly running: boolean | null;
+  readonly shutdown?: DaemonShutdownOutcome;
   readonly socketPath: string;
   readonly subcommand: 'run' | 'start' | 'stop' | 'status' | 'restart';
 }
@@ -473,6 +476,24 @@ export const lastResultSchema = z
   .strict() satisfies z.ZodType<LastResult>;
 
 const daemonSubcommandSchema = z.enum(['run', 'start', 'stop', 'status', 'restart']);
+export type DaemonShutdownOutcome = ShutdownOutcome | { readonly kind: 'absent' };
+const shutdownOutcomeSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('acknowledged') }),
+  z.object({ kind: z.literal('connection-closed') }),
+  z.object({ kind: z.literal('timeout'), phase: z.enum(['open', 'response']) }),
+  z.object({ kind: z.literal('unreachable') }),
+  z.object({ kind: z.literal('absent') }),
+  z.object({
+    kind: z.literal('refused'),
+    code: z.literal('shutdown-refused'),
+    message: z.string(),
+  }),
+  z.object({
+    kind: z.literal('protocol-error'),
+    code: z.enum(['bad-message', 'bad-intent', 'internal']),
+    message: z.string(),
+  }),
+]) satisfies z.ZodType<DaemonShutdownOutcome>;
 
 export const daemonInputSchema = z
   .object({
@@ -487,7 +508,8 @@ export const daemonResultSchema = z
     pid: z.number().int().nullable(),
     previousPid: z.number().int().nullable().optional(),
     report: statusReportSchema.nullable(),
-    running: z.boolean(),
+    running: z.boolean().nullable(),
+    shutdown: shutdownOutcomeSchema.optional(),
     socketPath: z.string(),
     subcommand: daemonSubcommandSchema,
   })

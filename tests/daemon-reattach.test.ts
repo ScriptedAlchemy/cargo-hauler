@@ -662,7 +662,7 @@ describe('reattach after a lost connection (#187)', () => {
       // with the goodbye lost in transit, as a crash would lose it.
       proxy.mute();
       const ack = yield* requestShutdown(fixture.config.socketPath, 5_000, daemonVersion);
-      expect(ack).toBe('acknowledged');
+      expect(ack).toEqual({ kind: 'acknowledged' });
 
       const result = yield* Fiber.join(run);
       expect(collected.stderr()).not.toContain('continues');

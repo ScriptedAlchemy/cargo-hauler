@@ -222,7 +222,7 @@ describe('ensureDaemonRunning', () => {
           setTimeout(() => {
             alive = false;
           }, 30);
-          return 'acknowledged' as const;
+          return { kind: 'acknowledged' } as const;
         }),
       spawnDetachedDaemon: () =>
         Effect.sync(() => {
@@ -394,7 +394,7 @@ describe('directional replacement', () => {
       pingDaemon: () => Effect.succeed(newer),
       pollMs: 5,
       processAlive: () => false,
-      requestShutdown: () => Effect.sync(() => { calls.push('shutdown'); return 'acknowledged' as const; }),
+      requestShutdown: () => Effect.sync(() => { calls.push('shutdown'); return { kind: 'acknowledged' } as const; }),
       spawnDetachedDaemon: () => Effect.sync(() => { calls.push('spawn'); }),
       waitForDaemon: () => Effect.succeed(newer),
       ...overrides,
@@ -416,7 +416,15 @@ describe('directional replacement', () => {
     Effect.gen(function* () {
       const { calls, dependencies } = tracking({
         pingDaemon: () => Effect.succeed(older),
-        requestShutdown: () => Effect.sync(() => { calls.push('shutdown'); return 'refused' as const; }),
+        requestShutdown: () =>
+          Effect.sync(() => {
+            calls.push('shutdown');
+            return {
+              code: 'shutdown-refused',
+              kind: 'refused',
+              message: 'newer daemon refused shutdown',
+            } as const;
+          }),
       });
       const error = yield* ensureDaemonVersion(config, dependencies).pipe(Effect.flip);
       expect(error._tag).toBe('DaemonNewer');
