@@ -44,7 +44,37 @@ export const compareVersions = (left: string, right: string): -1 | 0 | 1 => {
   if (b.prerelease === null) {
     return -1;
   }
-  return a.prerelease < b.prerelease ? -1 : 1;
+  const leftParts = a.prerelease.split('.');
+  const rightParts = b.prerelease.split('.');
+  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
+    const leftPart = leftParts[index];
+    const rightPart = rightParts[index];
+    if (leftPart === rightPart) {
+      continue;
+    }
+    if (leftPart === undefined) {
+      return -1;
+    }
+    if (rightPart === undefined) {
+      return 1;
+    }
+    const leftNumeric = /^\d+$/u.test(leftPart);
+    const rightNumeric = /^\d+$/u.test(rightPart);
+    if (leftNumeric && rightNumeric) {
+      // Prerelease counters have no size limit in SemVer; do not round them.
+      const leftNumber = BigInt(leftPart);
+      const rightNumber = BigInt(rightPart);
+      if (leftNumber === rightNumber) {
+        continue;
+      }
+      return leftNumber < rightNumber ? -1 : 1;
+    }
+    if (leftNumeric !== rightNumeric) {
+      return leftNumeric ? -1 : 1;
+    }
+    return leftPart < rightPart ? -1 : 1;
+  }
+  return 0;
 };
 
 /** True when `candidate` is strictly newer than `reference`. */
