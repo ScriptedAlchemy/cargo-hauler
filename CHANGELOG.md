@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.2
+
+### Patch Changes
+
+- 0ca43dd: Compare prerelease versions by SemVer identifiers when deciding whether a client may replace a daemon. Numeric counters such as `rc.10` now sort after `rc.9`, preventing an older prerelease client from being mistaken for a newer install.
+- bb0901a: Install PATH shims without following existing symlinks or overwriting other hard links to Cargo executables. Refuse dangling destination links unless `--force` is supplied, publish complete executable files atomically, and prevent an existing destination symlink from being embedded as the shim's own real Cargo path.
+
 ## 0.7.1
 
 ### Patch Changes
