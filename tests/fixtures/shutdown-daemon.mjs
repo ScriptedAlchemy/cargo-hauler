@@ -11,6 +11,8 @@ const modes = new Set([
   'internal',
   'bad-message',
   'disconnect',
+  'probe-silent',
+  'probe-disconnect',
 ]);
 if (socketPath === undefined || mode === undefined || !modes.has(mode)) {
   throw new Error('usage: shutdown-daemon.mjs <socket> <mode>');
@@ -31,6 +33,11 @@ const server = createServer((socket) => {
       buffered = buffered.slice(newline + 1);
       const message = JSON.parse(line);
       if (message.type === 'ping') {
+        if (mode === 'probe-silent') continue;
+        if (mode === 'probe-disconnect') {
+          socket.destroy();
+          continue;
+        }
         socket.write(`${JSON.stringify({
           id: message.id,
           pid: process.pid,

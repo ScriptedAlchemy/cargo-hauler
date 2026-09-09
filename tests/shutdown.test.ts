@@ -1,10 +1,10 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { afterEach, describe, expect, it } from 'effect-rstest';
+import { describe, expect, it } from 'effect-rstest';
 import * as Effect from 'effect/Effect';
 
 import { pingDaemon } from '../src/daemon/control.js';
@@ -13,13 +13,6 @@ import { requestShutdown } from '../src/daemon/shutdown.js';
 const fixtureEntry = fileURLToPath(
   new URL('./fixtures/shutdown-daemon.mjs', import.meta.url),
 );
-const children = new Set<ChildProcess>();
-
-afterEach(() => {
-  for (const child of children) child.kill('SIGTERM');
-  children.clear();
-});
-
 const startFixture = (
   socketPath: string,
   mode: string,
@@ -28,7 +21,6 @@ const startFixture = (
     const child = spawn(process.execPath, [fixtureEntry, socketPath, mode], {
       stdio: ['ignore', 'pipe', 'inherit'],
     });
-    children.add(child);
     child.once('error', reject);
     child.once('exit', (code) => {
       if (code !== 0 && code !== null) {
@@ -46,14 +38,13 @@ const withFixture = async <T>(
   mode: string,
   body: (socketPath: string, child: ChildProcess) => Promise<T>,
 ): Promise<T> => {
-  const root = mkdtempSync(join(tmpdir(), `cargo-hauler-shutdown-${mode}-`));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'chs-')));
   const socketPath = join(root, 'daemon.sock');
   const child = await startFixture(socketPath, mode);
   try {
     return await body(socketPath, child);
   } finally {
     child.kill('SIGTERM');
-    children.delete(child);
     rmSync(root, { force: true, recursive: true });
   }
 };

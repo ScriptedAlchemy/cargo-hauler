@@ -308,6 +308,13 @@ export const stopDaemon = (
       running,
       shutdown,
     });
+  const probeFailed = (message: string): DaemonControlResult =>
+    result(config, 'stop', {
+      message,
+      pid: null,
+      report: null,
+      running: null,
+    });
   return dependencies.identify(config.socketPath, 1_000).pipe(
     Effect.flatMap((identity) =>
       dependencies.requestShutdown(config.socketPath).pipe(
@@ -328,13 +335,23 @@ export const stopDaemon = (
     ),
     Effect.catchTags({
       ConnectionClosed: () =>
-        Effect.succeed(stopped({ kind: 'connection-closed' }, null, null)),
+        Effect.succeed(
+          probeFailed('cargo-hauler daemon identity connection closed before it could identify the process'),
+        ),
       ControlTimeout: (error) =>
-        Effect.succeed(stopped({ kind: 'timeout', phase: error.phase }, null, null)),
+        Effect.succeed(
+          probeFailed(
+            `cargo-hauler daemon identity probe timed out during ${error.phase}; its running state is unknown`,
+          ),
+        ),
       DaemonUnreachable: (error) => {
         const absent = daemonIsAbsent(error.cause);
         return Effect.succeed(
-          stopped(absent ? { kind: 'absent' } : { kind: 'unreachable' }, absent ? false : null, null),
+          absent
+            ? stopped({ kind: 'absent' }, false, null)
+            : probeFailed(
+                'cargo-hauler daemon identity probe could not reach the process; its running state is unknown',
+              ),
         );
       },
     }),

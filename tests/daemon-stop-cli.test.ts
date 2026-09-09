@@ -1,10 +1,10 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { afterEach, describe, expect, it } from 'effect-rstest';
+import { describe, expect, it } from 'effect-rstest';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const fixtureEntry = join(repoRoot, 'tests', 'fixtures', 'shutdown-daemon.mjs');
@@ -36,13 +36,6 @@ interface DaemonResult {
   };
 }
 
-const children = new Set<ChildProcess>();
-
-afterEach(() => {
-  for (const child of children) child.kill('SIGTERM');
-  children.clear();
-});
-
 const run = (
   entry: string,
   args: readonly string[],
@@ -53,7 +46,6 @@ const run = (
       env: { ...process.env, ...env },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    children.add(child);
     let stderr = '';
     let stdout = '';
     child.stderr.on('data', (chunk: Buffer) => {
@@ -64,7 +56,6 @@ const run = (
     });
     child.once('error', reject);
     child.once('close', (code) => {
-      children.delete(child);
       resolvePromise({ code: code ?? 1, stderr, stdout });
     });
   });
@@ -74,7 +65,6 @@ const startFixture = (socketPath: string, mode: string): Promise<ChildProcess> =
     const child = spawn(process.execPath, [fixtureEntry, socketPath, mode], {
       stdio: ['ignore', 'pipe', 'inherit'],
     });
-    children.add(child);
     child.once('error', reject);
     child.once('exit', (code) => {
       if (code !== 0 && code !== null) {
@@ -92,7 +82,7 @@ const invokeWithFixture = async (
   projection: (typeof projections)[number],
   mode: string,
 ): Promise<{ readonly child: ChildProcess; readonly invocation: Invocation; readonly result: DaemonResult }> => {
-  const root = mkdtempSync(join(tmpdir(), `cargo-hauler-stop-${mode}-`));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'chs-')));
   const stateDir = join(root, 'state');
   const child = await startFixture(join(stateDir, 'daemon.sock'), mode);
   try {
@@ -103,7 +93,6 @@ const invokeWithFixture = async (
     return { child, invocation, result: JSON.parse(invocation.stdout) as DaemonResult };
   } finally {
     child.kill('SIGTERM');
-    children.delete(child);
     rmSync(root, { force: true, recursive: true });
   }
 };
@@ -163,6 +152,22 @@ describe.skipIf(projections.some(({ entry }) => !existsSync(entry)))(
       }
     }
 
+    for (const mode of ['probe-silent', 'probe-disconnect'] as const) {
+      for (const projection of projections) {
+        it(
+          `${projection.name} does not invent a shutdown outcome when the identity probe ${mode}`,
+          async () => {
+            const { invocation, result } = await invokeWithFixture(projection, mode);
+            expect(invocation.code).toBe(1);
+            expect(result).toMatchObject({ pid: null, running: null });
+            expect(result).not.toHaveProperty('shutdown');
+            expect(result.message).toContain('identity');
+          },
+          30_000,
+        );
+      }
+    }
+
     for (const projection of projections) {
       it(
         `${projection.name} distinguishes acknowledgement from a daemon that remains alive`,
@@ -199,7 +204,7 @@ describe.skipIf(projections.some(({ entry }) => !existsSync(entry)))(
       });
 
       it(`${projection.name} treats an already absent daemon as idempotent success`, async () => {
-        const root = mkdtempSync(join(tmpdir(), 'cargo-hauler-stop-absent-'));
+        const root = realpathSync(mkdtempSync(join(tmpdir(), 'chs-')));
         try {
           const invocation = await run(projection.entry, projection.args, {
             CARGO_HAULER_KACHE_INDEX: '',
