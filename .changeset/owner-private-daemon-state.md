@@ -18,5 +18,6 @@ instead of directly in a possibly shared temporary root, and the socket
 digest no longer lowercases Unix paths, so case-distinct state directories no
 longer share one control endpoint. A daemon left listening at the previous
 relocated path is retired by the next client under the existing one-version
-rule, so the moved endpoint needs no manual cleanup on upgrade. Windows keeps
-its named pipe and gains no POSIX modes or uids. (#203)
+rule and stopped by `hauler daemon stop`, so the moved endpoint needs no
+manual cleanup on upgrade. Windows keeps its named pipe and gains no POSIX
+modes or uids. (#203)

@@ -709,8 +709,8 @@ it from the umask:
   never directly into a shared temporary root. Two accounts sharing one
   temporary root get separate directories. A daemon from an earlier install
   still listening at the previous relocated path is retired by the next
-  client under the usual one-version rule, so upgrading needs no manual
-  cleanup.
+  client under the usual one-version rule, and `hauler daemon stop` asks it
+  too before reporting nothing running, so upgrading needs no manual cleanup.
 
 Windows has neither POSIX modes nor uids, and its control endpoint is a
 named pipe rather than a filesystem entry, so none of the above applies
