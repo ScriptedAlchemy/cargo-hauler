@@ -17,4 +17,4 @@ directory under `XDG_RUNTIME_DIR`/`TMPDIR`/the system temporary directory
 instead of directly in a possibly shared temporary root, and the socket
 digest no longer lowercases Unix paths, so case-distinct state directories no
 longer share one control endpoint. Windows keeps its named pipe and gains no
-POSIX modes or uids.
+POSIX modes or uids. (#203)
