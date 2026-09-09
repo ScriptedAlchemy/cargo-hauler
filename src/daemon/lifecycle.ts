@@ -12,6 +12,7 @@ import type {
   EnsureDaemonDependencies,
   WaitForDaemonError,
 } from '../client/ensure-daemon.js';
+import { formatMs } from '../lib/format.js';
 import { loadHaulerSnapshot } from '../query.js';
 
 import { resolveDaemonConfig } from './config.js';
@@ -477,7 +478,10 @@ export const restartDaemon = (
         : yield* waitForExit(before.pid, dependencies);
     if (!exited) {
       return restart({
-        message: notReplacedMessage(before, dependencies.exitGraceMs),
+        message:
+          stopped.shutdown === undefined && stopped.running === null
+            ? `${stopped.message}; cargo-hauler daemon pid ${before.pid} (${before.version}) is still running ${formatMs(dependencies.exitGraceMs)} later; not restarted — retry once it has exited`
+            : notReplacedMessage(before, dependencies.exitGraceMs),
         pid: before.pid,
         previousPid: before.pid,
         report: null,

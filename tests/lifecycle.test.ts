@@ -307,6 +307,29 @@ describe('daemon restart', () => {
       expect(daemonExitCode(result)).toBe(1);
     }));
 
+  it.live('does not claim a shutdown request was sent when the nested identity probe failed', () =>
+    Effect.gen(function* () {
+      const { dependencies } = fakes({
+        exitGraceMs: 40,
+        processAlive: () => true,
+        stop: () =>
+          Effect.succeed(
+            controlResult('stop', {
+              message: 'cargo-hauler daemon identity probe timed out',
+              pid: null,
+              running: null,
+            }),
+          ),
+      });
+      const result = yield* restartDaemon(config, dependencies);
+
+      expect(result.message).toContain('identity probe timed out');
+      expect(result.message).toContain('not restarted');
+      expect(result.message).not.toContain('after the shutdown request');
+      expect(result).toMatchObject({ pid: 41, previousPid: 41, running: true });
+      expect(daemonExitCode(result)).toBe(1);
+    }));
+
   it('is a daemon subcommand', () => {
     expect(parseDaemonSubcommand(['restart'])).toBe('restart');
     expect(() => parseDaemonSubcommand(['reload'])).toThrow('run, start, stop, status, restart');

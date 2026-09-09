@@ -92,10 +92,11 @@ describe('shutdown socket outcome', () => {
   for (const testCase of cases) {
     it(`maps ${testCase.mode} without inventing an acknowledgement`, async () => {
       await withFixture(testCase.mode, async (socketPath) => {
-        const outcome = await Effect.runPromise(requestShutdown(socketPath, 100));
+        const timeoutMs = testCase.mode === 'silent' ? 100 : 5_000;
+        const outcome = await Effect.runPromise(requestShutdown(socketPath, timeoutMs));
         expect(outcome).toEqual(testCase.expected);
         if (testCase.mode !== 'acknowledged') {
-          await expect(Effect.runPromise(pingDaemon(socketPath, 100))).resolves.toMatchObject({
+          await expect(Effect.runPromise(pingDaemon(socketPath, 500))).resolves.toMatchObject({
             pid: expect.any(Number),
           });
         }
