@@ -23,6 +23,8 @@
   component and a view-model.
 - Documents must stay honest: a daemon the probe could not reach renders as
   `stopped`/`unresponsive` with its typed reason, never as an empty success.
+- Daemon stop results carry their typed shutdown outcome. Only confirmed exit
+  or confirmed prior absence is success; acknowledgement alone is not stopped.
 - Names are `hauler` / `cargo-hauler` / `CARGO_HAULER_*`. No other prefix is
   read; never add an alias.
 

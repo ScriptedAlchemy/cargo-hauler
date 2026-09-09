@@ -14,6 +14,7 @@ import { isRecord } from '../lib/guards.js';
 import { shortId } from '../lib/id.js';
 
 import { pingDaemon, requestOverSocket } from './control.js';
+import type { ErrorMessage, ServerMessage } from './protocol.js';
 
 /** What a `pong` says about the daemon behind the socket. */
 export interface DaemonIdentity {
@@ -75,44 +76,75 @@ export const waitForExit = (pid: number, options: ExitWaitOptions): Effect.Effec
     return true;
   });
 
-/**
- * How the daemon took a `shutdown` request: it answered `shutting-down`, it
- * hung up first (already on its way out), it never answered, or nothing was
- * listening.
- */
-export type ShutdownAck =
-  | 'acknowledged'
-  | 'connection-closed'
-  | 'timeout'
-  | 'unreachable'
-  /** The daemon is newer than this client (or this client sent no version) and stays up. */
-  | 'refused';
+type ShutdownProtocolErrorCode = Exclude<ErrorMessage['code'], 'shutdown-refused'>;
+
+/** The typed result of asking the daemon to shut down. */
+export type ShutdownOutcome =
+  | { readonly kind: 'acknowledged' }
+  | { readonly kind: 'connection-closed' }
+  | { readonly kind: 'timeout'; readonly phase: 'open' | 'response' }
+  | { readonly kind: 'unreachable' }
+  | {
+      readonly kind: 'refused';
+      readonly code: 'shutdown-refused';
+      readonly message: string;
+    }
+  | {
+      readonly kind: 'protocol-error';
+      readonly code: ShutdownProtocolErrorCode;
+      readonly message: string;
+    };
 
 export const requestShutdown = (
   socketPath: string,
   timeoutMs = 5_000,
   clientVersion: string = version,
-): Effect.Effect<ShutdownAck> =>
+): Effect.Effect<ShutdownOutcome> =>
   Effect.suspend(() => {
     const id = shortId();
+    const isResponse = (
+      message: ServerMessage,
+    ): message is Extract<ServerMessage, { readonly type: 'error' | 'shutting-down' }> =>
+      message.id === id && (message.type === 'shutting-down' || message.type === 'error');
     return requestOverSocket({
-      isTerminal: (message) =>
-        message.type === 'shutting-down' || (message.type === 'error' && message.id === id),
+      isTerminal: isResponse,
       message: { id, type: 'shutdown', version: clientVersion },
       socketPath,
       timeoutMs,
-    });
+    }).pipe(
+      Effect.map((messages): ShutdownOutcome => {
+        const response = messages.find(isResponse);
+        if (response === undefined) {
+          return { kind: 'connection-closed' };
+        }
+        switch (response.type) {
+          case 'shutting-down':
+            return { kind: 'acknowledged' };
+          case 'error':
+            return response.code === 'shutdown-refused'
+              ? {
+                  code: response.code,
+                  kind: 'refused',
+                  message: response.message,
+                }
+              : {
+                  code: response.code,
+                  kind: 'protocol-error',
+                  message: response.message,
+                };
+          default: {
+            const exhaustive: never = response;
+            return exhaustive;
+          }
+        }
+      }),
+    );
   }).pipe(
-    Effect.map(
-      (messages): ShutdownAck =>
-        messages.some((message) => message.type === 'error' && message.code === 'shutdown-refused')
-          ? 'refused'
-          : 'acknowledged',
-    ),
     Effect.catchTags({
-      ConnectionClosed: () => Effect.succeed<ShutdownAck>('connection-closed'),
-      ControlTimeout: () => Effect.succeed<ShutdownAck>('timeout'),
-      DaemonUnreachable: () => Effect.succeed<ShutdownAck>('unreachable'),
+      ConnectionClosed: () => Effect.succeed<ShutdownOutcome>({ kind: 'connection-closed' }),
+      ControlTimeout: (error) =>
+        Effect.succeed<ShutdownOutcome>({ kind: 'timeout', phase: error.phase }),
+      DaemonUnreachable: () => Effect.succeed<ShutdownOutcome>({ kind: 'unreachable' }),
     }),
   );
 
