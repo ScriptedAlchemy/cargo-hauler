@@ -25,7 +25,7 @@ import {
   requestShutdown,
   waitForExit,
 } from '../daemon/shutdown.js';
-import type { ExitWaitOptions, ShutdownAck } from '../daemon/shutdown.js';
+import type { ExitWaitOptions, ShutdownOutcome } from '../daemon/shutdown.js';
 import { isNewerVersion } from '../lib/version-order.js';
 import { resolveHaulerArgv } from '../hooks/hauler-binding.js';
 import { absentSocketCodes, socketErrorCode } from '../lib/socket-errors.js';
@@ -58,7 +58,7 @@ export interface EnsureDaemonDependencies extends ExitWaitOptions {
     timeoutMs: number,
   ) => Effect.Effect<PongMessage, WaitForDaemonError>;
   /** The graceful `shutdown` request to a daemon of another version. */
-  readonly requestShutdown: (socketPath: string) => Effect.Effect<ShutdownAck>;
+  readonly requestShutdown: (socketPath: string) => Effect.Effect<ShutdownOutcome>;
   readonly spawnDetachedDaemon: (
     config: DaemonConfigShape,
   ) => Effect.Effect<void, SpawnDaemonError>;
@@ -288,8 +288,8 @@ export const ensureDaemonVersion = (
         socketPath: config.socketPath,
       });
     }
-    const ack = yield* dependencies.requestShutdown(config.socketPath);
-    if (ack === 'refused') {
+    const shutdown = yield* dependencies.requestShutdown(config.socketPath);
+    if (shutdown.kind === 'refused') {
       return yield* new DaemonNewerError({
         clientVersion: version,
         daemon: identity,

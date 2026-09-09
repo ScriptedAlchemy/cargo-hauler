@@ -3,12 +3,21 @@ import * as Effect from 'effect/Effect';
 import * as Exit from 'effect/Exit';
 import * as Fiber from 'effect/Fiber';
 
-import { defaultEnsureDependencies, ensureDaemonRunning } from '../client/ensure-daemon.js';
-import type { EnsureDaemonDependencies } from '../client/ensure-daemon.js';
+import {
+  daemonIsAbsent,
+  defaultEnsureDependencies,
+  ensureDaemonRunning,
+} from '../client/ensure-daemon.js';
+import type {
+  EnsureDaemonDependencies,
+  WaitForDaemonError,
+} from '../client/ensure-daemon.js';
+import { formatMs } from '../lib/format.js';
 import { loadHaulerSnapshot } from '../query.js';
 
 import { resolveDaemonConfig } from './config.js';
 import type { DaemonConfigShape } from './config.js';
+import { pingDaemon } from './control.js';
 import { runDaemon } from './main.js';
 import type { StatusReport } from './protocol.js';
 import {
@@ -19,23 +28,31 @@ import {
   requestShutdown,
   waitForExit,
 } from './shutdown.js';
-import type { DaemonIdentity, ShutdownAck } from './shutdown.js';
+import type {
+  DaemonIdentity,
+  ExitWaitOptions,
+  ShutdownOutcome,
+} from './shutdown.js';
 
 export const daemonSubcommands = ['run', 'start', 'stop', 'status', 'restart'] as const;
 export type DaemonSubcommand = (typeof daemonSubcommands)[number];
+export type DaemonShutdownOutcome = ShutdownOutcome | { readonly kind: 'absent' };
 
 export interface DaemonControlResult {
   readonly message: string;
   readonly operation: 'daemon';
   readonly pid: number | null;
   /**
-   * `restart`: the pid that was serving before, null when none was. `start`
-   * and `status`: set only when a daemon of another version outlived the
-   * grace and was left serving (then equal to `pid`).
+   * `restart`: the pid that was serving before, null when none was. `stop`:
+   * the pid targeted by the request. `start` and `status`: set only when a
+   * daemon of another version outlived the grace and was left serving.
    */
   readonly previousPid?: number | null;
   readonly report: StatusReport | null;
-  readonly running: boolean;
+  /** Null when the client could not establish whether any daemon is running. */
+  readonly running: boolean | null;
+  /** Present for `stop`: the typed protocol/lifecycle outcome. */
+  readonly shutdown?: DaemonShutdownOutcome;
   readonly socketPath: string;
   readonly subcommand: DaemonSubcommand;
 }
@@ -57,7 +74,10 @@ export const daemonExitCode = (result: DaemonControlResult): number => {
     case 'status':
       return result.running && result.previousPid === undefined ? 0 : 1;
     case 'stop':
-      return 0;
+      return (result.shutdown?.kind === 'absent' ||
+        (result.shutdown?.kind === 'acknowledged' && result.running === false))
+        ? 0
+        : 1;
     default: {
       const exhaustive: never = result.subcommand;
       return exhaustive;
@@ -222,37 +242,122 @@ export const startDaemon = (
   );
 };
 
-const stopMessage = (ack: ShutdownAck): string => {
-  switch (ack) {
+const stopMessage = (
+  outcome: DaemonShutdownOutcome,
+  running: boolean | null,
+  pid: number | null,
+): string => {
+  switch (outcome.kind) {
     case 'acknowledged':
+      return running
+        ? `cargo-hauler daemon acknowledged the shutdown request, but pid ${pid} is still running`
+        : 'cargo-hauler daemon stopped';
     case 'connection-closed':
-      return 'cargo-hauler daemon stopped';
+      return running
+        ? `cargo-hauler daemon connection closed before acknowledging shutdown; pid ${pid} is still running`
+        : 'cargo-hauler daemon connection closed before acknowledging shutdown';
     case 'timeout':
-      return 'cargo-hauler daemon did not acknowledge the shutdown request';
+      return `cargo-hauler daemon did not acknowledge the shutdown request (${outcome.phase} timeout)`;
     case 'unreachable':
+      return 'cargo-hauler daemon could not be reached; its running state is unknown';
+    case 'absent':
       return 'cargo-hauler daemon is not running';
     case 'refused':
-      return 'cargo-hauler daemon refused the shutdown: it is newer than this client; stop it with `hauler daemon stop` from the current install';
+      return `cargo-hauler daemon refused the shutdown: ${outcome.message}`;
+    case 'protocol-error':
+      return `cargo-hauler daemon rejected the shutdown (${outcome.code}): ${outcome.message}`;
     default: {
-      const exhaustive: never = ack;
+      const exhaustive: never = outcome;
       return exhaustive;
     }
   }
 };
 
+export interface StopDaemonDependencies extends ExitWaitOptions {
+  readonly identify: (
+    socketPath: string,
+    timeoutMs: number,
+  ) => Effect.Effect<DaemonIdentity, WaitForDaemonError>;
+  readonly requestShutdown: (
+    socketPath: string,
+  ) => Effect.Effect<ShutdownOutcome>;
+}
+
+const defaultStopDependencies: StopDaemonDependencies = {
+  exitGraceMs,
+  identify: pingDaemon,
+  pollMs: 100,
+  processAlive,
+  requestShutdown,
+};
+
 export const stopDaemon = (
   config: DaemonConfigShape = resolveDaemonConfig(),
-): Effect.Effect<DaemonControlResult> =>
-  requestShutdown(config.socketPath).pipe(
-    Effect.map((ack) =>
-      result(config, 'stop', {
-        message: stopMessage(ack),
-        pid: null,
-        report: null,
-        running: false,
-      }),
+  dependencies: StopDaemonDependencies = defaultStopDependencies,
+): Effect.Effect<DaemonControlResult> => {
+  const stopped = (
+    shutdown: DaemonShutdownOutcome,
+    running: boolean | null,
+    pid: number | null,
+    previousPid?: number,
+  ): DaemonControlResult =>
+    result(config, 'stop', {
+      message: stopMessage(shutdown, running, pid),
+      pid,
+      ...(previousPid === undefined ? {} : { previousPid }),
+      report: null,
+      running,
+      shutdown,
+    });
+  const probeFailed = (message: string): DaemonControlResult =>
+    result(config, 'stop', {
+      message,
+      pid: null,
+      report: null,
+      running: null,
+    });
+  return dependencies.identify(config.socketPath, 1_000).pipe(
+    Effect.flatMap((identity) =>
+      dependencies.requestShutdown(config.socketPath).pipe(
+        Effect.flatMap((shutdown) => {
+          if (shutdown.kind === 'acknowledged') {
+            return waitForExit(identity.pid, dependencies).pipe(
+              Effect.map((exited) =>
+                stopped(shutdown, !exited, exited ? null : identity.pid, identity.pid),
+              ),
+            );
+          }
+          const running = dependencies.processAlive(identity.pid);
+          return Effect.succeed(
+            stopped(shutdown, running, running ? identity.pid : null, identity.pid),
+          );
+        }),
+      ),
     ),
+    Effect.catchTags({
+      ConnectionClosed: () =>
+        Effect.succeed(
+          probeFailed('cargo-hauler daemon identity connection closed before it could identify the process'),
+        ),
+      ControlTimeout: (error) =>
+        Effect.succeed(
+          probeFailed(
+            `cargo-hauler daemon identity probe timed out during ${error.phase}; its running state is unknown`,
+          ),
+        ),
+      DaemonUnreachable: (error) => {
+        const absent = daemonIsAbsent(error.cause);
+        return Effect.succeed(
+          absent
+            ? stopped({ kind: 'absent' }, false, null)
+            : probeFailed(
+                'cargo-hauler daemon identity probe could not reach the process; its running state is unknown',
+              ),
+        );
+      },
+    }),
   );
+};
 
 export const statusDaemon = (
   config: DaemonConfigShape = resolveDaemonConfig(),
@@ -366,11 +471,17 @@ export const restartDaemon = (
         running: true,
       });
     }
-    yield* dependencies.stop(config);
-    const exited = yield* waitForExit(before.pid, dependencies);
+    const stopped = yield* dependencies.stop(config);
+    const exited =
+      stopped.shutdown?.kind === 'acknowledged'
+        ? stopped.running === false
+        : yield* waitForExit(before.pid, dependencies);
     if (!exited) {
       return restart({
-        message: notReplacedMessage(before, dependencies.exitGraceMs),
+        message:
+          stopped.shutdown === undefined && stopped.running === null
+            ? `${stopped.message}; cargo-hauler daemon pid ${before.pid} (${before.version}) is still running ${formatMs(dependencies.exitGraceMs)} later; not restarted — retry once it has exited`
+            : notReplacedMessage(before, dependencies.exitGraceMs),
         pid: before.pid,
         previousPid: before.pid,
         report: null,

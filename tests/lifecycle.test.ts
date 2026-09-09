@@ -28,7 +28,11 @@ import {
   type RestartDaemonDependencies,
 } from '../src/daemon/lifecycle.js';
 import { bindDaemonSocket, runDaemon, socketListenPath } from '../src/daemon/main.js';
-import { daemonIdentity, type DaemonIdentity } from '../src/daemon/shutdown.js';
+import {
+  daemonIdentity,
+  requestShutdown,
+  type DaemonIdentity,
+} from '../src/daemon/shutdown.js';
 import {
   monitorSocketOwnership,
   readSocketIdentity,
@@ -44,6 +48,15 @@ const connectOnce = (socketPath: string): Effect.Effect<void, Error> =>
       resume(Effect.void);
     });
     client.once('error', (error) => resume(Effect.fail(error)));
+  });
+
+const stopInProcess = (config: DaemonConfigShape): Effect.Effect<DaemonControlResult> =>
+  stopDaemon(config, {
+    exitGraceMs: 5_000,
+    identify: pingDaemon,
+    pollMs: 10,
+    processAlive: () => existsSync(config.socketPath),
+    requestShutdown,
   });
 
 describe('signal shutdown lifecycle', () => {
@@ -139,7 +152,7 @@ describe('signal shutdown lifecycle', () => {
       // `signaled` guard swallow repeats.
       expect(Object.hasOwn(added[0] as object, 'listener')).toBe(false);
 
-      yield* stopDaemon(config);
+      yield* stopInProcess(config);
       const outcome = yield* Effect.promise(() => running);
       expect(outcome.message).toBe('completed');
       expect(process.rawListeners('SIGINT').filter((listener) => !before.has(listener))).toEqual(
@@ -163,7 +176,7 @@ describe('daemon start under the one-version rule', () => {
         requestShutdown: () =>
           Effect.sync(() => {
             calls.push('shutdown');
-            return 'acknowledged' as const;
+            return { kind: 'acknowledged' } as const;
           }),
         spawnDetachedDaemon: () => Effect.die(new Error('spawn should not run')),
         waitForDaemon: () => Effect.die(new Error('wait should not run')),
@@ -294,6 +307,29 @@ describe('daemon restart', () => {
       expect(daemonExitCode(result)).toBe(1);
     }));
 
+  it.live('does not claim a shutdown request was sent when the nested identity probe failed', () =>
+    Effect.gen(function* () {
+      const { dependencies } = fakes({
+        exitGraceMs: 40,
+        processAlive: () => true,
+        stop: () =>
+          Effect.succeed(
+            controlResult('stop', {
+              message: 'cargo-hauler daemon identity probe timed out',
+              pid: null,
+              running: null,
+            }),
+          ),
+      });
+      const result = yield* restartDaemon(config, dependencies);
+
+      expect(result.message).toContain('identity probe timed out');
+      expect(result.message).toContain('not restarted');
+      expect(result.message).not.toContain('after the shutdown request');
+      expect(result).toMatchObject({ pid: 41, previousPid: 41, running: true });
+      expect(daemonExitCode(result)).toBe(1);
+    }));
+
   it('is a daemon subcommand', () => {
     expect(parseDaemonSubcommand(['restart'])).toBe('restart');
     expect(() => parseDaemonSubcommand(['reload'])).toThrow('run, start, stop, status, restart');
@@ -342,7 +378,18 @@ describe('daemon restart', () => {
           return alive;
         },
         start: startInProcess,
-        stop: stopDaemon,
+        stop: (config) =>
+          stopDaemon(config, {
+            exitGraceMs: 5_000,
+            identify: pingDaemon,
+            pollMs: 10,
+            processAlive: () => {
+              const alive = existsSync(config.socketPath);
+              sawSocketGone ||= !alive;
+              return alive;
+            },
+            requestShutdown,
+          }),
       });
       expect(sawSocketGone).toBe(true);
       expect(result.running).toBe(true);
@@ -350,7 +397,7 @@ describe('daemon restart', () => {
       expect(result.message).toContain('restarted');
       const after = yield* pingDaemon(liveConfig.socketPath, 500);
       expect(after.startedAtMs).toBeGreaterThan(startedAt);
-      yield* stopDaemon(liveConfig);
+      yield* stopInProcess(liveConfig);
     }), 30_000);
 });
 
