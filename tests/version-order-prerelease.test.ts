@@ -53,6 +53,26 @@ describe('prerelease version precedence', () => {
     );
   });
 
+  it('orders large numeric identifiers without parsing BigInts', () => {
+    const original = globalThis.BigInt;
+    globalThis.BigInt = new Proxy(original, {
+      apply: () => {
+        throw new Error('Version ordering must not parse untrusted counters as BigInt');
+      },
+    });
+    try {
+      const counter = '9'.repeat(1024 * 1024);
+      assert.equal(compareVersions(`1.0.0-rc.${counter}`, '1.0.0-rc.2'), 1);
+      assert.equal(compareVersions('1.0.0-rc.2', `1.0.0-rc.${counter}`), -1);
+      // Preserve the helper's existing tolerant handling of leading zeroes.
+      assert.equal(compareVersions('1.0.0-rc.0002', '1.0.0-rc.2'), 0);
+      assert.equal(compareVersions('1.0.0-rc.000', '1.0.0-rc.0'), 0);
+      assert.equal(compareVersions('1.0.0-rc.0002', '1.0.0-rc.10'), -1);
+    } finally {
+      globalThis.BigInt = original;
+    }
+  });
+
   it('ignores build metadata and keeps a final release above prereleases', () => {
     assert.equal(compareVersions('1.0.0-rc.10+build.1', '1.0.0-rc.10+build.2'), 0);
     assert.equal(compareVersions('1.0.0-rc.10+build.2', '1.0.0'), -1);
