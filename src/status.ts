@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { currentUid } from './lib/private-state.js';
+
 /**
  * Shared state-root resolution used by the daemon config, CLI, hooks, and
  * tests. Defaults must be machine-agnostic: a per-user cache directory
@@ -77,30 +79,66 @@ export const isNamedPipePath = (path: string): boolean => path.startsWith(namedP
 const maxSocketPathBytes = (platform: NodeJS.Platform): number =>
   platform === 'linux' ? 107 : 103;
 
-const stateDirDigest = (stateDir: string): string =>
-  createHash('sha256').update(stateDir.toLowerCase()).digest('hex').slice(0, 16);
+/**
+ * Windows paths are case-insensitive, so two spellings name one state dir
+ * and must digest alike or clients split across pipes. Unix paths are
+ * case-sensitive: folding them mapped case-distinct state dirs onto a single
+ * control endpoint, pointing two independent daemons at one socket.
+ */
+const stateDirDigest = (stateDir: string, platform: NodeJS.Platform): string =>
+  createHash('sha256')
+    .update(platform === 'win32' ? stateDir.toLowerCase() : stateDir)
+    .digest('hex')
+    .slice(0, 16);
+
+/**
+ * The directory a relocated socket lives in. `XDG_RUNTIME_DIR` is already
+ * per-user, but `TMPDIR` and `/tmp` are shared, so the socket never sits
+ * directly in a runtime root: it goes one level down into a directory the
+ * daemon creates 0700. The uid keeps two accounts sharing one temp root from
+ * deriving the same path, where the first to bind would own the name.
+ */
+export const socketRuntimeDirName = (uid: number | null): string =>
+  `cargo-hauler-${uid === null ? 'anon' : uid}`;
 
 /**
  * The daemon's control endpoint for a state dir: `daemon.sock` inside it on
  * unix, a named pipe on Windows. When the state dir is too deep for
  * `sun_path` (a realpath'd macOS temp root gets there), the socket moves to
- * a short per-user runtime path keyed by a digest of the state dir, so every
+ * an owner-private runtime directory under the first runtime root whose
+ * resulting path still fits, keyed by a digest of the state dir, so every
  * process resolving that state dir still agrees on one endpoint.
  */
 export const daemonSocketPath = (
   stateDir: string,
   platform: NodeJS.Platform = process.platform,
   env: Readonly<Record<string, string | undefined>> = process.env,
+  uid: number | null = currentUid(),
 ): string => {
+  const digest = stateDirDigest(stateDir, platform);
   if (platform === 'win32') {
-    return `${namedPipePrefix}cargo-hauler-${stateDirDigest(stateDir)}`;
+    return `${namedPipePrefix}cargo-hauler-${digest}`;
   }
+  const limit = maxSocketPathBytes(platform);
   const inState = join(stateDir, 'daemon.sock');
-  if (Buffer.byteLength(inState) <= maxSocketPathBytes(platform)) {
+  if (Buffer.byteLength(inState) <= limit) {
     return inState;
   }
-  const runtimeDir = env.XDG_RUNTIME_DIR ?? env.TMPDIR ?? tmpdir();
-  return join(runtimeDir, `cargo-hauler-${stateDirDigest(stateDir)}.sock`);
+  const leaf = join(socketRuntimeDirName(uid), `${digest}.sock`);
+  const candidates = [env.XDG_RUNTIME_DIR, env.TMPDIR, tmpdir()]
+    .filter((root): root is string => root !== undefined && root.length > 0)
+    .map((root) => join(root, leaf));
+  // A runtime root long enough to overflow `sun_path` is no better than the
+  // state dir it replaces, so the next one is tried. If none fit, the
+  // shortest candidate at least fails at bind with a path worth reading.
+  return (
+    candidates.find((candidate) => Buffer.byteLength(candidate) <= limit) ??
+    candidates.reduce(
+      (shortest, candidate) =>
+        Buffer.byteLength(candidate) < Buffer.byteLength(shortest) ? candidate : shortest,
+      join(tmpdir(), leaf),
+    )
+  );
 };
 
 /**

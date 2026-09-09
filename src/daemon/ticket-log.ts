@@ -1,8 +1,10 @@
-import { createWriteStream, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { createWriteStream, readdirSync, rmSync } from 'node:fs';
 import type { WriteStream } from 'node:fs';
 import { join } from 'node:path';
 
 import * as Effect from 'effect/Effect';
+
+import { ensurePrivateDir, ensurePrivateFile } from '../lib/private-state.js';
 
 import type { LedgerApi } from './ledger.js';
 import { parseTicket } from './protocol.js';
@@ -111,7 +113,11 @@ export const openTicketLog = (
 ): TicketLogWriter | null => {
   const path = ticketLogPath(directory, ticket);
   try {
-    mkdirSync(directory, { recursive: true });
+    ensurePrivateDir(directory);
+    // Complete command output is the most exposed thing the daemon writes;
+    // the mode is settled before the stream opens so no chunk is ever
+    // world-readable, not even briefly.
+    ensurePrivateFile(path);
     return new TicketLogWriter(path, createWriteStream(path, { flags: 'w' }), maxBytes);
   } catch {
     return null;

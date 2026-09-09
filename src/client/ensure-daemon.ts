@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
-import { closeSync, existsSync, mkdirSync, openSync } from 'node:fs';
+import { closeSync, existsSync, openSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,6 +30,7 @@ import { isNewerVersion } from '../lib/version-order.js';
 import { resolveHaulerArgv } from '../hooks/hauler-binding.js';
 import { absentSocketCodes, socketErrorCode } from '../lib/socket-errors.js';
 import { isHaulerInternalEnvironmentVariable } from '../lib/cargo-env.js';
+import { ensurePrivateDir, ensurePrivateFile } from '../lib/private-state.js';
 
 export class SpawnDaemonError extends Data.TaggedError('SpawnDaemonError')<{
   readonly cause: unknown;
@@ -207,7 +208,11 @@ export const spawnDetachedDaemon = (
   Effect.acquireUseRelease(
     Effect.try({
       try: () => {
-        mkdirSync(config.stateDir, { recursive: true });
+        ensurePrivateDir(config.stateDir);
+        // The daemon inherits this descriptor as stdout and stderr, so its
+        // whole log is written through it; the mode is settled before the
+        // child exists.
+        ensurePrivateFile(config.logPath);
         return openSync(config.logPath, 'a');
       },
       catch: (cause) => new SpawnDaemonError({ cause }),

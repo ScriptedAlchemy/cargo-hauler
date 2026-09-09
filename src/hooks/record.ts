@@ -1,6 +1,7 @@
-import { appendFileSync, mkdirSync } from 'node:fs';
+import { appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { ensurePrivateDir, ensurePrivateFile } from '../lib/private-state.js';
 import { resolveStateDir } from '../status.js';
 
 export interface HookRecord {
@@ -23,6 +24,8 @@ export const appendHookRecord = (
   record: HookRecord,
   stateDir: string = resolveStateDir(),
 ): void => {
-  mkdirSync(stateDir, { recursive: true });
-  appendFileSync(join(stateDir, hookEventsFileName), `${JSON.stringify(record)}\n`);
+  const path = join(stateDir, hookEventsFileName);
+  ensurePrivateDir(stateDir);
+  ensurePrivateFile(path);
+  appendFileSync(path, `${JSON.stringify(record)}\n`);
 };

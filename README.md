@@ -635,7 +635,7 @@ Per-host notes and hook timeouts are in [docs/install.md](docs/install.md).
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `CARGO_HAULER_STATE_DIR` | Per-user cache directory | Unix socket or Windows named pipe source, SQLite ledger, daemon log, pid lock, `hook-state.json`, `hook-events.jsonl`, and the per-ticket output logs under `tickets/`. |
+| `CARGO_HAULER_STATE_DIR` | Per-user cache directory | Unix socket or Windows named pipe source, SQLite ledger, daemon log, pid lock, `hook-state.json`, `hook-events.jsonl`, and the per-ticket output logs under `tickets/`. Owner-private on Linux and macOS: the directory is `0700` and its sensitive files `0600`, and an unsafe or unowned path is refused rather than reused. |
 | `CARGO_HAULER_CARGO_BIN` | `$CARGO_HOME/bin/cargo` | Cargo binary for daemon-started work; bare `cargo` is the last fallback. Never resolved through `PATH`. Read from the daemon's own environment (export it where the daemon starts, or before `hauler daemon start`); clients do not forward it. |
 | `CARGO_HAULER_MAX_CONCURRENT` | cores ÷ 8, clamped to 5–16 | Global admission permits for Cargo processes across all lanes; an integer >= 1. |
 | `CARGO_HAULER_OVERLAP_EXECUTION` | `1` | Hand a lane to its next request once a `test`/`nextest`/`bench`/`run` leader reports its build finished, overlapping the next compile with the leader's execution phase. `0` keeps a lane strictly one process at a time. |
@@ -672,10 +672,46 @@ as a warning (daemon log, or stderr for hand-run commands) and the default
 applies; only `0` or `off` disables an arm that documents that contract.
 The state directory defaults to `$XDG_CACHE_HOME/cargo-hauler`, otherwise
 `~/.cache/cargo-hauler` on Linux, `~/Library/Caches/cargo-hauler` on macOS, and
-`%LOCALAPPDATA%\cargo-hauler` on Windows. When `CARGO_HAULER_KACHE_INDEX` is
+`%LOCALAPPDATA%\cargo-hauler` on Windows. Its contents are owner-private, and
+the daemon is a single user's, not a shared service — see
+[State directory ownership](#state-directory-ownership). When
+`CARGO_HAULER_KACHE_INDEX` is
 unset, the daemon reads kache's configured local store from
 `$XDG_CONFIG_HOME/kache/config.toml` or `~/.config/kache/config.toml` and opens
 `<local_store>/index.db` read-only.
+
+### State directory ownership
+
+The daemon is local control for the user who owns its state directory, not a
+shared multi-user service. Everything under the state directory — complete
+command output in `tickets/`, the ledger, the daemon log, the passthrough
+spool, the hook records, the jobserver FIFO, the control socket — is that
+one account's, and there is no mechanism for a second user to submit work to
+another user's daemon.
+
+On Linux and macOS the daemon enforces that boundary rather than inheriting
+it from the umask:
+
+- Directories cargo-hauler creates are `0700`, and sensitive files `0600`,
+  whatever umask the invoking shell had. An existing state directory that
+  the running user already owns is tightened in place on the next start;
+  its contents are preserved.
+- Only the state directory and the entries cargo-hauler owns are changed. A
+  parent you configured through `CARGO_HAULER_STATE_DIR` — a shared volume,
+  a RAM disk — is never chmod'ed.
+- A state path that is a symbolic link, is the wrong kind of entry, or is
+  owned by another user is refused by name instead of being followed,
+  chmod'ed, or deleted. Fix or remove the path and start again; cargo-hauler
+  will not act on another account's file on your behalf.
+- When the state directory is too deep for the kernel's socket path limit,
+  the control socket moves to a `cargo-hauler-<uid>` directory (mode `0700`)
+  under `XDG_RUNTIME_DIR`, `TMPDIR`, or the system temporary directory —
+  never directly into a shared temporary root. Two accounts sharing one
+  temporary root get separate directories.
+
+Windows has neither POSIX modes nor uids, and its control endpoint is a
+named pipe rather than a filesystem entry, so none of the above applies
+there; state files keep the permissions the filesystem gives them.
 
 ## Runtime behavior and caveats
 
