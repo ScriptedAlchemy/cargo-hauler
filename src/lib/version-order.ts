@@ -44,7 +44,41 @@ export const compareVersions = (left: string, right: string): -1 | 0 | 1 => {
   if (b.prerelease === null) {
     return -1;
   }
-  return a.prerelease < b.prerelease ? -1 : 1;
+  const leftParts = a.prerelease.split('.');
+  const rightParts = b.prerelease.split('.');
+  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
+    const leftPart = leftParts[index];
+    const rightPart = rightParts[index];
+    if (leftPart === rightPart) {
+      continue;
+    }
+    if (leftPart === undefined) {
+      return -1;
+    }
+    if (rightPart === undefined) {
+      return 1;
+    }
+    const leftNumeric = /^\d+$/u.test(leftPart);
+    const rightNumeric = /^\d+$/u.test(rightPart);
+    if (leftNumeric && rightNumeric) {
+      // Compare decimal strings in linear time: peer-supplied counters can
+      // be large, and constructing arbitrary-precision integers blocks I/O.
+      const leftDigits = leftPart.replace(/^0+/u, '') || '0';
+      const rightDigits = rightPart.replace(/^0+/u, '') || '0';
+      if (leftDigits === rightDigits) {
+        continue;
+      }
+      if (leftDigits.length !== rightDigits.length) {
+        return leftDigits.length < rightDigits.length ? -1 : 1;
+      }
+      return leftDigits < rightDigits ? -1 : 1;
+    }
+    if (leftNumeric !== rightNumeric) {
+      return leftNumeric ? -1 : 1;
+    }
+    return leftPart < rightPart ? -1 : 1;
+  }
+  return 0;
 };
 
 /** True when `candidate` is strictly newer than `reference`. */
