@@ -442,9 +442,10 @@ describe('daemon restart', () => {
       });
       const scope = yield* Scope.make();
       yield* Effect.addFinalizer(() => Scope.close(scope, Exit.void));
+      let activeDaemon: Fiber.Fiber<unknown, unknown> | undefined;
       const startInProcess = (): Effect.Effect<DaemonControlResult> =>
         Effect.gen(function* () {
-          yield* Effect.forkIn(runDaemon(liveConfig), scope);
+          activeDaemon = yield* Effect.forkIn(runDaemon(liveConfig), scope);
           const pong = yield* pingDaemon(liveConfig.socketPath, 500).pipe(
             Effect.retry(Schedule.spaced('50 millis').pipe(Schedule.upTo({ times: 400 }))),
           );
@@ -459,11 +460,33 @@ describe('daemon restart', () => {
           };
           return started;
         }).pipe(Effect.orDie);
+      let sawSocketGone = false;
+      const stopInProcessAndWait = (config: DaemonConfigShape): Effect.Effect<DaemonControlResult> =>
+        Effect.gen(function* () {
+          const daemon = activeDaemon;
+          const stopped = yield* stopDaemon(config, {
+            exitGraceMs: 5_000,
+            identify: pingDaemon,
+            pollMs: 10,
+            processAlive: () => {
+              const alive = existsSync(config.socketPath);
+              sawSocketGone ||= !alive;
+              return alive;
+            },
+            requestShutdown,
+          });
+          if (daemon !== undefined) {
+            // Socket removal precedes the outer singleton-lock finalizer.
+            // A real restart waits for process exit, so this in-process stand-in
+            // must wait for the daemon fiber's complete teardown too.
+            yield* Fiber.await(daemon);
+          }
+          return stopped;
+        });
       const first = yield* startInProcess();
       const startedAt = (yield* pingDaemon(liveConfig.socketPath, 500)).startedAtMs;
       yield* Effect.sleep('5 millis');
 
-      let sawSocketGone = false;
       const result = yield* restartDaemon(liveConfig, {
         exitGraceMs: 5_000,
         identify: daemonIdentity,
@@ -476,18 +499,7 @@ describe('daemon restart', () => {
           return alive;
         },
         start: startInProcess,
-        stop: (config) =>
-          stopDaemon(config, {
-            exitGraceMs: 5_000,
-            identify: pingDaemon,
-            pollMs: 10,
-            processAlive: () => {
-              const alive = existsSync(config.socketPath);
-              sawSocketGone ||= !alive;
-              return alive;
-            },
-            requestShutdown,
-          }),
+        stop: stopInProcessAndWait,
       });
       expect(sawSocketGone).toBe(true);
       expect(result.running).toBe(true);
@@ -495,7 +507,7 @@ describe('daemon restart', () => {
       expect(result.message).toContain('restarted');
       const after = yield* pingDaemon(liveConfig.socketPath, 500);
       expect(after.startedAtMs).toBeGreaterThan(startedAt);
-      yield* stopInProcess(liveConfig);
+      yield* stopInProcessAndWait(liveConfig);
     }), 30_000);
 });
 
