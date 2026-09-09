@@ -33,7 +33,7 @@ jobs:
           registry-url: https://registry.npmjs.org/
 
       - name: Install release tooling
-        run: npm install --global npm@11.19.1 pnpm@11.23.0
+        run: npm install --global npm@11.19.1 "$(node -p "require('./package.json').packageManager")"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
