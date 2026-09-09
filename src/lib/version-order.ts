@@ -61,13 +61,17 @@ export const compareVersions = (left: string, right: string): -1 | 0 | 1 => {
     const leftNumeric = /^\d+$/u.test(leftPart);
     const rightNumeric = /^\d+$/u.test(rightPart);
     if (leftNumeric && rightNumeric) {
-      // Prerelease counters have no size limit in SemVer; do not round them.
-      const leftNumber = BigInt(leftPart);
-      const rightNumber = BigInt(rightPart);
-      if (leftNumber === rightNumber) {
+      // Compare decimal strings in linear time: peer-supplied counters can
+      // be large, and constructing arbitrary-precision integers blocks I/O.
+      const leftDigits = leftPart.replace(/^0+/u, '') || '0';
+      const rightDigits = rightPart.replace(/^0+/u, '') || '0';
+      if (leftDigits === rightDigits) {
         continue;
       }
-      return leftNumber < rightNumber ? -1 : 1;
+      if (leftDigits.length !== rightDigits.length) {
+        return leftDigits.length < rightDigits.length ? -1 : 1;
+      }
+      return leftDigits < rightDigits ? -1 : 1;
     }
     if (leftNumeric !== rightNumeric) {
       return leftNumeric ? -1 : 1;
