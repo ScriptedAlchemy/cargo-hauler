@@ -328,7 +328,13 @@ const retireLegacyRelocatedDaemon = (
     if (legacyPath === null || legacyPath === config.socketPath) {
       return;
     }
-    const legacy = yield* pingOrAbsent(legacyPath, dependencies, pingTimeoutMs);
+    const legacy = yield* pingOrAbsent(legacyPath, dependencies, pingTimeoutMs).pipe(
+      // Nothing this build writes lives at that path, so a probe that fails
+      // for any other reason — a hung daemon, an `EACCES` on a leftover
+      // belonging to another account — is not worth failing the caller's
+      // command over; the spawn at the current path proceeds instead.
+      Effect.orElseSucceed(() => null),
+    );
     if (legacy === null) {
       return;
     }

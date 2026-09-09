@@ -472,6 +472,26 @@ describe('directional replacement', () => {
         expect(calls).toEqual([]);
       }));
 
+    it.effect('does not fail the caller when the legacy path itself cannot be probed', () =>
+      Effect.gen(function* () {
+        // Nothing this build writes lives there — an `EACCES` on another
+        // account's leftover at a colliding digest must not break every
+        // command run from this state dir.
+        const { calls, dependencies } = tracking({
+          pingDaemon: (socketPath) =>
+            Effect.fail(
+              socketPath === legacyPath
+                ? new DaemonUnreachableError({
+                    socketPath,
+                    cause: Object.assign(new Error('permission denied'), { code: 'EACCES' }),
+                  })
+                : absentDaemon(socketPath),
+            ),
+        });
+        expect(yield* ensureDaemonVersion(deepConfig, dependencies)).toBeNull();
+        expect(calls).toEqual([]);
+      }));
+
     it.effect('does not probe the legacy path when the socket lives in the state dir', () =>
       Effect.gen(function* () {
         const answered: string[] = [];

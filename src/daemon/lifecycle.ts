@@ -6,6 +6,7 @@ import * as Fiber from 'effect/Fiber';
 import { defaultEnsureDependencies, ensureDaemonRunning } from '../client/ensure-daemon.js';
 import type { EnsureDaemonDependencies } from '../client/ensure-daemon.js';
 import { loadHaulerSnapshot } from '../query.js';
+import { legacyRelocatedSocketPath } from '../status.js';
 
 import { resolveDaemonConfig } from './config.js';
 import type { DaemonConfigShape } from './config.js';
@@ -164,6 +165,9 @@ const result = (
   subcommand,
 });
 
+const causeMessage = (cause: unknown): string =>
+  cause instanceof Error ? cause.message : String(cause);
+
 /**
  * `hauler daemon start`: `ensureDaemonRunning`, so a daemon of another
  * version answering the socket is replaced on the way. One that outlives the
@@ -217,7 +221,18 @@ export const startDaemon = (
           }),
         ),
       DaemonUnreachable: failedStart,
-      SpawnDaemonError: failedStart,
+      // A refused state path fails before the log is opened, so pointing at
+      // the log alone would send the user to a file that was never written;
+      // the reason names the path they have to fix.
+      SpawnDaemonError: (error) =>
+        Effect.succeed(
+          result(config, 'start', {
+            message: `cargo-hauler daemon did not come up; check ${config.logPath}: ${causeMessage(error.cause)}`,
+            pid: null,
+            report: null,
+            running: false,
+          }),
+        ),
     }),
   );
 };
@@ -242,8 +257,18 @@ const stopMessage = (ack: ShutdownAck): string => {
 
 export const stopDaemon = (
   config: DaemonConfigShape = resolveDaemonConfig(),
+  shutdown: (socketPath: string) => Effect.Effect<ShutdownAck> = requestShutdown,
 ): Effect.Effect<DaemonControlResult> =>
-  requestShutdown(config.socketPath).pipe(
+  shutdown(config.socketPath).pipe(
+    Effect.flatMap((ack) => {
+      // A daemon from a pre-hardening install serves the previous relocated
+      // path and still holds this state dir's lock, so stopping only the
+      // current endpoint would report "not running" while it kept running.
+      const legacyPath = legacyRelocatedSocketPath(config.stateDir);
+      return ack === 'unreachable' && legacyPath !== null && legacyPath !== config.socketPath
+        ? shutdown(legacyPath)
+        : Effect.succeed(ack);
+    }),
     Effect.map((ack) =>
       result(config, 'stop', {
         message: stopMessage(ack),
@@ -290,7 +315,7 @@ export const statusDaemon = (
       SpawnDaemonError: (error) =>
         Effect.succeed(
           result(config, 'status', {
-            message: `cargo-hauler daemon could not be started; check ${config.logPath}: ${error.cause instanceof Error ? error.cause.message : String(error.cause)}`,
+            message: `cargo-hauler daemon could not be started; check ${config.logPath}: ${causeMessage(error.cause)}`,
             pid: null,
             report: null,
             running: false,

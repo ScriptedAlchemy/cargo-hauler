@@ -1,4 +1,4 @@
-import { chmodSync, closeSync, lstatSync, mkdirSync, openSync } from 'node:fs';
+import { chmodSync, closeSync, constants, lstatSync, mkdirSync, openSync } from 'node:fs';
 
 /**
  * The one owner-private filesystem policy for cargo-hauler state.
@@ -141,6 +141,17 @@ const entryStats = (path: string): PrivateEntryStats | undefined =>
   lstatSync(path, { throwIfNoEntry: false });
 
 /**
+ * `'a'` with the link refusal the rest of this module applies: the file is
+ * created only when the check below found nothing, and a symbolic link
+ * planted in that window fails the open with `ELOOP` rather than writing
+ * through it. Windows has no `O_NOFOLLOW` — the constant is absent at
+ * runtime despite its type, hence the fallback — and no POSIX modes to
+ * protect either.
+ */
+const appendCreateFlags =
+  constants.O_APPEND | constants.O_CREAT | constants.O_WRONLY | (constants.O_NOFOLLOW ?? 0);
+
+/**
  * `mkdir` and `open` mask their mode argument with the umask, so the mode is
  * re-applied afterwards: that is what makes the result independent of the
  * shell that happened to start the daemon, and it is also the step that
@@ -160,6 +171,16 @@ export const ensurePrivateDir = (dir: string): void => {
   } else {
     assertOwnedPrivateEntry(dir, existing, 'directory');
   }
+  // Re-read rather than trust the check above: recursive `mkdir` resolves an
+  // existing path with `stat`, so a symbolic link planted in the window
+  // between them is accepted silently and the chmod would follow it. The
+  // relocated socket's runtime directory is created in a shared temporary
+  // root, where another account can reach that window.
+  const created = entryStats(dir);
+  if (created === undefined) {
+    throw new UnsafeStatePathError(dir, 'it disappeared while being created');
+  }
+  assertOwnedPrivateEntry(dir, created, 'directory');
   chmodSync(dir, privateDirMode);
 };
 
@@ -188,7 +209,7 @@ export const hardenPrivateEntry = (path: string, kind: PrivateEntryKind): void =
  */
 export const ensurePrivateFile = (path: string): void => {
   if (entryStats(path) === undefined) {
-    closeSync(openSync(path, 'a', privateFileMode));
+    closeSync(openSync(path, appendCreateFlags, privateFileMode));
   }
   hardenPrivateEntry(path, 'file');
 };

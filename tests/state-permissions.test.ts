@@ -50,9 +50,6 @@ import { daemonSocketPath } from '../src/status.js';
 const posix = currentUid() !== null;
 const skipOnNonPosix = !posix;
 
-/** Root owns everything it stats, so the refusal assertions cannot be staged. */
-const skipUnlessUnprivileged = !posix || currentUid() === 0;
-
 const permissionsOf = (path: string): number => statSync(path).mode & 0o777;
 
 const scratch = (name: string): string => mkdtempSync(join(tmpdir(), `cargo-hauler-${name}-`));
@@ -65,6 +62,14 @@ const withUmask = <A>(mask: number, body: () => A): A => {
     process.umask(previous);
   }
 };
+
+/**
+ * Stage what a pre-hardening install or an operator left behind. `mkdir` and
+ * `writeFile` mask their `mode:` with the umask, so a fixture written under a
+ * `umask 077` shell would already be 0700 and prove nothing; the conventional
+ * umask makes the mode the fixture asks for the mode it gets.
+ */
+const staged = <A>(body: () => A): A => withUmask(0o022, body);
 
 const withScratch = <A>(name: string, body: (root: string) => A): A => {
   const root = scratch(name);
@@ -127,9 +132,11 @@ describe.skipIf(skipOnNonPosix)('owner-private state policy', () => {
   it('migrates an existing owned installation in place, keeping its contents', () => {
     withScratch('policy-migrate', (root) => {
       const stateDir = join(root, 'state');
-      mkdirSync(stateDir, { recursive: true, mode: 0o755 });
       const log = join(stateDir, 'daemon.log');
-      writeFileSync(log, 'existing output\n', { mode: 0o644 });
+      staged(() => {
+        mkdirSync(stateDir, { recursive: true, mode: 0o755 });
+        writeFileSync(log, 'existing output\n', { mode: 0o644 });
+      });
 
       ensurePrivateDir(stateDir);
       ensurePrivateFile(log);
@@ -143,9 +150,11 @@ describe.skipIf(skipOnNonPosix)('owner-private state policy', () => {
   it('never widens or touches the operator parent of the state dir it tightens', () => {
     withScratch('policy-parent', (root) => {
       const parent = join(root, 'shared');
-      mkdirSync(parent, { recursive: true, mode: 0o755 });
       const stateDir = join(parent, 'cargo-hauler');
-      mkdirSync(stateDir, { mode: 0o755 });
+      staged(() => {
+        mkdirSync(parent, { recursive: true, mode: 0o755 });
+        mkdirSync(stateDir, { mode: 0o755 });
+      });
 
       ensurePrivateDir(stateDir);
 
@@ -170,7 +179,7 @@ describe.skipIf(skipOnNonPosix)('owner-private state policy', () => {
   it('refuses a symlinked state dir without following it or changing the target', () => {
     withScratch('policy-dir-symlink', (root) => {
       const target = join(root, 'elsewhere');
-      mkdirSync(target, { mode: 0o755 });
+      staged(() => mkdirSync(target, { mode: 0o755 }));
       const link = join(root, 'state');
       symlinkSync(target, link);
 
@@ -185,7 +194,7 @@ describe.skipIf(skipOnNonPosix)('owner-private state policy', () => {
   it('refuses a symlinked sensitive file without following it or changing the target', () => {
     withScratch('policy-file-symlink', (root) => {
       const target = join(root, 'victim');
-      writeFileSync(target, 'not ours\n', { mode: 0o644 });
+      staged(() => writeFileSync(target, 'not ours\n', { mode: 0o644 }));
       const link = join(root, 'daemon.log');
       symlinkSync(target, link);
 
@@ -390,7 +399,9 @@ describe.skipIf(skipOnNonPosix)('relocated control socket', () => {
     }));
 });
 
-describe.skipIf(skipUnlessUnprivileged)('socket publication and stale cleanup', () => {
+// Ownership is asserted through `fakeStats`, not a second account, so these
+// run as root too — where the refusals matter most.
+describe.skipIf(skipOnNonPosix)('socket publication and stale cleanup', () => {
   it('refuses to remove a symlink standing where the socket belongs, leaving the target', async () => {
     await withScratchAsync('socket-symlink', async (root) => {
       const victim = join(root, 'victim');
