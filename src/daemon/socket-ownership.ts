@@ -1,7 +1,9 @@
-import { rm, stat } from 'node:fs/promises';
+import { lstat, rm } from 'node:fs/promises';
 
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
+
+import { assertOwnedPrivateEntry } from '../lib/private-state.js';
 
 export interface SocketIdentity {
   readonly device: number;
@@ -13,8 +15,17 @@ export class SocketOwnershipLostError extends Data.TaggedError('SocketOwnershipL
   readonly socketPath: string;
 }> {}
 
+/**
+ * Identity is read with `lstat`, not `stat`: a symlink planted at the socket
+ * path would otherwise contribute its target's inode, so the guard below
+ * would compare — and later unlink — an entry chosen by whoever made the
+ * link. A relocated socket lives in a shared temp tree, so that path is
+ * reachable to other accounts and the check is not theoretical. Substituting
+ * a different entry of any type is already caught by the inode comparison.
+ */
 export const readSocketIdentity = async (socketPath: string): Promise<SocketIdentity> => {
-  const metadata = await stat(socketPath);
+  const metadata = await lstat(socketPath);
+  assertOwnedPrivateEntry(socketPath, metadata, 'any');
   return {
     device: metadata.dev,
     inode: metadata.ino,
@@ -32,6 +43,22 @@ export const removeSocketIfOwned = async (
   if (current !== null && identitiesMatch(current, expected)) {
     await rm(socketPath, { force: true });
   }
+};
+
+/**
+ * Clear a crashed daemon's socket before publishing ours. This is the one
+ * place cargo-hauler deletes an entry it did not create, so it deletes only
+ * a socket it owns: a symlink, a foreign entry, or anything that is not a
+ * socket is refused with the path named, because unlinking it would be
+ * acting on somebody else's file rather than reclaiming our own.
+ */
+export const removeStaleSocketEntry = async (socketPath: string): Promise<void> => {
+  const existing = await lstat(socketPath).catch(() => null);
+  if (existing === null) {
+    return;
+  }
+  assertOwnedPrivateEntry(socketPath, existing, 'socket');
+  await rm(socketPath, { force: true });
 };
 
 /**

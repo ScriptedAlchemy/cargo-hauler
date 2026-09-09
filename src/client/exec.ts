@@ -1,4 +1,4 @@
-import { appendFileSync, mkdirSync } from 'node:fs';
+import { appendFileSync } from 'node:fs';
 import { constants as osConstants } from 'node:os';
 import { join } from 'node:path';
 
@@ -38,6 +38,7 @@ import type {
 
 import { AnsiStreamStripper } from '../lib/ansi.js';
 import { shortId } from '../lib/id.js';
+import { ensurePrivateDir, ensurePrivateFile } from '../lib/private-state.js';
 
 import { ensureDaemonRunning, type EnsureDaemonError } from './ensure-daemon.js';
 import {
@@ -239,7 +240,9 @@ const passthrough = (
     if (mode.spool) {
       yield* Effect.sync(() => {
         try {
-          mkdirSync(config.stateDir, { recursive: true });
+          const spoolPath = join(config.stateDir, passthroughSpoolFileName);
+          ensurePrivateDir(config.stateDir);
+          ensurePrivateFile(spoolPath);
           const record: PassthroughSpoolRecord = {
             version: 1,
             id: shortId(),
@@ -251,10 +254,7 @@ const passthrough = (
             host: options.host ?? null,
             exitCode: result.exitCode,
           };
-          appendFileSync(
-            join(config.stateDir, passthroughSpoolFileName),
-            `${JSON.stringify(record)}\n`,
-          );
+          appendFileSync(spoolPath, `${JSON.stringify(record)}\n`);
         } catch {
           // Passthrough must preserve cargo's result even when the state dir is unwritable.
         }

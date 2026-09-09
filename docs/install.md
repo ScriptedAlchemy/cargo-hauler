@@ -187,6 +187,21 @@ Daemon socket and ledger live under a per-user cache directory:
 macOS, and `%LOCALAPPDATA%\cargo-hauler` on Windows. Set
 `CARGO_HAULER_STATE_DIR` to relocate it.
 
+The daemon serves the one user who owns that directory; it is not a shared
+multi-user service. On Linux and macOS cargo-hauler creates the directory
+`0700` and its sensitive files (complete command output under `tickets/`,
+the ledger and its WAL sidecars, the daemon log, the passthrough spool, the
+hook records, the pid lock, the jobserver FIFO) `0600`, independent of your
+umask, and tightens an existing directory you already own on the next start.
+A parent you point `CARGO_HAULER_STATE_DIR` at is never modified, and a
+state path that is a symlink or belongs to another user is refused by name
+instead of being followed or deleted — fix or remove it and start again. If
+the directory is too deep for the kernel's unix-socket path limit, the
+control socket moves into a `cargo-hauler-<uid>` directory (`0700`) under
+`XDG_RUNTIME_DIR`, `TMPDIR`, or the system temporary directory rather than
+into a shared temporary root. Windows has no POSIX modes or uids and uses a
+named pipe, so none of this applies there.
+
 kache is optional. When `CARGO_HAULER_KACHE_INDEX` is unset, the daemon
 reads kache's own config (`$XDG_CONFIG_HOME/kache/config.toml`, else
 `~/.config/kache/config.toml`) for the `local_store` path under `[cache]` and

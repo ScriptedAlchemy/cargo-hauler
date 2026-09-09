@@ -12,10 +12,10 @@ import * as Fiber from 'effect/Fiber';
 import * as Schedule from 'effect/Schedule';
 import * as Scope from 'effect/Scope';
 
-import type { EnsureDaemonDependencies } from '../src/client/ensure-daemon.js';
+import { SpawnDaemonError, type EnsureDaemonDependencies } from '../src/client/ensure-daemon.js';
 import { resolveDaemonConfig } from '../src/daemon/config.js';
 import type { DaemonConfigShape } from '../src/daemon/config.js';
-import { pingDaemon } from '../src/daemon/control.js';
+import { DaemonUnreachableError, pingDaemon } from '../src/daemon/control.js';
 import {
   daemonExitCode,
   makeSignalShutdownController,
@@ -26,6 +26,7 @@ import {
   stopDaemon,
   type DaemonControlResult,
   type RestartDaemonDependencies,
+  type StopDaemonDependencies,
 } from '../src/daemon/lifecycle.js';
 import { bindDaemonSocket, runDaemon, socketListenPath } from '../src/daemon/main.js';
 import {
@@ -38,6 +39,8 @@ import {
   readSocketIdentity,
   removeSocketIfOwned,
 } from '../src/daemon/socket-ownership.js';
+import { UnsafeStatePathError } from '../src/lib/private-state.js';
+import { legacyRelocatedSocketPath } from '../src/status.js';
 import { scopedTempDir } from './harness.js';
 
 const connectOnce = (socketPath: string): Effect.Effect<void, Error> =>
@@ -216,6 +219,101 @@ describe('daemon start under the one-version rule', () => {
       expect(result.previousPid).toBeUndefined();
       expect(result.message).toBe('cargo-hauler daemon started (pid 42)');
       expect(daemonExitCode(result)).toBe(0);
+    }));
+
+  it.effect('names why the spawn was refused, since that failure never opens the log', () =>
+    Effect.gen(function* () {
+      // A state path this user does not own fails before the log exists, so
+      // "check <logPath>" alone would send the operator to a file that was
+      // never written.
+      const result = yield* startDaemon(config, {
+        exitGraceMs: 40,
+        pingDaemon: (socketPath) =>
+          Effect.fail(
+            new DaemonUnreachableError({
+              socketPath,
+              cause: Object.assign(new Error('no such file'), { code: 'ENOENT' }),
+            }),
+          ),
+        pollMs: 5,
+        processAlive: () => false,
+        requestShutdown: () => Effect.die(new Error('shutdown should not run')),
+        spawnDetachedDaemon: () =>
+          Effect.fail(
+            new SpawnDaemonError({
+              cause: new UnsafeStatePathError(config.stateDir, 'it is a symbolic link'),
+            }),
+          ),
+        waitForDaemon: () => Effect.die(new Error('wait should not run')),
+      });
+
+      expect(result.running).toBe(false);
+      expect(result.message).toContain(config.stateDir);
+      expect(result.message).toContain('it is a symbolic link');
+      expect(daemonExitCode(result)).toBe(1);
+    }));
+});
+
+describe('daemon stop after the control socket moved', () => {
+  // Only a state dir too deep for `sun_path` relocates its socket, and only a
+  // relocated socket has a previous path a pre-hardening daemon still serves.
+  const deepConfig = resolveDaemonConfig({
+    CARGO_HAULER_STATE_DIR: `/private/var/folders/3m/${'x'.repeat(60)}/T/cargo-hauler/state`,
+  });
+  const shallowConfig = resolveDaemonConfig({
+    CARGO_HAULER_STATE_DIR: '/tmp/cargo-hauler-stop-unit',
+  });
+
+  /** Answers as pid 41 at `serving`; nowhere else is anything listening. */
+  const stopFakes = (serving: string | null) => {
+    const asked: string[] = [];
+    const dependencies: StopDaemonDependencies = {
+      exitGraceMs: 100,
+      identify: (socketPath) => {
+        asked.push(socketPath);
+        return socketPath === serving
+          ? Effect.succeed({ pid: 41, startedAtMs: 1, version: '0.4.1' })
+          : Effect.fail(
+              new DaemonUnreachableError({
+                socketPath,
+                cause: Object.assign(new Error('no such file'), { code: 'ENOENT' }),
+              }),
+            );
+      },
+      pollMs: 5,
+      processAlive: () => false,
+      requestShutdown: () => Effect.succeed({ kind: 'acknowledged' as const }),
+    };
+    return { asked, dependencies };
+  };
+
+  it.effect('stops a daemon left serving the pre-hardening path when nothing answers the current one', () =>
+    Effect.gen(function* () {
+      const legacyPath = legacyRelocatedSocketPath(deepConfig.stateDir);
+      const { asked, dependencies } = stopFakes(legacyPath);
+      const result = yield* stopDaemon(deepConfig, dependencies);
+
+      expect(asked).toEqual([deepConfig.socketPath, legacyPath]);
+      expect(result.message).toBe('cargo-hauler daemon stopped');
+      expect(result.running).toBe(false);
+    }));
+
+  it.effect('asks only the current path when a daemon answers it', () =>
+    Effect.gen(function* () {
+      const { asked, dependencies } = stopFakes(deepConfig.socketPath);
+      const stopped = yield* stopDaemon(deepConfig, dependencies);
+
+      expect(asked).toEqual([deepConfig.socketPath]);
+      expect(stopped.message).toBe('cargo-hauler daemon stopped');
+    }));
+
+  it.effect('has no previous path to ask when the socket never moved', () =>
+    Effect.gen(function* () {
+      const { asked, dependencies } = stopFakes(null);
+      const absent = yield* stopDaemon(shallowConfig, dependencies);
+
+      expect(asked).toEqual([shallowConfig.socketPath]);
+      expect(absent.message).toBe('cargo-hauler daemon is not running');
     }));
 });
 

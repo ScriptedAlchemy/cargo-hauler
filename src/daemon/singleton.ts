@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { uptime } from 'node:os';
 
 import * as Data from 'effect/Data';
@@ -10,6 +10,7 @@ import type * as Scope from 'effect/Scope';
 import { lock } from 'proper-lockfile';
 
 import { isRecord } from '../lib/guards.js';
+import { ensurePrivateDir, ensurePrivateFile } from '../lib/private-state.js';
 
 import type { DaemonConfigShape } from './config.js';
 import { pingDaemon } from './control.js';
@@ -193,9 +194,12 @@ const defaultLockDependencies: SingletonLockDependencies = {
   currentPid: process.pid,
   lockMtimeMs: async (lockTargetPath) => (await stat(`${lockTargetPath}.lock`)).mtimeMs,
   now: Date.now,
+  // The state dir is established owner-private here, before the lock and
+  // before any other writer runs, so every entry created under it later is
+  // already inside a directory no other account can traverse.
   prepare: async (stateDir, lockTargetPath) => {
-    await mkdir(stateDir, { recursive: true });
-    await writeFile(lockTargetPath, '', { flag: 'a' });
+    ensurePrivateDir(stateDir);
+    ensurePrivateFile(lockTargetPath);
   },
   processLiveness,
   readPid: (lockTargetPath) => readFile(lockTargetPath, 'utf8'),

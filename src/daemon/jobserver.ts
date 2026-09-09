@@ -1,9 +1,10 @@
 import { spawnSync } from 'node:child_process';
-import { closeSync, constants, mkdirSync, openSync, readSync, statSync, writeSync } from 'node:fs';
+import { closeSync, constants, openSync, readSync, statSync, writeSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
 
 import { isRecord } from '../lib/guards.js';
+import { ensurePrivateDir, hardenPrivateEntry } from '../lib/private-state.js';
 
 /**
  * Machine-wide GNU make jobserver FIFO shared by every cargo the daemon
@@ -164,14 +165,18 @@ export const armSharedJobserver = (options: ArmJobserverOptions): boolean => {
   const tokens = options.tokens ?? Math.max(1, availableParallelism() - 1);
   const path = join(options.stateDir, jobserverFifoFileName);
   try {
-    mkdirSync(options.stateDir, { recursive: true });
+    ensurePrivateDir(options.stateDir);
     if (statSync(path, { throwIfNoEntry: false }) === undefined) {
-      spawnSync('mkfifo', ['-m', '0666', path], { stdio: 'ignore' });
+      // Only this user's cargo processes ever draw from the pool, so the
+      // FIFO is owner-only: a world-writable one let any local account
+      // drain or flood the daemon's tokens.
+      spawnSync('mkfifo', ['-m', '0600', path], { stdio: 'ignore' });
     }
     const stat = statSync(path, { throwIfNoEntry: false });
     if (stat === undefined || !stat.isFIFO()) {
       return false;
     }
+    hardenPrivateEntry(path, 'fifo');
     // O_RDWR so open, drain, and seed never block on a peer; O_NONBLOCK so
     // draining stale bytes ends with EAGAIN instead of waiting for writers.
     const fd = openSync(path, constants.O_RDWR | constants.O_NONBLOCK);

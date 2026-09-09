@@ -1,9 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { lockSync } from 'proper-lockfile';
 
 import { isRecord } from '../lib/guards.js';
+import { ensurePrivateDir, ensurePrivateFile, privateFileMode } from '../lib/private-state.js';
 import { resolveStateDir } from '../status.js';
 
 /**
@@ -43,17 +44,21 @@ const sleepSync = (ms: number): void => {
  * failing the host's tool call.
  */
 const withStateLock = <A>(stateDir: string, update: () => A): A => {
-  mkdirSync(stateDir, { recursive: true });
+  ensurePrivateDir(stateDir);
   const target = statePath(stateDir);
   if (!existsSync(target)) {
     // proper-lockfile locks an existing path; an absent state file reads as
     // empty either way.
     try {
-      writeFileSync(target, `${JSON.stringify(emptyState())}\n`, { flag: 'wx' });
+      writeFileSync(target, `${JSON.stringify(emptyState())}\n`, {
+        flag: 'wx',
+        mode: privateFileMode,
+      });
     } catch {
       // Another hook created it first; that is the file we lock.
     }
   }
+  ensurePrivateFile(target);
   const deadline = Date.now() + lockWaitMs;
   let release: (() => void) | null = null;
   for (;;) {
@@ -120,11 +125,13 @@ const loadState = (stateDir: string): HookState => {
  * atomic on POSIX and on Windows for same-volume paths.
  */
 const saveState = (stateDir: string, state: HookState): void => {
-  mkdirSync(stateDir, { recursive: true });
+  ensurePrivateDir(stateDir);
   const target = statePath(stateDir);
   const temp = `${target}.${process.pid}.${Math.random().toString(36).slice(2, 8)}.tmp`;
   try {
-    writeFileSync(temp, `${JSON.stringify(state)}\n`);
+    // The rename carries this mode onto the target, so the published file is
+    // private whatever the previous one was.
+    writeFileSync(temp, `${JSON.stringify(state)}\n`, { mode: privateFileMode });
     renameSync(temp, target);
   } catch (error) {
     rmSync(temp, { force: true });

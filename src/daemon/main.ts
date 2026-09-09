@@ -1,4 +1,3 @@
-import { rmSync } from 'node:fs';
 import { rename } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
@@ -12,6 +11,7 @@ import * as References from 'effect/References';
 import type * as Scope from 'effect/Scope';
 import type * as SocketServer from 'effect/unstable/socket/SocketServer';
 
+import { ensurePrivateDir } from '../lib/private-state.js';
 import { isNamedPipePath } from '../status.js';
 
 import { Broker, BrokerLive } from './broker.js';
@@ -28,6 +28,7 @@ import {
   monitorSocketOwnership,
   readSocketIdentity,
   removeSocketIfOwned,
+  removeStaleSocketEntry,
   SocketOwnershipLostError,
 } from './socket-ownership.js';
 import type { SocketIdentity } from './socket-ownership.js';
@@ -95,8 +96,18 @@ export const bindDaemonSocket = (
       const server = yield* NodeSocketServer.make({ path: socketPath });
       return { identity: null, server };
     }
+    // The socket's directory is the boundary that protects it: the state dir
+    // when it fits, otherwise a runtime directory under a possibly shared
+    // temp root, which nothing else has created yet.
+    yield* Effect.try({
+      try: () => ensurePrivateDir(dirname(socketPath)),
+      catch: (cause) => new SocketOwnershipLostError({ cause, socketPath }),
+    });
     const listenPath = socketListenPath(socketPath, process.pid);
-    yield* Effect.sync(() => rmSync(listenPath, { force: true }));
+    yield* Effect.tryPromise({
+      try: () => removeStaleSocketEntry(listenPath),
+      catch: (cause) => new SocketOwnershipLostError({ cause, socketPath: listenPath }),
+    });
     const server = yield* NodeSocketServer.make({ path: listenPath });
     // Stat before the rename: the inode is ours for certain, whereas the
     // canonical path could already name a competing daemon's socket.
@@ -116,13 +127,17 @@ export const bindDaemonSocket = (
 
 const daemonProgram = Effect.gen(function* () {
   const config = yield* DaemonConfig;
-  // We hold the singleton lock, so an existing socket file is a leftover
-  // from a crashed daemon and safe to remove. A Windows named pipe is not a
-  // filesystem entry (it vanishes with its server), so there is nothing to
-  // remove — and rmSync on a `\\.\pipe\` path must not run.
+  // We hold the singleton lock, so a socket we own at this path is a
+  // leftover from a crashed daemon and safe to remove; anything else there
+  // is not ours to delete and fails startup by name. A Windows named pipe is
+  // not a filesystem entry (it vanishes with its server), so there is
+  // nothing to remove — and the unlink on a `\\.\pipe\` path must not run.
   const removeStaleSocket = isNamedPipePath(config.socketPath)
     ? Effect.void
-    : Effect.sync(() => rmSync(config.socketPath, { force: true }));
+    : Effect.tryPromise({
+        try: () => removeStaleSocketEntry(config.socketPath),
+        catch: (cause) => new SocketOwnershipLostError({ cause, socketPath: config.socketPath }),
+      });
   yield* removeStaleSocket;
   const ledger = yield* Ledger;
   const reaped = yield* ledger.reapOrphans(Date.now(), orphanedByRestartError);

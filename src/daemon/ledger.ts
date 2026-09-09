@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 
@@ -8,6 +8,7 @@ import * as Layer from 'effect/Layer';
 
 import { defaultCargoProfile } from '../lib/argv.js';
 import { isRecord } from '../lib/guards.js';
+import { ensurePrivateDir, ensurePrivateFile, hardenPrivateEntry } from '../lib/private-state.js';
 import '../lib/quiet-sqlite-warning.js';
 
 import { DaemonConfig } from './config.js';
@@ -488,11 +489,17 @@ export const openLedgerDatabaseReadOnly = (databasePath: string): DatabaseSync =
 };
 
 export const openLedgerDatabase = (databasePath: string): DatabaseSync => {
-  mkdirSync(dirname(databasePath), { recursive: true });
+  ensurePrivateDir(dirname(databasePath));
+  ensurePrivateFile(databasePath);
   const db = new DatabaseSync(databasePath);
   db.exec('PRAGMA journal_mode = WAL;');
   db.exec('PRAGMA synchronous = NORMAL;');
   db.exec('PRAGMA busy_timeout = 5000;');
+  // SQLite creates the WAL sidecars itself, with the umask; they hold the
+  // same command history as the database, so they are tightened as soon as
+  // the journal mode that creates them has been set.
+  hardenPrivateEntry(`${databasePath}-wal`, 'file');
+  hardenPrivateEntry(`${databasePath}-shm`, 'file');
   db.exec(schemaStatements);
   const existingColumns = new Set(
     db
@@ -1097,6 +1104,9 @@ export const createLedgerApi = (db: DatabaseSync, options: CreateLedgerApiOption
         return 0;
       }
     }
+    // A spool left by a pre-hardening install carries its old mode through
+    // the rename; the drain copy is tightened before it is read.
+    hardenPrivateEntry(drainPath, 'file');
     const records = readFileSync(drainPath, 'utf8')
       .split('\n')
       .flatMap((line) => {
