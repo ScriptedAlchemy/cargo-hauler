@@ -241,8 +241,8 @@ describe('packed install', () => {
     expect(help.stdout).not.toContain('--from');
 
     const unselected = runInstaller(['install', 'amp']);
-    expect(unselected.status).toBe(2);
-    expect(unselected.stderr).toContain('Install host must be claude, codex, or cursor.');
+    expect(unselected.status).toBe(1);
+    expect(unselected.stderr).toContain('"code":"AB7001"');
     const from = runInstaller(['install', 'cursor', '--from', projectRoot]);
     expect(from.status).toBe(2);
     expect(from.stderr).toContain("unknown option '--from'");
@@ -352,6 +352,9 @@ describe('packed install', () => {
             expect(failed).toEqual([]);
             const tools = await session.client.listTools();
             expect(tools.tools.map((tool) => tool.name)).toContain('hauler_status');
+            const status = await session.client.callTool({ arguments: {}, name: 'hauler_status' });
+            expect(status.isError ?? false).toBe(false);
+            expect(status.structuredContent).toMatchObject({ daemon: 'stopped', operation: 'status' });
             const requested = await session.client.callTool({
               arguments: { argv: ['cargo', 'check'] },
               name: 'hauler_request',
