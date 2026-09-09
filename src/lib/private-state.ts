@@ -181,11 +181,12 @@ export const hardenPrivateEntry = (path: string, kind: PrivateEntryKind): void =
  * before their own `createWriteStream`/`appendFile`/`open`, so the mode is
  * settled before the first byte instead of depending on which writer got
  * there first.
+ *
+ * Creation is unconditional, including on hosts with no uids: callers such as
+ * the singleton's `prepare` rely on this to bring the lock target into
+ * existence, and only the mode and ownership enforcement is POSIX-only.
  */
 export const ensurePrivateFile = (path: string): void => {
-  if (currentUid() === null) {
-    return;
-  }
   if (entryStats(path) === undefined) {
     closeSync(openSync(path, 'a', privateFileMode));
   }

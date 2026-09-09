@@ -24,10 +24,11 @@ import {
   type EnsureDaemonDependencies,
   ensureDaemonVersion,
 } from '../src/client/ensure-daemon.js';
-import { pingDaemon } from '../src/daemon/control.js';
+import { DaemonUnreachableError, pingDaemon } from '../src/daemon/control.js';
 import { runDaemon } from '../src/daemon/main.js';
 import { passthroughSpoolFileName, type PongMessage } from '../src/daemon/protocol.js';
 import { notReplacedMessage } from '../src/daemon/shutdown.js';
+import { legacyRelocatedSocketPath } from '../src/status.js';
 import { scopedEnv, scopedTempDir } from './harness.js';
 
 const configAt = (stateDir: string): DaemonConfigShape => ({
@@ -64,6 +65,13 @@ const configAt = (stateDir: string): DaemonConfigShape => ({
   stallAutoKill: true,
   reattachGraceMs: 30_000,
 });
+
+/** The failure a ping gets from a socket path no daemon owns. */
+const absentDaemon = (socketPath: string): DaemonUnreachableError =>
+  new DaemonUnreachableError({
+    socketPath,
+    cause: Object.assign(new Error('ENOENT: no such file or directory'), { code: 'ENOENT' }),
+  });
 
 describe('spawnDetachedDaemon', () => {
   it.live('closes the log descriptor and returns a typed failure when spawn throws', () =>
@@ -414,4 +422,68 @@ describe('directional replacement', () => {
       expect(error._tag).toBe('DaemonNewer');
       expect(calls).toEqual(['shutdown']);
     }));
+
+  describe('relocated socket left by a pre-hardening install', () => {
+    // Deep enough that the socket leaves the state dir, which is the only
+    // case whose endpoint moved. Resolved rather than hand-built, so both
+    // endpoints come from the real derivation.
+    const deepConfig = resolveDaemonConfig({
+      CARGO_HAULER_STATE_DIR: `/private/var/folders/3m/${'x'.repeat(60)}/T/cargo-hauler/state`,
+    });
+    const legacyPath = legacyRelocatedSocketPath(deepConfig.stateDir);
+
+    it('is a different path from the current endpoint, and absent for an in-state socket', () => {
+      expect(legacyPath).not.toBeNull();
+      expect(legacyPath).not.toBe(deepConfig.socketPath);
+      expect(legacyRelocatedSocketPath(config.stateDir)).toBeNull();
+    });
+
+    it.effect('retires the daemon still listening there so the spawn can take the lock', () =>
+      Effect.gen(function* () {
+        // Nothing answers at the current endpoint; the old daemon answers at
+        // the legacy one and still holds this state dir's singleton lock.
+        const answered: string[] = [];
+        const { calls, dependencies } = tracking({
+          pingDaemon: (socketPath) => {
+            answered.push(socketPath);
+            return socketPath === legacyPath
+              ? Effect.succeed(older)
+              : Effect.fail(absentDaemon(socketPath));
+          },
+        });
+
+        expect(yield* ensureDaemonVersion(deepConfig, dependencies)).toBeNull();
+        expect(answered).toEqual([deepConfig.socketPath, legacyPath]);
+        // Retired through the usual gate, and the caller — not this step —
+        // spawns at the current path.
+        expect(calls).toEqual(['shutdown']);
+      }));
+
+    it.effect('leaves a newer daemon at the legacy path alone and fails as DaemonNewer', () =>
+      Effect.gen(function* () {
+        const { calls, dependencies } = tracking({
+          pingDaemon: (socketPath) =>
+            socketPath === legacyPath
+              ? Effect.succeed(newer)
+              : Effect.fail(absentDaemon(socketPath)),
+        });
+        const error = yield* ensureDaemonVersion(deepConfig, dependencies).pipe(Effect.flip);
+        expect(error._tag).toBe('DaemonNewer');
+        expect(calls).toEqual([]);
+      }));
+
+    it.effect('does not probe the legacy path when the socket lives in the state dir', () =>
+      Effect.gen(function* () {
+        const answered: string[] = [];
+        const { calls, dependencies } = tracking({
+          pingDaemon: (socketPath) => {
+            answered.push(socketPath);
+            return Effect.fail(absentDaemon(socketPath));
+          },
+        });
+        expect(yield* ensureDaemonVersion(config, dependencies)).toBeNull();
+        expect(answered).toEqual([config.socketPath]);
+        expect(calls).toEqual([]);
+      }));
+  });
 });

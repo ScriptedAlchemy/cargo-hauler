@@ -707,7 +707,10 @@ it from the umask:
   the control socket moves to a `cargo-hauler-<uid>` directory (mode `0700`)
   under `XDG_RUNTIME_DIR`, `TMPDIR`, or the system temporary directory —
   never directly into a shared temporary root. Two accounts sharing one
-  temporary root get separate directories.
+  temporary root get separate directories. A daemon from an earlier install
+  still listening at the previous relocated path is retired by the next
+  client under the usual one-version rule, so upgrading needs no manual
+  cleanup.
 
 Windows has neither POSIX modes nor uids, and its control endpoint is a
 named pipe rather than a filesystem entry, so none of the above applies

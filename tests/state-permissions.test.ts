@@ -34,6 +34,7 @@ import {
   currentUid,
   ensurePrivateDir,
   ensurePrivateFile,
+  hardenPrivateEntry,
   privateDirMode,
   privateFileMode,
   UnsafeStatePathError,
@@ -205,6 +206,20 @@ describe.skipIf(skipOnNonPosix)('owner-private state policy', () => {
       const directory = join(root, 'daemon.log');
       mkdirSync(directory);
       expect(() => ensurePrivateFile(directory)).toThrow(UnsafeStatePathError);
+    });
+  });
+
+  it('brings a sensitive file into existence, which tightening alone does not', () => {
+    // The singleton's lock target must exist before proper-lockfile can lock
+    // it, and creation is the half of this that is not POSIX-only.
+    withScratch('policy-create', (root) => {
+      const tightenOnly = join(root, 'absent.log');
+      hardenPrivateEntry(tightenOnly, 'file');
+      expect(existsSync(tightenOnly)).toBe(false);
+
+      const created = join(root, 'daemon.pid');
+      ensurePrivateFile(created);
+      expect(existsSync(created)).toBe(true);
     });
   });
 

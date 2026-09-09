@@ -79,6 +79,9 @@ export const isNamedPipePath = (path: string): boolean => path.startsWith(namedP
 const maxSocketPathBytes = (platform: NodeJS.Platform): number =>
   platform === 'linux' ? 107 : 103;
 
+const digestOf = (identity: string): string =>
+  createHash('sha256').update(identity).digest('hex').slice(0, 16);
+
 /**
  * Windows paths are case-insensitive, so two spellings name one state dir
  * and must digest alike or clients split across pipes. Unix paths are
@@ -86,10 +89,7 @@ const maxSocketPathBytes = (platform: NodeJS.Platform): number =>
  * control endpoint, pointing two independent daemons at one socket.
  */
 const stateDirDigest = (stateDir: string, platform: NodeJS.Platform): string =>
-  createHash('sha256')
-    .update(platform === 'win32' ? stateDir.toLowerCase() : stateDir)
-    .digest('hex')
-    .slice(0, 16);
+  digestOf(platform === 'win32' ? stateDir.toLowerCase() : stateDir);
 
 /**
  * The directory a relocated socket lives in. `XDG_RUNTIME_DIR` is already
@@ -139,6 +139,32 @@ export const daemonSocketPath = (
       join(tmpdir(), leaf),
     )
   );
+};
+
+/**
+ * Where an install before the owner-private hardening put a relocated
+ * socket: directly in the runtime root, under a digest that case-folded
+ * every platform's path. A daemon from such an install is still listening
+ * there and still holds this state dir's singleton lock, so a client that
+ * probed only the current path would spawn a daemon that cannot take the
+ * lock and would leave the old one serving nobody. Clients retire it
+ * through the usual one-version rule instead. Null when this state dir does
+ * not relocate its socket, and never equal to the current path.
+ */
+export const legacyRelocatedSocketPath = (
+  stateDir: string,
+  platform: NodeJS.Platform = process.platform,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string | null => {
+  if (platform === 'win32') {
+    return null;
+  }
+  const inState = join(stateDir, 'daemon.sock');
+  if (Buffer.byteLength(inState) <= maxSocketPathBytes(platform)) {
+    return null;
+  }
+  const runtimeDir = env.XDG_RUNTIME_DIR ?? env.TMPDIR ?? tmpdir();
+  return join(runtimeDir, `cargo-hauler-${digestOf(stateDir.toLowerCase())}.sock`);
 };
 
 /**

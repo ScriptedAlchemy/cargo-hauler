@@ -31,6 +31,7 @@ import { resolveHaulerArgv } from '../hooks/hauler-binding.js';
 import { absentSocketCodes, socketErrorCode } from '../lib/socket-errors.js';
 import { isHaulerInternalEnvironmentVariable } from '../lib/cargo-env.js';
 import { ensurePrivateDir, ensurePrivateFile } from '../lib/private-state.js';
+import { legacyRelocatedSocketPath } from '../status.js';
 
 export class SpawnDaemonError extends Data.TaggedError('SpawnDaemonError')<{
   readonly cause: unknown;
@@ -269,46 +270,86 @@ export const defaultEnsureDependencies: EnsureDaemonDependencies = {
  * never signalled past the request; one that outlives the grace fails this
  * call as `DaemonNotReplaced` and keeps serving.
  */
+const pingOrAbsent = (
+  socketPath: string,
+  dependencies: EnsureDaemonDependencies,
+  pingTimeoutMs: number,
+): Effect.Effect<PongMessage | null, WaitForDaemonError> =>
+  dependencies.pingDaemon(socketPath, pingTimeoutMs).pipe(
+    Effect.catchTag('DaemonUnreachable', (error) =>
+      daemonIsAbsent(error.cause) ? Effect.succeed(null) : Effect.fail(error),
+    ),
+  );
+
+/**
+ * Retire a daemon from another install: the graceful request, then a wait for
+ * its pid. Directional — only an older daemon is replaced. A newer one
+ * belongs to a newer install; this client is the stale one. One that refuses
+ * or outlives the grace keeps serving and fails the call.
+ */
+const retireDaemon = (
+  socketPath: string,
+  daemon: PongMessage,
+  dependencies: EnsureDaemonDependencies,
+): Effect.Effect<void, DaemonNewerError | DaemonNotReplacedError> =>
+  Effect.gen(function* () {
+    const identity = { pid: daemon.pid, startedAtMs: daemon.startedAtMs, version: daemon.version };
+    if (isNewerVersion(daemon.version, version)) {
+      return yield* new DaemonNewerError({ clientVersion: version, daemon: identity, socketPath });
+    }
+    const ack = yield* dependencies.requestShutdown(socketPath);
+    if (ack === 'refused') {
+      return yield* new DaemonNewerError({ clientVersion: version, daemon: identity, socketPath });
+    }
+    const exited = yield* waitForExit(daemon.pid, dependencies);
+    if (!exited) {
+      return yield* new DaemonNotReplacedError({
+        daemon: identity,
+        graceMs: dependencies.exitGraceMs,
+        socketPath,
+      });
+    }
+  });
+
+/**
+ * Nothing answers at this state dir's current endpoint, so check the one a
+ * pre-hardening install would have used for a relocated socket. This build
+ * never binds that path, so a daemon answering there cannot serve this
+ * client and is retired under the same version gate; the caller then spawns
+ * at the current path with the singleton lock free.
+ */
+const retireLegacyRelocatedDaemon = (
+  config: DaemonConfigShape,
+  dependencies: EnsureDaemonDependencies,
+  pingTimeoutMs: number,
+): Effect.Effect<void, EnsureDaemonError> =>
+  Effect.gen(function* () {
+    const legacyPath = legacyRelocatedSocketPath(config.stateDir);
+    if (legacyPath === null || legacyPath === config.socketPath) {
+      return;
+    }
+    const legacy = yield* pingOrAbsent(legacyPath, dependencies, pingTimeoutMs);
+    if (legacy === null) {
+      return;
+    }
+    yield* retireDaemon(legacyPath, legacy, dependencies);
+  });
+
 export const ensureDaemonVersion = (
   config: DaemonConfigShape = resolveDaemonConfig(),
   dependencies: EnsureDaemonDependencies = defaultEnsureDependencies,
   pingTimeoutMs = 500,
 ): Effect.Effect<PongMessage | null, EnsureDaemonError> =>
   Effect.gen(function* () {
-    const already = yield* dependencies.pingDaemon(config.socketPath, pingTimeoutMs).pipe(
-      Effect.catchTag('DaemonUnreachable', (error) =>
-        daemonIsAbsent(error.cause) ? Effect.succeed(null) : Effect.fail(error),
-      ),
-    );
-    if (already === null || already.version === version) {
+    const already = yield* pingOrAbsent(config.socketPath, dependencies, pingTimeoutMs);
+    if (already === null) {
+      yield* retireLegacyRelocatedDaemon(config, dependencies, pingTimeoutMs);
+      return null;
+    }
+    if (already.version === version) {
       return already;
     }
-    const identity = { pid: already.pid, startedAtMs: already.startedAtMs, version: already.version };
-    // Directional: only an older daemon is replaced. A newer one belongs to
-    // a newer install; this client is the stale one.
-    if (isNewerVersion(already.version, version)) {
-      return yield* new DaemonNewerError({
-        clientVersion: version,
-        daemon: identity,
-        socketPath: config.socketPath,
-      });
-    }
-    const ack = yield* dependencies.requestShutdown(config.socketPath);
-    if (ack === 'refused') {
-      return yield* new DaemonNewerError({
-        clientVersion: version,
-        daemon: identity,
-        socketPath: config.socketPath,
-      });
-    }
-    const exited = yield* waitForExit(already.pid, dependencies);
-    if (!exited) {
-      return yield* new DaemonNotReplacedError({
-        daemon: { pid: already.pid, startedAtMs: already.startedAtMs, version: already.version },
-        graceMs: dependencies.exitGraceMs,
-        socketPath: config.socketPath,
-      });
-    }
+    yield* retireDaemon(config.socketPath, already, dependencies);
     yield* dependencies.spawnDetachedDaemon(config);
     return yield* dependencies.waitForDaemon(config.socketPath).pipe(
       Effect.mapError(
