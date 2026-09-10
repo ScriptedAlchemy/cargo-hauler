@@ -261,16 +261,16 @@ describe('ensureDaemonRunning', () => {
       expect(actual).toBe(fresh);
     }));
 
-  it.live('keeps using the older daemon when it outlives retirement', () =>
+  it.live('does not return an older daemon whose acknowledged shutdown outlives retirement', () =>
     Effect.gen(function* () {
       const diagnostics: string[] = [];
       const { calls, dependencies } = fakes({ exitGraceMs: 40, processAlive: () => true });
-      const daemon = yield* ensureDaemonRunning(config, dependencies, (line) => diagnostics.push(line));
+      const error = yield* Effect.flip(
+        ensureDaemonRunning(config, dependencies, (line) => diagnostics.push(line)),
+      );
 
-      expect(daemon).toBe(previous);
-      expect(diagnostics).toEqual([
-        `[cargo-hauler] daemon 0.7.1 will be replaced by ${version} when idle\n`,
-      ]);
+      expect(error._tag).toBe('DaemonNotReplaced');
+      expect(diagnostics).toEqual([]);
       expect(calls).toEqual(['shutdown']);
     }));
 

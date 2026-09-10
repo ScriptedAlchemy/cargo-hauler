@@ -96,7 +96,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
     readFileSync(logPath, 'utf8').trim().split('\n').filter(Boolean);
 
   it('reads status from a busy compatible older daemon without requesting shutdown', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'cargo-hauler-stale-status-'));
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-status-'));
     const logPath = join(root, 'requests.log');
     const env = fixtureEnv(root);
     try {
@@ -117,7 +117,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
   }, 30_000);
 
   it('replaces an idle compatible older daemon before submitting exec', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'cargo-hauler-stale-idle-'));
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-idle-'));
     const logPath = join(root, 'requests.log');
     const env = fixtureEnv(root);
     try {
@@ -140,7 +140,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
   }, 30_000);
 
   it('submits to a busy compatible older daemon and reports deferred replacement once', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'cargo-hauler-stale-busy-'));
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-busy-'));
     const logPath = join(root, 'requests.log');
     const env = fixtureEnv(root);
     try {
@@ -157,7 +157,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
   }, 30_000);
 
   it('keeps newer-daemon rejection directional without requesting shutdown', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'cargo-hauler-stale-newer-'));
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-newer-'));
     const logPath = join(root, 'requests.log');
     const env = fixtureEnv(root);
     try {
@@ -173,7 +173,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
   }, 30_000);
 
   it('rejects an incompatible older daemon by name without requesting shutdown', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'cargo-hauler-stale-incompatible-'));
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-incompatible-'));
     const logPath = join(root, 'requests.log');
     const env = fixtureEnv(root);
     try {

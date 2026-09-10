@@ -167,7 +167,7 @@ describe('signal shutdown lifecycle', () => {
 describe('daemon start under the one-version rule', () => {
   const config = resolveDaemonConfig({ CARGO_HAULER_STATE_DIR: '/tmp/cargo-hauler-start-unit' });
 
-  it.live('keeps a compatible older daemon serving when retirement outlives the grace', () =>
+  it.live('reports an acknowledged older daemon that outlives retirement as unavailable', () =>
     Effect.gen(function* () {
       const calls: string[] = [];
       const dependencies: EnsureDaemonDependencies = {
@@ -195,8 +195,10 @@ describe('daemon start under the one-version rule', () => {
         running: true,
         subcommand: 'start',
       });
-      expect(result.message).toBe('cargo-hauler daemon started (pid 41)');
-      expect(daemonExitCode(result)).toBe(0);
+      expect(result.message).toContain(
+        'daemon pid 41 (0.7.1) is still running 40ms after the shutdown request',
+      );
+      expect(daemonExitCode(result)).toBe(1);
     }));
 
   it.effect('reports a daemon of this build as started, with no previousPid, and exits 0', () =>

@@ -293,14 +293,16 @@ const pingOrAbsent = (
 /**
  * Retire a daemon from another install: the graceful request, then a wait for
  * its pid. Directional — only an older daemon is replaced. A newer one
- * belongs to a newer install; this client is the stale one. Refusal or an
- * outlived grace returns false so the submission can stay on the old daemon.
+ * belongs to a newer install; this client is the stale one. Refusal returns
+ * false so the submission can stay on the old daemon. Once shutdown is
+ * acknowledged the listener is closed, so a daemon that outlives the grace
+ * cannot safely be returned as reusable.
  */
 const retireDaemon = (
   socketPath: string,
   daemon: PongMessage,
   dependencies: EnsureDaemonDependencies,
-): Effect.Effect<boolean, DaemonNewerError> =>
+): Effect.Effect<boolean, DaemonNewerError | DaemonNotReplacedError> =>
   Effect.gen(function* () {
     const identity = { pid: daemon.pid, startedAtMs: daemon.startedAtMs, version: daemon.version };
     if (isNewerVersion(daemon.version, version)) {
@@ -312,7 +314,11 @@ const retireDaemon = (
     }
     const exited = yield* waitForExit(daemon.pid, dependencies);
     if (!exited) {
-      return false;
+      return yield* new DaemonNotReplacedError({
+        daemon: identity,
+        graceMs: dependencies.exitGraceMs,
+        socketPath,
+      });
     }
     return true;
   });
