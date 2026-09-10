@@ -13,7 +13,11 @@ import {
 import { resolveDaemonConfig } from './daemon/config.js';
 import type { DaemonConfigShape } from './daemon/config.js';
 import { requestExpecting } from './daemon/control.js';
-import type { DaemonNewerError, DaemonNotReplacedError } from './daemon/shutdown.js';
+import type {
+  DaemonIncompatibleError,
+  DaemonNewerError,
+  DaemonNotReplacedError,
+} from './daemon/shutdown.js';
 import { createLedgerApi, openLedgerDatabase, openLedgerDatabaseReadOnly } from './daemon/ledger.js';
 import { isOrphanedByRestart, orphanedByRestartError, toStatusRow } from './daemon/protocol.js';
 import type {
@@ -179,10 +183,9 @@ const fromReport = (report: StatusReport, config: DaemonConfigShape): HaulerSnap
   );
 
 /**
- * A live daemon's report, validated with the strict client schema. Every
- * socket read first runs `ensureDaemonVersion`, so this payload can only come
- * from the current build. A report that does not fit is therefore a protocol
- * defect between same-version peers, not a compatibility condition.
+ * A live daemon's report, validated with the strict client schema. The read
+ * gate accepts only the current wire protocol, including compatible older
+ * releases, so a report that does not fit is a protocol defect.
  */
 const fromLiveReport = (raw: unknown, config: DaemonConfigShape): Effect.Effect<HaulerSnapshot> =>
   Effect.sync(() => statusReportSchema.parse(raw)).pipe(
@@ -280,7 +283,11 @@ export const loadHaulerSnapshot = (
   options: LoadSnapshotOptions = {},
 ): Effect.Effect<
   HaulerSnapshot,
-  SpawnDaemonError | DaemonNewerError | DaemonNotReplacedError | DaemonReplacementFailedError
+  | SpawnDaemonError
+  | DaemonIncompatibleError
+  | DaemonNewerError
+  | DaemonNotReplacedError
+  | DaemonReplacementFailedError
 > => {
   const config = options.config ?? resolveDaemonConfig();
   const recentLimit = options.recentLimit ?? defaultRecentLimit;
@@ -312,9 +319,7 @@ export const loadHaulerSnapshot = (
             }),
           ),
     ),
-    // A ping that never establishes a version is an unresponsive daemon, not
-    // a failed replacement. Replacement startup failures are tagged before
-    // they reach this boundary and therefore remain failures.
+    // A ping that never establishes a protocol identity is unresponsive.
     Effect.catchTags({
       ControlTimeout: () =>
         unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),

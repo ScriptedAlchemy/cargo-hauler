@@ -99,6 +99,7 @@ export const requestShutdown = (
   socketPath: string,
   timeoutMs = 5_000,
   clientVersion: string = version,
+  ifIdle = false,
 ): Effect.Effect<ShutdownOutcome> =>
   Effect.suspend(() => {
     const id = shortId();
@@ -108,7 +109,7 @@ export const requestShutdown = (
       message.id === id && (message.type === 'shutting-down' || message.type === 'error');
     return requestOverSocket({
       isTerminal: isResponse,
-      message: { id, type: 'shutdown', version: clientVersion },
+      message: { id, type: 'shutdown', version: clientVersion, ...(ifIdle ? { ifIdle } : {}) },
       socketPath,
       timeoutMs,
     }).pipe(
@@ -171,6 +172,25 @@ export class DaemonNewerError extends Data.TaggedError('DaemonNewer')<{
     readonly clientVersion: string;
   }) {
     super({ ...fields, message: newerDaemonMessage(fields.daemon, fields.clientVersion) });
+  }
+}
+
+/** An older daemon from a different wire-protocol release series cannot serve this client. */
+export class DaemonIncompatibleError extends Data.TaggedError('DaemonIncompatible')<{
+  readonly socketPath: string;
+  readonly daemon: DaemonIdentity;
+  readonly clientVersion: string;
+  readonly message: string;
+}> {
+  constructor(fields: {
+    readonly socketPath: string;
+    readonly daemon: DaemonIdentity;
+    readonly clientVersion: string;
+  }) {
+    super({
+      ...fields,
+      message: `cargo-hauler daemon pid ${fields.daemon.pid} (${fields.daemon.version}) is incompatible with this client (${fields.clientVersion}); not replaced while compatibility cannot be established — stop it with \`hauler daemon stop\` from its install`,
+    });
   }
 }
 

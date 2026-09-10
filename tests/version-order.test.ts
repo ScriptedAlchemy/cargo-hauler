@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'effect-rstest';
 
 import { compareVersions, isNewerVersion } from '../src/lib/version-order.js';
+import { speaksCurrentWireProtocol, wireProtocol } from '../src/lib/wire-protocol.js';
 
 describe('compareVersions', () => {
   it('orders releases numerically per component', () => {
@@ -24,5 +25,17 @@ describe('compareVersions', () => {
     expect(isNewerVersion('0.6.7', '0.6.6')).toBe(true);
     expect(isNewerVersion('0.6.6', '0.6.6')).toBe(false);
     expect(isNewerVersion('0.3.5', '0.6.6')).toBe(false);
+  });
+});
+
+describe('daemon wire protocol identity', () => {
+  it('recognizes published 0.7 peers and explicit protocol identity independently of patch version', () => {
+    expect(speaksCurrentWireProtocol({ version: '0.7.1' }, '0.7.3')).toBe(true);
+    expect(
+      speaksCurrentWireProtocol({ protocol: wireProtocol, version: '0.7.1' }, '0.7.3'),
+    ).toBe(true);
+    expect(speaksCurrentWireProtocol({ protocol: 2, version: '0.7.1' }, '0.7.3')).toBe(false);
+    expect(speaksCurrentWireProtocol({ version: '0.6.7' }, '0.7.3')).toBe(false);
+    expect(speaksCurrentWireProtocol({ version: '0.7.4' }, '0.7.3')).toBe(false);
   });
 });

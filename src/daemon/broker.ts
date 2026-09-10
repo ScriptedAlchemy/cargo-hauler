@@ -45,7 +45,7 @@ import type {
 import { laneKeyFor, makeLaneRuntime } from './lane-exec.js';
 import { Ledger } from './ledger.js';
 import { memoryAvailableBytes, memoryPressureLevel, memoryPsi } from './pressure.js';
-import { parseTicket, toStatusRow } from './protocol.js';
+import { daemonReportIsIdle, parseTicket, toStatusRow } from './protocol.js';
 import type {
   AttachMode,
   EstimateSource,
@@ -151,6 +151,11 @@ export interface BrokerApi {
     input: SubmitInput,
     callbacks: SubmitCallbacks,
   ) => Effect.Effect<SubmitResult, CargoIntentError>;
+  /**
+   * Atomically stop admitting submissions and confirm no work is in flight.
+   * A busy refusal leaves admission open.
+   */
+  readonly prepareRetirement: (retire: Effect.Effect<void>) => Effect.Effect<boolean>;
   readonly recordAttempt: (
     input: AttemptInput,
   ) => Effect.Effect<{ readonly ticket: string }>;
@@ -230,6 +235,8 @@ export const BrokerLive: Layer.Layer<
       ledger,
     });
     const laneRegistration = yield* Semaphore.make(1);
+    const retirementAdmission = yield* Semaphore.make(1);
+    const activeAdmissions = yield* Ref.make(0);
     // ponytail: reconnects serialize daemon-wide; use per-ticket locks only
     // if concurrent reconnect throughput becomes measurable.
     const reattachRegistration = yield* Semaphore.make(1);
@@ -280,7 +287,7 @@ export const BrokerLive: Layer.Layer<
             ),
           );
 
-    const submit = (
+    const submitAccepted = (
       rawInput: SubmitInput,
       callbacks: SubmitCallbacks,
     ): Effect.Effect<SubmitResult, CargoIntentError> =>
@@ -966,6 +973,38 @@ export const BrokerLive: Layer.Layer<
         };
       });
 
+    const submit = (
+      input: SubmitInput,
+      callbacks: SubmitCallbacks,
+    ): Effect.Effect<SubmitResult, CargoIntentError> =>
+      Effect.acquireUseRelease(
+        retirementAdmission.withPermits(1)(Ref.update(activeAdmissions, (count) => count + 1)),
+        () => submitAccepted(input, callbacks),
+        () =>
+          retirementAdmission.withPermits(1)(
+            Ref.update(activeAdmissions, (count) => count - 1),
+          ),
+      );
+
+    const prepareRetirement = (
+      retire: Effect.Effect<void>,
+    ): Effect.Effect<boolean> =>
+      retirementAdmission.withPermits(1)(
+        Effect.gen(function* () {
+          if ((yield* Ref.get(activeAdmissions)) > 0) {
+            return false;
+          }
+          const idle = daemonReportIsIdle(yield* report(1));
+          if (!idle) {
+            return false;
+          }
+          yield* retire;
+          // Keep admission closed until daemon scope teardown interrupts this
+          // fiber; no concurrent submit can enter after the idle snapshot.
+          return yield* Effect.never;
+        }),
+      );
+
     yield* Effect.addFinalizer(() =>
       Effect.gen(function* () {
         yield* lanesRuntime.interruptWorkers();
@@ -996,6 +1035,7 @@ export const BrokerLive: Layer.Layer<
 
     return {
       submit,
+      prepareRetirement,
       recordAttempt,
       kill,
       markOwnerGone,

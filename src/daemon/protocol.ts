@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+export { wireProtocol } from '../lib/wire-protocol.js';
 export { LineBuffer } from '../lib/ndjson.js';
 
 /**
@@ -404,6 +405,8 @@ export const pingRequestSchema = z.object({
 export const shutdownRequestSchema = z.object({
   type: z.literal('shutdown'),
   id: z.string().min(1),
+  /** Automatic upgrades set this; explicit daemon restart leaves it false. */
+  ifIdle: z.boolean().optional(),
   /**
    * The requesting client's release version. The daemon refuses a shutdown
    * from a client older than itself, or from one that sends no version
@@ -691,12 +694,23 @@ export interface StatusReport {
   readonly kache: KacheStatusReport | null;
   readonly system: SystemLoadReport;
   /**
-   * The daemon's release version. Every client is the same install as the
-   * daemon it talks to: `ensureDaemonRunning` replaces a daemon whose version
-   * differs, so a report always names the caller's own version.
+   * The daemon's release version. A client may use an older daemon that
+   * advertises the same wire-protocol identity.
    */
   readonly version: string;
 }
+
+/** One retirement predicate shared by the client preflight and daemon refusal. */
+export const daemonReportIsIdle = (
+  report: Pick<StatusReport, 'active' | 'lanes'>,
+): boolean =>
+  report.active.length === 0 &&
+  report.lanes.every(
+    (lane) =>
+      lane.queued === 0 &&
+      lane.runningTicket === null &&
+      lane.executingTickets.length === 0,
+  );
 
 /** Busy share of one device backing the state dir or an in-flight target dir. */
 export interface DiskUtilReport {
@@ -839,6 +853,8 @@ export interface PongMessage {
   readonly pid: number;
   readonly startedAtMs: number;
   readonly version: string;
+  /** Stable wire identity; absent only on compatible 0.7.1–0.7.3 daemons. */
+  readonly protocol?: number;
 }
 
 export interface StatusResultMessage {

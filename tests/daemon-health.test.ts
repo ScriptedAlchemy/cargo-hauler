@@ -94,7 +94,7 @@ describe('probeDaemonHealth', () => {
       expect(health).toEqual({ reason: 'answer-timeout', state: 'unresponsive', timeoutMs: 300 });
     }).pipe(Effect.scoped, Effect.runPromise), 10_000);
 
-  it('bounds replacement of a stale daemon within the health-probe budget', () =>
+  it('rejects an incompatible daemon without replacing it during a health read', () =>
     Effect.gen(function* () {
       const root = yield* scopedTempDir('hauler-health-stale-');
       const config = listenerConfig(root);
@@ -127,9 +127,9 @@ describe('probeDaemonHealth', () => {
         probeDaemonHealth(config, { platform: 'linux', timeoutMs: 300 }),
       );
       expect(Date.now() - startedAt).toBeLessThan(1_500);
-      expect(calls).toEqual(['ping', 'shutdown']);
+      expect(calls).toEqual(['ping']);
       expect(health).toMatchObject({ reason: 'open-failed', state: 'unreachable' });
-      expect(health.state === 'unreachable' ? health.detail : '').toContain('not restarted');
+      expect(health.state === 'unreachable' ? health.detail : '').toContain('incompatible');
     }).pipe(Effect.scoped, Effect.runPromise), 10_000);
 
   it.skipIf(process.getuid?.() === 0)('reports a state directory it may not search as unreachable, not missing', () =>

@@ -10,14 +10,16 @@ import * as Schedule from 'effect/Schedule';
 
 import { resolveDaemonConfig } from '../daemon/config.js';
 import type { DaemonConfigShape } from '../daemon/config.js';
-import { pingDaemon } from '../daemon/control.js';
+import { pingDaemon, requestExpecting } from '../daemon/control.js';
 import type {
   ConnectionClosedError,
   ControlTimeoutError,
   DaemonUnreachableError,
 } from '../daemon/control.js';
-import type { PongMessage } from '../daemon/protocol.js';
+import { daemonReportIsIdle } from '../daemon/protocol.js';
+import type { PongMessage, StatusResultMessage } from '../daemon/protocol.js';
 import {
+  DaemonIncompatibleError,
   DaemonNewerError,
   DaemonNotReplacedError,
   exitGraceMs,
@@ -31,6 +33,8 @@ import { resolveHaulerArgv } from '../hooks/hauler-binding.js';
 import { absentSocketCodes, socketErrorCode } from '../lib/socket-errors.js';
 import { isHaulerInternalEnvironmentVariable } from '../lib/cargo-env.js';
 import { ensurePrivateDir, ensurePrivateFile } from '../lib/private-state.js';
+import { shortId } from '../lib/id.js';
+import { speaksCurrentWireProtocol } from '../lib/wire-protocol.js';
 import { legacyRelocatedSocketPath } from '../status.js';
 
 export class SpawnDaemonError extends Data.TaggedError('SpawnDaemonError')<{
@@ -50,6 +54,7 @@ export type WaitForDaemonError =
 export type EnsureDaemonError =
   | WaitForDaemonError
   | SpawnDaemonError
+  | DaemonIncompatibleError
   | DaemonNewerError
   | DaemonNotReplacedError
   | DaemonReplacementFailedError;
@@ -59,6 +64,8 @@ export interface EnsureDaemonDependencies extends ExitWaitOptions {
     socketPath: string,
     timeoutMs: number,
   ) => Effect.Effect<PongMessage, WaitForDaemonError>;
+  /** Whether the answering daemon has no running, queued, executing, or attached work. */
+  readonly daemonIsIdle: (socketPath: string) => Effect.Effect<boolean>;
   /** The graceful `shutdown` request to a daemon of another version. */
   readonly requestShutdown: (socketPath: string) => Effect.Effect<ShutdownOutcome>;
   readonly spawnDetachedDaemon: (
@@ -244,31 +251,33 @@ export const spawnDetachedDaemon = (
   );
 
 export const defaultEnsureDependencies: EnsureDaemonDependencies = {
+  daemonIsIdle: (socketPath) =>
+    requestExpecting(
+      {
+        message: { id: shortId(), limit: 1, type: 'status' },
+        socketPath,
+        timeoutMs: 5_000,
+      },
+      (message): message is StatusResultMessage => message.type === 'status-result',
+    ).pipe(
+      Effect.map((result) => result !== undefined && daemonReportIsIdle(result.report)),
+      // Unknown is busy: automatic replacement must never guess that a
+      // daemon is idle when its status probe failed.
+      Effect.catchCause(() => Effect.succeed(false)),
+    ),
   exitGraceMs,
   pingDaemon,
   pollMs: 100,
   processAlive,
-  requestShutdown,
+  requestShutdown: (socketPath) => requestShutdown(socketPath, 5_000, version, true),
   spawnDetachedDaemon,
   waitForDaemon,
 };
 
 /**
- * The version gate for every client read. A daemon of this build is returned,
- * an absent daemon stays absent, and a daemon from another install is replaced
- * before the caller can request or parse a versioned payload.
- *
- * One install, one version: the CLI, hooks, MCP server, and daemon always
- * ship together, so a daemon answering with another version is one left
- * running from a previous install, and it is replaced here on the next call
- * — the graceful `shutdown` request, a wait for its pid to exit, then the
- * usual detached spawn. Its in-flight tickets are not handed over: the old
- * daemon settles them itself as it shuts down (`killed`, error `daemon
- * shutdown`), exactly as under `hauler daemon restart`; only rows a daemon
- * that died without shutting down never marked are stamped `orphaned by
- * daemon restart` by the next daemon's first ledger pass. The old daemon is
- * never signalled past the request; one that outlives the grace fails this
- * call as `DaemonNotReplaced` and keeps serving.
+ * Read-only protocol gate. Compatible daemons are returned without lifecycle
+ * side effects; absent stays absent, newer remains directional, and an older
+ * incompatible peer fails with its identity before a payload is parsed.
  */
 const pingOrAbsent = (
   socketPath: string,
@@ -284,22 +293,24 @@ const pingOrAbsent = (
 /**
  * Retire a daemon from another install: the graceful request, then a wait for
  * its pid. Directional — only an older daemon is replaced. A newer one
- * belongs to a newer install; this client is the stale one. One that refuses
- * or outlives the grace keeps serving and fails the call.
+ * belongs to a newer install; this client is the stale one. Refusal returns
+ * false so the submission can stay on the old daemon. Once shutdown is
+ * acknowledged the listener is closed, so a daemon that outlives the grace
+ * cannot safely be returned as reusable.
  */
 const retireDaemon = (
   socketPath: string,
   daemon: PongMessage,
   dependencies: EnsureDaemonDependencies,
-): Effect.Effect<void, DaemonNewerError | DaemonNotReplacedError> =>
+): Effect.Effect<boolean, DaemonNewerError | DaemonNotReplacedError> =>
   Effect.gen(function* () {
     const identity = { pid: daemon.pid, startedAtMs: daemon.startedAtMs, version: daemon.version };
     if (isNewerVersion(daemon.version, version)) {
       return yield* new DaemonNewerError({ clientVersion: version, daemon: identity, socketPath });
     }
     const shutdown = yield* dependencies.requestShutdown(socketPath);
-    if (shutdown.kind === 'refused') {
-      return yield* new DaemonNewerError({ clientVersion: version, daemon: identity, socketPath });
+    if (shutdown.kind !== 'acknowledged') {
+      return false;
     }
     const exited = yield* waitForExit(daemon.pid, dependencies);
     if (!exited) {
@@ -309,6 +320,7 @@ const retireDaemon = (
         socketPath,
       });
     }
+    return true;
   });
 
 /**
@@ -322,11 +334,11 @@ const retireLegacyRelocatedDaemon = (
   config: DaemonConfigShape,
   dependencies: EnsureDaemonDependencies,
   pingTimeoutMs: number,
-): Effect.Effect<void, EnsureDaemonError> =>
+): Effect.Effect<PongMessage | null, EnsureDaemonError> =>
   Effect.gen(function* () {
     const legacyPath = legacyRelocatedSocketPath(config.stateDir);
     if (legacyPath === null || legacyPath === config.socketPath) {
-      return;
+      return null;
     }
     const legacy = yield* pingOrAbsent(legacyPath, dependencies, pingTimeoutMs).pipe(
       // Nothing this build writes lives at that path, so a probe that fails
@@ -336,9 +348,12 @@ const retireLegacyRelocatedDaemon = (
       Effect.orElseSucceed(() => null),
     );
     if (legacy === null) {
-      return;
+      return null;
     }
-    yield* retireDaemon(legacyPath, legacy, dependencies);
+    if (!(yield* dependencies.daemonIsIdle(legacyPath))) {
+      return legacy;
+    }
+    return (yield* retireDaemon(legacyPath, legacy, dependencies)) ? null : legacy;
   });
 
 export const ensureDaemonVersion = (
@@ -349,31 +364,95 @@ export const ensureDaemonVersion = (
   Effect.gen(function* () {
     const already = yield* pingOrAbsent(config.socketPath, dependencies, pingTimeoutMs);
     if (already === null) {
-      yield* retireLegacyRelocatedDaemon(config, dependencies, pingTimeoutMs);
       return null;
     }
     if (already.version === version) {
       return already;
     }
-    yield* retireDaemon(config.socketPath, already, dependencies);
-    yield* dependencies.spawnDetachedDaemon(config);
-    return yield* dependencies.waitForDaemon(config.socketPath).pipe(
-      Effect.mapError(
-        (cause) => new DaemonReplacementFailedError({ cause, socketPath: config.socketPath }),
-      ),
-    );
+    const identity = {
+      pid: already.pid,
+      startedAtMs: already.startedAtMs,
+      version: already.version,
+    };
+    if (isNewerVersion(already.version, version)) {
+      return yield* new DaemonNewerError({
+        clientVersion: version,
+        daemon: identity,
+        socketPath: config.socketPath,
+      });
+    }
+    if (speaksCurrentWireProtocol(already, version)) {
+      return already;
+    }
+    return yield* new DaemonIncompatibleError({
+      clientVersion: version,
+      daemon: identity,
+      socketPath: config.socketPath,
+    });
   });
 
 export const ensureDaemonRunning = (
   config: DaemonConfigShape = resolveDaemonConfig(),
   dependencies: EnsureDaemonDependencies = defaultEnsureDependencies,
+  reportDiagnostic: (line: string) => void = (line) => {
+    process.stderr.write(line);
+  },
 ): Effect.Effect<PongMessage, EnsureDaemonError> =>
   ensureDaemonVersion(config, dependencies).pipe(
-    Effect.flatMap((daemon) =>
-      daemon === null
-        ? dependencies.spawnDetachedDaemon(config).pipe(
-            Effect.andThen(dependencies.waitForDaemon(config.socketPath)),
-          )
-        : Effect.succeed(daemon),
-    ),
+    Effect.flatMap((daemon) => {
+      if (daemon === null) {
+        return Effect.gen(function* () {
+          const legacy = yield* retireLegacyRelocatedDaemon(config, dependencies, 500);
+          if (legacy !== null) {
+            return yield* new DaemonIncompatibleError({
+              clientVersion: version,
+              daemon: {
+                pid: legacy.pid,
+                startedAtMs: legacy.startedAtMs,
+                version: legacy.version,
+              },
+              socketPath: legacyRelocatedSocketPath(config.stateDir) ?? config.socketPath,
+            });
+          }
+          yield* dependencies.spawnDetachedDaemon(config);
+          return yield* dependencies.waitForDaemon(config.socketPath);
+        });
+      }
+      if (daemon.version === version) {
+        return Effect.succeed(daemon);
+      }
+      const deferred = (): Effect.Effect<PongMessage> =>
+        Effect.sync(() => {
+          reportDiagnostic(
+            `[cargo-hauler] daemon ${daemon.version} will be replaced by ${version} when idle\n`,
+          );
+          return daemon;
+        });
+      return dependencies.daemonIsIdle(config.socketPath).pipe(
+        Effect.flatMap((idle) => {
+          if (!idle) {
+            return deferred();
+          }
+          return retireDaemon(config.socketPath, daemon, dependencies).pipe(
+            Effect.flatMap((retired) =>
+              retired
+                ? dependencies.spawnDetachedDaemon(config).pipe(
+                    Effect.andThen(
+                      dependencies.waitForDaemon(config.socketPath).pipe(
+                        Effect.mapError(
+                          (cause) =>
+                            new DaemonReplacementFailedError({
+                              cause,
+                              socketPath: config.socketPath,
+                            }),
+                        ),
+                      ),
+                    ),
+                  )
+                : deferred(),
+            ),
+          );
+        }),
+      );
+    }),
   );

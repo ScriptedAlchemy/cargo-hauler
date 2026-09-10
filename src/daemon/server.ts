@@ -21,7 +21,7 @@ import type {
   ReattachRequest,
   ServerMessage,
 } from './protocol.js';
-import { LineBuffer, clientMessageSchema, encodeServerMessage } from './protocol.js';
+import { LineBuffer, clientMessageSchema, encodeServerMessage, wireProtocol } from './protocol.js';
 
 export interface ConnectionHandlerOptions {
   readonly broker: BrokerApi;
@@ -475,6 +475,7 @@ export const makeConnectionHandler =
                 type: 'pong',
                 id: message.id,
                 pid: process.pid,
+                protocol: wireProtocol,
                 startedAtMs: options.startedAtMs,
                 version: options.version,
               });
@@ -545,27 +546,48 @@ export const makeConnectionHandler =
                 });
               });
             case 'shutdown': {
-              // Replacement is directional: a client older than this daemon,
-              // or one that sends no version (every build before the field),
-              // is a long-lived session on a previous plugin. It must not
-              // take the current install's daemon down, or the two installs
-              // replace each other on every hook call.
-              const requester = message.version ?? null;
-              if (requester === null || compareVersions(requester, options.version) < 0) {
-                return send({
-                  type: 'error',
-                  id: message.id,
-                  code: 'shutdown-refused',
-                  message: `shutdown refused: this daemon is ${options.version} and the requesting client is ${requester ?? 'unversioned (older)'}; only a newer install replaces a daemon — upgrade that client, or stop the daemon with \`hauler daemon stop\` from this install`,
-                });
-              }
-              // Written directly (not via the queue) so the ack is flushed
-              // before the latch tears the server down.
-              return write(encodeServerMessage({ type: 'shutting-down', id: message.id })).pipe(
-                Effect.ignore,
-                Effect.andThen(Deferred.succeed(options.shutdownLatch, undefined)),
-                Effect.asVoid,
-              );
+              return Effect.gen(function* () {
+                // Replacement is directional: a client older than this daemon,
+                // or one that sends no version (every build before the field),
+                // is a long-lived session on a previous plugin. It must not
+                // take the current install's daemon down, or the two installs
+                // replace each other on every hook call.
+                const requester = message.version ?? null;
+                if (requester === null || compareVersions(requester, options.version) < 0) {
+                  return yield* send({
+                    type: 'error',
+                    id: message.id,
+                    code: 'shutdown-refused',
+                    message: `shutdown refused: this daemon is ${options.version} and the requesting client is ${requester ?? 'unversioned (older)'}; only a newer install replaces a daemon — upgrade that client, or stop the daemon with \`hauler daemon stop\` from this install`,
+                  });
+                }
+                if (message.ifIdle === true) {
+                  const mayRetire = yield* options.broker.prepareRetirement(
+                    write(
+                      encodeServerMessage({ type: 'shutting-down', id: message.id }),
+                    ).pipe(
+                      Effect.ignore,
+                      Effect.andThen(Deferred.succeed(options.shutdownLatch, undefined)),
+                      Effect.asVoid,
+                    ),
+                  );
+                  if (!mayRetire) {
+                    return yield* send({
+                      type: 'error',
+                      id: message.id,
+                      code: 'shutdown-refused',
+                      message: 'shutdown refused: cargo-hauler still has work in flight',
+                    });
+                  }
+                  return;
+                }
+                // Written directly (not via the queue) so the ack is flushed
+                // before the latch tears the server down.
+                yield* write(
+                  encodeServerMessage({ type: 'shutting-down', id: message.id }),
+                ).pipe(Effect.ignore);
+                yield* Deferred.succeed(options.shutdownLatch, undefined);
+              });
             }
             default: {
               const exhaustive: never = message;

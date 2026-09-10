@@ -54,10 +54,8 @@ export type TicketSocketError =
 const nullableRecordSchema = requestRecordSchema.nullable();
 
 /**
- * The record on a `result-result`/`await-result` reply. The daemon is a
- * trusted local peer of this build (one install, one version — see
- * `ensureDaemonRunning`), so a row that does not fit the schema is a defect,
- * not a failure a caller could handle.
+ * The record on a `result-result`/`await-result` reply. The daemon passed the
+ * wire-protocol gate, so a row that does not fit the schema is a defect.
  */
 const readRecord = (request: unknown): Effect.Effect<RequestRecord | null> =>
   Effect.sync(() => nullableRecordSchema.parse(request));
@@ -311,8 +309,8 @@ export const submitBackgroundAck = (
   ensure: (config: DaemonConfigShape) => Effect.Effect<unknown, EnsureDaemonError> = ensureDaemonRunning,
 ): Effect.Effect<BackgroundSubmitAck | null, TicketSocketError> =>
   // Cold daemon must not mean "failed to submit": start it like exec does.
-  // A daemon of another version that outlived the shutdown grace is the one
-  // failure that must reach the caller — this build never submits to it.
+  // Compatible busy daemons keep serving this submission; incompatible peers
+  // still fail before the request crosses the socket.
   // No `holdStop`: the daemon's default for a background request is false,
   // the same as `exec --bg --session`. Background tickets never hold a stop;
   // the two entry points used to disagree.

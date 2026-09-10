@@ -1,9 +1,10 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { version } from 'agent-bundle/meta';
 import { afterEach, describe, expect, it } from 'effect-rstest';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
@@ -54,7 +55,7 @@ const run = (
 const startStaleDaemon = (
   socketPath: string,
   logPath: string,
-  mode: 'replaceable' | 'stubborn',
+  mode: 'idle-older' | 'busy-older' | 'incompatible-older' | 'newer',
 ): Promise<ChildProcess> =>
   new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [fixtureEntry, socketPath, logPath, mode], {
@@ -78,50 +79,116 @@ const startStaleDaemon = (
   });
 
 describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => {
-  it('replaces a stale daemon before parsing its older status payload', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'cargo-hauler-stale-cli-'));
+  const fixtureEnv = (root: string): Readonly<Record<string, string>> => {
     const stateDir = join(root, 'state');
-    const logPath = join(root, 'requests.log');
-    const env = {
+    const cargo = join(root, 'cargo');
+    writeFileSync(cargo, '#!/usr/bin/env bash\nexit 0\n');
+    chmodSync(cargo, 0o755);
+    return {
+      CARGO_HAULER_CARGO_BIN: cargo,
       CARGO_HAULER_KACHE_INDEX: '',
       CARGO_HAULER_STATE_DIR: stateDir,
+      CARGO_HAULER_BATCH_WINDOW_MS: '0',
     };
+  };
+
+  const requests = (logPath: string): string[] =>
+    readFileSync(logPath, 'utf8').trim().split('\n').filter(Boolean);
+
+  it('reads status from a busy compatible older daemon without requesting shutdown', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-status-'));
+    const logPath = join(root, 'requests.log');
+    const env = fixtureEnv(root);
     try {
-      await startStaleDaemon(join(stateDir, 'daemon.sock'), logPath, 'replaceable');
+      await startStaleDaemon(join(env.CARGO_HAULER_STATE_DIR, 'daemon.sock'), logPath, 'busy-older');
       const status = await run(haulerEntry, ['status', '--json'], env);
 
       expect(status.code).toBe(0);
-      expect(status.stderr).not.toContain('ZodError');
       expect(JSON.parse(status.stdout)).toMatchObject({
         daemon: 'running',
+        lanes: [{ queued: 1 }],
         operation: 'status',
       });
-      expect(readFileSync(logPath, 'utf8').trim().split('\n')).toEqual(['ping', 'shutdown']);
+      expect(status.stderr).toBe('');
+      expect(requests(logPath)).toEqual(['ping', 'status']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it('replaces an idle compatible older daemon before submitting exec', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-idle-'));
+    const logPath = join(root, 'requests.log');
+    const env = fixtureEnv(root);
+    try {
+      await startStaleDaemon(join(env.CARGO_HAULER_STATE_DIR, 'daemon.sock'), logPath, 'idle-older');
+      const submitted = await run(haulerEntry, ['exec', '--bg', '--', 'cargo', 'check'], env);
+      const log = await run(haulerEntry, ['log', '--json'], env);
+
+      expect(submitted.code).toBe(0);
+      expect(log.code).toBe(0);
+      expect(JSON.parse(log.stdout)).toMatchObject({
+        daemon: 'running',
+        operation: 'log',
+        requests: [expect.objectContaining({ argv: ['cargo', 'check'] })],
+      });
+      expect(requests(logPath)).toEqual(['ping', 'status', 'shutdown']);
       await run(haulerEntry, ['daemon', 'stop'], env);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   }, 30_000);
 
-  it('reports one clear failure when the stale daemon cannot be replaced', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'cargo-hauler-stubborn-cli-'));
-    const stateDir = join(root, 'state');
+  it('submits to a busy compatible older daemon and reports deferred replacement once', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-busy-'));
     const logPath = join(root, 'requests.log');
-    const env = {
-      CARGO_HAULER_KACHE_INDEX: '',
-      CARGO_HAULER_STATE_DIR: stateDir,
-    };
+    const env = fixtureEnv(root);
     try {
-      await startStaleDaemon(join(stateDir, 'daemon.sock'), logPath, 'stubborn');
-      const status = await run(haulerEntry, ['daemon', 'status'], env);
-      const output = `${status.stdout}${status.stderr}`;
+      await startStaleDaemon(join(env.CARGO_HAULER_STATE_DIR, 'daemon.sock'), logPath, 'busy-older');
+      const submitted = await run(haulerEntry, ['exec', '--bg', '--', 'cargo', 'check'], env);
+
+      expect(submitted.code).toBe(0);
+      const diagnostic = `daemon 0.7.1 will be replaced by ${version} when idle`;
+      expect(submitted.stderr.split(diagnostic)).toHaveLength(2);
+      expect(requests(logPath)).toEqual(['ping', 'status', 'exec']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it('keeps newer-daemon rejection directional without requesting shutdown', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-newer-'));
+    const logPath = join(root, 'requests.log');
+    const env = fixtureEnv(root);
+    try {
+      await startStaleDaemon(join(env.CARGO_HAULER_STATE_DIR, 'daemon.sock'), logPath, 'newer');
+      const status = await run(haulerEntry, ['status', '--json'], env);
 
       expect(status.code).toBe(1);
-      expect(output).toContain('cargo-hauler daemon pid');
-      expect(output).toContain('(0.6.0) is still running');
-      expect(output).toContain('not restarted');
-      expect(output).not.toContain('ZodError');
-      expect(readFileSync(logPath, 'utf8').trim().split('\n')).toEqual(['ping', 'shutdown']);
+      expect(status.stderr).toContain('(999.0.0) is newer than this client');
+      expect(requests(logPath)).toEqual(['ping']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it('rejects an incompatible older daemon by name without requesting shutdown', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-incompatible-'));
+    const logPath = join(root, 'requests.log');
+    const env = fixtureEnv(root);
+    try {
+      await startStaleDaemon(
+        join(env.CARGO_HAULER_STATE_DIR, 'daemon.sock'),
+        logPath,
+        'incompatible-older',
+      );
+      const status = await run(haulerEntry, ['status', '--json'], env);
+
+      expect(status.code).toBe(1);
+      expect(status.stderr).toContain('daemon pid');
+      expect(status.stderr).toContain('(0.6.0)');
+      expect(status.stderr).toContain('incompatible with this client');
+      expect(requests(logPath)).toEqual(['ping']);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -26,8 +26,11 @@ import {
 } from '../src/client/ensure-daemon.js';
 import { DaemonUnreachableError, pingDaemon } from '../src/daemon/control.js';
 import { runDaemon } from '../src/daemon/main.js';
-import { passthroughSpoolFileName, type PongMessage } from '../src/daemon/protocol.js';
-import { notReplacedMessage } from '../src/daemon/shutdown.js';
+import {
+  passthroughSpoolFileName,
+  type PongMessage,
+  wireProtocol,
+} from '../src/daemon/protocol.js';
 import { legacyRelocatedSocketPath } from '../src/status.js';
 import { scopedEnv, scopedTempDir } from './harness.js';
 
@@ -204,7 +207,7 @@ describe('ensureDaemonRunning', () => {
     version,
     ...fields,
   });
-  const previous = pong({ pid: 41, version: '0.0.0-previous' });
+  const previous = pong({ pid: 41, version: '0.7.1' });
   const fresh = pong({ id: 'fresh', pid: 42, startedAtMs: 2 });
 
   /** Fakes: the previous-install daemon (pid 41) answers, exits shortly after the shutdown request, and the spawn brings up pid 42. */
@@ -212,6 +215,7 @@ describe('ensureDaemonRunning', () => {
     const calls: string[] = [];
     let alive = true;
     const dependencies: EnsureDaemonDependencies = {
+      daemonIsIdle: () => Effect.succeed(true),
       exitGraceMs: 500,
       pingDaemon: () => Effect.succeed(previous),
       pollMs: 5,
@@ -257,22 +261,44 @@ describe('ensureDaemonRunning', () => {
       expect(actual).toBe(fresh);
     }));
 
-  it.live('fails as DaemonNotReplaced, without spawning, when the old pid outlives the grace', () =>
+  it.live('does not return an older daemon whose acknowledged shutdown outlives retirement', () =>
     Effect.gen(function* () {
+      const diagnostics: string[] = [];
       const { calls, dependencies } = fakes({ exitGraceMs: 40, processAlive: () => true });
-      const error = yield* Effect.flip(ensureDaemonRunning(config, dependencies));
+      const error = yield* Effect.flip(
+        ensureDaemonRunning(config, dependencies, (line) => diagnostics.push(line)),
+      );
 
       expect(error._tag).toBe('DaemonNotReplaced');
-      if (error._tag !== 'DaemonNotReplaced') {
-        throw new Error(`unexpected failure ${error._tag}`);
-      }
-      expect(error.daemon).toEqual({ pid: 41, startedAtMs: 1, version: '0.0.0-previous' });
-      expect(error.graceMs).toBe(40);
-      expect(error.socketPath).toBe(config.socketPath);
-      expect(error.message).toBe(notReplacedMessage(error.daemon, 40));
-      expect(error.message).toContain('pid 41 (0.0.0-previous) is still running 40ms after the shutdown request');
-      expect(error.message).toContain('not restarted');
+      expect(diagnostics).toEqual([]);
       expect(calls).toEqual(['shutdown']);
+    }));
+
+  it.effect('keeps using the older daemon when retirement is refused after the idle probe', () =>
+    Effect.gen(function* () {
+      const diagnostics: string[] = [];
+      const refusalCalls: string[] = [];
+      const { calls, dependencies } = fakes({
+        requestShutdown: () =>
+          Effect.sync(() => {
+            refusalCalls.push('shutdown');
+            return {
+              code: 'shutdown-refused',
+              kind: 'refused',
+              message: 'work arrived before retirement',
+            } as const;
+          }),
+      });
+      const daemon = yield* ensureDaemonRunning(config, dependencies, (line) =>
+        diagnostics.push(line),
+      );
+
+      expect(daemon).toBe(previous);
+      expect(diagnostics).toEqual([
+        `[cargo-hauler] daemon 0.7.1 will be replaced by ${version} when idle\n`,
+      ]);
+      expect(calls).toEqual([]);
+      expect(refusalCalls).toEqual(['shutdown']);
     }));
 
   it.live('spawns and waits when nothing answers the socket', () =>
@@ -385,11 +411,19 @@ describe('daemonIsAbsent', () => {
 
 describe('directional replacement', () => {
   const config = configAt('/tmp/cargo-hauler-directional-unit');
-  const newer: PongMessage = { id: 'n', pid: 77, startedAtMs: 1, type: 'pong', version: '999.0.0' };
-  const older: PongMessage = { id: 'o', pid: 78, startedAtMs: 1, type: 'pong', version: '0.0.1' };
+  const newer: PongMessage = {
+    id: 'n',
+    pid: 77,
+    protocol: wireProtocol,
+    startedAtMs: 1,
+    type: 'pong',
+    version: '999.0.0',
+  };
+  const older: PongMessage = { id: 'o', pid: 78, startedAtMs: 1, type: 'pong', version: '0.7.1' };
   const tracking = (overrides: Partial<EnsureDaemonDependencies>) => {
     const calls: string[] = [];
     const dependencies: EnsureDaemonDependencies = {
+      daemonIsIdle: () => Effect.succeed(true),
       exitGraceMs: 100,
       pingDaemon: () => Effect.succeed(newer),
       pollMs: 5,
@@ -412,7 +446,7 @@ describe('directional replacement', () => {
       expect(calls).toEqual([]);
     }));
 
-  it.effect('treats a refused shutdown as a newer daemon and does not spawn', () =>
+  it.effect('reuses a protocol-compatible older daemon for reads without requesting shutdown', () =>
     Effect.gen(function* () {
       const { calls, dependencies } = tracking({
         pingDaemon: () => Effect.succeed(older),
@@ -426,9 +460,8 @@ describe('directional replacement', () => {
             } as const;
           }),
       });
-      const error = yield* ensureDaemonVersion(config, dependencies).pipe(Effect.flip);
-      expect(error._tag).toBe('DaemonNewer');
-      expect(calls).toEqual(['shutdown']);
+      expect(yield* ensureDaemonVersion(config, dependencies)).toBe(older);
+      expect(calls).toEqual([]);
     }));
 
   describe('relocated socket left by a pre-hardening install', () => {
@@ -446,7 +479,7 @@ describe('directional replacement', () => {
       expect(legacyRelocatedSocketPath(config.stateDir)).toBeNull();
     });
 
-    it.effect('retires the daemon still listening there so the spawn can take the lock', () =>
+    it.effect('does not probe or retire a legacy endpoint during a read', () =>
       Effect.gen(function* () {
         // Nothing answers at the current endpoint; the old daemon answers at
         // the legacy one and still holds this state dir's singleton lock.
@@ -461,13 +494,11 @@ describe('directional replacement', () => {
         });
 
         expect(yield* ensureDaemonVersion(deepConfig, dependencies)).toBeNull();
-        expect(answered).toEqual([deepConfig.socketPath, legacyPath]);
-        // Retired through the usual gate, and the caller — not this step —
-        // spawns at the current path.
-        expect(calls).toEqual(['shutdown']);
+        expect(answered).toEqual([deepConfig.socketPath]);
+        expect(calls).toEqual([]);
       }));
 
-    it.effect('leaves a newer daemon at the legacy path alone and fails as DaemonNewer', () =>
+    it.effect('does not inspect a newer daemon at the legacy path during a read', () =>
       Effect.gen(function* () {
         const { calls, dependencies } = tracking({
           pingDaemon: (socketPath) =>
@@ -475,8 +506,27 @@ describe('directional replacement', () => {
               ? Effect.succeed(newer)
               : Effect.fail(absentDaemon(socketPath)),
         });
-        const error = yield* ensureDaemonVersion(deepConfig, dependencies).pipe(Effect.flip);
-        expect(error._tag).toBe('DaemonNewer');
+        expect(yield* ensureDaemonVersion(deepConfig, dependencies)).toBeNull();
+        expect(calls).toEqual([]);
+      }));
+
+    it.effect('does not spawn behind a busy daemon holding the legacy-path singleton', () =>
+      Effect.gen(function* () {
+        const answered: string[] = [];
+        const { calls, dependencies } = tracking({
+          daemonIsIdle: () => Effect.succeed(false),
+          pingDaemon: (socketPath) => {
+            answered.push(socketPath);
+            return socketPath === legacyPath
+              ? Effect.succeed(older)
+              : Effect.fail(absentDaemon(socketPath));
+          },
+          spawnDetachedDaemon: () => Effect.die(new Error('spawn should not run')),
+        });
+
+        const error = yield* ensureDaemonRunning(deepConfig, dependencies).pipe(Effect.flip);
+        expect(error._tag).toBe('DaemonIncompatible');
+        expect(answered).toEqual([deepConfig.socketPath, legacyPath]);
         expect(calls).toEqual([]);
       }));
 

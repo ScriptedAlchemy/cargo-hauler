@@ -1,10 +1,10 @@
-import { spawn } from 'node:child_process';
 import { createConnection } from 'node:net';
-import { fileURLToPath } from 'node:url';
 
 import { version } from 'agent-bundle/meta';
 
 import { socketErrorCode } from '../lib/socket-errors.js';
+import { isNewerVersion } from '../lib/version-order.js';
+import { speaksCurrentWireProtocol } from '../lib/wire-protocol.js';
 
 import { asFinishedTicket, type FinishedTicket } from './finished-ticket.js';
 import { resolveHookSocketPath } from './paths.js';
@@ -127,60 +127,15 @@ const requestOnce = (
     });
   });
 
-const replaceStaleDaemon = (): Promise<{ readonly detail: string; readonly replaced: boolean }> => {
-  // This RPC runs from a generated artifact hook. Its declared companion
-  // script is code-relative, not state-relative or PATH-selected. Do not
-  // import the runtime root resolver here: preflight builds inline even a
-  // dynamic import and would pull the rendering runtime into the fast path.
-  const command = process.execPath;
-  const args = [fileURLToPath(new URL('../scripts/hauler.mjs', import.meta.url))];
-  return new Promise((resolve) => {
-    const child = spawn(command, [...args, 'daemon', 'start'], {
-      killSignal: 'SIGTERM',
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: 8_000,
-    });
-    let output = '';
-    child.stdout.on('data', (chunk: Buffer) => {
-      output += chunk.toString('utf8');
-    });
-    child.stderr.on('data', (chunk: Buffer) => {
-      output += chunk.toString('utf8');
-    });
-    child.once('error', (error) => {
-      resolve({ detail: error.message, replaced: false });
-    });
-    child.once('close', (code) => {
-      resolve({
-        detail: output.trim() || `hauler daemon start exited ${code ?? 1}`,
-        replaced: code === 0,
-      });
-    });
-  });
-};
-
-export interface RequestOutcomeDependencies {
-  readonly replaceStaleDaemon: () => Promise<{
-    readonly detail: string;
-    readonly replaced: boolean;
-  }>;
-}
-
-const defaultRequestOutcomeDependencies: RequestOutcomeDependencies = {
-  replaceStaleDaemon,
-};
-
 /**
- * One-shot hook request with the same one-version gate as the Effect client.
- * Hook preflights stay dependency-free on Effect: on skew they delegate the
- * replacement to `hauler daemon start`, which owns the shutdown/wait/spawn
- * lifecycle, then retry the requested operation once.
+ * One-shot hook read with the same protocol gate as the Effect client.
+ * Hook preflights stay dependency-free on Effect and never turn a read into
+ * daemon replacement.
  */
 export const requestOutcome = async (
   message: Record<string, unknown>,
   socketPath: string,
   timeoutMs: number,
-  dependencies: RequestOutcomeDependencies = defaultRequestOutcomeDependencies,
 ): Promise<RequestOutcome> => {
   const ping = await requestOnce(
     { id: `hook-version-${Date.now()}`, type: 'ping' },
@@ -193,11 +148,21 @@ export const requestOutcome = async (
   if (ping.message.type !== 'pong' || typeof ping.message.version !== 'string') {
     return { kind: 'malformed' };
   }
-  if (ping.message.version !== version) {
-    const replacement = await dependencies.replaceStaleDaemon();
-    if (!replacement.replaced) {
-      return { detail: replacement.detail, kind: 'replacement-failed' };
-    }
+  const peer = {
+    version: ping.message.version,
+    ...(typeof ping.message.protocol === 'number' ? { protocol: ping.message.protocol } : {}),
+  };
+  if (isNewerVersion(ping.message.version, version)) {
+    return {
+      detail: `cargo-hauler daemon ${ping.message.version} is newer than this client ${version}`,
+      kind: 'replacement-failed',
+    };
+  }
+  if (ping.message.version !== version && !speaksCurrentWireProtocol(peer, version)) {
+    return {
+      detail: `cargo-hauler daemon ${ping.message.version} is incompatible with this client ${version}`,
+      kind: 'replacement-failed',
+    };
   }
   return requestOnce(message, socketPath, timeoutMs);
 };

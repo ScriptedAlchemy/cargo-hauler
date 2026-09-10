@@ -44,6 +44,10 @@ plugin internals, not CLI entry points.
   a single crate answers the question.
 - Prefer `hauler status`, `hauler last`, and the `hauler_status` MCP
   tool over `ps`/`pgrep` probes.
+- After a package upgrade, reads keep using a protocol-compatible older
+  daemon and never retire it. A submission may print `daemon X will be
+  replaced by Y when idle`; the request was accepted by the busy daemon, so
+  do not restart it or resubmit.
 - Do not pipe status through `jq` just to find your work. Scope it directly:
   `hauler status --session <id>`, `--cwd <path>`, repeated
   `--ticket cc-N`, `--status running`, or `--command-contains <text>`.

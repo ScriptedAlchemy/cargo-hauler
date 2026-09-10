@@ -15,6 +15,7 @@ const brokerWith = (overrides: Partial<BrokerApi> = {}): BrokerApi => ({
   kill: () => Effect.succeed(true),
   markOwnerGone: () => Effect.succeed(false),
   ownerDisconnected: () => Effect.void,
+  prepareRetirement: (retire) => Effect.as(retire, true),
   reattach: () => Effect.succeed({ kind: 'unknown' }),
   recordAttempt: () => Effect.succeed({ ticket: 'cc-attempt' }),
   report: () => Effect.die(new Error('status exploded')),
@@ -492,7 +493,10 @@ describe('daemon connection defect boundaries', () => {
 });
 
 describe('directional shutdown', () => {
-  const shutdownWith = (fields: Record<string, unknown>) =>
+  const shutdownWith = (
+    fields: Record<string, unknown>,
+    broker: BrokerApi = brokerWith(),
+  ) =>
     Effect.gen(function* () {
       const written = yield* Deferred.make<void>();
       const replies: ServerMessage[] = [];
@@ -520,7 +524,7 @@ describe('directional shutdown', () => {
       } as unknown as Socket.Socket;
       const shutdownLatch = yield* Deferred.make<void>();
       yield* makeConnectionHandler({
-        broker: brokerWith(),
+        broker,
         shutdownLatch,
         startedAtMs: 0,
         version: '0.6.7',
@@ -547,5 +551,21 @@ describe('directional shutdown', () => {
         expect(latched).toBe(true);
         expect(replies[0]).toEqual({ type: 'shutting-down', id: 's1' });
       }
+    }));
+
+  it.effect('refuses automatic retirement while busy but keeps explicit restart semantics', () =>
+    Effect.gen(function* () {
+      const busy = brokerWith({ prepareRetirement: () => Effect.succeed(false) });
+      const automatic = yield* shutdownWith({ ifIdle: true, version: '0.7.0' }, busy);
+      expect(automatic.latched).toBe(false);
+      expect(automatic.replies[0]).toMatchObject({
+        code: 'shutdown-refused',
+        id: 's1',
+        type: 'error',
+      });
+
+      const explicit = yield* shutdownWith({ version: '0.7.0' }, busy);
+      expect(explicit.latched).toBe(true);
+      expect(explicit.replies[0]).toEqual({ id: 's1', type: 'shutting-down' });
     }));
 });
