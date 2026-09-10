@@ -84,11 +84,10 @@ describe('hook RPC NDJSON framing', () => {
     }
   });
 
-  it('replaces a stale hook daemon before retrying the requested payload', async () => {
+  it('reads from a protocol-compatible older hook daemon without replacement', async () => {
     const root = mkdtempSync(join(tmpdir(), 'cc-hook-stale-'));
     const socketPath = join(root, 'daemon.sock');
     const calls: string[] = [];
-    let replaced = false;
     const server = createServer((socket) => {
       socket.once('data', (chunk: Buffer) => {
         const message = JSON.parse(chunk.toString('utf8')) as {
@@ -104,7 +103,7 @@ describe('hook RPC NDJSON framing', () => {
                   pid: 1,
                   startedAtMs: 1,
                   type: 'pong',
-                  version: replaced ? version : '0.0.0-previous',
+                  version: '0.7.1',
                 }
               : { id: message.id, requests: [], type: 'session-pending-result' },
           )}\n`,
@@ -120,12 +119,6 @@ describe('hook RPC NDJSON framing', () => {
         { id: 'pending', type: 'session-pending' },
         socketPath,
         500,
-        {
-          replaceStaleDaemon: async () => {
-            replaced = true;
-            return { detail: '', replaced: true };
-          },
-        },
       );
       expect(outcome).toMatchObject({
         kind: 'reply',
@@ -171,15 +164,9 @@ describe('hook RPC NDJSON framing', () => {
         { id: 'pending', type: 'session-pending' },
         socketPath,
         500,
-        {
-          replaceStaleDaemon: async () => ({
-            detail: 'old daemon still running',
-            replaced: false,
-          }),
-        },
       );
       expect(outcome).toEqual({
-        detail: 'old daemon still running',
+        detail: `cargo-hauler daemon 0.0.0-previous is incompatible with this client ${version}`,
         kind: 'replacement-failed',
       });
       expect(calls).toEqual(['ping']);

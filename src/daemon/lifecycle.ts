@@ -220,6 +220,16 @@ export const startDaemon = (
       ConnectionClosed: failedStart,
       ControlTimeout: failedStart,
       DaemonReplacementFailed: failedStart,
+      DaemonIncompatible: (error) =>
+        Effect.succeed(
+          result(config, 'start', {
+            message: error.message,
+            pid: error.daemon.pid,
+            previousPid: error.daemon.pid,
+            report: null,
+            running: true,
+          }),
+        ),
       DaemonNewer: (error) =>
         Effect.succeed(
           result(config, 'start', {
@@ -411,6 +421,16 @@ export const statusDaemon = (
       }),
     ),
     Effect.catchTags({
+      DaemonIncompatible: (error) =>
+        Effect.succeed(
+          result(config, 'status', {
+            message: error.message,
+            pid: error.daemon.pid,
+            previousPid: error.daemon.pid,
+            report: null,
+            running: true,
+          }),
+        ),
       DaemonNewer: (error) =>
         Effect.succeed(
           result(config, 'status', {

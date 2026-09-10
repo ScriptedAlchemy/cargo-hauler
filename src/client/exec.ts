@@ -935,26 +935,24 @@ const reattachLoop = (
   });
 
 /**
- * Auto-start and the one-version rule share one call, made before the first
- * connection: `ensureDaemonRunning` pings, replaces a daemon left running by
- * a previous install, and starts one when none answers. Exec fails open, so
- * none of its failures stop the build. A ping that merely timed out is a
- * saturated daemon — `brokeredOrUnreachable` already knocks on it for a
- * minute, so that case proceeds silently. A daemon of another version that
- * outlived the shutdown grace is not a peer this build may use: cargo runs
- * directly with that message as the reason. Anything else (a failed spawn, a
- * daemon that never came up) is reported once and the connection attempt
- * decides what happens next.
+ * Auto-start and protocol-aware upgrade share one call before the first
+ * connection. An idle older compatible daemon is replaced; a busy one serves
+ * the submission and reports the deferred upgrade once. Incompatible or
+ * newer peers fail open to direct Cargo. A ping timeout is a saturated daemon,
+ * so the normal connection retry proceeds silently.
  */
 const ensureForExec = (
   options: ExecOptions,
   config: DaemonConfigShape,
 ): Effect.Effect<PassthroughMode | null> => {
-  const ensure = options.ensureDaemon ?? (() => ensureDaemonRunning(config).pipe(Effect.asVoid));
+  const ensure =
+    options.ensureDaemon ??
+    (() => ensureDaemonRunning(config, undefined, options.io.writeStderr).pipe(Effect.asVoid));
   return ensure().pipe(
     Effect.as<PassthroughMode | null>(null),
     Effect.catchTags({
       ControlTimeout: () => Effect.succeed(null),
+      DaemonIncompatible: (error) => Effect.succeed({ reason: error.message, spool: true }),
       DaemonNewer: (error) => Effect.succeed({ reason: error.message, spool: true }),
       DaemonNotReplaced: (error) => Effect.succeed({ reason: error.message, spool: true }),
     }),
@@ -986,6 +984,20 @@ export const runExecClient = (
     stdoutIsTty: terminal?.stdout.kind === 'tty',
   };
   const config = options.config ?? resolveDaemonConfig();
+  let reportedUpgrade = false;
+  const configuredOptions: ExecOptions =
+    options.ensureDaemon === undefined
+      ? {
+          ...options,
+          ensureDaemon: () =>
+            ensureDaemonRunning(config, undefined, (line) => {
+              if (!reportedUpgrade) {
+                reportedUpgrade = true;
+                options.io.writeStderr(line);
+              }
+            }).pipe(Effect.asVoid),
+        }
+      : options;
   // Help/version and other non-compiling queries never take a ticket: a
   // brokered query would hold a lane slot behind a generic multi-minute
   // estimate and record a spurious job outcome (observed with
@@ -993,18 +1005,22 @@ export const runExecClient = (
   // failed job). They run in place and stay out of the spool.
   const localReason = localQueryReason(options.argv);
   if (localReason !== null) {
-    return passthrough(options, config, { reason: localReason, spool: false });
+    return passthrough(configuredOptions, config, { reason: localReason, spool: false });
   }
   return Effect.gen(function* () {
-    if (options.autoSpawn !== false) {
-      const direct = yield* ensureForExec(options, config);
+    if (configuredOptions.autoSpawn !== false) {
+      const direct = yield* ensureForExec(configuredOptions, config);
       if (direct !== null) {
-        return yield* passthrough(options, config, direct);
+        return yield* passthrough(configuredOptions, config, direct);
       }
     }
-    return yield* brokeredOrUnreachable(options, config).pipe(
+    return yield* brokeredOrUnreachable(configuredOptions, config).pipe(
       Effect.catchTag('DaemonUnreachable', (unreachable) =>
-        passthrough(options, config, unreachablePassthroughMode(unreachable) ?? unreachableMode),
+        passthrough(
+          configuredOptions,
+          config,
+          unreachablePassthroughMode(unreachable) ?? unreachableMode,
+        ),
       ),
     );
   });

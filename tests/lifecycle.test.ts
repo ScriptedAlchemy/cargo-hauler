@@ -167,13 +167,14 @@ describe('signal shutdown lifecycle', () => {
 describe('daemon start under the one-version rule', () => {
   const config = resolveDaemonConfig({ CARGO_HAULER_STATE_DIR: '/tmp/cargo-hauler-start-unit' });
 
-  it.live('reports a daemon of another version that outlived the grace as running, not replaced', () =>
+  it.live('keeps a compatible older daemon serving when retirement outlives the grace', () =>
     Effect.gen(function* () {
       const calls: string[] = [];
       const dependencies: EnsureDaemonDependencies = {
+        daemonIsIdle: () => Effect.succeed(true),
         exitGraceMs: 40,
         pingDaemon: () =>
-          Effect.succeed({ id: 'old', pid: 41, startedAtMs: 1, type: 'pong', version: '0.4.1' }),
+          Effect.succeed({ id: 'old', pid: 41, startedAtMs: 1, type: 'pong', version: '0.7.1' }),
         pollMs: 5,
         processAlive: () => true,
         requestShutdown: () =>
@@ -190,22 +191,18 @@ describe('daemon start under the one-version rule', () => {
       expect(result).toMatchObject({
         operation: 'daemon',
         pid: 41,
-        previousPid: 41,
         report: null,
         running: true,
         subcommand: 'start',
       });
-      expect(result.message).toBe(
-        'cargo-hauler daemon pid 41 (0.4.1) is still running 40ms after the shutdown request; not restarted — retry once it has exited, or stop it with `hauler daemon stop`',
-      );
-      // A daemon is running, but not this build's: the same verdict as a
-      // restart that could not replace it.
-      expect(daemonExitCode(result)).toBe(1);
+      expect(result.message).toBe('cargo-hauler daemon started (pid 41)');
+      expect(daemonExitCode(result)).toBe(0);
     }));
 
   it.effect('reports a daemon of this build as started, with no previousPid, and exits 0', () =>
     Effect.gen(function* () {
       const result = yield* startDaemon(config, {
+        daemonIsIdle: () => Effect.succeed(true),
         exitGraceMs: 40,
         pingDaemon: () => Effect.succeed({ id: 'same', pid: 42, startedAtMs: 2, type: 'pong', version }),
         pollMs: 5,
@@ -227,6 +224,7 @@ describe('daemon start under the one-version rule', () => {
       // "check <logPath>" alone would send the operator to a file that was
       // never written.
       const result = yield* startDaemon(config, {
+        daemonIsIdle: () => Effect.succeed(true),
         exitGraceMs: 40,
         pingDaemon: (socketPath) =>
           Effect.fail(

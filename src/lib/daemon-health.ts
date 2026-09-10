@@ -151,10 +151,8 @@ export const probeDaemonHealth = (
     config,
     {
       ...defaultEnsureDependencies,
-      // The 5 s SessionStart envelope must cover ping + replacement + status.
-      // Exit gets enough time for normal teardown and boot gets margin over
-      // observed cold starts, while a genuinely stubborn daemon still fails
-      // within the host budget.
+      // Keep the dependency timings bounded even though this read-only probe
+      // never initiates replacement.
       exitGraceMs,
       requestShutdown: (socketPath) => requestShutdown(socketPath, shutdownTimeoutMs),
       waitForDaemon: (socketPath) =>
@@ -197,6 +195,12 @@ export const probeDaemonHealth = (
           timeoutMs,
         }),
       DaemonUnreachable: (error) => Effect.succeed<DaemonHealth>(unreachableHealth(error)),
+      DaemonIncompatible: (error) =>
+        Effect.succeed<DaemonHealth>({
+          detail: error.message,
+          reason: 'open-failed',
+          state: 'unreachable',
+        }),
       DaemonNewer: (error) =>
         Effect.succeed<DaemonHealth>({
           detail: error.message,

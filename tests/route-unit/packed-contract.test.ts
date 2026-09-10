@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -143,6 +144,95 @@ const fixturesFor = (
 });
 
 describe('packed stdio contract', () => {
+  it.live.skipIf(!existsSync(join(pluginRoot, 'mcp.json')))(
+    'exits after a served tool call and stdin EOF',
+    () =>
+      Effect.gen(function* () {
+        const fixture = yield* scopedDaemon(1);
+        yield* Effect.promise(
+          () =>
+            new Promise<void>((resolvePromise, reject) => {
+            const packed = packedEntry();
+            const child = spawn(process.execPath, [packed.entry], {
+              cwd: projectRoot,
+              env: {
+                ...process.env,
+                ...packed.env,
+                CARGO_HAULER_KACHE_INDEX: '',
+                CARGO_HAULER_STATE_DIR: fixture.config.stateDir,
+              },
+              stdio: ['pipe', 'pipe', 'pipe'],
+            });
+            let stdout = '';
+            let toolServed = false;
+            const deadline = setTimeout(() => {
+              child.kill('SIGTERM');
+              reject(new Error('packed MCP server did not serve status and exit after stdin EOF'));
+            }, 5_000);
+            child.once('error', (error) => {
+              clearTimeout(deadline);
+              reject(error);
+            });
+            child.once('close', (code) => {
+              clearTimeout(deadline);
+              code === 0 && toolServed
+                ? resolvePromise()
+                : reject(
+                    new Error(
+                      `packed MCP server exited ${code ?? 'by signal'} before serving status`,
+                    ),
+                  );
+            });
+            child.stdout.setEncoding('utf8');
+            child.stdout.on('data', (chunk: string) => {
+              stdout += chunk;
+              for (;;) {
+                const newline = stdout.indexOf('\n');
+                if (newline < 0) {
+                  break;
+                }
+                const line = stdout.slice(0, newline);
+                stdout = stdout.slice(newline + 1);
+                const message = JSON.parse(line) as { readonly id?: number };
+                if (message.id === 1) {
+                  child.stdin.write(
+                    `${JSON.stringify({
+                      jsonrpc: '2.0',
+                      method: 'notifications/initialized',
+                    })}\n`,
+                  );
+                  child.stdin.write(
+                    `${JSON.stringify({
+                      id: 2,
+                      jsonrpc: '2.0',
+                      method: 'tools/call',
+                      params: { arguments: {}, name: 'hauler_status' },
+                    })}\n`,
+                  );
+                } else if (message.id === 2) {
+                  toolServed = true;
+                  child.stdin.end();
+                }
+              }
+            });
+            child.stdin.write(
+              `${JSON.stringify({
+                id: 1,
+                jsonrpc: '2.0',
+                method: 'initialize',
+                params: {
+                  capabilities: {},
+                  clientInfo: { name: 'eof-test', version: '1.0.0' },
+                  protocolVersion: '2025-06-18',
+                },
+              })}\n`,
+            );
+            }),
+        );
+      }),
+    5_000,
+  );
+
   it.live.skipIf(!existsSync(join(pluginRoot, 'mcp.json')))(
     'runs the built hauler server as a process and passes the contract matrix for every tool',
     () =>

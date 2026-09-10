@@ -85,7 +85,7 @@ The CLI is `hauler` on PATH from `npm i -g cargo-hauler`. Never run
 | `hauler result <ticket> [--full]` | A stored ticket in full: the settled 16 KiB output tail, or the whole live in-memory tail while it runs (not the status preview). The document names the full on-disk output log (`Full output: <path> (size)`) and `--json` carries it as `request.outputPath`; `--full` prints that whole log instead of the tail (the last ~768 KiB when it does not fit, with the path for the rest). |
 | `hauler kill <ticket>` | Stop a ticket: drop it from the queue or SIGTERM (then SIGKILL) its cargo process group, freeing the lane. Riders return to their lane or fail with it. |
 | `hauler request [--session ID] [--host HOST] [--cwd DIR] [--after TICKET …] -- <cargo …>` | Submit a background request and return its ticket, with where it landed in its lane (`queued behind cc-3281 (~13m)`, `waiting for cc-3281`, or `attached to cc-3281`). `--cwd` overrides the current CLI workspace; `--after` works as for `exec`. |
-| `hauler daemon <run\|start\|stop\|status\|restart>` | Manage the daemon lifecycle. `stop` records its typed `shutdown` outcome in JSON and exits `0` only after a `shutting-down` acknowledgement followed by the original pid's exit, or when the daemon was already absent. Refusal, timeout, protocol error, disconnect before acknowledgement, and an acknowledged daemon still alive after 5 s exit `1`; `running` remains `true` when the original pid is alive and `null` when liveness could not be established. `restart` is the manual replacement: it sends the graceful stop, waits up to 5 s for the old pid to exit, then starts a daemon from this install and prints both (`restarted: pid 741314 (0.6.0) → pid 742001 (0.6.1)`); a daemon that has not exited by then is reported, not killed, and nothing is started (exit `1`). Tickets in flight are not handed over: the old daemon settles them itself as it shuts down — `killed`, error `daemon shutdown` — and callers resubmit (only rows a daemon that died without shutting down never marked are stamped `orphaned by daemon restart` by the next daemon's first ledger pass). After upgrading the package, every client entry — reads (`status`, `daemon status`, `log`, `last`, `await`, `result`, the dashboard and MCP tools), writes, and hooks — checks the daemon version before requesting a versioned payload and replaces a daemon from the previous install automatically. When the old daemon has not exited within the grace, the command fails with `` cargo-hauler daemon pid N (X.Y.Z) is still running 5s after the shutdown request; not restarted — retry once it has exited, or stop it with `hauler daemon stop` `` instead of parsing its payload or starting a second daemon. |
+| `hauler daemon <run\|start\|stop\|status\|restart>` | Manage the daemon lifecycle. `stop` records its typed `shutdown` outcome in JSON and exits `0` only after a `shutting-down` acknowledgement followed by the original pid's exit, or when the daemon was already absent. Refusal, timeout, protocol error, disconnect before acknowledgement, and an acknowledged daemon still alive after 5 s exit `1`; `running` remains `true` when the original pid is alive and `null` when liveness could not be established. `restart` is the explicit replacement path: it sends the graceful stop, waits up to 5 s for the old pid to exit, then starts a daemon from this install and prints both (`restarted: pid 741314 (0.6.0) → pid 742001 (0.6.1)`). Tickets in flight are not handed over: the old daemon settles them itself as it shuts down — `killed`, error `daemon shutdown` — and callers resubmit. Automatic upgrades are gentler: read-only commands and MCP/dashboard reads never retire a daemon; a protocol-compatible older daemon serves them directly. Submission commands replace an older daemon only after an idle status check; daemons from 0.7.4 onward hold admission closed while confirming that state, while 0.7.1–0.7.3 receive a client preflight. A busy or slow-to-retire daemon keeps serving the submission and emits one line such as `daemon 0.7.1 will be replaced by 0.7.3 when idle`. A truly incompatible daemon is reported with its pid and version instead of having its payload parsed. |
 | `hauler install-shim [--dir DIR] [--real-cargo PATH] [--force]` | Install the optional PATH shim. |
 | `hauler web [--port N] [--no-open]` | Open the dashboard from the checkout, npm package, or installed plugin. Agent Bundle's generated web command serves the built App against the plugin's own `hauler` server, opens it populated by `hauler_status`, and stays in the foreground until Ctrl-C. In an MCP host, call `hauler_status` instead. |
 
@@ -448,9 +448,13 @@ ever flagged.
 Tickets do not survive a daemon stop; runs are never handed over to the next
 daemon. How a ticket ends depends on how the daemon went. A graceful stop —
 `hauler daemon restart`, `hauler daemon stop`, or the automatic replacement of
-a daemon from another install by the next `hauler exec`, `hauler request`,
-hook call, or `hauler daemon start` — is the shutdown request, and the old
-daemon settles every queued, running, and attached ticket itself as it exits:
+an idle older daemon by the next `hauler exec`, `hauler request`, hook
+submission, or `hauler daemon start` — is the shutdown request. Automatic
+replacement checks for queued, running, executing, or attached work first;
+0.7.4 and later daemons hold admission closed through that decision, while
+0.7.1–0.7.3 receive the compatible client's status preflight. When a stop does
+proceed, the old daemon settles every queued, running, and attached ticket
+itself as it exits:
 its cargo processes are terminated (SIGTERM, then SIGKILL after
 `CARGO_HAULER_KILL_GRACE_MS`) and each row is marked `killed` with the error
 `daemon shutdown`, so `hauler result cc-N` shows the ticket `killed` with
@@ -708,9 +712,9 @@ it from the umask:
   under `XDG_RUNTIME_DIR`, `TMPDIR`, or the system temporary directory —
   never directly into a shared temporary root. Two accounts sharing one
   temporary root get separate directories. A daemon from an earlier install
-  still listening at the previous relocated path is retired by the next
-  client under the usual one-version rule, and `hauler daemon stop` asks it
-  too before reporting nothing running, so upgrading needs no manual cleanup.
+  still listening at the previous relocated path is considered only by a
+  daemon-starting submission, never by a read; `hauler daemon stop` asks it
+  too before reporting nothing running.
 
 Windows has neither POSIX modes nor uids, and its control endpoint is a
 named pipe rather than a filesystem entry, so none of the above applies
@@ -728,14 +732,11 @@ there; state files keep the permissions the filesystem gives them.
   `hauler_await` fail loudly when the daemon is unreachable instead of
   reporting a ticket as not found; `hauler_status`, `hauler_log`, and
   `hauler_last` read the ledger with the daemon marked `stopped` or
-  `unresponsive`. Before any live daemon reply is parsed, these reads apply
-  the one-version rule and replace a daemon left running by a previous
-  install. Replacement is directional: only a newer install replaces a
-  daemon. A client older than the daemon it finds — a session still on a
-  previous plugin — never shuts it down (the daemon refuses a shutdown from
-  an older or unversioned client), reports the daemon as newer, and runs
-  cargo directly. If replacement fails, the reads report that failure
-  instead of reading the stale payload.
+  `unresponsive`. Reads never request daemon shutdown. They use an older
+  daemon when its wire-protocol identity is compatible; a truly incompatible
+  daemon is reported with its pid and version. A client older than the daemon
+  it finds — a session still on a previous plugin — keeps the directional
+  `DaemonNewer` behavior and never shuts it down.
 - The state directory is not migrated between installs. Every rendered
   document names the one in use (`state dir …` in the header; `stateRoot` in
   `--json`), so a `CARGO_HAULER_STATE_DIR` change is visible on the next
