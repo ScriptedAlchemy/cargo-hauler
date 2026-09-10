@@ -57,7 +57,7 @@
     "release:version": "changeset version"
   },
   "devDependencies": {
-    "@agent-bundle/runtime": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8",
+    "@agent-bundle/runtime": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@e040c32591d586eba72da6fa5c1bc1c881993000",
     "@changesets/cli": "3.0.2",
     "@effect/atom-react": "4.0.0-rc.112",
     "@effect/platform-node": "4.0.0-rc.112",
@@ -69,7 +69,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-    "agent-bundle": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8",
+    "agent-bundle": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@e040c32591d586eba72da6fa5c1bc1c881993000",
     "bashjsast": "github:woolkingx/bashjsast#131f4b677d1906774fc49cfceab0ccb7b370b2e6",
     "effect": "4.0.0-rc.112",
     "effect-rstest": "https://pkg.pr.new/ScriptedAlchemy/effect-rstest@e5f8d5f",

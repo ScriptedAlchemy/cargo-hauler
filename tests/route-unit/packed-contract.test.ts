@@ -52,6 +52,19 @@ const packedEntry = (): { readonly entry: string; readonly env: Record<string, s
   };
 };
 
+it.skipIf(!existsSync(join(pluginRoot, 'mcp.json')))(
+  'packs exact-parent-source App authentication without host-origin pinning',
+  () => {
+    const dashboard = readFileSync(join(pluginRoot, 'mcp-apps', 'dashboard.html'), 'utf8');
+    const sources = [dashboard, readFileSync(packedEntry().entry, 'utf8')];
+    for (const source of sources) {
+      expect(source).not.toContain('App client cannot pin an empty or wildcard origin.');
+      expect(source).not.toContain('The App host returned an unpinnable origin.');
+      expect(source).toMatch(/App client was disposed[\s\S]{0,400}\.source\s*!==/);
+    }
+  },
+);
+
 /** Submits one background fake-cargo job over the socket and returns its ticket. */
 const submitJob = (
   fixture: Fixture,

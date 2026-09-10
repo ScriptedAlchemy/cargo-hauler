@@ -110,8 +110,8 @@ importers:
   .:
     devDependencies:
       '@agent-bundle/runtime':
-        specifier: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8
-        version: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8(@rspack/core@2.2.2(@swc/helpers@0.5.23))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        specifier: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@e040c32591d586eba72da6fa5c1bc1c881993000
+        version: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@e040c32591d586eba72da6fa5c1bc1c881993000(@rspack/core@2.2.2(@swc/helpers@0.5.23))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@changesets/cli':
         specifier: 3.0.2
         version: 3.0.2
@@ -146,8 +146,8 @@ importers:
         specifier: ^7.0.0-dev.20260707.2
         version: 7.0.0-dev.20260707.2
       agent-bundle:
-        specifier: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8
-        version: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8(@rspack/core@2.2.2(@swc/helpers@0.5.23))(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@rspack/core@2.2.2(@swc/helpers@0.5.23))(@rstest/core@0.11.12)(hono@4.13.7)(react@19.2.8)(typescript@7.0.2)
+        specifier: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@e040c32591d586eba72da6fa5c1bc1c881993000
+        version: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@e040c32591d586eba72da6fa5c1bc1c881993000(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@e040c32591d586eba72da6fa5c1bc1c881993000(@rspack/core@2.2.2(@swc/helpers@0.5.23))(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@rspack/core@2.2.2(@swc/helpers@0.5.23))(@rstest/core@0.11.12)(hono@4.13.7)(react@19.2.8)(typescript@7.0.2)
       bashjsast:
         specifier: github:woolkingx/bashjsast#131f4b677d1906774fc49cfceab0ccb7b370b2e6
         version: https://codeload.github.com/woolkingx/bashjsast/tar.gz/131f4b677d1906774fc49cfceab0ccb7b370b2e6
@@ -181,9 +181,9 @@ importers:
 
 packages:
 
-  '@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8':
-    resolution: {integrity: sha512-/EPzmvZ2zzeu7XXhycJEiEKA2pzuaQEWzFO4Sxr05Fx0smu/iDfRLGE9Na7G1sgi+iLKD0uqbk8URLCiAMNnjw==, tarball: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8}
-    version: 0.0.0-preview-b807ca0
+  '@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@e040c32591d586eba72da6fa5c1bc1c881993000':
+    resolution: {integrity: sha512-+mx25yXFMOvC0uX0Z7Jbe3Vf+q7hEsLxNQ6K2x+OX25zUTEDjqRqfAe91N5PC6BwHxoxoyw9VtJv/tc105cUAg==, tarball: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@e040c32591d586eba72da6fa5c1bc1c881993000}
+    version: 0.0.0-preview-e040c32
     engines: {node: '>=22.19.0'}
     peerDependencies:
       '@rspack/core': ^2.2.0-0
@@ -960,13 +960,13 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  agent-bundle@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8:
-    resolution: {integrity: sha512-6y2tutGcyab0dng+o3UDFjvh4cID7h06Cnaqwap7QuhGsS+CbIO91mmcNoikO65fsC6JlGo9b08wDxvalrxRTg==, tarball: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8}
-    version: 0.0.0-preview-b807ca0
+  agent-bundle@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@e040c32591d586eba72da6fa5c1bc1c881993000:
+    resolution: {integrity: sha512-BPzjGP/zU9cqQGqzuQp6a6knaomV5shOwQQppGcPfNVhevvl+yy3hZ6EwrGlbbd6eaM1+xKUxFarUYfXO6+sCg==, tarball: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@e040c32591d586eba72da6fa5c1bc1c881993000}
+    version: 0.0.0-preview-e040c32
     engines: {node: '>=22.19.0'}
     hasBin: true
     peerDependencies:
-      '@agent-bundle/runtime': 0.0.0-preview-b807ca0
+      '@agent-bundle/runtime': 0.0.0-preview-e040c32
       '@rstest/core': ^0.11.10
       react: 19.2.8
     peerDependenciesMeta:
@@ -1395,9 +1395,9 @@ packages:
       typescript:
         optional: true
 
-  rsc-markdown-stream@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8:
-    resolution: {integrity: sha512-GuMpzr7YFNYkDUIyTaFx5PKDuIurCbp80GoBXcCCchaaYgoYBy2u5bHpayA090cqjEDQTAEypJmRvDGgq8KhPQ==, tarball: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8}
-    version: 0.0.0-preview-b807ca0
+  rsc-markdown-stream@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@e040c32591d586eba72da6fa5c1bc1c881993000:
+    resolution: {integrity: sha512-7QSl+6FQfXrUbH7VLP2460ilJwyWxo3MRXhrKNdvexy/lM/gRSQIqCsJ0/TGc4y46MLfF+3Nw+Sn3qlLrBYFNA==, tarball: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@e040c32591d586eba72da6fa5c1bc1c881993000}
+    version: 0.0.0-preview-e040c32
     engines: {node: '>=22.19.0'}
     peerDependencies:
       react: ^19.0.0
@@ -1525,7 +1525,7 @@ packages:
 
 snapshots:
 
-  '@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8(@rspack/core@2.2.2(@swc/helpers@0.5.23))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@e040c32591d586eba72da6fa5c1bc1c881993000(@rspack/core@2.2.2(@swc/helpers@0.5.23))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       '@modelcontextprotocol/server': 2.0.0
       effect: 4.0.0-rc.112
@@ -1533,7 +1533,7 @@ snapshots:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
       react-server-dom-rspack: 0.1.0(@rspack/core@2.2.2(@swc/helpers@0.5.23))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      rsc-markdown-stream: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8(react@19.2.8)
+      rsc-markdown-stream: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@e040c32591d586eba72da6fa5c1bc1c881993000(react@19.2.8)
       zod: 4.5.4
     optionalDependencies:
       '@rspack/core': 2.2.2(@swc/helpers@0.5.23)
@@ -2182,7 +2182,7 @@ snapshots:
 
   acorn@8.18.0: {}
 
-  agent-bundle@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8(@rspack/core@2.2.2(@swc/helpers@0.5.23))(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@rspack/core@2.2.2(@swc/helpers@0.5.23))(@rstest/core@0.11.12)(hono@4.13.7)(react@19.2.8)(typescript@7.0.2):
+  agent-bundle@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@e040c32591d586eba72da6fa5c1bc1c881993000(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@e040c32591d586eba72da6fa5c1bc1c881993000(@rspack/core@2.2.2(@swc/helpers@0.5.23))(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@rspack/core@2.2.2(@swc/helpers@0.5.23))(@rstest/core@0.11.12)(hono@4.13.7)(react@19.2.8)(typescript@7.0.2):
     dependencies:
       '@effect/platform-node-shared': 4.0.0-rc.112(effect@4.0.0-rc.112)
       '@modelcontextprotocol/client': 2.0.0
@@ -2207,7 +2207,7 @@ snapshots:
       ws: 8.21.3
       yaml: 2.9.0
     optionalDependencies:
-      '@agent-bundle/runtime': https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8(@rspack/core@2.2.2(@swc/helpers@0.5.23))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@agent-bundle/runtime': https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@e040c32591d586eba72da6fa5c1bc1c881993000(@rspack/core@2.2.2(@swc/helpers@0.5.23))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@rstest/core': 0.11.12
       react: 19.2.8
     transitivePeerDependencies:
@@ -2573,7 +2573,7 @@ snapshots:
     optionalDependencies:
       typescript: 7.0.2
 
-  rsc-markdown-stream@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8(react@19.2.8):
+  rsc-markdown-stream@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@e040c32591d586eba72da6fa5c1bc1c881993000(react@19.2.8):
     dependencies:
       react: 19.2.8
 
