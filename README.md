@@ -987,9 +987,10 @@ ships no preview harness of its own.
 
 agent-bundle does not yet have an npm release; this repository pins the
 [pkg.pr.new](https://pkg.pr.new) preview of Agent Bundle main commit
-[`b807ca0`](https://github.com/ScriptedAlchemy/agent-bundle/commit/b807ca0eea5c0d5744350e1fa8829e3d59c3c0b8),
-merged by [Agent Bundle PR #772](https://github.com/ScriptedAlchemy/agent-bundle/pull/772),
-for both `agent-bundle` and `@agent-bundle/runtime`. `inspect` reports the
+[`e040c32`](https://github.com/ScriptedAlchemy/agent-bundle/commit/e040c32591d586eba72da6fa5c1bc1c881993000),
+built from [Agent Bundle PR #779](https://github.com/ScriptedAlchemy/agent-bundle/pull/779),
+for `agent-bundle`, `@agent-bundle/runtime`, and their paired
+`rsc-markdown-stream` preview. `inspect` reports the
 `agent` component kind as unavailable on every host (agent-bundle G5
 deferral); this plugin defines no agents.
 
