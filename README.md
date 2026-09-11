@@ -973,8 +973,8 @@ the lane time the execution-phase hand-back released.
 pnpm run check   # validate + build + typecheck + Effect diagnostics + rstest + route tests
 ```
 
-`tests/` is grouped by what a test executes: `unit/<subsystem>/` imports one
-owner under `src/internal/` and nothing runs; `integration/` runs a real broker
+`tests/` is grouped by what a test executes: `unit/<subsystem>/` is scoped to
+one owner under `src/internal/`; `integration/` runs a real broker
 in-process through `tests/support/harness.ts`; `packaging/` reads the built
 `artifact/` or spawns the package entries; `acceptance/` drives real `cargo`
 against the workspaces under `evals/fixtures/`; `route-unit/` and
