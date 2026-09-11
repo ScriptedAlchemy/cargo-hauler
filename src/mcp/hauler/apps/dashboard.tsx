@@ -517,7 +517,7 @@ const LoadStat = ({ system }: { readonly system: SystemLoad | null }): ReactNode
         {system.loadAvg1.toFixed(1)}
         <span className="est"> / {system.cores} cores{clamped ? ' · clamping' : ''}</span>
       </b>
-      <span>loadavg (1m) · {perCore.toFixed(2)}/core</span>
+      <span>1-min load average · {perCore.toFixed(2)}/core</span>
     </div>
   );
 };
@@ -562,7 +562,7 @@ const DiskIoStat = ({ system }: { readonly system: SystemLoad | null }): ReactNo
       {ioWait === null ? null : (
         <div
           className="stat"
-          title="share of CPU time spent waiting on disk I/O since the previous status sample; high iowait beside a modest loadavg means builds are stalled on disk, not CPU"
+          title="share of CPU time spent waiting on disk I/O since the previous status sample; high iowait beside a modest load average means builds are stalled on disk, not CPU"
         >
           <b>{ioWait.toFixed(ioWait < 10 ? 1 : 0)}%</b>
           <span>iowait (cpu)</span>
