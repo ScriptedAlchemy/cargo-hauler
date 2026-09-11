@@ -787,7 +787,6 @@ argv parser, or string-concatenated Markdown; the `src/` tree is the app.
 src/
   layout.tsx                    the hauler shell around every rendered route
   providers/hauler-daemon.ts    request-scoped daemon configuration
-  components/                   typed components over pure view-models
   mcp/hauler/tools/*.tsx        hauler_status, _dashboard, _log, _last, _await, _result, _request, _kill
   mcp/hauler/tools/*.cli.ts     each tool's `hauler <command>` projection (flags, positionals)
   mcp/hauler/apps/dashboard.tsx the MCP App (ui://cargo-hauler/dashboard.html)
@@ -796,8 +795,25 @@ src/
   events/tool/{before,after}.tsx    the shell hook routes, gated by *.preflight.ts
   skills/cargo-hauler/SKILL.md, skills/hauler-dashboard/SKILL.tsx
   scripts/hauler.ts             the `hauler` process entry hooks rewrite cargo to
-  daemon/, client/, hooks/, shim/, lib/   the broker and its libraries
+  internal/                     the implementation the entrypoints import, by owner
+    contracts/                  wire protocol, tool schemas, wire version
+    cargo/                      argv, intent, workspace, topology, execution/
+    daemon/                     composition (main, config), runtime/, broker/, scheduling/, reporting/
+    storage/                    the SQLite ledger and per-ticket output logs
+    client/                     socket clients: control, exec, tickets, ensure-daemon
+    operations/                 what the routes call: tickets, status, inspection
+    host-hooks/                 the shell/session hook handlers and their small RPC client
+    integrations/kache/         kache status and store pressure
+    platform/                   state and socket paths, private-file policy, executable location
+    shim/                       the PATH shim installer
+    ui/documents/, ui/dashboard/, ui/shared/   agent documents, the browser App, shared formatters
+    util/                       guards, ids, text, ANSI
 ```
+
+Everything above `internal/` is discovered by the framework's conventions;
+everything under it is ordinary imported code. [docs/architecture.md](docs/architecture.md)
+is the ownership map and walks the three main paths (submitting cargo, reading
+status, processing a shell hook) file by file.
 
 #### The shell (`src/layout.tsx`)
 
@@ -826,7 +842,7 @@ addition: each re-exports a `preflight` (`before.preflight.ts`,
 `hooks/event-route-tool-before.<host>.mjs`, a few hundred KB with no React,
 Flight worker, or Effect — and runs before the rendered route
 (`*.execute.mjs`) is loaded. The gate decides on the raw command
-(`src/hooks/tokens.ts`; `session-ping.ts` for the one bounded completion ping
+(`src/internal/host-hooks/tokens.ts`; `session-ping.ts` for the one bounded completion ping
 after a tool ran): `continue` for the shell calls that name neither cargo nor
 hauler, `execute` for the rest. Both routes declare `providers: []`, so
 neither mounts the daemon-config provider; the rendered route calls
@@ -843,7 +859,7 @@ socket, and ledger paths); active health and status I/O belongs to the operation
 that needs it. Routes read the config through `requestDaemonConfig(context)`,
 and tests inject a fixture through the harness `context.providers` seam.
 
-#### Components (`src/components/`)
+#### Components (`src/internal/ui/documents/`)
 
 Components render view-models and nothing else. The models are pure functions
 in `view-models.ts`, so the MCP document, the CLI Markdown, and a test
@@ -871,7 +887,7 @@ assertion share one derivation.
 same operation render the same document with different command spellings
 (`surface.ts`).
 
-#### Streaming (`src/components/streaming.tsx`)
+#### Streaming (`src/internal/ui/documents/streaming.tsx`)
 
 `hauler_await` and `hauler_log` are progressive documents. Each is a
 valueless `Agent.Result` container around one `Suspense` boundary:
@@ -944,7 +960,7 @@ with the wait split by cause: *lane-bound* (a same-lane leader was still
 compiling — before its `Finished` line or exit), *permit-bound* (every
 admission permit was held and no same-lane compile was to blame), and *other*
 (admission holds, `--after` prerequisites, scheduling latency). The
-classification is a pure sweep over ledger rows (`src/daemon/wait-split.ts`)
+classification is a pure sweep over ledger rows (`src/internal/daemon/reporting/wait-split.ts`)
 run once per status refresh against the daemon's current permit count, which
 the tile states; runs admitted under an earlier cap are classified against
 today's. With `buildFinishedAtMs` on the row, the by-command split adds
@@ -957,12 +973,19 @@ the lane time the execution-phase hand-back released.
 pnpm run check   # validate + build + typecheck + Effect diagnostics + rstest + route tests
 ```
 
+`tests/` is grouped by what a test executes: `unit/<subsystem>/` imports one
+owner under `src/internal/` and nothing runs; `integration/` runs a real broker
+in-process through `tests/support/harness.ts`; `packaging/` reads the built
+`artifact/` or spawns the package entries; `acceptance/` drives real `cargo`
+against the workspaces under `evals/fixtures/`; `route-unit/` and
+`browser-app/` are the framework-level suites below.
+
 `tests/route-unit/` renders the app through the framework compiler with no
 artifact build, at the harness proof levels:
 
 | Level | Suite | What it proves |
 | --- | --- | --- |
-| route-unit | `routes`, `layout`, `streaming`, `events` | documents, shell metadata, Suspense fallbacks and settled values, lineage attribution, event decisions (the shell routes' preflight gates are unit-tested in `tests/event-preflight.test.ts` and against their compiled entries in `tests/hooks-simulate.test.ts`) |
+| route-unit | `routes`, `layout`, `streaming`, `events` | documents, shell metadata, Suspense fallbacks and settled values, lineage attribution, event decisions (the shell routes' preflight gates are unit-tested in `tests/integration/event-preflight.test.ts` and against their compiled entries in `tests/integration/hooks-simulate.test.ts`) |
 | cli-dispatch | `cli-dispatch`, `layout` | argv through the routed CLI shell; Markdown wrapped by the shell, `--json` bare |
 | script-dispatch | `script-dispatch` | the `hauler` entry through its `main` envelope as its own process |
 | mcp-in-memory | `mcp-surface`, `layout` | tool names, `outputSchema`, the dashboard resource link, `_meta.hauler`, and a live fixture broker over the in-memory transport |
@@ -971,7 +994,7 @@ artifact build, at the harness proof levels:
 | workbench-surface | `workbench-surface` | what `agent-bundle dev` would show: catalog, provider, lifecycles per host, counts |
 
 Daemon-backed cases run a real broker in-process with a fake `cargo`
-(`tests/harness.ts`) and reach it either through the `haulerDaemon` provider
+(`tests/support/harness.ts`) and reach it either through the `haulerDaemon` provider
 seam or through `CARGO_HAULER_STATE_DIR`.
 
 ### Development

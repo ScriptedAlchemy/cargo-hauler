@@ -2,9 +2,9 @@ import { Agent, agent } from '@agent-bundle/runtime';
 import type { AgentEventRouteConfig, AgentEventRouteProps } from 'agent-bundle';
 import React from 'react';
 
-import { handleBeforeShell } from '../../hooks/before-shell.js';
-import { haulerArgvForRoot } from '../../hooks/hauler-binding.js';
-import { decisionValue, shellEventFrom } from '../../lib/event-support.js';
+import { handleBeforeShell } from '../../internal/host-hooks/before-shell.js';
+import { haulerArgvForRoot } from '../../internal/platform/hauler-binding.js';
+import { decisionValue, shellEventFrom } from '../../internal/host-hooks/event-support.js';
 
 export const config = {
   requires: ['events.toolBefore.deny'],

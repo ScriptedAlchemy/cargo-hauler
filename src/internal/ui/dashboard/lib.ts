@@ -1,0 +1,1226 @@
+import type { AppRouteResult } from 'agent-bundle/app';
+import { Effect, Schedule, Stream, type Duration } from 'effect';
+
+import { cargoJsonDemuxFlag, defaultCargoProfile, namedPackagesInArgv } from '../../cargo/argv.js';
+import { isRecord } from '../../util/guards.js';
+import {
+  commandDisplay,
+  formatBytes,
+  formatMs,
+  heavyCapNote,
+  pathBasename,
+  relativeTime,
+  shortenPath,
+} from '../shared/format.js';
+import { kachePressureModel } from '../../integrations/kache/pressure-model.js';
+import type { KachePressureModel, KachePressureWarning } from '../../integrations/kache/pressure-model.js';
+import { sharedTargetWarning } from '../shared/shared-target.js';
+
+export { formatBytes, formatMs, pathBasename, relativeTime, shortenPath };
+export { kachePressureModel };
+export type { KachePressureModel, KachePressureWarning };
+
+/**
+ * Pure logic for the dashboard widget, kept DOM-free and compiler-free so unit
+ * tests can import it directly: the widget entry touches `document` at module
+ * scope and reads `agent-bundle/meta`, which only resolves inside a compiled
+ * surface.
+ */
+
+export const DEMUX_FLAG = cargoJsonDemuxFlag;
+
+/**
+ * Statuses a request can end in. Denied is terminal too — a hook-blocked
+ * invocation is finished work the operator should see in History, rendered
+ * distinctly from failed (cargo ran and errored) and killed (stopped by
+ * request), not blended into either.
+ */
+export const terminalStatuses: ReadonlySet<string> = new Set([
+  'done',
+  'failed',
+  'killed',
+  'denied',
+  'passthrough',
+]);
+
+export type DashboardSection =
+  | 'contention'
+  | 'inFlight'
+  | 'queue'
+  | 'metrics'
+  | 'kache'
+  | 'lanes'
+  | 'history';
+
+/**
+ * Fixed section order regardless of content. Sections used to unmount when
+ * empty, but on a live-polling page that made the layout jump every time work
+ * started or finished; instead every section stays mounted and empty ones
+ * render a slim one-line state.
+ */
+export const sectionOrder: readonly DashboardSection[] = [
+  'contention',
+  'inFlight',
+  'queue',
+  'metrics',
+  'kache',
+  'lanes',
+  'history',
+];
+
+export interface StatusPoll<A> {
+  readonly value: A | null;
+  readonly error: string | null;
+  readonly updatedAtMs: number | null;
+}
+
+type PollOutcome<A> =
+  | { readonly _tag: 'Ok'; readonly value: A }
+  | { readonly _tag: 'Err'; readonly message: string };
+
+/**
+ * Polls `fetch` on a fixed cadence forever. One rejected or timed-out
+ * iteration must not terminate the stream — `Stream.fromEffectSchedule`
+ * over a failing effect ends the stream, freezing the widget on stale data
+ * until a manual Retry — so each poll is folded into a {@link StatusPoll}
+ * that keeps the last good value and carries the error alongside it while
+ * the cadence continues.
+ */
+export const pollStatus = <A, E, R>(
+  fetch: Effect.Effect<A, E, R>,
+  options: {
+    readonly describeError: (error: E) => string;
+    readonly interval: Duration.Input;
+    readonly nowMs?: () => number;
+  },
+): Stream.Stream<StatusPoll<A>, never, R> => {
+  const now = options.nowMs ?? Date.now;
+  const attempt = fetch.pipe(
+    Effect.match({
+      onFailure: (error): PollOutcome<A> => ({ _tag: 'Err', message: options.describeError(error) }),
+      onSuccess: (value): PollOutcome<A> => ({ _tag: 'Ok', value }),
+    }),
+  );
+  return Stream.fromEffectSchedule(attempt, Schedule.spaced(options.interval)).pipe(
+    Stream.mapAccum(
+      (): StatusPoll<A> => ({ error: null, updatedAtMs: null, value: null }),
+      (state, outcome) => {
+        switch (outcome._tag) {
+          case 'Ok': {
+            const next: StatusPoll<A> = { error: null, updatedAtMs: now(), value: outcome.value };
+            return [next, [next]] as const;
+          }
+          case 'Err': {
+            const next: StatusPoll<A> = { ...state, error: outcome.message };
+            return [next, [next]] as const;
+          }
+          default: {
+            const exhaustive: never = outcome;
+            return exhaustive;
+          }
+        }
+      },
+    ),
+  );
+};
+
+/**
+ * Below this run count the p95 column is hidden: on a tiny sample the 95th
+ * percentile is just "the slowest run so far" dressed up as a distribution
+ * (a real n=3 dashboard showed p50 = p95 = the same bucket ceiling).
+ */
+export const percentileMinSamples = 10;
+
+type StatusResult = AppRouteResult<'tool:hauler/hauler_status'>;
+export type DashboardMetricsWindow = NonNullable<StatusResult['metrics']>['windows'][number];
+type DashboardPhaseSplit = NonNullable<DashboardMetricsWindow['bySubcommand'][number]['phases']>;
+export type DashboardKachePressure = NonNullable<NonNullable<StatusResult['kache']>['pressure']>;
+export type MetricsWindowId = DashboardMetricsWindow['id'];
+
+export const metricsWindowIds = ['hour', 'day', 'all'] as const satisfies readonly MetricsWindowId[];
+export const defaultMetricsWindowId: MetricsWindowId = 'day';
+
+export interface PickedMetricsWindow {
+  readonly id: MetricsWindowId;
+  /** Null when the status carried no metrics windows (daemon stopped or unresponsive). */
+  readonly window: DashboardMetricsWindow | null;
+}
+
+export const pickMetricsWindow = (
+  windows: readonly DashboardMetricsWindow[],
+  selectedId: MetricsWindowId,
+): PickedMetricsWindow => {
+  if (windows.length === 0) {
+    return { id: selectedId, window: null };
+  }
+  const selected = windows.find((window) => window.id === selectedId);
+  if (selected !== undefined) {
+    return { id: selected.id, window: selected };
+  }
+  const fallback = windows.find((window) => window.id === defaultMetricsWindowId) ?? windows[0];
+  return { id: fallback.id, window: fallback };
+};
+
+export const metricsWindowLabel = (id: MetricsWindowId): string => {
+  switch (id) {
+    case 'hour':
+      return '1h';
+    case 'day':
+      return '24h';
+    case 'all':
+      return 'all';
+    default: {
+      const exhaustive: never = id;
+      return exhaustive;
+    }
+  }
+};
+
+export interface WaitMetricsView {
+  /** Finished rows on screen that recorded a queue wait. */
+  readonly count: number;
+  readonly p50Ms: number | null;
+}
+
+/**
+ * Queue wait of the finished rows on screen. Without daemon metrics (the
+ * daemon is stopped or did not answer) the ledger rows the status still
+ * carries are the only wait sample, so this is what the wait tiles show; a
+ * live daemon's ledger windows carry their own percentiles instead. No p95:
+ * over at most a screen of rows it would be the slowest row dressed up as a
+ * distribution.
+ */
+export const waitMetricsView = (waits: readonly number[]): WaitMetricsView => {
+  const sorted = [...waits].sort((left, right) => left - right);
+  return {
+    count: sorted.length,
+    p50Ms: sorted.length === 0 ? null : sorted[Math.floor((sorted.length - 1) * 0.5)],
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Queue wait vs run, and where the wait went (#92)
+
+export type WaitSplitPartKind = 'lane' | 'permit' | 'other';
+
+export interface WaitSplitPart {
+  readonly kind: WaitSplitPartKind;
+  readonly label: string;
+  readonly ms: number;
+  /** Share of the classified wait, 0–100; every part is 0 when nothing waited. */
+  readonly percent: number;
+  readonly title: string;
+}
+
+export type WaitVsRunView =
+  | { readonly kind: 'unavailable'; readonly reason: 'no-window' }
+  | {
+      readonly kind: 'available';
+      /** Leaders whose wait was classified (queued and started inside the scan). */
+      readonly count: number;
+      readonly waitTotalMs: number;
+      readonly runTotalMs: number;
+      /** Wait as a share of run time, e.g. 160 when leaders waited 1.6× as long as they ran; null without runs. */
+      readonly waitToRunPercent: number | null;
+      readonly parts: readonly WaitSplitPart[];
+      /** The permit assumption behind `permit-bound`, stated so the tile stays honest. */
+      readonly permitsNote: string;
+    };
+
+/**
+ * The per-window wait-vs-run tile. Lane-bound wait is time a same-lane leader
+ * was still compiling; permit-bound is time every admission permit was held
+ * (with no same-lane compile to blame); the rest is admission holds,
+ * `--after` prerequisites and scheduling latency. Without a window (the
+ * status carried no metrics: daemon stopped or unresponsive) the tile says
+ * so rather than showing zero wait.
+ */
+export const waitVsRunView = (window: DashboardMetricsWindow | null): WaitVsRunView => {
+  if (window === null) {
+    return { kind: 'unavailable', reason: 'no-window' };
+  }
+  const split = window.waitSplit;
+  const classifiedMs = split.laneBoundMs + split.permitBoundMs + split.otherMs;
+  const share = (ms: number): number => (classifiedMs <= 0 ? 0 : (ms / classifiedMs) * 100);
+  const permitTitle =
+    split.permits === null
+      ? 'not classified: the daemon reported no permit count'
+      : `waited while all ${split.permits} admission permits were held and no same-lane leader was compiling`;
+  return {
+    kind: 'available',
+    count: split.count,
+    waitTotalMs: window.waitTotalMs,
+    runTotalMs: window.runTotalMs,
+    waitToRunPercent:
+      window.runTotalMs <= 0 ? null : (window.waitTotalMs / window.runTotalMs) * 100,
+    parts: [
+      {
+        kind: 'lane',
+        label: 'lane-bound',
+        ms: split.laneBoundMs,
+        percent: share(split.laneBoundMs),
+        title:
+          'waited while a leader in the same lane was still compiling (before its Finished line or exit)',
+      },
+      {
+        kind: 'permit',
+        label: 'permit-bound',
+        ms: split.permitBoundMs,
+        percent: share(split.permitBoundMs),
+        title: permitTitle,
+      },
+      {
+        kind: 'other',
+        label: 'other',
+        ms: split.otherMs,
+        percent: share(split.otherMs),
+        title:
+          'admission holds (memory, load, heavy cap), --after prerequisites and scheduling latency',
+      },
+    ],
+    permitsNote:
+      split.permits === null
+        ? 'permit-bound wait is not classified: the daemon reported no permit count'
+        : `permit-bound wait assumes the current ${split.permits}-permit cap; runs admitted under an earlier cap are classified against today's`,
+  };
+};
+
+export interface PhaseSplitView {
+  readonly count: number;
+  /** Compile share of compile + execute time, 0–100. */
+  readonly compilePercent: number;
+  /** `compile p50 12.0s · exec p50 3.1s (n=14)`, percentiles hidden below {@link percentileMinSamples}. */
+  readonly text: string;
+}
+
+/**
+ * Compile vs execution time for a by-command row, from the leaders that
+ * handed their lane back at Cargo's `Finished` line. Null when no leader of
+ * this command handed back (pure compiles never do).
+ */
+export const phaseSplitView = (phases: DashboardPhaseSplit | null): PhaseSplitView | null => {
+  if (phases === null || phases.count <= 0) {
+    return null;
+  }
+  const total = phases.compileTotalMs + phases.executeTotalMs;
+  const p50 = (value: number | null): string =>
+    phases.count < percentileMinSamples || value === null ? `n<${percentileMinSamples}` : formatMs(value);
+  return {
+    compilePercent: total <= 0 ? 0 : (phases.compileTotalMs / total) * 100,
+    count: phases.count,
+    text: `compile p50 ${p50(phases.compileP50Ms)} · exec p50 ${p50(phases.executeP50Ms)} (n=${phases.count})`,
+  };
+};
+
+export type HandBackView =
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'available'; readonly leaders: number; readonly laneReleasedMs: number; readonly text: string };
+
+/**
+ * Lane time the execution-phase hand-back released: every test/run execution
+ * phase ran with its lane already free. Unavailable without a window (the
+ * status carried no metrics).
+ */
+export const handBackView = (window: DashboardMetricsWindow | null): HandBackView => {
+  if (window === null) {
+    return { kind: 'unavailable' };
+  }
+  const { handBack } = window;
+  return {
+    kind: 'available',
+    laneReleasedMs: handBack.laneReleasedMs,
+    leaders: handBack.leaders,
+    text:
+      handBack.leaders === 0
+        ? 'no leader handed back'
+        : `${formatMs(handBack.laneReleasedMs)} across ${handBack.leaders} leader${handBack.leaders === 1 ? '' : 's'}`,
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Kache store pressure (#92)
+
+export const kachePressureView = (
+  pressure: DashboardKachePressure | null | undefined,
+  nowMs: number,
+): KachePressureModel | null =>
+  pressure == null ? null : kachePressureModel(pressure, nowMs);
+
+export const frequencyEntries = (
+  record: Readonly<Record<string, unknown>> | undefined,
+): readonly (readonly [string, number])[] =>
+  record === undefined
+    ? []
+    : Object.entries(record).filter(
+        (entry): entry is [string, number] => typeof entry[1] === 'number' && entry[1] > 0,
+      );
+
+export const frequencyTotal = (record: Readonly<Record<string, unknown>> | undefined): number =>
+  frequencyEntries(record).reduce((sum, [, value]) => sum + value, 0);
+
+export interface TicketDetail {
+  readonly ticket: string;
+  readonly status: string;
+  readonly argv: readonly string[] | null;
+  readonly execArgv: readonly string[] | null;
+  readonly workspaceRoot: string | null;
+  readonly exitCode: number | null;
+  readonly signal: string | null;
+  readonly runMs: number | null;
+  readonly waitMs: number | null;
+  readonly error: string | null;
+  readonly errorCount: number | null;
+  readonly warningCount: number | null;
+  /** The detail record's tail (`hauler_result`); a status row never carries one (#95). */
+  readonly outputTail: string | null;
+  /** True when outputTail is a live in-progress snapshot from the daemon. */
+  readonly outputTailLive: boolean;
+  readonly diagnostics: readonly string[] | null;
+}
+
+const stringOrNull = (value: unknown): string | null =>
+  typeof value === 'string' && value.length > 0 ? value : null;
+
+const numberOrNull = (value: unknown): number | null =>
+  typeof value === 'number' ? value : null;
+
+const stringArrayOrNull = (value: unknown): readonly string[] | null =>
+  Array.isArray(value) && value.every((part) => typeof part === 'string')
+    ? (value as readonly string[])
+    : null;
+
+export const ticketDetailFrom = (record: unknown): TicketDetail | null => {
+  if (!isRecord(record)) {
+    return null;
+  }
+  const row = record;
+  const ticket = stringOrNull(row['ticket']);
+  if (ticket === null) {
+    return null;
+  }
+  return {
+    ticket,
+    status: stringOrNull(row['status']) ?? 'unknown',
+    argv: stringArrayOrNull(row['argv']),
+    execArgv: stringArrayOrNull(row['execArgv']),
+    workspaceRoot: stringOrNull(row['workspaceRoot']),
+    exitCode: numberOrNull(row['exitCode']),
+    signal: stringOrNull(row['signal']),
+    runMs: numberOrNull(row['runMs']),
+    waitMs: numberOrNull(row['waitMs']),
+    error: stringOrNull(row['error']),
+    errorCount: numberOrNull(row['errorCount']),
+    warningCount: numberOrNull(row['warningCount']),
+    outputTail: stringOrNull(row['outputTail']),
+    outputTailLive: row['outputTailLive'] === true,
+    diagnostics: stringArrayOrNull(row['diagnostics']),
+  };
+};
+
+/**
+ * What the drawer's output pane should show. The detail comes from
+ * `hauler_result`; even that can come back tail-less (a request that never
+ * ran), so the per-diagnostic renderings the ledger kept are the honest
+ * fallback before giving up with a placeholder.
+ */
+export const outputTextFor = (detail: TicketDetail): string | null => {
+  if (detail.outputTail !== null) {
+    return detail.outputTail;
+  }
+  if (detail.diagnostics !== null && detail.diagnostics.length > 0) {
+    return detail.diagnostics.join('\n\n');
+  }
+  return null;
+};
+
+/**
+ * Resolve the drawer detail for a clicked row. A status row is the bounded
+ * summary contract — no tail, settled or live (#95) — so the drawer always
+ * makes one `hauler_result` fetch for the detail record: the ledger tail of
+ * a finished ticket, the daemon's whole live tail of a running one. The row
+ * stands in only when the fetch finds no record (the ticket left the ledger).
+ */
+export const resolveTicketDetail = async (
+  row: unknown,
+  fetchRecord: (ticket: string) => Promise<unknown>,
+): Promise<TicketDetail | null> => {
+  const fromRow = ticketDetailFrom(row);
+  if (fromRow === null) {
+    return null;
+  }
+  const fetched = ticketDetailFrom(await fetchRecord(fromRow.ticket));
+  return fetched ?? fromRow;
+};
+
+/**
+ * The one line a list row shows of a running ticket's live output: the last
+ * non-blank line of the status row's `outputPreview` (#95), or null when the
+ * row has none (queued or finished).
+ */
+export const outputPreviewLine = (row: unknown): string | null => {
+  if (!isRecord(row)) {
+    return null;
+  }
+  const tail = stringOrNull(row['outputPreview']);
+  if (tail === null) {
+    return null;
+  }
+  const lines = tail.split('\n').map((line) => line.trimEnd());
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const line = lines[index];
+    if (line !== undefined && line.trim().length > 0) {
+      return line;
+    }
+  }
+  return null;
+};
+
+const filterCompactionThreshold = 120;
+const filterExpressionFlags = new Set(['-E', '--filterset', '--filter-expr']);
+
+const topLevelFilterCount = (expression: string): number => {
+  let count = 1;
+  let depth = 0;
+  let quote: '"' | "'" | null = null;
+  let escaped = false;
+  for (const character of expression) {
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (quote !== null) {
+      if (character === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      continue;
+    }
+    if (character === '(' || character === '[' || character === '{') {
+      depth += 1;
+      continue;
+    }
+    if (character === ')' || character === ']' || character === '}') {
+      depth = Math.max(0, depth - 1);
+      continue;
+    }
+    if (character === '|' && depth === 0) {
+      count += 1;
+    }
+  }
+  return count;
+};
+
+interface FilterSpan {
+  readonly flag: string | null;
+  readonly indexes: readonly number[];
+  readonly value: string;
+}
+
+const compactFilterSpans = (
+  parts: readonly string[],
+  spans: readonly FilterSpan[],
+): readonly string[] => {
+  const combinedLength = spans.reduce(
+    (length, span, index) => length + span.value.length + (index === 0 ? 0 : 1),
+    0,
+  );
+  if (combinedLength <= filterCompactionThreshold || spans.length === 0) {
+    return parts;
+  }
+  const count = spans.reduce((total, span) => total + topLevelFilterCount(span.value), 0);
+  const skipped = new Set(spans.flatMap((span) => span.indexes));
+  const firstIndex = spans[0]?.indexes[0];
+  const marker = `(${count} filter${count === 1 ? '' : 's'})`;
+  const compacted: string[] = [];
+  for (let index = 0; index < parts.length; index += 1) {
+    if (index === firstIndex) {
+      const flag = spans[0]?.flag;
+      if (flag !== null && flag !== undefined) {
+        compacted.push(flag);
+      }
+      compacted.push(marker);
+    }
+    if (!skipped.has(index)) {
+      compacted.push(parts[index] ?? '');
+    }
+  }
+  return compacted;
+};
+
+const compactNextestFiltersets = (parts: readonly string[]): readonly string[] => {
+  if (!parts.slice(1).includes('nextest')) {
+    return parts;
+  }
+  const spans: FilterSpan[] = [];
+  for (let index = 0; index < parts.length; index += 1) {
+    const token = parts[index];
+    if (token === undefined) {
+      continue;
+    }
+    if (filterExpressionFlags.has(token)) {
+      const value = parts[index + 1];
+      if (value !== undefined) {
+        spans.push({ flag: token, indexes: [index, index + 1], value });
+        index += 1;
+      }
+      continue;
+    }
+    const equals = token.indexOf('=');
+    if (equals > 0) {
+      const flag = token.slice(0, equals);
+      if (filterExpressionFlags.has(flag)) {
+        spans.push({ flag, indexes: [index], value: token.slice(equals + 1) });
+      }
+    }
+  }
+  return compactFilterSpans(parts, spans);
+};
+
+const cargoTestValueFlags = new Set([
+  '-F',
+  '-j',
+  '-p',
+  '-Z',
+  '--bench',
+  '--bin',
+  '--color',
+  '--config',
+  '--example',
+  '--exclude',
+  '--features',
+  '--jobs',
+  '--manifest-path',
+  '--message-format',
+  '--package',
+  '--profile',
+  '--target',
+  '--target-dir',
+  '--test',
+]);
+const libtestValueFlags = new Set([
+  '--color',
+  '--ensure-time',
+  '--format',
+  '--logfile',
+  '--report-time',
+  '--skip',
+  '--test-threads',
+]);
+
+const compactCargoTestFilters = (parts: readonly string[]): readonly string[] => {
+  const testIndex = parts.indexOf('test', 1);
+  if (testIndex === -1) {
+    return parts;
+  }
+  const spans: FilterSpan[] = [];
+  let passthrough = false;
+  for (let index = testIndex + 1; index < parts.length; index += 1) {
+    const token = parts[index];
+    if (token === undefined) {
+      continue;
+    }
+    if (token === '--') {
+      passthrough = true;
+      continue;
+    }
+    if (token.startsWith('-')) {
+      const flag = token.split('=', 1)[0] ?? token;
+      const consumesValue = passthrough
+        ? libtestValueFlags.has(flag)
+        : cargoTestValueFlags.has(flag);
+      if (consumesValue && !token.includes('=')) {
+        index += 1;
+      }
+      continue;
+    }
+    spans.push({ flag: null, indexes: [index], value: token });
+  }
+  return compactFilterSpans(parts, spans);
+};
+
+/**
+ * Compact semantic test-selection arguments for bounded dashboard cells.
+ * The original argv remains available through {@link argvTitle} and the
+ * ticket drawer; non-selection arguments retain their original order/text.
+ */
+export const compactArgvText = (argv: unknown): string => {
+  const parts = stringArrayOrNull(argv);
+  if (parts === null) {
+    return '';
+  }
+  return commandDisplay(compactCargoTestFilters(compactNextestFiltersets(parts)));
+};
+
+export const argvText = (argv: unknown): string => {
+  const parts = stringArrayOrNull(argv);
+  return parts === null ? '' : commandDisplay(parts);
+};
+
+export const argvTitle = (argv: unknown): string => stringArrayOrNull(argv)?.join(' ') ?? '';
+
+export const summaryFirstLine = (summary: string): string => summary.split('\n', 1)[0] ?? '';
+
+interface RanAs {
+  readonly command: string;
+  readonly extraPackages: number;
+}
+
+/**
+ * What the daemon actually spawned, when it materially differs from the
+ * request. The injected demux flag alone is noise and yields null; batch
+ * composition (folded `-p` packages) surfaces as a "ran as" line with the
+ * count of packages beyond the request's own.
+ */
+export const ranAsFor = (argvValue: unknown, execArgvValue: unknown): RanAs | null => {
+  const argv = stringArrayOrNull(argvValue);
+  const execArgv = stringArrayOrNull(execArgvValue);
+  if (argv === null || execArgv === null) {
+    return null;
+  }
+  const cleaned = execArgv.filter((part) => part !== DEMUX_FLAG);
+  if (cleaned.length === argv.length && cleaned.every((part, index) => part === argv[index])) {
+    return null;
+  }
+  const requested = namedPackagesInArgv(argv);
+  let extraPackages = 0;
+  for (const name of namedPackagesInArgv(cleaned)) {
+    if (!requested.has(name)) {
+      extraPackages += 1;
+    }
+  }
+  return { command: commandDisplay(cleaned), extraPackages };
+};
+
+export interface MemoryStatView {
+  readonly clamp: 'none' | 'soft' | 'hard';
+  readonly label: string;
+  readonly value: string;
+}
+
+export const memoryStatView = (system: {
+  readonly memAvailableBytes?: unknown;
+  readonly memClamp?: unknown;
+  readonly memFullAvg10?: unknown;
+}): MemoryStatView => {
+  const available =
+    typeof system.memAvailableBytes === 'number'
+      ? formatBytes(system.memAvailableBytes)
+      : '—';
+  const psi =
+    typeof system.memFullAvg10 === 'number'
+      ? system.memFullAvg10.toFixed(1)
+      : '—';
+  const clamp =
+    system.memClamp === 'soft' || system.memClamp === 'hard'
+      ? system.memClamp
+      : 'none';
+  return {
+    clamp,
+    label: `mem free · psi ${psi}`,
+    value: available,
+  };
+};
+
+/** Detail text of an untyped `admissionHold` record field; null when absent or malformed. */
+export const admissionHoldDetail = (value: unknown): string | null =>
+  isRecord(value) && typeof value.detail === 'string' && value.detail.length > 0 ? value.detail : null;
+
+/**
+ * Heavy-cap admission note from an untyped daemon `system.heavy` payload;
+ * null when the cap is disabled (the daemon omits `heavy`) or the payload is
+ * not the promised shape.
+ */
+export const heavyAdmissionNote = (system: { readonly heavy?: unknown }): string | null => {
+  const heavy = system.heavy;
+  if (!isRecord(heavy)) {
+    return null;
+  }
+  return typeof heavy.running === 'number' &&
+    typeof heavy.maxConcurrent === 'number' &&
+    typeof heavy.capActive === 'boolean'
+    ? heavyCapNote({
+        capActive: heavy.capActive,
+        maxConcurrent: heavy.maxConcurrent,
+        running: heavy.running,
+      })
+    : null;
+};
+
+export const formatCompactNumber = (value: number): string => {
+  const absolute = Math.abs(value);
+  const unit =
+    absolute >= 1_000_000_000
+      ? ({ divisor: 1_000_000_000, suffix: 'b' } as const)
+      : absolute >= 1_000_000
+        ? ({ divisor: 1_000_000, suffix: 'm' } as const)
+        : absolute >= 1_000
+          ? ({ divisor: 1_000, suffix: 'k' } as const)
+          : null;
+  if (unit === null) {
+    return String(Math.round(value));
+  }
+  const scaled = value / unit.divisor;
+  const rounded = Math.abs(scaled) >= 10 ? Math.round(scaled) : Math.round(scaled * 10) / 10;
+  return `${rounded}${unit.suffix}`;
+};
+
+/**
+ * Remaining-time hint for a running row. Estimates come from prior runs of
+ * the same intent, so estimate ≈ elapsed is the common steady state right
+ * before finish — rendering it reads as a countdown stuck at "now" (a live
+ * dashboard showed elapsed 13s with "~13s" beside it). The hint renders only
+ * when the estimate exceeds elapsed by a meaningful margin: at least
+ * {@link remainingMinMs} and at least {@link remainingMinFraction} of the
+ * estimate. Otherwise null hides it.
+ */
+export const remainingMinMs = 5_000;
+export const remainingMinFraction = 0.1;
+
+export const remainingEstimateMs = (elapsedMs: number, estimateMs: unknown): number | null => {
+  if (typeof estimateMs !== 'number' || estimateMs <= 0 || elapsedMs < 0) {
+    return null;
+  }
+  const remaining = estimateMs - elapsedMs;
+  return remaining >= remainingMinMs && remaining >= estimateMs * remainingMinFraction
+    ? remaining
+    : null;
+};
+
+/**
+ * Kache sub-panels collapse when empty, like the top-level sections: an idle
+ * machine renders no "No recent heartbeats." placeholder column.
+ */
+export type KacheColumn = 'roots' | 'crates';
+
+export const kacheColumns = (counts: {
+  readonly roots: number;
+  readonly crates: number;
+}): readonly KacheColumn[] => [
+  ...(counts.roots > 0 ? (['roots'] as const) : []),
+  ...(counts.crates > 0 ? (['crates'] as const) : []),
+];
+
+/**
+ * Kache slowest crates, grouped by build profile. Dev, release, and test
+ * timings are different populations — a release build of the same crate can
+ * be 10x its dev check — so crates are never ranked, and never metered,
+ * across profiles: each group carries its own maximum for the meter, and
+ * empty groups simply do not exist.
+ */
+export interface KacheCrateTiming {
+  readonly crate: string;
+  readonly ms: number;
+}
+
+export interface KacheProfileGroup {
+  readonly profile: string;
+  readonly rows: readonly KacheCrateTiming[];
+  /** Group-local maximum; meters are relative to this, never a global max. */
+  readonly maxMs: number;
+}
+
+/** Familiar cargo profiles lead in a stable order; anything else follows alphabetically. */
+const profileOrder = ['dev', 'debug', 'release', 'test', 'bench'];
+
+const profileRank = (profile: string): number => {
+  const index = profileOrder.indexOf(profile);
+  return index === -1 ? profileOrder.length : index;
+};
+
+export const kacheProfileGroups = (
+  topCrates: readonly { readonly crate?: unknown; readonly profile?: unknown; readonly ms?: unknown }[],
+): readonly KacheProfileGroup[] => {
+  const byProfile = new Map<string, KacheCrateTiming[]>();
+  for (const row of topCrates) {
+    if (typeof row.crate !== 'string' || typeof row.profile !== 'string') {
+      continue;
+    }
+    if (typeof row.ms !== 'number' || row.ms <= 0) {
+      continue;
+    }
+    const rows = byProfile.get(row.profile) ?? [];
+    rows.push({ crate: row.crate, ms: row.ms });
+    byProfile.set(row.profile, rows);
+  }
+  return [...byProfile.entries()]
+    .sort(
+      ([left], [right]) =>
+        profileRank(left) - profileRank(right) || left.localeCompare(right),
+    )
+    .map(([profile, rows]) => {
+      const sorted = [...rows].sort(
+        (left, right) => right.ms - left.ms || left.crate.localeCompare(right.crate),
+      );
+      return {
+        profile: profile === '' ? 'unattributed' : profile,
+        rows: sorted,
+        maxMs: sorted.reduce((maximum, row) => Math.max(maximum, row.ms), 0),
+      };
+    });
+};
+
+interface RowCommandPopulation {
+  readonly subcommand: string;
+  readonly profile: string;
+}
+
+const rowCommandPopulation = (row: {
+  readonly intentJson?: unknown;
+  readonly argv?: unknown;
+}): RowCommandPopulation | null => {
+  if (typeof row.intentJson === 'string' && row.intentJson.length > 0) {
+    try {
+      const intent: unknown = JSON.parse(row.intentJson);
+      if (
+        intent !== null &&
+        typeof intent === 'object' &&
+        typeof (intent as { subcommand?: unknown }).subcommand === 'string'
+      ) {
+        const subcommand = (intent as { subcommand: string }).subcommand;
+        const rawProfile = (intent as { profile?: unknown }).profile;
+        const profile =
+          typeof rawProfile === 'string' && rawProfile.trim().length > 0
+            ? rawProfile
+            : defaultCargoProfile(subcommand);
+        return { profile, subcommand };
+      }
+    } catch {
+      // Fall through to argv.
+    }
+  }
+  const argv = stringArrayOrNull(row.argv);
+  if (argv === null) {
+    return null;
+  }
+  for (const part of argv.slice(1)) {
+    if (part.startsWith('-') || part.startsWith('+')) {
+      continue;
+    }
+    return { profile: defaultCargoProfile(part), subcommand: part };
+  }
+  return null;
+};
+
+/**
+ * The cargo subcommand a row ran, for timing splits: `intentJson.subcommand`
+ * (the daemon's own normalization) when present, else the first
+ * non-flag/non-toolchain argv token after the program. Check and test runs
+ * are different populations and must never share one histogram line.
+ */
+export const rowSubcommand = (row: {
+  readonly intentJson?: unknown;
+  readonly argv?: unknown;
+}): string | null => rowCommandPopulation(row)?.subcommand ?? null;
+
+export interface SubcommandTiming {
+  readonly subcommand: string;
+  readonly profile?: string;
+  /** Honest n: finished rows of this subcommand inside the visible window. */
+  readonly count: number;
+  readonly p50Ms: number;
+  readonly maxMs: number;
+  readonly meanMs: number;
+}
+
+/**
+ * Run timings split by subcommand, from the finished rows on screen. This is
+ * the by-command split when the status carried no metrics windows (the
+ * daemon is stopped or did not answer, and the rows come from the ledger);
+ * check and test stay the separate populations they are, each line carrying
+ * its own n.
+ */
+export const subcommandTimings = (
+  rows: readonly {
+    readonly intentJson?: unknown;
+    readonly argv?: unknown;
+    readonly runMs?: unknown;
+  }[],
+): readonly SubcommandTiming[] => {
+  const samples = new Map<string, { readonly population: RowCommandPopulation; readonly runs: number[] }>();
+  for (const row of rows) {
+    if (typeof row.runMs !== 'number' || row.runMs < 0) {
+      continue;
+    }
+    const population = rowCommandPopulation(row);
+    if (population === null) {
+      continue;
+    }
+    const key = `${population.subcommand}\0${population.profile}`;
+    const entry = samples.get(key) ?? { population, runs: [] };
+    entry.runs.push(row.runMs);
+    samples.set(key, entry);
+  }
+  return [...samples.values()]
+    .map(({ population, runs }) => {
+      const sorted = [...runs].sort((left, right) => left - right);
+      return {
+        ...population,
+        count: sorted.length,
+        p50Ms: sorted[Math.floor((sorted.length - 1) * 0.5)],
+        maxMs: sorted[sorted.length - 1],
+        meanMs: sorted.reduce((sum, value) => sum + value, 0) / sorted.length,
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.count - left.count ||
+        left.subcommand.localeCompare(right.subcommand) ||
+        left.profile.localeCompare(right.profile),
+    );
+};
+
+export const subcommandDisplayLabel = (timing: {
+  readonly subcommand: string;
+  readonly profile?: string;
+}): string => {
+  const { profile, subcommand } = timing;
+  return profile === undefined || profile === defaultCargoProfile(subcommand)
+    ? `cargo ${subcommand}`
+    : `cargo ${subcommand} · ${profile}`;
+};
+
+/**
+ * The all-time latency tile. The ledger's number is counterfactual solo
+ * estimate minus actual time-to-result summed over riders; when it is negative
+ * the riders waited longer than they would have alone, and a "saved" label
+ * with a minus sign misreads. Say what happened instead.
+ */
+export const latencySavedStat = (latencyMs: number): { readonly label: string; readonly value: string } =>
+  latencyMs < 0
+    ? { label: 'latency added by attaching (all time)', value: formatMs(-latencyMs) }
+    : { label: 'latency saved (all time)', value: formatMs(latencyMs) };
+
+export interface DiagnosticBadge {
+  readonly kind: 'errors' | 'warnings';
+  readonly count: number;
+}
+
+export const diagnosticBadges = (
+  errorCount: unknown,
+  warningCount: unknown,
+): readonly DiagnosticBadge[] => [
+  ...(typeof errorCount === 'number' && errorCount > 0
+    ? ([{ count: errorCount, kind: 'errors' }] as const)
+    : []),
+  ...(typeof warningCount === 'number' && warningCount > 0
+    ? ([{ count: warningCount, kind: 'warnings' }] as const)
+    : []),
+];
+
+/**
+ * Queue wait worth surfacing on a running row. Sub-second waits are lane
+ * bookkeeping, not contention; from one second up the row genuinely queued
+ * before starting and the operator should see it.
+ */
+export const queuedWaitThresholdMs = 1_000;
+
+export const queuedWaitMs = (waitMs: unknown): number | null =>
+  typeof waitMs === 'number' && waitMs >= queuedWaitThresholdMs ? waitMs : null;
+
+/** `overrun` from an untyped queued row's `queue.headEstimateState`; null for an on-track head or a row without queue detail. */
+export const queueHeadEstimateState = (queue: unknown): string | null =>
+  isRecord(queue) && queue.headEstimateState === 'overrun' ? 'overrun' : null;
+
+/**
+ * Why a queued row is waiting longer than expected: its own wait past the
+ * estimate, the lane head overrunning its estimate while still alive (#91),
+ * or both.
+ */
+export const delayedWaitCue = (delayed: unknown, headEstimateState?: unknown): string | null => {
+  const cues = [
+    delayed === true ? 'wait exceeds estimate' : null,
+    headEstimateState === 'overrun' ? 'head overrunning' : null,
+  ].filter((cue): cue is string => cue !== null);
+  return cues.length === 0 ? null : cues.join(' · ');
+};
+
+export const quietOutputHint = (
+  quietMs: unknown,
+): { readonly label: string; readonly title: string } | null => {
+  if (typeof quietMs !== 'number' || !Number.isFinite(quietMs) || quietMs < 0) {
+    return null;
+  }
+  return {
+    label: `quiet ${Math.floor(quietMs / 60_000)}m`,
+    title: 'no output — long compile/link phases can be silent; check kache/rustc activity',
+  };
+};
+
+/**
+ * Stall pill for a running row (#46): the daemon saw no process-tree CPU and
+ * no output for `idleMs` on a run already past its estimate. The title names
+ * the release command; riders point at their leader.
+ */
+export const stalledHint = (
+  stall: unknown,
+  killTicket: unknown,
+): { readonly label: string; readonly title: string } | null => {
+  if (
+    typeof stall !== 'object' ||
+    stall === null ||
+    !('idleMs' in stall) ||
+    typeof stall.idleMs !== 'number' ||
+    !Number.isFinite(stall.idleMs) ||
+    stall.idleMs < 0
+  ) {
+    return null;
+  }
+  const kill = typeof killTicket === 'string' ? ` — hauler kill ${killTicket}` : '';
+  return {
+    label: `stalled ${Math.floor(stall.idleMs / 60_000)}m`,
+    title: `no CPU and no output for ${Math.floor(stall.idleMs / 60_000)}m on a run past its estimate; likely deadlocked${kill}`,
+  };
+};
+
+export const laneIsActive = (lane: {
+  readonly queued?: unknown;
+  readonly runningTicket?: unknown;
+  readonly executingTickets?: unknown;
+  readonly sharedTargetWith?: unknown;
+}): boolean =>
+  (typeof lane.queued === 'number' && lane.queued > 0) ||
+  typeof lane.runningTicket === 'string' ||
+  (Array.isArray(lane.executingTickets) && lane.executingTickets.length > 0) ||
+  (Array.isArray(lane.sharedTargetWith) && lane.sharedTargetWith.length > 0);
+
+/**
+ * The daemon's shared-target flag on an untyped lane row (#185): the other
+ * workspace roots and the one-wording warning for the cell's tooltip, or null
+ * when the lane carries no flag.
+ */
+export const sharedTargetCell = (lane: {
+  readonly workspaceRoot?: unknown;
+  readonly targetDir?: unknown;
+  readonly sharedTargetWith?: unknown;
+}): { readonly roots: readonly string[]; readonly warning: string } | null => {
+  const roots = Array.isArray(lane.sharedTargetWith) ? lane.sharedTargetWith.map(String) : [];
+  if (roots.length === 0 || typeof lane.targetDir !== 'string' || typeof lane.workspaceRoot !== 'string') {
+    return null;
+  }
+  return {
+    roots,
+    warning: sharedTargetWarning({
+      targetDir: lane.targetDir,
+      workspaceRoots: [lane.workspaceRoot, ...roots].sort(),
+    }),
+  };
+};
+
+/**
+ * Time hauler's attach coalescing saved, from the rows on screen. This is
+ * strictly about attached requests (identity/coverage/batch riders) — kache
+ * compile timings are crate build costs, not hauler savings, and must
+ * never feed this number.
+ *
+ * Per attached row: when its leader is visible and finished, the follower
+ * skipped exactly the leader's real runtime (exact credit); otherwise the
+ * follower's own prior-run estimate stands in, reported separately as
+ * estimated. Batch leaders additionally fold extra `-p` packages into one
+ * cargo invocation; that count is surfaced as its own signal.
+ */
+export interface AttachSavings {
+  /** Attached rows in the window — each one is a cargo run that never spawned. */
+  readonly avoidedRuns: number;
+  /** Sum of finished leaders' real runMs, credited once per follower. */
+  readonly savedExactMs: number;
+  /** Sum of follower estimateMs where the leader's real runtime is unknown. */
+  readonly savedEstimatedMs: number;
+  /** Packages folded into visible leaders' batch invocations beyond their own. */
+  readonly batchExtraPackages: number;
+}
+
+const isAttachMode = (value: unknown): value is 'identity' | 'coverage' | 'batch' =>
+  value === 'identity' || value === 'coverage' || value === 'batch';
+
+export const attachSavings = (
+  rows: readonly {
+    readonly ticket?: unknown;
+    readonly attachedTo?: unknown;
+    readonly attachMode?: unknown;
+    readonly runMs?: unknown;
+    readonly estimateMs?: unknown;
+    readonly argv?: unknown;
+    readonly execArgv?: unknown;
+  }[],
+): AttachSavings => {
+  const deduped: Array<(typeof rows)[number]> = [];
+  const seenTickets = new Set<string>();
+  for (const row of rows) {
+    if (typeof row.ticket !== 'string') {
+      deduped.push(row);
+      continue;
+    }
+    if (seenTickets.has(row.ticket)) {
+      continue;
+    }
+    seenTickets.add(row.ticket);
+    deduped.push(row);
+  }
+  const leadersByTicket = new Map<string, (typeof rows)[number]>();
+  for (const row of deduped) {
+    if (typeof row.ticket === 'string' && row.attachedTo == null) {
+      leadersByTicket.set(row.ticket, row);
+    }
+  }
+  let avoidedRuns = 0;
+  let savedExactMs = 0;
+  let savedEstimatedMs = 0;
+  let batchExtraPackages = 0;
+  for (const row of deduped) {
+    if (row.attachedTo == null) {
+      batchExtraPackages += ranAsFor(row.argv, row.execArgv)?.extraPackages ?? 0;
+      continue;
+    }
+    if (typeof row.attachedTo !== 'string' || !isAttachMode(row.attachMode)) {
+      continue;
+    }
+    avoidedRuns += 1;
+    const estimateMs =
+      typeof row.estimateMs === 'number' && row.estimateMs > 0 ? row.estimateMs : null;
+    const leader = leadersByTicket.get(row.attachedTo);
+    const leaderRunMs =
+      leader !== undefined && typeof leader.runMs === 'number' && leader.runMs > 0
+        ? leader.runMs
+        : null;
+    switch (row.attachMode) {
+      case 'identity':
+        if (leaderRunMs !== null) {
+          savedExactMs += leaderRunMs;
+        } else if (estimateMs !== null) {
+          savedEstimatedMs += estimateMs;
+        }
+        break;
+      case 'coverage':
+        if (leaderRunMs !== null && estimateMs !== null) {
+          const bounded = Math.min(leaderRunMs, estimateMs);
+          if (bounded === leaderRunMs) {
+            savedExactMs += bounded;
+          } else {
+            savedEstimatedMs += bounded;
+          }
+        } else if (leaderRunMs !== null) {
+          savedExactMs += leaderRunMs;
+        } else if (estimateMs !== null) {
+          savedEstimatedMs += estimateMs;
+        }
+        break;
+      case 'batch':
+        if (estimateMs !== null) {
+          savedEstimatedMs += estimateMs;
+        }
+        break;
+      default: {
+        const exhaustive: never = row.attachMode;
+        return exhaustive;
+      }
+    }
+  }
+  return { avoidedRuns, batchExtraPackages, savedEstimatedMs, savedExactMs };
+};

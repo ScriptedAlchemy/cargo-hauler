@@ -2,10 +2,10 @@ import { Agent, agent } from '@agent-bundle/runtime';
 import type { AgentEventRouteConfig, AgentEventRouteProps } from 'agent-bundle';
 import React from 'react';
 
-import { daemonBadgeModel } from '../../components/view-models.js';
-import { probeDaemonHealth } from '../../lib/daemon-health.js';
-import { decisionValue } from '../../lib/event-support.js';
-import { requestDaemonConfig } from '../../lib/request-config.js';
+import { daemonBadgeModel } from '../../internal/ui/documents/view-models.js';
+import { probeDaemonHealth } from '../../internal/operations/daemon-health.js';
+import { decisionValue } from '../../internal/host-hooks/event-support.js';
+import { requestDaemonConfig } from '../../internal/operations/request-config.js';
 
 /**
  * Session start: tell the new session what the hauler daemon looks like right

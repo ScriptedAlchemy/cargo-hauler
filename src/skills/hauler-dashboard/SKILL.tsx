@@ -1,7 +1,7 @@
 import { version } from 'agent-bundle/meta';
 import React from 'react';
 
-import { cliSurface, mcpSurface } from '../../components/surface.js';
+import { cliSurface, mcpSurface } from '../../internal/ui/documents/surface.js';
 import { APP_RESOURCE_URI } from '../../constants.js';
 
 /**

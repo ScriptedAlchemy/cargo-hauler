@@ -3,11 +3,11 @@ import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
 import React from 'react';
 import { z } from 'zod';
 
-import { KillDocument } from '../../../components/documents.js';
-import { surfaceNames } from '../../../components/surface.js';
-import { killResultSchema } from '../../../lib/protocol-schemas.js';
-import { requestDaemonConfig } from '../../../lib/request-config.js';
-import { killTicketResult } from '../../../lib/tickets.js';
+import { KillDocument } from '../../../internal/ui/documents/documents.js';
+import { surfaceNames } from '../../../internal/ui/documents/surface.js';
+import { killResultSchema } from '../../../internal/contracts/tool-schemas.js';
+import { requestDaemonConfig } from '../../../internal/operations/request-config.js';
+import { killTicketResult } from '../../../internal/operations/tickets.js';
 
 export const config = {
   annotations: { destructiveHint: true, idempotentHint: true },

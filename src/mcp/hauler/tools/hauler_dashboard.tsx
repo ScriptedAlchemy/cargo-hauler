@@ -3,11 +3,11 @@ import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
 import { appResourceUri } from 'agent-bundle/routes';
 import React from 'react';
 
-import { DashboardDocument } from '../../../components/documents.js';
-import { surfaceNames } from '../../../components/surface.js';
-import { loadStatusResult } from '../../../lib/inspect.js';
-import { limitInputSchema, statusResultSchema } from '../../../lib/protocol-schemas.js';
-import { requestDaemonConfig } from '../../../lib/request-config.js';
+import { DashboardDocument } from '../../../internal/ui/documents/documents.js';
+import { surfaceNames } from '../../../internal/ui/documents/surface.js';
+import { loadStatusResult } from '../../../internal/operations/inspection.js';
+import { limitInputSchema, statusResultSchema } from '../../../internal/contracts/tool-schemas.js';
+import { requestDaemonConfig } from '../../../internal/operations/request-config.js';
 
 /**
  * The one tool that carries the MCP App: hosts that render MCP Apps open the

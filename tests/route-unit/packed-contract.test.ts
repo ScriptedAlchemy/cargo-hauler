@@ -13,10 +13,10 @@ import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Schedule from 'effect/Schedule';
 
-import { fetchTicket } from '../../src/client/tickets.js';
-import { requestOverSocket } from '../../src/daemon/control.js';
-import type { RequestRecord } from '../../src/daemon/protocol.js';
-import { type Fixture, scopedDaemon } from '../harness.js';
+import { fetchTicket } from '../../src/internal/client/tickets.js';
+import { requestOverSocket } from '../../src/internal/client/control.js';
+import type { RequestRecord } from '../../src/internal/contracts/protocol.js';
+import { type Fixture, scopedDaemon } from '../support/harness.js';
 
 /**
  * Packed-stdio proof: the built `artifact/` MCP entry runs as a separate

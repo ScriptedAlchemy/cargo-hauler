@@ -2,12 +2,12 @@ import { agent } from '@agent-bundle/runtime';
 import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
 import React from 'react';
 
-import { RequestDocument } from '../../../components/documents.js';
-import { surfaceNames } from '../../../components/surface.js';
-import { lineageModel } from '../../../components/view-models.js';
-import { requestInputSchema, requestResultSchema } from '../../../lib/protocol-schemas.js';
-import { requestDaemonConfig } from '../../../lib/request-config.js';
-import { submitTicketRequest } from '../../../lib/tickets.js';
+import { RequestDocument } from '../../../internal/ui/documents/documents.js';
+import { surfaceNames } from '../../../internal/ui/documents/surface.js';
+import { lineageModel } from '../../../internal/ui/documents/view-models.js';
+import { requestInputSchema, requestResultSchema } from '../../../internal/contracts/tool-schemas.js';
+import { requestDaemonConfig } from '../../../internal/operations/request-config.js';
+import { submitTicketRequest } from '../../../internal/operations/tickets.js';
 
 export const config = {
   annotations: { readOnlyHint: false },

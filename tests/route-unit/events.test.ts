@@ -3,7 +3,7 @@ import { createEventRouteInput, expectDocument, renderRoute } from 'agent-bundle
 import type { CanonicalAgentEvent } from 'agent-bundle';
 import * as Effect from 'effect/Effect';
 
-import { scopedDaemon } from '../harness.js';
+import { scopedDaemon } from '../support/harness.js';
 
 import { withIsolatedStateDir, withStateDir } from './support.js';
 
@@ -78,9 +78,9 @@ describe('session/start daemon notice', () => {
  * Permission semantics: the hauler never introduces a prompt. The shell tool
  * routes' decisions — `allow` for a rewritten cargo command, `continue` plus
  * `updatedInput` beside an ungoverned segment, plain `continue` for
- * everything else, never `ask` — are proven in `tests/hooks.test.ts` against
- * the handler, `tests/event-preflight.test.ts` against the gate, and
- * `tests/hooks-simulate.test.ts` against the compiled entries. The stop route
+ * everything else, never `ask` — are proven in `tests/unit/host-hooks/hooks.test.ts` against
+ * the handler, `tests/integration/event-preflight.test.ts` against the gate, and
+ * `tests/integration/hooks-simulate.test.ts` against the compiled entries. The stop route
  * stays here: it makes no decision without a daemon hold.
  */
 describe('stop route', () => {

@@ -65,8 +65,8 @@ import {
   type WaitVsRunView,
   waitMetricsView,
   waitVsRunView,
-} from '../../../dashboard/lib.js';
-import { statusResultSchema } from '../../../lib/protocol-schemas.js';
+} from '../../../internal/ui/dashboard/lib.js';
+import { statusResultSchema } from '../../../internal/contracts/tool-schemas.js';
 
 /**
  * Framework App-route metadata. The compiler extracts it without evaluating

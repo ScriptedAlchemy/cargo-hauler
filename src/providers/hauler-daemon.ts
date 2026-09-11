@@ -1,4 +1,4 @@
-import { resolveDaemonConfig, type DaemonConfigShape } from '../daemon/config.js';
+import { resolveDaemonConfig, type DaemonConfigShape } from '../internal/daemon/config.js';
 
 /**
  * The daemon configuration for one request, mounted at

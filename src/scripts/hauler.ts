@@ -7,22 +7,22 @@ import type { AgentTerminal, ExecutableMainContext } from 'agent-bundle';
 import * as Cause from 'effect/Cause';
 import * as Effect from 'effect/Effect';
 
-import { buildTransportedEnv } from '../client/env.js';
-import { runExecClient, type RunExecOptions, type RunExecResult } from '../client/exec.js';
-import { ExecUsageError, parseExecArgv } from '../client/parse.js';
-import { isEnabledFlag } from '../daemon/config.js';
-import { daemonExitCode, parseDaemonSubcommand, runDaemonControl } from '../daemon/lifecycle.js';
+import { buildTransportedEnv } from '../internal/client/env.js';
+import { runExecClient, type RunExecOptions, type RunExecResult } from '../internal/client/exec.js';
+import { ExecUsageError, parseExecArgv } from '../internal/client/parse.js';
+import { isEnabledFlag } from '../internal/daemon/config.js';
+import { daemonExitCode, parseDaemonSubcommand, runDaemonControl } from '../internal/daemon/runtime/lifecycle.js';
 import {
   defaultShimDir,
   installCargoShim,
   shimPathStatus,
   type ShimPathStatus,
-} from '../shim/install.js';
+} from '../internal/shim/install.js';
 import {
   globalHaulerArgv,
   haulerEntryLocation,
   type HaulerEntryLocation,
-} from '../shim/entry-location.js';
+} from '../internal/shim/entry-location.js';
 
 /**
  * The process-level entry: `exec` owns stdout/stderr byte-for-byte for the

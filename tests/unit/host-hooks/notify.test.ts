@@ -1,0 +1,107 @@
+import { describe, expect, it } from 'effect-rstest';
+
+import { handleAfterShell } from '../../../src/internal/host-hooks/after-shell.js';
+
+describe('afterTool completion notify', () => {
+  it('injects additionalContext for tickets that finished since the last cursor', async () => {
+    const result = await handleAfterShell(
+      {
+        sessionId: 'sess-1',
+        toolInput: { command: 'hauler exec -- cargo check' },
+        toolName: 'Bash',
+        toolResponse: { exitCode: 0 },
+      },
+      { nativeEvent: 'PostToolUse', target: 'claude' },
+      {
+        completedSince: async () => [
+          {
+            error: null,
+            errorCount: 0,
+            exitCode: 0,
+            status: 'done',
+            ticket: 'cc-42',
+            warningCount: 2,
+          },
+          {
+            error: 'boom',
+            errorCount: 3,
+            exitCode: 101,
+            status: 'failed',
+            ticket: 'cc-43',
+            warningCount: 1,
+          },
+        ],
+        nowMs: () => 50,
+        readCursor: () => 10,
+        record: () => undefined,
+        writeCursor: () => undefined,
+      },
+    );
+
+    expect(result.outcome).toBe('continue');
+    expect(result.additionalContext).toContain('cc-42 finished: success, 0 errors, 2 warnings');
+    expect(result.additionalContext).toContain('call hauler_result cc-42');
+    expect(result.additionalContext).toContain('cc-43 finished: failed, 3 errors, 1 warning');
+  });
+
+  it('stays silent when nothing completed or the daemon is down', async () => {
+    const silent = await handleAfterShell(
+      { sessionId: 'sess-1', toolInput: { command: 'ls' } },
+      { target: 'claude' },
+      {
+        completedSince: async () => [],
+        record: () => undefined,
+      },
+    );
+    expect(silent).toEqual({ outcome: 'continue' });
+
+    const down = await handleAfterShell(
+      { sessionId: 'sess-1', toolInput: { command: 'ls' } },
+      { target: 'claude' },
+      {
+        completedSince: async () => {
+          throw new Error('down');
+        },
+        record: () => undefined,
+      },
+    );
+    expect(down).toEqual({ outcome: 'continue' });
+  });
+
+  it('announces preflight tickets without querying the daemon, at the ping watermark', async () => {
+    let queried = false;
+    let cursor: number | undefined;
+    const result = await handleAfterShell(
+      {
+        finishedAsOfMs: 40,
+        finishedTickets: [
+          {
+            error: null,
+            errorCount: 0,
+            exitCode: 0,
+            status: 'done',
+            ticket: 'cc-42',
+            warningCount: 0,
+          },
+        ],
+        sessionId: 'sess-1',
+        toolInput: { command: 'ls' },
+      },
+      { target: 'claude' },
+      {
+        completedSince: async () => {
+          queried = true;
+          return [];
+        },
+        nowMs: () => 99,
+        record: () => undefined,
+        writeCursor: (_session, atMs) => {
+          cursor = atMs;
+        },
+      },
+    );
+    expect(queried).toBe(false);
+    expect(cursor).toBe(40);
+    expect(result.additionalContext).toContain('cc-42 finished: success');
+  });
+});

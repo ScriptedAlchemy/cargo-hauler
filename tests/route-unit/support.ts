@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import type { AgentDocument, JsonValue } from '@agent-bundle/runtime';
 
-import type { DaemonConfigShape } from '../../src/daemon/config.js';
+import type { DaemonConfigShape } from '../../src/internal/daemon/config.js';
 import type { HaulerDaemonContext } from '../../src/providers/hauler-daemon.js';
 
 /**

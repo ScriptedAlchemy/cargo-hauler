@@ -2,7 +2,7 @@ import { describe, expect, it } from 'effect-rstest';
 import { invokeMcpTool, listMcpSurface, openInMemoryMcpServer } from 'agent-bundle/test';
 import * as Effect from 'effect/Effect';
 
-import { scopedDaemon } from '../harness.js';
+import { scopedDaemon } from '../support/harness.js';
 
 import { withIsolatedStateDir, withStateDir } from './support.js';
 

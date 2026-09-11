@@ -11,14 +11,15 @@
   diagnostics, `rstest`, the route-unit suite, and browser App tests. Run it
   before claiming a change is done.
 - The plugin surface is an agent-bundle application: `src/layout.tsx` (the
-  shell), `src/providers/hauler-daemon.ts` (daemon connection), `src/components`
-  (typed components over `view-models.ts`), `src/mcp/hauler/tools` and
+  shell), `src/providers/hauler-daemon.ts` (daemon connection),
+  `src/internal/ui/documents` (typed components over `view-models.ts`), `src/mcp/hauler/tools` and
   `src/mcp/hauler/apps` (MCP; each tool's `<tool>.cli.ts` is its `hauler`
   command), `src/events` (hook routes; `tool/before.preflight.ts` and
   `tool/after.preflight.ts` decide on the raw command before the route
-  loads — keep them free of React and Effect), `src/hooks` (the handlers
-  the routes call), `src/cli/daemon.ts`, `src/scripts/hauler.ts` (process entry),
-  `src/skills`. The README's tour is the map; do not reintroduce a
+  loads — keep them free of React and Effect), `src/internal/host-hooks` (the
+  handlers the routes call), `src/cli/daemon.ts`, `src/scripts/hauler.ts` (process
+  entry), `src/skills`. Everything else lives under `src/internal/<owner>/`
+  (`docs/architecture.md` is the ownership map); do not reintroduce a
   hand-written server, argv parser, or string-concatenated documents — add a
   component and a view-model.
 - Documents must stay honest: a daemon the probe could not reach renders as
