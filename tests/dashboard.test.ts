@@ -75,6 +75,7 @@ describe('MCP App dashboard', () => {
     expect(html).toContain('History');
     expect(html).toContain('Contention');
     expect(html).toContain('hauler_status');
+    expect(html).toContain('hauler_dashboard');
     expect(html).toContain('hauler_result');
     expect(html).toContain('wait exceeds estimate');
     expect(html).toContain('no output — long compile/link phases can be silent');

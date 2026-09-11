@@ -8,14 +8,16 @@ import { withIsolatedStateDir, withStateDir } from './support.js';
 
 /**
  * mcp-in-memory proof: the generated `hauler` server registers exactly the
- * tool names the skills and README teach, `hauler_status` advertises the
- * dashboard resource so hosts can open the MCP App next to the result, and —
+ * tool names the skills and README teach, `hauler_dashboard` alone advertises
+ * the dashboard resource so hosts open the MCP App next to that result and
+ * `hauler_status` stays text, and —
  * against an in-process fixture broker running a fake cargo — the tools
  * project real daemon state through the real MCP wire contract. (App HTML
  * itself is a browser build output and is not registered at this level.)
  */
 const toolNames = [
   'hauler_await',
+  'hauler_dashboard',
   'hauler_kill',
   'hauler_last',
   'hauler_log',
@@ -33,10 +35,13 @@ describe('hauler MCP surface', () => {
       const session = await openInMemoryMcpServer({ server: 'hauler' });
       try {
         const listed = await session.client.listTools();
-        const status = listed.tools.find((tool) => tool.name === 'hauler_status');
-        expect(status?._meta).toMatchObject({
+        const dashboard = listed.tools.find((tool) => tool.name === 'hauler_dashboard');
+        expect(dashboard?._meta).toMatchObject({
           ui: { resourceUri: 'ui://cargo-hauler/dashboard.html' },
         });
+        expect(dashboard?.annotations).toMatchObject({ readOnlyHint: true });
+        const status = listed.tools.find((tool) => tool.name === 'hauler_status');
+        expect(status?._meta?.ui).toBeUndefined();
         expect(status?.annotations).toMatchObject({ readOnlyHint: true });
         // Every hauler result is an object, so every tool advertises its outputSchema.
         expect(listed.tools.every((tool) => tool.outputSchema !== undefined)).toBe(true);
@@ -49,6 +54,10 @@ describe('hauler MCP surface', () => {
       const result = await invokeMcpTool('hauler_status', { input: {}, server: 'hauler' });
       expect(result.isError).toBe(false);
       expect(result.structuredContent).toMatchObject({ daemon: 'stopped', operation: 'status' });
+      // The App opens populated from the same payload; the text stays one line.
+      const opened = await invokeMcpTool('hauler_dashboard', { input: {}, server: 'hauler' });
+      expect(opened.isError).toBe(false);
+      expect(opened.structuredContent).toMatchObject({ daemon: 'stopped', operation: 'status' });
     });
   });
 

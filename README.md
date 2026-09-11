@@ -59,10 +59,11 @@ hauler install-shim                                # optional: cargo from script
 ```
 
 Restart the host (or reload the window) so new sessions load the hooks. The
-daemon starts on demand with the first brokered request; `hauler status` shows
-what is running, and the `hauler_status` tool opens the dashboard in hosts that
-render MCP Apps. Prefer the hosts' own plugin commands, or building from a
-checkout? See [Install](#install).
+daemon starts on demand with the first brokered request; `hauler status` and
+the `hauler_status` tool show what is running as text, and the
+`hauler_dashboard` tool opens the dashboard in hosts that render MCP Apps.
+Prefer the hosts' own plugin commands, or building from a checkout? See
+[Install](#install).
 
 The CLI is `hauler` on PATH from `npm i -g cargo-hauler`. Never run
 `scripts/hauler.mjs` or any path under `.claude/plugins/cache`,
@@ -87,11 +88,14 @@ The CLI is `hauler` on PATH from `npm i -g cargo-hauler`. Never run
 | `hauler request [--session ID] [--host HOST] [--cwd DIR] [--after TICKET …] -- <cargo …>` | Submit a background request and return its ticket, with where it landed in its lane (`queued behind cc-3281 (~13m)`, `waiting for cc-3281`, or `attached to cc-3281`). `--cwd` overrides the current CLI workspace; `--after` works as for `exec`. |
 | `hauler daemon <run\|start\|stop\|status\|restart>` | Manage the daemon lifecycle. `stop` records its typed `shutdown` outcome in JSON and exits `0` only after a `shutting-down` acknowledgement followed by the original pid's exit, or when the daemon was already absent. Refusal, timeout, protocol error, disconnect before acknowledgement, and an acknowledged daemon still alive after 5 s exit `1`; `running` remains `true` when the original pid is alive and `null` when liveness could not be established. `restart` is the explicit replacement path: it sends the graceful stop, waits up to 5 s for the old pid to exit, then starts a daemon from this install and prints both (`restarted: pid 741314 (0.6.0) → pid 742001 (0.6.1)`). Tickets in flight are not handed over: the old daemon settles them itself as it shuts down — `killed`, error `daemon shutdown` — and callers resubmit. Automatic upgrades are gentler: read-only commands and MCP/dashboard reads never retire a daemon; a protocol-compatible older daemon serves them directly. Submission commands replace an older daemon only after an idle status check; daemons from 0.7.4 onward hold admission closed while confirming that state, while 0.7.1–0.7.3 receive a client preflight. A busy or slow-to-retire daemon keeps serving the submission and emits one line such as `daemon 0.7.1 will be replaced by 0.7.3 when idle`. A truly incompatible daemon is reported with its pid and version instead of having its payload parsed. |
 | `hauler install-shim [--dir DIR] [--real-cargo PATH] [--force]` | Install the optional PATH shim. |
-| `hauler web [--port N] [--no-open]` | Open the dashboard from the checkout, npm package, or installed plugin. Agent Bundle's generated web command serves the built App against the plugin's own `hauler` server, opens it populated by `hauler_status`, and stays in the foreground until Ctrl-C. In an MCP host, call `hauler_status` instead. |
+| `hauler web [--port N] [--no-open]` | Open the dashboard from the checkout, npm package, or installed plugin. Agent Bundle's generated web command serves the built App against the plugin's own `hauler` server, opens it populated by `hauler_dashboard`, and stays in the foreground until Ctrl-C. In an MCP host, call `hauler_dashboard` instead. |
 
 The `hauler` MCP server projects the same operations as `hauler_status`,
 `hauler_log`, `hauler_last`, `hauler_await`, `hauler_result`, `hauler_kill`,
-and `hauler_request`, with the same filters as the CLI. `hauler_status` and
+and `hauler_request`, with the same filters as the CLI, plus
+`hauler_dashboard`, which carries the MCP App (below) and answers with one
+summary line so opening the dashboard never pastes the status text into the
+model's context. `hauler_status` and
 `hauler_log` rows are the same bounded summaries (`outputPreview`, never a
 tail); `hauler_result`, `hauler_await`, and `hauler_last` carry the whole
 tail. `hauler_request.cwd` is an optional override: Agent Bundle's authoritative
@@ -102,7 +106,8 @@ workspace.
 ## Dashboard
 
 The dashboard is an MCP App (`ui://cargo-hauler/dashboard.html`) attached to
-`hauler_status`. It shows contention and admission, in-flight and queued work
+`hauler_dashboard`; `hauler_status` is the same data as text for the model and
+never opens it. It shows contention and admission, in-flight and queued work
 — each running row with the last line of its output preview, each ticket's
 drawer with the whole tail fetched through `hauler_result` — metrics over
 one-hour, 24-hour, and all-time windows, per-command timings, optional kache
@@ -783,7 +788,7 @@ src/
   layout.tsx                    the hauler shell around every rendered route
   providers/hauler-daemon.ts    request-scoped daemon configuration
   components/                   typed components over pure view-models
-  mcp/hauler/tools/*.tsx        hauler_status, _log, _last, _await, _result, _request, _kill
+  mcp/hauler/tools/*.tsx        hauler_status, _dashboard, _log, _last, _await, _result, _request, _kill
   mcp/hauler/tools/*.cli.ts     each tool's `hauler <command>` projection (flags, positionals)
   mcp/hauler/apps/dashboard.tsx the MCP App (ui://cargo-hauler/dashboard.html)
   cli/daemon.ts                 the one plain CLI command
@@ -898,7 +903,8 @@ the same filter as its `session` field). Results carry
 
 | Route | Surface | Document |
 | --- | --- | --- |
-| `tool:hauler/hauler_status` (`hauler status`) | queue, lanes, admission, kache, filters; bounded summary rows (`StatusRow`): `outputPreview` on running rows, never a tail | `StatusDocument`; the tool advertises the dashboard App |
+| `tool:hauler/hauler_status` (`hauler status`) | queue, lanes, admission, kache, filters; bounded summary rows (`StatusRow`): `outputPreview` on running rows, never a tail | `StatusDocument`, text for the model |
+| `tool:hauler/hauler_dashboard` (`hauler web`) | the same `StatusResult`, `limit` only; the tool advertises the dashboard App (`_meta.ui.resourceUri`) so hosts open it beside the result | `DashboardDocument`: one summary line plus where the App and the text form are |
 | `tool:hauler/hauler_log` (`hauler log`) | recent requests, as summary rows | `LogStream` → `LogDocument` |
 | `tool:hauler/hauler_last` (`hauler last`) | most recent request, as a detail record with its tail | `LastDocument` |
 | `tool:hauler/hauler_await` (`hauler await`) | long-poll a ticket (≤ 2 h) | `AwaitStream` → `AwaitDocument` |
@@ -922,8 +928,10 @@ resource URI it describes, so the document cannot drift from the surface.
 #### Dashboard
 
 `src/mcp/hauler/apps/dashboard.tsx` is the MCP App at
-`ui://cargo-hauler/dashboard.html`, attached to `hauler_status` on hosts that
-render MCP Apps. It shows contention and admission, in-flight and queued
+`ui://cargo-hauler/dashboard.html`, attached to `hauler_dashboard` on hosts
+that render MCP Apps; the opening result is that tool's status payload, and
+`hauler_status` carries no App so its text reaches the model alone. It shows
+contention and admission, in-flight and queued
 work, metrics windows, optional kache data, lanes, and history, with a live
 output drawer per ticket. The App polls `hauler_status` every 5 s; its rows
 are summaries, so a running row's `outputPreview` shows as one line under the
@@ -979,7 +987,7 @@ pnpm run check     # the gate
 To see the dashboard outside an MCP host, run `node artifact/bin/cargo-hauler.mjs
 web` after a build: the framework's `web` command (configured under `web` in
 `agent-bundle.config.ts`) launches the artifact's own `hauler` server, calls
-`hauler_status` once so the App opens populated, approves `call-tool` so its
+`hauler_dashboard` once so the App opens populated, approves `call-tool` so its
 panels may poll, and serves `ui://cargo-hauler/dashboard.html` on a loopback
 origin until Ctrl-C — so the data is the daemon's own. `pnpm run dev` and the
 Workbench's MCP page preview the same App with live rebuilds. The repository

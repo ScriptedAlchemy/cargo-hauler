@@ -28,9 +28,10 @@ export default () => (
     <h2>Open it</h2>
     <ul>
       <li>
-        <strong>MCP App host:</strong> call <code>{mcpSurface.status}</code>. Hosts that render MCP Apps attach{' '}
-        <code>{APP_RESOURCE_URI}</code> beside the result; the same document's text form carries the daemon
-        badge, admission meter, lane board, in-flight and recent tickets, and kache summary.
+        <strong>MCP App host:</strong> call <code>{mcpSurface.dashboard}</code>. Hosts that render MCP Apps attach{' '}
+        <code>{APP_RESOURCE_URI}</code> beside its result; the text result is one summary line. For the queue as
+        text — daemon badge, admission meter, lane board, in-flight and recent tickets, kache summary — call{' '}
+        <code>{mcpSurface.status}</code>, which never opens the App.
       </li>
       <li>
         <strong>Plain browser:</strong> run <code>node &lt;plugin root&gt;/bin/cargo-hauler.mjs web</code> — the

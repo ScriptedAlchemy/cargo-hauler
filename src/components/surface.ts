@@ -6,6 +6,8 @@ import type { AgentRequestContext } from '@agent-bundle/runtime';
  */
 export interface SurfaceNames {
   readonly await: string;
+  /** The call that opens the dashboard App (MCP) or serves it in a browser (CLI). */
+  readonly dashboard: string;
   readonly kill: string;
   readonly log: string;
   readonly request: string;
@@ -17,6 +19,7 @@ export interface SurfaceNames {
 
 export const mcpSurface: SurfaceNames = {
   await: 'hauler_await',
+  dashboard: 'hauler_dashboard',
   kill: 'hauler_kill',
   log: 'hauler_log',
   request: 'hauler_request',
@@ -27,6 +30,7 @@ export const mcpSurface: SurfaceNames = {
 
 export const cliSurface: SurfaceNames = {
   await: 'hauler await',
+  dashboard: 'hauler web',
   kill: 'hauler kill',
   log: 'hauler log',
   request: 'hauler request',

@@ -1,6 +1,7 @@
 import { Agent } from '@agent-bundle/runtime';
 import React from 'react';
 
+import { APP_RESOURCE_URI } from '../constants.js';
 import { awaitCeilingMs, orphanedByRestartError, type RequestRecord } from '../daemon/protocol.js';
 import { formatMs } from '../lib/format.js';
 import { documentValue } from '../lib/json.js';
@@ -77,6 +78,20 @@ export const StatusDocument = ({
       </Agent.Context>
     ) : null}
     <DashboardLink names={names} />
+  </Agent.Result>
+);
+
+/**
+ * The `hauler_dashboard` text: the App opens beside it on hosts that render
+ * MCP Apps, so the model gets the daemon's summary line and where the text
+ * form is, not a second copy of the status document.
+ */
+export const DashboardDocument = ({ names, result }: Omit<DocumentProps<StatusResult>, 'nowMs'>) => (
+  <Agent.Result value={documentValue(result)}>
+    <Agent.Text>{result.summary.split('\n', 1)[0] ?? result.summary}</Agent.Text>
+    <Agent.Context>
+      {`Dashboard: ${APP_RESOURCE_URI} opens beside this result on hosts that render MCP Apps; elsewhere run the browser preview (see the hauler-dashboard skill). For the queue, lanes, and tickets as text call ${names.status}.`}
+    </Agent.Context>
   </Agent.Result>
 );
 

@@ -58,9 +58,10 @@ export default defineConfig({
   targets: ['claude', 'codex', 'cursor', 'portable'],
   // `hauler web`: the dashboard App in a plain browser tab from the installed
   // artifact, served by the framework's own host (`bin/cargo-hauler.mjs web`);
-  // `hauler_status` opens it populated and `call-tool` lets its panels poll.
+  // `hauler_dashboard` opens it populated and `call-tool` lets its panels
+  // poll `hauler_status`.
   web: {
-    apps: [{ allow: ['call-tool'], app: 'hauler/dashboard', tool: 'hauler_status' }],
+    apps: [{ allow: ['call-tool'], app: 'hauler/dashboard', tool: 'hauler_dashboard' }],
     open: 'browser',
   },
 });

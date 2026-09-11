@@ -8,21 +8,21 @@ import {
 type BindingOperations = MountBrowserAppOptions['operations'];
 type ToolCallResult = Awaited<ReturnType<BindingOperations['callTool']>>;
 
-const statusTool = {
+const dashboardTool = {
   _meta: {
-    hauler: { route: 'tool:hauler/hauler_status' },
+    hauler: { route: 'tool:hauler/hauler_dashboard' },
     ui: { resourceUri: 'ui://cargo-hauler/dashboard.html' },
   },
-  description: 'Show cargo-hauler status.',
+  description: 'Open the cargo-hauler dashboard.',
   inputSchema: { properties: {}, type: 'object' },
-  name: 'hauler_status',
+  name: 'hauler_dashboard',
 };
 
 const openingHostContext = {
   availableDisplayModes: ['inline'],
   displayMode: 'inline',
   platform: 'desktop',
-  toolInfo: { tool: statusTool },
+  toolInfo: { tool: dashboardTool },
 };
 
 const status = {
@@ -76,9 +76,9 @@ const mountDashboard = async (
     host: { context: openingHostContext },
     operations: operations(callTool),
     serverName: 'hauler',
-    toolDefinition: statusTool,
+    toolDefinition: dashboardTool,
     toolInput: { limit: 40 },
-    toolName: statusTool.name,
+    toolName: dashboardTool.name,
     toolResult: openingResult,
   });
   mounted.push(app);

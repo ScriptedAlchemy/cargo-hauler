@@ -368,7 +368,7 @@ describe('packed install', () => {
           }
 
           const web = await serveWeb(installedRoot, env);
-          expect(web.ready).toMatchObject({ app: 'hauler/dashboard', tool: 'hauler_status' });
+          expect(web.ready).toMatchObject({ app: 'hauler/dashboard', tool: 'hauler_dashboard' });
           expect(web.status).toBe(200);
         } finally {
           rmSync(home, { force: true, recursive: true });

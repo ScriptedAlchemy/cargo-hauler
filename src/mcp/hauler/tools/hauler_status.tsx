@@ -1,6 +1,5 @@
 import { agent } from '@agent-bundle/runtime';
 import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
-import { appResourceUri } from 'agent-bundle/routes';
 import React from 'react';
 
 import { StatusDocument } from '../../../components/documents.js';
@@ -11,10 +10,9 @@ import { requestDaemonConfig } from '../../../lib/request-config.js';
 import { hasStatusFilters } from '../../../lib/status-filter.js';
 
 export const config = {
-  _meta: { ui: { resourceUri: appResourceUri('dashboard') } },
   annotations: { readOnlyHint: true },
   description:
-    'Show cargo-hauler queue and in-flight work. Filter by cwd, session, laneKey, tickets, statuses, or commandContains instead of piping CLI JSON through jq. Rows are bounded summaries: no output tail, only a short outputPreview (last 8 lines) on running rows; read one ticket with hauler_result for its whole live tail.',
+    'Show cargo-hauler queue and in-flight work as text. Filter by cwd, session, laneKey, tickets, statuses, or commandContains instead of piping CLI JSON through jq. Rows are bounded summaries: no output tail, only a short outputPreview (last 8 lines) on running rows; read one ticket with hauler_result for its whole live tail. To open the visual dashboard (MCP App) call hauler_dashboard.',
   title: 'Hauler status',
 } satisfies ToolConfig;
 
