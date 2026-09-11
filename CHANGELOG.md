@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.1
+
+### Patch Changes
+
+- ef7d00e: Dashboard: the Contention panel's CPU stat is labelled `1-min load average`
+  instead of `loadavg (1m)`, which read as a stuck "loading" timer. Same value:
+  the machine's Unix 1-minute load average over its cores.
+
 ## 0.8.0
 
 ### Minor Changes
