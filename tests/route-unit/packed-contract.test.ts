@@ -124,6 +124,7 @@ const fixturesFor = (
 ): Record<string, ContractRouteFixture> => ({
   // The dashboard is a resource: no input, but the coverage check wants an entry.
   'app:hauler/dashboard': {},
+  'tool:hauler/hauler_dashboard': { input: {}, inputs: [{ limit: 5 }], resultCompat: 'additive' },
   'tool:hauler/hauler_await': {
     // Cancellation must catch the call mid-wait, so it awaits the long job.
     cancellation: { abortAfterMs: 100, input: { maxWaitMs: 20_000, ticket: tickets.running } },
@@ -292,6 +293,7 @@ describe('packed stdio contract', () => {
         const tools = yield* Effect.promise(() => session.client.listTools());
         expect(tools.tools.map((tool) => tool.name).sort()).toEqual([
           'hauler_await',
+          'hauler_dashboard',
           'hauler_kill',
           'hauler_last',
           'hauler_log',

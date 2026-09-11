@@ -27,6 +27,7 @@ describe('route manifest', () => {
       'event:tool/before',
       'event:tool/after',
       'tool:hauler/hauler_status',
+      'tool:hauler/hauler_dashboard',
       'tool:hauler/hauler_log',
       'tool:hauler/hauler_last',
       'tool:hauler/hauler_await',
@@ -68,6 +69,18 @@ describe('tool documents without a daemon', () => {
           surface: 'tool',
         },
       });
+    });
+  });
+
+  it('renders the dashboard tool as one summary line beside the App link, never the status document', async () => {
+    await withIsolatedStateDir(async () => {
+      const rendered = await renderRoute('tool:hauler/hauler_dashboard', { input: {} });
+      expectDocument(rendered)
+        .toHaveStatus('success')
+        .toContainText('daemon is not running')
+        .toContainContext('Dashboard: ui://cargo-hauler/dashboard.html opens beside this result');
+      expect(rendered.result).toMatchObject({ active: [], daemon: 'stopped', operation: 'status' });
+      expect(JSON.stringify(rendered.document)).not.toContain('Nothing queued or running.');
     });
   });
 

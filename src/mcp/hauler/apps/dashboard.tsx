@@ -72,7 +72,8 @@ import { statusResultSchema } from '../../../lib/protocol-schemas.js';
  * Framework App-route metadata. The compiler extracts it without evaluating
  * the module, following the one relative import to read `APP_RESOURCE_URI`'s
  * string literal (`src/constants.ts` is the single source of the URI; the
- * `hauler_status` tool and the rendered skill import the same const).
+ * `hauler_dashboard` tool references it through `appResourceUri` and the
+ * rendered skill imports the same const).
  * `template` resolves beside this module, like its imports.
  */
 export const config = {
@@ -1539,8 +1540,9 @@ const DashboardApp = () => {
 
   useEffect(() => {
     let active = true;
-    // The opening `hauler_status` result the host pushes beside the App.
-    const stop = client.onToolResult('tool:hauler/hauler_status', (result) => {
+    // The opening `hauler_dashboard` result the host pushes beside the App:
+    // the same status payload the panels later poll from `hauler_status`.
+    const stop = client.onToolResult('tool:hauler/hauler_dashboard', (result) => {
       const parsed = statusResultSchema.safeParse(result);
       const receivedAt = Date.now();
       setPushed(
