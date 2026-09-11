@@ -1,7 +1,7 @@
 import type { EventPreflight } from 'agent-bundle';
 
-import { commandMentionsHauler } from '../../hooks/tokens.js';
-import { extractShellCommand } from '../../lib/tool-input.js';
+import { commandMentionsHauler } from '../../internal/host-hooks/tokens.js';
+import { extractShellCommand } from '../../internal/host-hooks/tool-input.js';
 
 /**
  * The gate every shell tool call pays (#90): a command that names neither

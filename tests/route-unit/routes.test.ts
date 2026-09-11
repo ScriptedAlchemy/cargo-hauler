@@ -4,9 +4,9 @@ import { describe, expect, it } from 'effect-rstest';
 import { expectDocument, renderRoute, renderRouteEvents, testManifest } from 'agent-bundle/test';
 import * as Effect from 'effect/Effect';
 
-import { requestOverSocket } from '../../src/daemon/control.js';
-import type { RequestRecord, StatusRow } from '../../src/daemon/protocol.js';
-import { scopedDaemon } from '../harness.js';
+import { requestOverSocket } from '../../src/internal/client/control.js';
+import type { RequestRecord, StatusRow } from '../../src/internal/contracts/protocol.js';
+import { scopedDaemon } from '../support/harness.js';
 
 import { documentMetadata, fakeCargoEnv, withDaemon, withIsolatedStateDir } from './support.js';
 

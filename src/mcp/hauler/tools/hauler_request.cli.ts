@@ -1,7 +1,7 @@
 import type { CliProjectionConfig } from 'agent-bundle/routes';
 import type { z } from 'zod';
 
-import { parseTicketList } from '../../../client/parse.js';
+import { parseTicketList } from '../../../internal/client/parse.js';
 
 import type { inputSchema } from './hauler_request.js';
 

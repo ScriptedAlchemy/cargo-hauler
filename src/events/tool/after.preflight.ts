@@ -1,10 +1,10 @@
 import type { EventPreflight } from 'agent-bundle';
 
-import { readCursor } from '../../hooks/hook-state.js';
-import { pingSessionCompleted } from '../../hooks/session-ping.js';
-import { commandMentionsHauler, hiddenCargoRun } from '../../hooks/tokens.js';
-import { documentValue } from '../../lib/json.js';
-import { extractShellCommand, extractShellOutput } from '../../lib/tool-input.js';
+import { readCursor } from '../../internal/host-hooks/hook-state.js';
+import { pingSessionCompleted } from '../../internal/host-hooks/session-ping.js';
+import { commandMentionsHauler, hiddenCargoRun } from '../../internal/host-hooks/tokens.js';
+import { documentValue } from '../../internal/util/json.js';
+import { extractShellCommand, extractShellOutput } from '../../internal/host-hooks/tool-input.js';
 
 /**
  * The gate every shell tool call pays (#90). Every call still tells the daemon

@@ -3,8 +3,8 @@ import { describe, expect, it } from 'effect-rstest';
 import { expectDocument, expectEvents, renderRouteEvents } from 'agent-bundle/test';
 import * as Effect from 'effect/Effect';
 
-import { requestOverSocket } from '../../src/daemon/control.js';
-import { scopedDaemon, type Fixture } from '../harness.js';
+import { requestOverSocket } from '../../src/internal/client/control.js';
+import { scopedDaemon, type Fixture } from '../support/harness.js';
 
 import { fakeCargoEnv, withDaemon, withIsolatedStateDir } from './support.js';
 

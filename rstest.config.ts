@@ -5,7 +5,7 @@ import { agentBundleRstest } from 'agent-bundle/rstest';
  * The framework preset runs one compiler pass and aliases the reserved
  * `agent-bundle/meta` specifier to a generated module carrying exactly the
  * `{ name, packageName, packageVersion, version }` a build would stamp, so
- * source modules such as `src/daemon/main.ts` and `src/layout.tsx` load here
+ * source modules such as `src/internal/daemon/main.ts` and `src/layout.tsx` load here
  * with the package identity instead of raising `AB4760`.
  *
  * Only that alias is adopted. The preset's `react-server` pool conditions are

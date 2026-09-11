@@ -2,8 +2,8 @@ import { Agent, useAgent, type AgentLayoutProps, type JsonValue } from '@agent-b
 import { version } from 'agent-bundle/meta';
 import React from 'react';
 
-import { LineageFooter } from './components/lineage-footer.js';
-import { lineageModel } from './components/view-models.js';
+import { LineageFooter } from './internal/ui/documents/lineage-footer.js';
+import { lineageModel } from './internal/ui/documents/view-models.js';
 
 /**
  * The hauler shell. Every rendered surface — the six `hauler_*` MCP tools,

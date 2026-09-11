@@ -2,8 +2,8 @@ import { Agent } from '@agent-bundle/runtime';
 import type { AgentEventRouteConfig, AgentEventRouteProps } from 'agent-bundle';
 import React from 'react';
 
-import { handleStopHold } from '../hooks/stop-hold.js';
-import { decisionValue } from '../lib/event-support.js';
+import { handleStopHold } from '../internal/host-hooks/stop-hold.js';
+import { decisionValue } from '../internal/host-hooks/event-support.js';
 
 // Standalone: stop-hold may block for its bounded wait and must not occupy
 // the shared MCP runtime. Budget mirrors the former 900 s stop hook.

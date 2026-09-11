@@ -2,12 +2,12 @@ import { agent } from '@agent-bundle/runtime';
 import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
 import React from 'react';
 
-import { StatusDocument } from '../../../components/documents.js';
-import { surfaceNames } from '../../../components/surface.js';
-import { loadStatusResult } from '../../../lib/inspect.js';
-import { statusInputSchema, statusResultSchema } from '../../../lib/protocol-schemas.js';
-import { requestDaemonConfig } from '../../../lib/request-config.js';
-import { hasStatusFilters } from '../../../lib/status-filter.js';
+import { StatusDocument } from '../../../internal/ui/documents/documents.js';
+import { surfaceNames } from '../../../internal/ui/documents/surface.js';
+import { loadStatusResult } from '../../../internal/operations/inspection.js';
+import { statusInputSchema, statusResultSchema } from '../../../internal/contracts/tool-schemas.js';
+import { requestDaemonConfig } from '../../../internal/operations/request-config.js';
+import { hasStatusFilters } from '../../../internal/operations/status-filter.js';
 
 export const config = {
   annotations: { readOnlyHint: true },

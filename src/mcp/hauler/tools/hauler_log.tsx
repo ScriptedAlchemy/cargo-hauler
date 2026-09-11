@@ -2,11 +2,11 @@ import { agent } from '@agent-bundle/runtime';
 import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
 import React from 'react';
 
-import { LogStream } from '../../../components/streaming.js';
-import { surfaceNames } from '../../../components/surface.js';
-import { loadLogResult } from '../../../lib/inspect.js';
-import { limitInputSchema, logResultSchema } from '../../../lib/protocol-schemas.js';
-import { requestDaemonConfig } from '../../../lib/request-config.js';
+import { LogStream } from '../../../internal/ui/documents/streaming.js';
+import { surfaceNames } from '../../../internal/ui/documents/surface.js';
+import { loadLogResult } from '../../../internal/operations/inspection.js';
+import { limitInputSchema, logResultSchema } from '../../../internal/contracts/tool-schemas.js';
+import { requestDaemonConfig } from '../../../internal/operations/request-config.js';
 
 export const config = {
   annotations: { readOnlyHint: true },

@@ -1,0 +1,1352 @@
+import { availableParallelism, loadavg } from 'node:os';
+
+import * as Cause from 'effect/Cause';
+import * as Deferred from 'effect/Deferred';
+import * as Effect from 'effect/Effect';
+import * as Fiber from 'effect/Fiber';
+import * as Metric from 'effect/Metric';
+import * as Queue from 'effect/Queue';
+import * as Ref from 'effect/Ref';
+import * as Semaphore from 'effect/Semaphore';
+import * as ChildProcessSpawner from 'effect/unstable/process/ChildProcessSpawner';
+import type { Scope } from 'effect/Scope';
+
+import { makeAttachmentRuntime } from './attachments.js';
+import type { AttachmentRuntime } from './attachments.js';
+import {
+  batchCompatibleFor,
+  batchKindFor,
+  composeTestFoldArgv,
+  extraPackagesFor,
+  maxBatchPackages,
+  withExtraPackages,
+} from '../scheduling/batch.js';
+import { createBuildPhaseDetector, executionSubcommands } from '../../cargo/execution/build-phase.js';
+import { compileSurfaceKey } from './coverage.js';
+import {
+  attachModeMetric,
+  cargoRunByKindMetric,
+  cargoRunMetric,
+  jobOutcomeMetric,
+  waitMsSummary,
+} from '../reporting/broker-metrics.js';
+import type { DaemonConfigShape } from '../config.js';
+import {
+  assessOverrun,
+  laneWaitRemainingMs,
+  type CostEstimate,
+  type CostModelApi,
+} from '../scheduling/cost.js';
+import { isSchedulable } from './dependencies.js';
+import { executeCargo, TailBuffer } from '../../cargo/execution/executor.js';
+import type { ExecutionResult } from '../../cargo/execution/executor.js';
+import type { NormalizedCargoIntent } from '../../cargo/intent.js';
+import {
+  diagnosticFinishFields,
+  diagnosticsForAttachment,
+  guarded,
+  makeAttachment,
+  planDemux,
+  quietMsSinceOutput,
+  queuedWaitIsDelayed,
+  settlementStep,
+} from './job-state.js';
+import type { Attachment, Job, JobState, SubmitCallbacks, SubmitInput } from './job-state.js';
+import { isSharedJobserverArmed } from '../runtime/jobserver.js';
+import type { LedgerApi } from '../../storage/ledger.js';
+import {
+  cpuSomeAvg10,
+  memoryAvailableBytes,
+  memoryPressureLevel,
+  memoryPsi,
+} from '../scheduling/pressure.js';
+import type {
+  AdmissionHold,
+  EstimateState,
+  FinishedStatus,
+  HeavyAdmissionReport,
+  LaneStatus,
+  QueueContext,
+  RunPhase,
+  StallReport,
+} from '../../contracts/protocol.js';
+import { ReplayBuffer } from './replay.js';
+import {
+  admissionDecision,
+  admissionHoldFor,
+  heavyCapActive,
+  isHeavyIntent,
+  selectNextIndex,
+} from '../scheduling/scheduler.js';
+import type { AdmissionLoadInput } from '../scheduling/scheduler.js';
+import { sharedTargetWith } from './shared-target.js';
+import type { TicketDirectory } from './ticket-directory.js';
+import { openTicketLog } from '../../storage/ticket-log.js';
+import type { TopologyApi } from '../../cargo/topology.js';
+
+export interface Lane {
+  readonly key: string;
+  readonly workspaceRoot: string;
+  readonly targetDir: string;
+  /** Pending jobs; the worker picks by schedule score, not arrival order. */
+  readonly pending: Job[];
+  /** Capacity-one coalescing signal; the awakened worker drains pending jobs. */
+  readonly wake: Queue.Queue<void>;
+  /** The leader whose cargo compiles here; null between jobs and once only execution phases remain. */
+  running: string | null;
+  /**
+   * Leaders past their build whose tests, benches, or program still run in
+   * this lane. Cargo dropped the build-directory lock at that point, so they
+   * hold no lane slot — only their admission permit, until they settle.
+   */
+  readonly executing: Set<string>;
+  /**
+   * `compileSurfaceKey` of the last leader this lane started; candidates on
+   * another surface are scheduled as costlier (see `scheduler.ts`).
+   */
+  lastSurfaceKey: string | null;
+  /**
+   * The job the worker took from `pending`, from the batch window through
+   * settlement. While it is parked at the load gate or on the permit it is
+   * in neither `pending` nor `running`, yet it still runs ahead of the queue.
+   */
+  head: Job | null;
+}
+
+/** Lane identity: one FIFO per (workspace root, resolved cargo target dir). */
+export const laneKeyFor = (workspaceRoot: string, targetDir: string): string =>
+  JSON.stringify([workspaceRoot, targetDir]);
+
+const pinsJobs = (argument: string): boolean =>
+  argument === '-j' || argument.startsWith('--jobs') || /^-j\d+$/u.test(argument);
+
+/**
+ * Environment for a spawned cargo. The machine-wide jobserver FIFO owns
+ * parallelism whenever the daemon armed it: cargo only joins an inherited
+ * jobserver while `-j`/`build.jobs` is unset, so pinning `CARGO_BUILD_JOBS`
+ * would opt every run out of the shared budget. The per-run grant is the
+ * fallback for daemons that could not arm the FIFO, and never overrides a
+ * caller's own `-j` flag or `CARGO_BUILD_JOBS`. Uniform for all callers, so
+ * it never fragments intent identity.
+ */
+export const cargoExecEnv = (
+  jobsGrant: number,
+  input: Pick<SubmitInput, 'argv' | 'env'>,
+  jobserverArmed: boolean,
+): Readonly<Record<string, string>> | undefined => {
+  const grantsJobs =
+    !jobserverArmed &&
+    jobsGrant > 0 &&
+    input.env?.CARGO_BUILD_JOBS === undefined &&
+    !input.argv.some(pinsJobs);
+  return grantsJobs ? { ...input.env, CARGO_BUILD_JOBS: String(jobsGrant) } : input.env;
+};
+
+export interface MakeJobOptions {
+  /** Fail-fast signal the submitter already looked up; recomputed when absent. */
+  readonly editedRecently?: boolean;
+}
+
+export interface LaneRuntimeDeps {
+  readonly config: DaemonConfigShape;
+  readonly ledger: LedgerApi;
+  readonly costModel: CostModelApi;
+  readonly topology: TopologyApi;
+  readonly spawner: ChildProcessSpawner.ChildProcessSpawner['Service'];
+  readonly directory: TicketDirectory;
+  readonly daemonScope: Scope;
+}
+
+export interface LaneRuntime {
+  readonly attachments: AttachmentRuntime;
+  readonly getOrCreateLane: (
+    key: string,
+    workspaceRoot: string,
+    targetDir: string,
+  ) => Effect.Effect<Lane>;
+  readonly makeJob: (
+    id: number,
+    ticket: string,
+    laneKey: string,
+    input: SubmitInput,
+    intent: NormalizedCargoIntent,
+    callbacks: SubmitCallbacks,
+    queuedAtMs: number,
+    estimate: CostEstimate,
+    options?: MakeJobOptions,
+  ) => Effect.Effect<Job>;
+  readonly enqueueJob: (lane: Lane, job: Job) => Effect.Effect<number>;
+  /**
+   * Settles a job that never left the queue as `failed` with `error` (a
+   * prerequisite ended other than `done`), dropping it from the lane. A job
+   * a kill already claimed settles `killed` instead.
+   */
+  readonly failPendingJob: (lane: Lane, job: Job, error: string) => Effect.Effect<void>;
+  readonly settleInterruptedJob: (job: Job) => Effect.Effect<void>;
+  readonly laneStatuses: () => Effect.Effect<readonly LaneStatus[]>;
+  readonly requestStatusFields: (
+    ticket: string,
+    atMs: number,
+  ) => Effect.Effect<{
+    readonly queue?: QueueContext;
+    readonly delayed?: true;
+    readonly quietMs?: number;
+    readonly admissionHold?: AdmissionHold;
+    readonly stall?: StallReport;
+    readonly orphaned?: true;
+    readonly compileEstimateMs?: number;
+    readonly executeEstimateMs?: number;
+    readonly phase?: RunPhase;
+    readonly estimateState?: EstimateState;
+    readonly p90Ms?: number;
+  }>;
+  readonly interruptWorkers: () => Effect.Effect<void>;
+  /** Heavy-cap state for status; null when the cap is disabled. */
+  readonly heavyAdmission: (
+    memAvailableBytes: number | null,
+  ) => Effect.Effect<HeavyAdmissionReport | null>;
+}
+
+export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntime> =>
+  Effect.gen(function* () {
+    const { config, ledger, costModel, topology, spawner, directory, daemonScope } = deps;
+
+    const admission = yield* Semaphore.make(config.maxConcurrent);
+    const admittedCount = yield* Ref.make(0);
+    // Heavy leaders claim their slot as the gate admits them, before the
+    // permit wait, so two heavies parked on the semaphore cannot both pass.
+    const heavyAdmittedCount = yield* Ref.make(0);
+    const laneCreation = yield* Semaphore.make(1);
+    const lanes = new Map<string, Lane>();
+    const laneWorkers = new Set<Fiber.Fiber<never, never>>();
+
+    const attachments = makeAttachmentRuntime({ directory, ledger });
+
+    const recoverDefect = <A>(fallback: A) => (cause: Cause.Cause<never>): Effect.Effect<A> =>
+      Cause.hasInterruptsOnly(cause)
+        ? Effect.failCause(cause)
+        : Effect.logError(`broker dependency failed: ${Cause.pretty(cause)}`).pipe(
+            Effect.as(fallback),
+          );
+
+    const makeJob = (
+      id: number,
+      ticket: string,
+      laneKey: string,
+      input: SubmitInput,
+      intent: NormalizedCargoIntent,
+      callbacks: SubmitCallbacks,
+      queuedAtMs: number,
+      estimate: CostEstimate,
+      options: MakeJobOptions = {},
+    ): Effect.Effect<Job> =>
+      Effect.gen(function* () {
+        const killSignal = yield* Deferred.make<void>();
+        const laneReleased = yield* Deferred.make<void>();
+        const state = yield* Ref.make<JobState>('queued');
+        const plan = planDemux(intent, input.argv);
+        const editedRecently =
+          options.editedRecently ??
+          (yield* topology
+            .editedRecently(intent.workspaceRoot, intent.packages)
+            .pipe(Effect.catchCause(recoverDefect(false))));
+        // Looked up again rather than taken from the submit-time estimate: on a
+        // cold workspace the first lookup answers with an empty set while the
+        // metadata refresh runs, and this later one can see the filled cache.
+        const depClosure = yield* topology
+          .dependencyClosure(intent.workspaceRoot, intent.packages)
+          .pipe(
+            Effect.catchCause(
+              recoverDefect<ReadonlySet<string>>(new Set<string>()),
+            ),
+          );
+        return {
+          id,
+          ticket,
+          laneKey,
+          input,
+          intent,
+          callbacks,
+          killSignal,
+          state,
+          queuedAtMs,
+          replay: new ReplayBuffer(config.replayBufferBytes),
+          attachments: new Map<string, Attachment>(),
+          attachGate: { open: true },
+          execArgv: plan.execArgv,
+          demux: plan.demux,
+          tail: new TailBuffer(config.outputTailBytes),
+          log: null,
+          estimateMs: estimate.estimateMs,
+          compileEstimateMs: estimate.compileEstimateMs ?? estimate.estimateMs,
+          executeEstimateMs: estimate.executeEstimateMs ?? null,
+          estimateSource: estimate.source,
+          startedAtMs: null,
+          buildFinishedAtMs: null,
+          laneReleased,
+          lastOutputAtMs: null,
+          admissionHold: null,
+          pid: null,
+          stall: null,
+          ownerGone: false,
+          ownerId: callbacks.ownerId ?? null,
+          ownerEpoch: 0,
+          killReason: null,
+          editedRecently,
+          depClosure,
+          after: input.after ?? [],
+          waitingFor: new Set<string>(),
+        };
+      });
+
+    const enqueueJob = (lane: Lane, job: Job): Effect.Effect<number> =>
+      Effect.gen(function* () {
+        const position = yield* Effect.sync(() => {
+          lane.pending.push(job);
+          return lane.pending.length - 1;
+        });
+        yield* Queue.offer(lane.wake, undefined);
+        yield* Effect.logDebug('enqueued job', { position });
+        return position;
+      });
+
+    /**
+     * Splices out the best-scored schedulable pending job under the
+     * scheduling policy. Jobs blocked on `--after` prerequisites stay put
+     * (they still count toward the score of the jobs they wait on).
+     * `unblocks` counts the other pending requests (and their coalesced
+     * waiters) whose dependency closure this candidate compiles — running a
+     * leaf crate first releases the dependents queued above it and warms
+     * the artifacts they will reuse.
+     */
+    const takeNextJob = (lane: Lane): Effect.Effect<Job | undefined> =>
+      Effect.sync(() => {
+        const nowMs = Date.now();
+        const ready = lane.pending.filter(isSchedulable);
+        const index = selectNextIndex(
+          ready.map((candidate) =>
+            scheduleCandidate(candidate, lane.pending, nowMs, lane.lastSurfaceKey),
+          ),
+        );
+        const next = index === -1 ? undefined : ready[index];
+        if (next !== undefined) {
+          lane.pending.splice(lane.pending.indexOf(next), 1);
+        }
+        return next;
+      });
+
+    /**
+     * Absorbs other queued compatible jobs onto `leader` as batch
+     * attachments. Every composite is the leader's argv plus the followers'
+     * `-p` flags; test/nextest composites also add `--no-fail-fast` and,
+     * for `cargo test`, the followers' extra name filters, admitting only
+     * followers with the leader's `--test` targets and harness flags (#53,
+     * #87); compile composites keep the leader's `--` trailer, so only
+     * followers with the same trailer join (#86).
+     *
+     * Only `queued` candidates fold: a pending job already in
+     * `kill-requested` (disconnect cleanup leaves it in the lane) would
+     * otherwise be compiled for nobody and settled `done` instead of `killed`.
+     * A job blocked on `--after` prerequisites does not fold either: the
+     * composite would run it before the work it declared it needs.
+     * Folded followers keep their own `mergeStderr`; the composite's channels
+     * are forwarded as the leader produced them.
+     */
+    const foldBatch = (lane: Lane, leader: Job): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        const kind = config.batchEnabled ? batchKindFor(leader.intent) : null;
+        if (kind === null) {
+          return;
+        }
+        const extras: string[] = [];
+        const absorbed: Job[] = [];
+        const foldedAttachments: Attachment[] = [];
+        const atMs = Date.now();
+        yield* Effect.sync(() => {
+          const named = new Set(leader.intent.packages);
+          for (let index = lane.pending.length - 1; index >= 0; index -= 1) {
+            const candidate = lane.pending[index];
+            if (
+              candidate === undefined ||
+              Ref.getUnsafe(candidate.state) !== 'queued' ||
+              !isSchedulable(candidate) ||
+              !batchCompatibleFor(kind, leader.intent, candidate.intent)
+            ) {
+              continue;
+            }
+            const extra = extraPackagesFor(leader.intent, candidate.intent);
+            if (named.size + extra.length > maxBatchPackages) {
+              continue;
+            }
+            for (const name of extra) {
+              named.add(name);
+            }
+            extras.push(...extra);
+            absorbed.push(candidate);
+            lane.pending.splice(index, 1);
+            candidate.attachGate.open = false;
+            directory.remove(candidate.ticket);
+            const candidateAttachment = makeAttachment({
+              id: candidate.id,
+              ticket: candidate.ticket,
+              mode: 'batch',
+              input: candidate.input,
+              intent: candidate.intent,
+              callbacks: candidate.callbacks,
+              createdAtMs: candidate.queuedAtMs,
+              estimateMs: candidate.estimateMs,
+              estimateSource: candidate.estimateSource,
+              tail: new TailBuffer(config.outputTailBytes),
+              attachedAtMs: atMs,
+            });
+            if (leader.demux !== null) {
+              candidateAttachment.diagnostics = diagnosticsForAttachment(
+                leader.demux,
+                candidateAttachment,
+              );
+            }
+            leader.attachments.set(candidateAttachment.ticket, candidateAttachment);
+            directory.setAttachment(leader, candidateAttachment);
+            foldedAttachments.push(candidateAttachment);
+
+            for (const attachment of candidate.attachments.values()) {
+              switch (attachment.mode) {
+                case 'identity':
+                  attachment.mode = 'batch';
+                  break;
+                case 'coverage':
+                case 'batch':
+                  break;
+                default: {
+                  const exhaustive: never = attachment.mode;
+                  return exhaustive;
+                }
+              }
+              leader.attachments.set(attachment.ticket, attachment);
+              directory.setAttachment(leader, attachment);
+              foldedAttachments.push(attachment);
+            }
+            candidate.attachments.clear();
+          }
+        });
+        if (absorbed.length === 0) {
+          return;
+        }
+        yield* Effect.logDebug('folded queued jobs into batch', {
+          attachments: foldedAttachments.length,
+          leader: leader.ticket,
+        });
+        yield* Effect.forEach(
+          foldedAttachments,
+          (attachment) =>
+            ledger.markAttached(attachment.id, {
+              atMs,
+              leaderTicket: leader.ticket,
+              mode: attachment.mode,
+            }).pipe(Effect.andThen(Metric.update(attachModeMetric, attachment.mode))),
+          { discard: true },
+        );
+        yield* Effect.sync(() => {
+          switch (kind) {
+            case 'compile':
+              if (extras.length > 0) {
+                leader.execArgv = withExtraPackages(leader.execArgv, extras);
+              }
+              break;
+            case 'test':
+            case 'nextest':
+              leader.execArgv = composeTestFoldArgv(
+                leader.execArgv,
+                leader.intent,
+                absorbed.map((job) => job.intent),
+              );
+              break;
+            default: {
+              const exhaustive: never = kind;
+              return exhaustive;
+            }
+          }
+        });
+      });
+
+    /**
+     * Puts a detached attachment back on its lane as an independent job,
+     * first trying to re-attach to another in-flight leader so a killed
+     * leader with N identity followers becomes one rerun, not N.
+     */
+    const requeueAttachment = (
+      lane: Lane,
+      attachment: Attachment,
+      reason: string,
+    ): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        const atMs = Date.now();
+        yield* Effect.logDebug('requeueing attachment', {
+          reason,
+          ticket: attachment.ticket,
+        });
+        yield* ledger.markRequeued(attachment.id, atMs);
+        const onRequeued = attachment.callbacks.onRequeued;
+        if (onRequeued !== undefined) {
+          yield* guarded(onRequeued({ ticket: attachment.ticket, reason }));
+        }
+        const revived = makeAttachment({
+          id: attachment.id,
+          ticket: attachment.ticket,
+          mode: attachment.mode,
+          input: attachment.input,
+          intent: attachment.intent,
+          callbacks: attachment.callbacks,
+          createdAtMs: attachment.createdAtMs,
+          estimateMs: attachment.estimateMs,
+          estimateSource: attachment.estimateSource,
+          tail: attachment.tail,
+          attachedAtMs: atMs,
+        });
+        const reattached = yield* attachments.tryRegisterAttachment(lane.key, revived);
+        if (reattached !== null) {
+          yield* attachments.completeAttachRegistration(
+            reattached.leader,
+            revived,
+            reattached.mode,
+            atMs,
+          );
+          return;
+        }
+        const job = yield* makeJob(
+          attachment.id,
+          attachment.ticket,
+          lane.key,
+          attachment.input,
+          attachment.intent,
+          attachment.callbacks,
+          atMs,
+          { estimateMs: attachment.estimateMs, source: attachment.estimateSource },
+        );
+        yield* Effect.sync(() => directory.setLeader(job));
+        yield* enqueueJob(lane, job);
+      });
+
+    /**
+     * The leader's build is done and only its execution phase remains. Cargo
+     * released the build-directory lock with it, so the lane stops counting
+     * the job as running and the worker may take the next one; the job keeps
+     * its admission permit, since a test run is still machine load.
+     * Idempotent, and a leader that settles first simply never gets here.
+     */
+    const handBackLane = (lane: Lane, job: Job): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        const atMs = Date.now();
+        const first = yield* Effect.sync(() => {
+          if (job.buildFinishedAtMs !== null) {
+            return false;
+          }
+          job.buildFinishedAtMs = atMs;
+          if (lane.running === job.ticket) {
+            lane.running = null;
+          }
+          lane.executing.add(job.ticket);
+          return true;
+        });
+        if (!first) {
+          return;
+        }
+        yield* ledger.markBuildFinished(job.id, atMs).pipe(Effect.ignoreCause);
+        yield* Effect.logDebug('build finished; lane handed to the next job', {
+          ticket: job.ticket,
+        });
+        yield* Deferred.succeed(job.laneReleased, undefined);
+        // Riders that only wanted this build (`test --no-run`) are done here;
+        // after the stamp, so their rows carry the build-finished time too.
+        yield* attachments.releaseBuildFinishedAttachments(job, atMs);
+      });
+
+    const completeExit = (job: Job): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        const lane = lanes.get(job.laneKey);
+        if (lane !== undefined) {
+          yield* Effect.sync(() => {
+            if (lane.running === job.ticket) {
+              lane.running = null;
+            }
+            lane.executing.delete(job.ticket);
+          });
+        }
+        yield* Effect.sync(() => directory.remove(job.ticket));
+      });
+
+    const claimSettlement = (job: Job): Effect.Effect<boolean> =>
+      Ref.modify(job.state, (state): readonly [boolean, JobState] =>
+        state === 'finished' ? [false, state] : [true, 'finished'],
+      );
+
+    /**
+     * The single idempotent settlement path for every claimed leader
+     * lifecycle. Once the state claim wins, ledger rows, waiter notification,
+     * in-flight cleanup, callbacks, and attachments complete uninterruptibly.
+     * Each step is isolated: the claim is spent, so a defect in one (a busy
+     * ledger) must not leave the lane held or the followers without an exit.
+     */
+    const settleJob = (
+      attachmentLane: Lane | null,
+      job: Job,
+      status: FinishedStatus,
+      exitCode: number | null,
+      signal: string | null,
+      error: string | null,
+      atMs: number,
+    ): Effect.Effect<void> =>
+      Effect.uninterruptible(
+        Effect.gen(function* () {
+          const won = yield* claimSettlement(job);
+          if (!won) {
+            return;
+          }
+          const step = (label: string, effect: Effect.Effect<void>): Effect.Effect<void> =>
+            settlementStep(`${label} (${job.ticket})`, effect);
+          const startedAtMs = job.startedAtMs;
+          const waitMs = Math.max(0, (startedAtMs ?? atMs) - job.queuedAtMs);
+          const runMs = startedAtMs === null ? 0 : Math.max(0, atMs - startedAtMs);
+          // Flush the on-disk log before the row turns terminal, so a
+          // `hauler result --full` issued on the exit sees the whole run.
+          const log = job.log;
+          if (log !== null) {
+            yield* step(
+              'closeTicketLog',
+              log.close().pipe(Effect.timeout('5 seconds'), Effect.ignore),
+            );
+          }
+          yield* step(
+            'ledger.markFinished',
+            ledger.markFinished(job.id, {
+              status,
+              atMs,
+              exitCode,
+              signal,
+              outputTail: startedAtMs === null ? null : job.tail.toString(),
+              error,
+              ...diagnosticFinishFields(job.demux?.globalDiagnostics ?? null),
+            }),
+          );
+          yield* step(
+            'metrics',
+            Metric.update(jobOutcomeMetric, status).pipe(
+              Effect.andThen(
+                startedAtMs === null ? Effect.void : Metric.update(waitMsSummary, waitMs),
+              ),
+            ),
+          );
+          yield* step('notifyWaiters', directory.notifyWaiters(job.ticket));
+          yield* step('completeExit', completeExit(job));
+          yield* guarded(
+            job.callbacks.onExit({
+              ticket: job.ticket,
+              status,
+              exitCode,
+              signal,
+              waitMs,
+              runMs,
+              error,
+            }),
+          );
+          yield* step(
+            'settleAttachments',
+            attachments.settleAttachments(
+              attachmentLane === null
+                ? null
+                : (attachment, reason) => requeueAttachment(attachmentLane, attachment, reason),
+              job,
+              status,
+              exitCode,
+              signal,
+              error,
+              atMs,
+            ),
+          );
+        }),
+      );
+
+    // A daemon-initiated kill of a queued job (reattach grace expired, #187)
+    // names its cause on the job; a client's `hauler kill` leaves it null.
+    const finishKilledBeforeRun = (lane: Lane, job: Job): Effect.Effect<void> =>
+      settleJob(lane, job, 'killed', null, null, job.killReason ?? 'killed while queued', Date.now());
+
+    const failPendingJob = (lane: Lane, job: Job, error: string): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        yield* Effect.sync(() => {
+          const index = lane.pending.indexOf(job);
+          if (index !== -1) {
+            lane.pending.splice(index, 1);
+          }
+        });
+        const state = yield* Ref.get(job.state);
+        if (state === 'kill-requested') {
+          yield* finishKilledBeforeRun(lane, job);
+          return;
+        }
+        yield* settleJob(lane, job, 'failed', null, null, error, Date.now());
+      });
+
+    const settleInterruptedJob = (job: Job): Effect.Effect<void> =>
+      settleJob(null, job, 'killed', null, 'SIGTERM', 'daemon shutdown', Date.now()).pipe(
+        Effect.ignore,
+      );
+
+    const claimStart = (job: Job): Effect.Effect<boolean> =>
+      Ref.modify(job.state, (state): readonly [boolean, JobState] =>
+        state === 'queued' ? [true, 'starting'] : [false, state],
+      );
+
+    const runAdmitted = (lane: Lane, job: Job): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        const starts = yield* claimStart(job);
+        if (!starts) {
+          const state = yield* Ref.get(job.state);
+          if (state === 'kill-requested') {
+            yield* finishKilledBeforeRun(lane, job);
+          }
+          return;
+        }
+        yield* Effect.logDebug('starting admitted job');
+        const runStartedAtMs = Date.now();
+        // The log opens in the same frame that publishes the start, so a
+        // follower registering against a started leader always finds the
+        // path it shares (completeAttachRegistration reads `leader.log`).
+        const queuedAttachments = yield* Effect.sync(() => {
+          job.startedAtMs = runStartedAtMs;
+          job.lastOutputAtMs = runStartedAtMs;
+          job.log =
+            config.ticketLogMaxBytes > 0
+              ? openTicketLog(config.ticketLogDir, job.ticket, config.ticketLogMaxBytes)
+              : null;
+          return [...job.attachments.values()];
+        });
+        const outputPath = job.log?.path ?? null;
+        yield* Effect.sync(() => {
+          lane.running = job.ticket;
+          lane.lastSurfaceKey = compileSurfaceKey(job.intent);
+        });
+        // execArgv already carries the demux flag and any batch-folded -p
+        // packages: this is the invocation the ledger reports as "ran as".
+        yield* ledger.markRunning(job.id, runStartedAtMs, job.execArgv, outputPath);
+        yield* Ref.set(job.state, 'running');
+        const waitMs = runStartedAtMs - job.queuedAtMs;
+        yield* Effect.annotateCurrentSpan('waitMs', waitMs);
+        yield* guarded(job.callbacks.onStarted({ ticket: job.ticket, waitMs }));
+        yield* Effect.forEach(
+          queuedAttachments,
+          (attachment) =>
+            Effect.gen(function* () {
+              yield* ledger.markRunning(attachment.id, runStartedAtMs, undefined, outputPath);
+              const won = yield* attachments.notifyAttachmentStarted(attachment, runStartedAtMs);
+              if (won) {
+                // The winner attached while the leader was queued: no output
+                // exists yet, so it goes live directly (no replay needed).
+                yield* Effect.sync(() => {
+                  attachment.live = true;
+                });
+              }
+            }),
+          { discard: true },
+        );
+        // Test, bench, and run leaders drop cargo's build-directory lock once
+        // compiled; watching for cargo's build-finished line lets the lane
+        // admit its next compile while this one executes. Demuxed runs are
+        // pure compiles and never reach an execution phase.
+        const phase =
+          config.overlapExecution &&
+          job.demux === null &&
+          executionSubcommands.has(job.intent.subcommand)
+            ? createBuildPhaseDetector()
+            : null;
+        const execEnv = cargoExecEnv(config.jobsGrant, job.input, isSharedJobserverArmed());
+        const result: ExecutionResult = yield* executeCargo({
+          argv: job.execArgv,
+          cwd: job.input.cwd,
+          env: execEnv,
+          killSignal: job.killSignal,
+          // The broker-side tail (fed by emitChunk) is authoritative: in
+          // demux mode the executor's own tail would capture raw JSON.
+          tailBytes: 0,
+          onSpawn: (pid) =>
+            Effect.sync(() => {
+              job.pid = pid;
+            }),
+          onOutput: (channel, data) =>
+            phase === null
+              ? attachments.emitChunk(job, channel, data)
+              : attachments.emitChunk(job, channel, data).pipe(
+                  Effect.andThen(
+                    Effect.suspend(() =>
+                      phase.feed(channel, data) ? handBackLane(lane, job) : Effect.void,
+                    ),
+                  ),
+                ),
+          // The JSON demux owns stdout, so a merged pipe is only honoured for
+          // runs that stream raw output (`cargo run`, `cargo test`, ...).
+          mergeStderr: job.demux === null && job.input.mergeStderr === true,
+          ...(job.demux === null
+            ? {}
+            : { onStdoutLine: (line: string) => attachments.handleStdoutLine(job, line) }),
+        }).pipe(
+          Effect.withSpan('cargo.exec'),
+          Effect.trackDuration(cargoRunMetric),
+          Effect.trackDuration(cargoRunByKindMetric(job.intent.subcommand)),
+          Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+        );
+        const finishedAtMs = Date.now();
+        // A compile error is still a measured build time; without it a broken
+        // build would be re-estimated at the cold-start default on every retry.
+        if (result.outcome !== 'killed') {
+          const compileMs =
+            job.buildFinishedAtMs === null ? undefined : job.buildFinishedAtMs - runStartedAtMs;
+          const executeMs =
+            job.buildFinishedAtMs === null ? undefined : finishedAtMs - job.buildFinishedAtMs;
+          yield* costModel.recordOutcome(job.intent.key, finishedAtMs - runStartedAtMs, {
+            outcome: result.outcome,
+            editedRecently: job.editedRecently,
+            ...(compileMs === undefined ? {} : { compileMs }),
+            ...(executeMs === undefined ? {} : { executeMs }),
+          });
+        }
+        // A broker-initiated kill (stall auto-kill) names its reason on the
+        // job; the executor only knows a signal arrived.
+        yield* settleJob(
+          lane,
+          job,
+          result.outcome,
+          result.exitCode,
+          result.signal,
+          result.outcome === 'killed' ? (result.error ?? job.killReason) : result.error,
+          finishedAtMs,
+        );
+      }).pipe(
+        Effect.withSpan('job.process', {
+          attributes: { ticket: job.ticket, lane: lane.key },
+        }),
+      );
+
+    // Admission clamp: load, CPU PSI, and soft memory pressure respect the
+    // loadMinConcurrent progress floor. Sustained hard memory PSI (avg60 must
+    // reach half the hard threshold), low MemAvailable, macOS critical
+    // pressure, and the heavy-leader cap bypass that floor. Every arm still
+    // shares this bounded wait, so the queue cannot deadlock and gated jobs
+    // remain killable.
+    const loadGateDeadlineMs = 120_000;
+    const gateDisabled =
+      config.loadThresholdPerCore === null &&
+      config.cpuStallThreshold === null &&
+      config.memPressureSoftThreshold === null &&
+      config.memPressureHardThreshold === null &&
+      config.memAvailableMinBytes === null &&
+      config.memPressureLevelThreshold === null &&
+      config.heavyMemAvailableBytes === null;
+    const sampleMemAvailable =
+      config.memAvailableMinBytes !== null || config.heavyMemAvailableBytes !== null;
+
+    const sampleAdmissionInput = (running: number, heavy: boolean): AdmissionLoadInput => {
+      const memPsi =
+        config.memPressureSoftThreshold === null && config.memPressureHardThreshold === null
+          ? null
+          : memoryPsi();
+      return {
+        cpuStallPercent: config.cpuStallThreshold === null ? null : cpuSomeAvg10(),
+        cpuStallThreshold: config.cpuStallThreshold,
+        heavy,
+        heavyMaxConcurrent: config.heavyMaxConcurrent,
+        heavyMemAvailableBytes: config.heavyMemAvailableBytes,
+        loadPerCore: loadavg()[0] / availableParallelism(),
+        memAvailableBytes: sampleMemAvailable ? memoryAvailableBytes() : null,
+        memAvailableMinBytes: config.memAvailableMinBytes,
+        memFullAvg10: memPsi?.fullAvg10 ?? null,
+        memFullAvg60: memPsi?.fullAvg60 ?? null,
+        memHardThreshold: config.memPressureHardThreshold,
+        memPressureLevel:
+          config.memPressureLevelThreshold === null ? null : memoryPressureLevel(),
+        memPressureLevelThreshold: config.memPressureLevelThreshold,
+        memSoftThreshold: config.memPressureSoftThreshold,
+        minConcurrent: config.loadMinConcurrent,
+        running,
+        // A disabled loadavg arm never trips; PSI can gate on its own.
+        thresholdPerCore: config.loadThresholdPerCore ?? Number.POSITIVE_INFINITY,
+      };
+    };
+
+    const claimHeavy = Ref.update(heavyAdmittedCount, (count) => count + 1);
+    const releaseHeavy = Ref.update(heavyAdmittedCount, (count) => count - 1);
+    const heavyLeader = (job: Job): boolean =>
+      config.heavyMemAvailableBytes !== null && isHeavyIntent(job.intent);
+
+    /**
+     * Resolves once every admission arm clears or the bounded deadline
+     * passes. A heavy leader returns holding its heavy slot, claimed in the
+     * same atomic step as the decision and recorded in `claimed` so the
+     * caller's finalizer releases it even if the fiber is interrupted between
+     * this wait and the permit acquisition.
+     */
+    const waitForLoadHeadroom = (
+      job: Job,
+      heavy: boolean,
+      claimed: { value: boolean },
+    ): Effect.Effect<void> =>
+      gateDisabled
+        ? Effect.void
+        : Effect.gen(function* () {
+            const deadline = Date.now() + loadGateDeadlineMs;
+            while (Date.now() < deadline) {
+              const running = yield* Ref.get(admittedCount);
+              const sample = yield* Effect.sync(() => sampleAdmissionInput(running, heavy));
+              const { decision, input } = yield* Ref.modify(heavyAdmittedCount, (heavyRunning) => {
+                const input: AdmissionLoadInput = { ...sample, heavyRunning };
+                const decision = admissionDecision(input);
+                const claim = !decision.defer && heavy;
+                claimed.value = claim;
+                return [{ decision, input }, claim ? heavyRunning + 1 : heavyRunning] as const;
+              });
+              if (!decision.defer) {
+                yield* Effect.sync(() => {
+                  job.admissionHold = null;
+                });
+                return;
+              }
+              const hold = admissionHoldFor(input, decision.reason);
+              yield* Effect.sync(() => {
+                job.admissionHold = hold;
+              });
+              yield* Effect.logDebug(
+                `admission deferred (${hold.reason}): ${hold.detail}; load/core ${input.loadPerCore.toFixed(2)}, cpu stall ${input.cpuStallPercent?.toFixed(1) ?? 'n/a'}%, memory full avg10 ${input.memFullAvg10?.toFixed(1) ?? 'n/a'}%, avg60 ${input.memFullAvg60?.toFixed(1) ?? 'n/a'}%, available ${input.memAvailableBytes ?? 'n/a'} bytes, macOS level ${input.memPressureLevel ?? 'n/a'} with ${running} running (${input.heavyRunning ?? 0} heavy)`,
+              );
+              yield* Effect.sleep('2 seconds');
+            }
+            yield* Effect.sync(() => {
+              job.admissionHold = null;
+            });
+            if (heavy) {
+              yield* claimHeavy;
+              claimed.value = true;
+            }
+          });
+
+    /**
+     * Resolves once a kill lands on a job that has not started. A kill that
+     * arrives after `claimStart` belongs to the run — the executor races the
+     * same signal — so this arm parks forever rather than interrupting an
+     * admitted run.
+     */
+    const killedBeforeStart = (job: Job): Effect.Effect<void> =>
+      Deferred.await(job.killSignal).pipe(
+        Effect.andThen(Ref.get(job.state)),
+        Effect.flatMap((state) => (state === 'kill-requested' ? Effect.void : Effect.never)),
+      );
+
+    const processJob = (lane: Lane, job: Job): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        const state = yield* Ref.get(job.state);
+        if (state === 'kill-requested') {
+          yield* finishKilledBeforeRun(lane, job);
+          return;
+        }
+        if (state === 'finished') {
+          return;
+        }
+        const heavy = heavyLeader(job);
+        const claimed = { value: false };
+        const admitAndRun = waitForLoadHeadroom(job, heavy, claimed).pipe(
+          Effect.andThen(
+            admission.withPermits(1)(
+              Ref.update(admittedCount, (count) => count + 1).pipe(
+                Effect.andThen(runAdmitted(lane, job)),
+                Effect.ensuring(Ref.update(admittedCount, (count) => count - 1)),
+              ),
+            ),
+          ),
+        );
+        // A job parked at the load gate or on the permit can wait minutes
+        // (and blocks its whole lane); a kill must settle it right away
+        // instead of waiting for a permit it will never use.
+        yield* Effect.raceFirst(
+          admitAndRun,
+          killedBeforeStart(job).pipe(Effect.andThen(finishKilledBeforeRun(lane, job))),
+        ).pipe(
+          Effect.ensuring(Effect.suspend(() => (claimed.value ? releaseHeavy : Effect.void))),
+        );
+      }).pipe(Effect.onInterrupt(() => settleInterruptedJob(job)));
+
+    const stillQueued = (job: Job): Effect.Effect<boolean> =>
+      Ref.get(job.state).pipe(Effect.map((state) => state === 'queued'));
+
+    const processLaneJob = (lane: Lane, job: Job): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        // A kill-requested head neither waits for nor leads a batch: it
+        // would fold followers only to requeue them one by one.
+        if (
+          config.batchEnabled &&
+          config.batchWindowMs > 0 &&
+          !lane.pending.some(isSchedulable) &&
+          batchKindFor(job.intent) !== null &&
+          (yield* stillQueued(job))
+        ) {
+          yield* Effect.sleep(`${config.batchWindowMs} millis`);
+        }
+        if (yield* stillQueued(job)) {
+          yield* foldBatch(lane, job);
+        }
+        yield* processJob(lane, job);
+      }).pipe(
+        Effect.catchCauseIf(
+          (cause) => !Cause.hasInterruptsOnly(cause),
+          (cause) => {
+            const message = Cause.pretty(cause);
+            return Effect.logError(`lane ${lane.key} job ${job.ticket} crashed`, cause).pipe(
+              Effect.andThen(
+                settleJob(lane, job, 'failed', null, null, message, Date.now()).pipe(
+                  Effect.ignore,
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+    const drainLane = (lane: Lane): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        while (true) {
+          const job = yield* takeNextJob(lane);
+          if (job === undefined) {
+            return;
+          }
+          yield* Effect.sync(() => {
+            lane.head = job;
+          });
+          // The job runs as a child of the lane worker, so shutdown still
+          // interrupts it, while the worker waits only until the lane is free
+          // again: settlement, or the hand-back at the end of the build.
+          yield* Effect.forkChild(
+            processLaneJob(lane, job).pipe(
+              Effect.annotateLogs({ ticket: job.ticket, lane: lane.key }),
+              Effect.ensuring(
+                Effect.sync(() => {
+                  if (lane.head === job) {
+                    lane.head = null;
+                  }
+                }),
+              ),
+              Effect.ensuring(Deferred.succeed(job.laneReleased, undefined)),
+            ),
+          );
+          yield* Deferred.await(job.laneReleased);
+        }
+      });
+
+    const laneWorker = (lane: Lane): Effect.Effect<never> =>
+      Effect.forever(
+        Queue.take(lane.wake).pipe(
+          Effect.andThen(drainLane(lane)),
+          Effect.catchCauseIf(
+            (cause) => !Cause.hasInterruptsOnly(cause),
+            (cause) => Effect.logError(`lane ${lane.key} iteration crashed`, cause),
+          ),
+        ),
+      );
+
+    const getOrCreateLane = (
+      key: string,
+      workspaceRoot: string,
+      targetDir: string,
+    ): Effect.Effect<Lane> =>
+      laneCreation.withPermits(1)(
+        Effect.gen(function* () {
+          const existing = lanes.get(key);
+          if (existing !== undefined) {
+            return existing;
+          }
+          const wake = yield* Queue.dropping<void>(1);
+          const lane: Lane = {
+            key,
+            workspaceRoot,
+            targetDir,
+            pending: [],
+            wake,
+            running: null,
+            executing: new Set<string>(),
+            lastSurfaceKey: null,
+            head: null,
+          };
+          lanes.set(key, lane);
+          const worker = yield* Effect.forkIn(laneWorker(lane), daemonScope);
+          yield* Effect.sync(() => laneWorkers.add(worker));
+          return lane;
+        }),
+      );
+
+    const laneStatuses = (): Effect.Effect<readonly LaneStatus[]> =>
+      Effect.sync(() => {
+        const knownLanes = [...lanes.values()];
+        return knownLanes.map((lane) => {
+          const sharedWith = sharedTargetWith(lane, knownLanes);
+          return {
+            key: lane.key,
+            workspaceRoot: lane.workspaceRoot,
+            targetDir: lane.targetDir,
+            ...(sharedWith.length === 0 ? {} : { sharedTargetWith: sharedWith }),
+            queued: lane.pending.length,
+            runningTicket: lane.running,
+            executingTickets: [...lane.executing],
+          };
+        });
+      });
+
+    /**
+     * `pending` is the whole lane queue, blocked jobs included: a job waiting
+     * `--after` this candidate is one more request it releases, so the
+     * prerequisite moves up the way a dependency-closure leaf does.
+     */
+    function scheduleCandidate(
+      candidate: Job,
+      pending: readonly Job[],
+      nowMs: number,
+      lastSurfaceKey: string | null,
+    ) {
+      let unblocks = 0;
+      for (const other of pending) {
+        if (other === candidate) {
+          continue;
+        }
+        const declared = other.waitingFor.has(candidate.ticket);
+        const compiles =
+          candidate.intent.packages.length > 0 &&
+          other.depClosure.size > 0 &&
+          candidate.intent.packages.some((name) => other.depClosure.has(name));
+        if (declared || compiles) {
+          unblocks += 1 + other.attachments.size;
+        }
+      }
+      return {
+        id: candidate.id,
+        estimateMs: candidate.estimateMs,
+        waiters: candidate.attachments.size,
+        unblocks,
+        ageMs: nowMs - candidate.queuedAtMs,
+        editedRecently: candidate.editedRecently,
+        surfaceSwitch:
+          lastSurfaceKey !== null && compileSurfaceKey(candidate.intent) !== lastSurfaceKey,
+      };
+    }
+
+    /** Schedulable pending jobs in the order the lane would admit them; blocked jobs are not ahead of anything. */
+    const orderedPending = (lane: Lane, nowMs: number): readonly Job[] => {
+      const remaining = lane.pending.filter(isSchedulable);
+      const blocked = lane.pending.filter((job) => !isSchedulable(job));
+      const ordered: Job[] = [];
+      while (remaining.length > 0) {
+        const index = selectNextIndex(
+          remaining.map((candidate) =>
+            scheduleCandidate(candidate, [...remaining, ...blocked], nowMs, lane.lastSurfaceKey),
+          ),
+        );
+        if (index === -1) {
+          break;
+        }
+        const next = remaining.splice(index, 1)[0];
+        if (next !== undefined) {
+          ordered.push(next);
+        }
+      }
+      return ordered;
+    };
+
+    const estimateFieldsFor = (
+      job: Job,
+      atMs: number,
+      p90Ms: number | null,
+    ): {
+      readonly compileEstimateMs: number;
+      readonly executeEstimateMs?: number;
+      readonly phase?: RunPhase;
+      readonly estimateState?: EstimateState;
+      readonly p90Ms?: number;
+    } => {
+      // A compile-only subcommand is in its compile phase for the whole run;
+      // an execution subcommand is only known to be compiling while the
+      // build-phase detector watches for Cargo's `Finished` line (overlap
+      // on). With overlap off the split is invisible, so no phase is claimed.
+      const phaseVisible =
+        !executionSubcommands.has(job.intent.subcommand) ||
+        (config.overlapExecution && job.demux === null);
+      const phase: RunPhase | undefined =
+        job.startedAtMs === null
+          ? undefined
+          : job.buildFinishedAtMs !== null
+            ? 'execute'
+            : phaseVisible
+              ? 'compile'
+              : undefined;
+      const overrun =
+        job.startedAtMs === null
+          ? { overrun: false as const, p90Ms }
+          : assessOverrun({
+              elapsedMs: Math.max(0, atMs - job.startedAtMs),
+              estimateMs: job.estimateMs,
+              p90Ms,
+              stallFactor: config.stallEstimateFactor,
+              stalled: job.stall !== null,
+            });
+      return {
+        compileEstimateMs: job.compileEstimateMs,
+        ...(job.executeEstimateMs === null ? {} : { executeEstimateMs: job.executeEstimateMs }),
+        ...(phase === undefined ? {} : { phase }),
+        ...(overrun.overrun
+          ? {
+              estimateState: 'overrun' as const,
+              ...(overrun.p90Ms === null ? {} : { p90Ms: overrun.p90Ms }),
+            }
+          : {}),
+      };
+    };
+
+    const waitContributionMs = (
+      job: Job,
+      atMs: number,
+      p90Ms: number | null,
+    ): number =>
+      laneWaitRemainingMs({
+        atMs,
+        buildFinishedAtMs: job.buildFinishedAtMs,
+        compileEstimateMs: job.compileEstimateMs,
+        estimateMs: job.estimateMs,
+        executeEstimateMs: job.executeEstimateMs,
+        overlapExecution: config.overlapExecution,
+        p90Ms,
+        stallFactor: config.stallEstimateFactor,
+        stalled: job.stall !== null,
+        startedAtMs: job.startedAtMs,
+      });
+
+    const requestStatusFields: LaneRuntime['requestStatusFields'] = (ticket, atMs) =>
+      Effect.gen(function* () {
+        const entry = directory.get(ticket);
+        if (entry === undefined) {
+          return {};
+        }
+        const leader = entry.kind === 'leader' ? entry.job : entry.leader;
+        // Only a started run can overrun; a queued one needs no history lookup.
+        const p90Ms =
+          leader.startedAtMs === null ? null : yield* costModel.intentP90Ms(leader.intent.key);
+        const estimates = estimateFieldsFor(leader, atMs, p90Ms);
+        if (leader.startedAtMs !== null) {
+          const quietMs = quietMsSinceOutput(leader.lastOutputAtMs, atMs);
+          // Riders share the leader's process, so its stall is theirs too;
+          // orphaning is per ticket (only the leader's owner is tracked).
+          return {
+            ...estimates,
+            ...(quietMs === undefined ? {} : { quietMs }),
+            ...(leader.stall === null ? {} : { stall: leader.stall }),
+            ...(entry.kind === 'leader' && entry.job.ownerGone ? { orphaned: true } : {}),
+          };
+        }
+
+        const ownCreatedAtMs =
+          entry.kind === 'leader' ? entry.job.queuedAtMs : entry.attachment.createdAtMs;
+        const ownEstimateMs =
+          entry.kind === 'leader' ? entry.job.estimateMs : entry.attachment.estimateMs;
+        const delayed = queuedWaitIsDelayed(Math.max(0, atMs - ownCreatedAtMs), ownEstimateMs);
+        // A lane head parked at the admission gate is neither pending nor
+        // running. A queued leader whose submitter dropped is waiting for a
+        // reattach (#187) and says so.
+        const held = {
+          ...(leader.admissionHold === null ? {} : { admissionHold: leader.admissionHold }),
+          ...(entry.kind === 'leader' && entry.job.ownerGone ? { orphaned: true as const } : {}),
+        };
+        const lane = lanes.get(leader.laneKey);
+        if (lane === undefined) {
+          return delayed ? { delayed: true, ...held, ...estimates } : { ...held, ...estimates };
+        }
+        const pending = orderedPending(lane, atMs);
+        const targetIndex = pending.indexOf(leader);
+        if (targetIndex === -1) {
+          return delayed ? { delayed: true, ...held, ...estimates } : { ...held, ...estimates };
+        }
+
+        const ahead = pending.slice(0, targetIndex);
+        // Queued tickets ahead owe the lane their compile only when overlap
+        // will hand it back at their build-finished line; otherwise the whole run.
+        let waitEtaMs = ahead.reduce(
+          (total, job) => total + waitContributionMs(job, atMs, null),
+          0,
+        );
+        const aheadTickets = ahead.map((job) => job.ticket);
+        let position = ahead.length;
+        let headFields: Partial<QueueContext> = {};
+        // The lane head — running, or parked at the gate before its permit —
+        // runs before everything pending. An overrun-but-alive head contributes
+        // p90 remaining, never a negative that cancels queued work. A head
+        // already executing contributes only remaining execute time, or 0
+        // once overlap has handed the lane back.
+        const head = lane.head;
+        if (head !== null && head !== leader && Ref.getUnsafe(head.state) !== 'finished') {
+          aheadTickets.unshift(head.ticket);
+          position += 1;
+          const headP90Ms =
+            head.startedAtMs === null ? null : yield* costModel.intentP90Ms(head.intent.key);
+          waitEtaMs += waitContributionMs(head, atMs, headP90Ms);
+          const headEstimates = estimateFieldsFor(head, atMs, headP90Ms);
+          headFields = {
+            ...(head.startedAtMs === null
+              ? {}
+              : { headElapsedMs: Math.max(0, atMs - head.startedAtMs) }),
+            headEstimateMs: head.estimateMs,
+            ...(headEstimates.phase === undefined ? {} : { headPhase: headEstimates.phase }),
+            ...(headEstimates.estimateState === undefined
+              ? {}
+              : { headEstimateState: headEstimates.estimateState }),
+            headTicket: head.ticket,
+          };
+        }
+        const queue: QueueContext = {
+          aheadTickets,
+          position,
+          waitEtaMs: Math.max(0, waitEtaMs),
+          ...headFields,
+        };
+        return delayed
+          ? { delayed: true, queue, ...held, ...estimates }
+          : { queue, ...held, ...estimates };
+      });
+
+    const interruptWorkers = (): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        const workers = yield* Effect.sync(() => [...laneWorkers]);
+        yield* Effect.forEach(workers, Fiber.interrupt, {
+          concurrency: 'unbounded',
+          discard: true,
+        });
+        yield* Effect.sync(() => laneWorkers.clear());
+      });
+
+    const heavyAdmission: LaneRuntime['heavyAdmission'] = (memAvailableBytes) =>
+      config.heavyMemAvailableBytes === null
+        ? Effect.succeed(null)
+        : Ref.get(heavyAdmittedCount).pipe(
+            Effect.map((running) => ({
+              running,
+              maxConcurrent: config.heavyMaxConcurrent,
+              capActive: heavyCapActive({
+                heavyMemAvailableBytes: config.heavyMemAvailableBytes,
+                memAvailableBytes,
+              }),
+            })),
+          );
+
+    return {
+      attachments,
+      getOrCreateLane,
+      makeJob,
+      enqueueJob,
+      failPendingJob,
+      settleInterruptedJob,
+      laneStatuses,
+      requestStatusFields,
+      interruptWorkers,
+      heavyAdmission,
+    } satisfies LaneRuntime;
+  });

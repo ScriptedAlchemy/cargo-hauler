@@ -21,11 +21,11 @@ import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 import * as Schedule from 'effect/Schedule';
 
-import { pingDaemon } from '../../src/daemon/control.js';
-import { runDaemon } from '../../src/daemon/main.js';
+import { pingDaemon } from '../../src/internal/client/control.js';
+import { runDaemon } from '../../src/internal/daemon/main.js';
 
-import { dropAfterAckProxy } from '../drop-after-ack-proxy.js';
-import { fakeCargoEnv, scopedEnv, scopedFixture } from '../harness.js';
+import { dropAfterAckProxy } from '../support/drop-after-ack-proxy.js';
+import { fakeCargoEnv, scopedEnv, scopedFixture } from '../support/harness.js';
 
 /**
  * Host-install proof from the actual npm shape: pack a source staging copy,

@@ -2,11 +2,11 @@ import { agent } from '@agent-bundle/runtime';
 import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
 import React from 'react';
 
-import { ResultDocument } from '../../../components/documents.js';
-import { surfaceNames } from '../../../components/surface.js';
-import { resultFetchResultSchema, resultInputSchema } from '../../../lib/protocol-schemas.js';
-import { requestDaemonConfig } from '../../../lib/request-config.js';
-import { fetchTicketResultView } from '../../../lib/tickets.js';
+import { ResultDocument } from '../../../internal/ui/documents/documents.js';
+import { surfaceNames } from '../../../internal/ui/documents/surface.js';
+import { resultFetchResultSchema, resultInputSchema } from '../../../internal/contracts/tool-schemas.js';
+import { requestDaemonConfig } from '../../../internal/operations/request-config.js';
+import { fetchTicketResultView } from '../../../internal/operations/tickets.js';
 
 export const config = {
   annotations: { readOnlyHint: true },

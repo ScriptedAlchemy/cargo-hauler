@@ -2,9 +2,9 @@ import { Agent } from '@agent-bundle/runtime';
 import type { AgentEventRouteConfig, AgentEventRouteProps } from 'agent-bundle';
 import React from 'react';
 
-import { handleAfterShell } from '../../hooks/after-shell.js';
-import { finishedTicketsFromPreflight } from '../../hooks/session-ping.js';
-import { decisionValue, shellEventFrom } from '../../lib/event-support.js';
+import { handleAfterShell } from '../../internal/host-hooks/after-shell.js';
+import { finishedTicketsFromPreflight } from '../../internal/host-hooks/session-ping.js';
+import { decisionValue, shellEventFrom } from '../../internal/host-hooks/event-support.js';
 
 export const config = {
   requires: ['events.toolAfter.context'],

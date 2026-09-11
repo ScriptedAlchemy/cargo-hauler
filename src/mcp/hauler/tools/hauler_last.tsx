@@ -3,11 +3,11 @@ import type { ToolConfig, ToolRouteProps } from 'agent-bundle';
 import React from 'react';
 import { z } from 'zod';
 
-import { LastDocument } from '../../../components/documents.js';
-import { surfaceNames } from '../../../components/surface.js';
-import { loadLastResult } from '../../../lib/inspect.js';
-import { lastResultSchema } from '../../../lib/protocol-schemas.js';
-import { requestDaemonConfig } from '../../../lib/request-config.js';
+import { LastDocument } from '../../../internal/ui/documents/documents.js';
+import { surfaceNames } from '../../../internal/ui/documents/surface.js';
+import { loadLastResult } from '../../../internal/operations/inspection.js';
+import { lastResultSchema } from '../../../internal/contracts/tool-schemas.js';
+import { requestDaemonConfig } from '../../../internal/operations/request-config.js';
 
 export const config = {
   annotations: { readOnlyHint: true },

@@ -1,8 +1,8 @@
 import type { CliRouteConfig, CliRouteProps } from 'agent-bundle';
 import { z } from 'zod';
 
-import { daemonExitCode, runDaemonControl } from '../daemon/lifecycle.js';
-import { daemonResultSchema } from '../lib/protocol-schemas.js';
+import { daemonExitCode, runDaemonControl } from '../internal/daemon/runtime/lifecycle.js';
+import { daemonResultSchema } from '../internal/contracts/tool-schemas.js';
 
 export const config = {
   description:
