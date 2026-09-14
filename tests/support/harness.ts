@@ -22,17 +22,29 @@ import type {
 } from '../../src/internal/contracts/protocol.js';
 
 const fakeCargoScript = `#!/usr/bin/env bash
+# Harness timing knobs travel as CARGO_HAULER_TEST_FAKE_* so they never enter
+# request identity / coverage / batch digests (those strip CARGO_HAULER_*).
+FAKE_READY_FILE="\${CARGO_HAULER_TEST_FAKE_READY_FILE:-\${FAKE_READY_FILE:-}}"
+FAKE_RELEASE_FILE="\${CARGO_HAULER_TEST_FAKE_RELEASE_FILE:-\${FAKE_RELEASE_FILE:-}}"
+FAKE_OUTPUT_BYTES="\${CARGO_HAULER_TEST_FAKE_OUTPUT_BYTES:-\${FAKE_OUTPUT_BYTES:-}}"
+FAKE_OUTPUT_COUNT="\${CARGO_HAULER_TEST_FAKE_OUTPUT_COUNT:-\${FAKE_OUTPUT_COUNT:-}}"
+FAKE_OUTPUT_INTERVAL="\${CARGO_HAULER_TEST_FAKE_OUTPUT_INTERVAL:-\${FAKE_OUTPUT_INTERVAL:-}}"
+FAKE_FINISHED_AFTER="\${CARGO_HAULER_TEST_FAKE_FINISHED_AFTER:-\${FAKE_FINISHED_AFTER:-}}"
+FAKE_SLEEP="\${CARGO_HAULER_TEST_FAKE_SLEEP:-\${FAKE_SLEEP:-}}"
+FAKE_LATE_OUT="\${CARGO_HAULER_TEST_FAKE_LATE_OUT:-\${FAKE_LATE_OUT:-}}"
+FAKE_EXIT="\${CARGO_HAULER_TEST_FAKE_EXIT:-\${FAKE_EXIT:-0}}"
+FAKE_STAGE_FILE="\${CARGO_HAULER_TEST_FAKE_STAGE_FILE:-\${FAKE_STAGE_FILE:-}}"
 echo "fake-out:$*"
 echo "fake-err:$*" >&2
 echo "fake-jobs:\${CARGO_BUILD_JOBS:-none}" >&2
-if [ -n "\${FAKE_READY_FILE:-}" ]; then : > "\$FAKE_READY_FILE"; fi
-if [ -n "\${FAKE_RELEASE_FILE:-}" ]; then
+if [ -n "\$FAKE_READY_FILE" ]; then : > "\$FAKE_READY_FILE"; fi
+if [ -n "\$FAKE_RELEASE_FILE" ]; then
   while [ ! -e "\$FAKE_RELEASE_FILE" ]; do sleep 0.01; done
 fi
-if [ -n "\${FAKE_OUTPUT_BYTES:-}" ]; then
+if [ -n "\$FAKE_OUTPUT_BYTES" ]; then
   yes "fake-bulk:0123456789abcdef0123456789abcdef0123456789abcdef" | head -c "\$FAKE_OUTPUT_BYTES"
 fi
-if [ -n "\${FAKE_OUTPUT_COUNT:-}" ]; then
+if [ -n "\$FAKE_OUTPUT_COUNT" ]; then
   fake_output_index=0
   while [ "\$fake_output_index" -lt "\$FAKE_OUTPUT_COUNT" ]; do
     sleep "\${FAKE_OUTPUT_INTERVAL:-0.04}"
@@ -40,14 +52,28 @@ if [ -n "\${FAKE_OUTPUT_COUNT:-}" ]; then
     fake_output_index=\$((fake_output_index + 1))
   done
 fi
-if [ -n "\${FAKE_FINISHED_AFTER:-}" ]; then
+if [ -n "\$FAKE_FINISHED_AFTER" ]; then
   sleep "\$FAKE_FINISHED_AFTER"
   echo "    Finished \\\`test\\\` profile [unoptimized + debuginfo] target(s) in 0.42s" >&2
 fi
-if [ -n "\${FAKE_SLEEP:-}" ]; then sleep "\$FAKE_SLEEP"; fi
-if [ -n "\${FAKE_LATE_OUT:-}" ]; then echo "\$FAKE_LATE_OUT"; fi
-exit "\${FAKE_EXIT:-0}"
+if [ -n "\$FAKE_SLEEP" ]; then sleep "\$FAKE_SLEEP"; fi
+if [ -n "\$FAKE_LATE_OUT" ]; then echo "\$FAKE_LATE_OUT"; fi
+exit "\$FAKE_EXIT"
 `;
+
+/**
+ * Rewrite harness-only `FAKE_*` knobs to `CARGO_HAULER_TEST_FAKE_*` so they
+ * ride to the fake cargo without fragmenting identity, coverage, or fold.
+ */
+export const withFakeCargoKnobs = (
+  env: Readonly<Record<string, string>>,
+): Record<string, string> => {
+  const rewritten: Record<string, string> = {};
+  for (const [key, value] of Object.entries(env)) {
+    rewritten[key.startsWith('FAKE_') ? `CARGO_HAULER_TEST_${key}` : key] = value;
+  }
+  return rewritten;
+};
 
 export interface Fixture {
   readonly config: DaemonConfigShape;
@@ -180,11 +206,12 @@ export const scopedEnv = (
 export const fakeCargoEnv = (
   fixture: Pick<Fixture, 'binDir'>,
   extra: Readonly<Record<string, string>> = {},
-): Record<string, string> => ({
-  CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-  PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-  ...extra,
-});
+): Record<string, string> =>
+  withFakeCargoKnobs({
+    CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
+    PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
+    ...extra,
+  });
 
 export const shortId = (): string => randomUUID().slice(0, 8);
 
@@ -209,22 +236,22 @@ export interface ExecOptions {
 export const execRequest = (fixture: Fixture, options: ExecOptions) => {
   const env: Record<string, string> = {
     ...fakeCargoEnv(fixture),
-    ...options.extraEnv,
+    ...withFakeCargoKnobs(options.extraEnv ?? {}),
   };
   if (options.sleep !== undefined) {
-    env.FAKE_SLEEP = options.sleep;
+    env.CARGO_HAULER_TEST_FAKE_SLEEP = options.sleep;
   }
   if (options.outputBytes !== undefined) {
-    env.FAKE_OUTPUT_BYTES = options.outputBytes;
+    env.CARGO_HAULER_TEST_FAKE_OUTPUT_BYTES = options.outputBytes;
   }
   if (options.finishedAfter !== undefined) {
-    env.FAKE_FINISHED_AFTER = options.finishedAfter;
+    env.CARGO_HAULER_TEST_FAKE_FINISHED_AFTER = options.finishedAfter;
   }
   if (options.exit !== undefined) {
-    env.FAKE_EXIT = options.exit;
+    env.CARGO_HAULER_TEST_FAKE_EXIT = options.exit;
   }
   if (options.lateOut !== undefined) {
-    env.FAKE_LATE_OUT = options.lateOut;
+    env.CARGO_HAULER_TEST_FAKE_LATE_OUT = options.lateOut;
   }
   return requestOverSocket({
     socketPath: fixture.config.socketPath,

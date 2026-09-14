@@ -30,7 +30,7 @@ while IFS= read -r line; do
     exit:*) exit "\${line#exit:}" ;;
     *) printf '%s\\n' "$line" ;;
   esac
-done < "$FAKE_STAGE_FILE"
+done < "\${CARGO_HAULER_TEST_FAKE_STAGE_FILE:-\$FAKE_STAGE_FILE}"
 exit 0
 `;
 

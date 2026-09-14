@@ -13,7 +13,7 @@ import type { BrokerApi, SubmitResult } from '../../src/internal/daemon/broker/b
 import type { ExitInfo, SubmitCallbacks, SubmitInput } from '../../src/internal/daemon/broker/job-state.js';
 
 import { brokerFixture } from '../support/broker-fixture.js';
-import type { Fixture } from '../support/harness.js';
+import { fakeCargoEnv, type Fixture } from '../support/harness.js';
 
 class FilePending extends Data.TaggedError('FilePending')<{ readonly path: string }> {}
 
@@ -25,10 +25,7 @@ const waitForFile = (path: string): Effect.Effect<void, FilePending> =>
 const cargoEnv = (
   fixture: Fixture,
   extra: Readonly<Record<string, string>> = {},
-): Record<string, string> => ({
-  CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-  ...extra,
-});
+): Record<string, string> => fakeCargoEnv(fixture, extra);
 
 interface Tracked {
   readonly submitted: SubmitResult;
@@ -72,7 +69,7 @@ while IFS= read -r line; do
     exit:*) exit "\${line#exit:}" ;;
     *) printf '%s\\n' "$line" ;;
   esac
-done < "$FAKE_STAGE_FILE"
+done < "\${CARGO_HAULER_TEST_FAKE_STAGE_FILE:-\$FAKE_STAGE_FILE}"
 exit 0
 `;
 
@@ -95,7 +92,7 @@ const stagedCargo = (
   chmodSync(cargoPath, 0o755);
   const stageFile = join(dir, 'stages.txt');
   writeFileSync(stageFile, `${stages.join('\n')}\n`);
-  return { CARGO_HAULER_CARGO_BIN: cargoPath, FAKE_STAGE_FILE: stageFile };
+  return fakeCargoEnv(fixture, { CARGO_HAULER_CARGO_BIN: cargoPath, FAKE_STAGE_FILE: stageFile });
 };
 
 describe('kill while parked (#51)', () => {
