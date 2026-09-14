@@ -844,9 +844,10 @@ Event routes are host protocol responses and are never wrapped.
 
 `tool/before` and `tool/after` are split into cheap `events.*` handlers and
 sibling `.view.tsx` modules. The framework compiles each `.ts` handler into
-the hook entry itself — `hooks/event-route-tool-before.<host>.mjs`, a few
-hundred KB with no React, Flight worker, or Effect — and loads the rendered
-view only when the handler calls `context.render`. The handler decides on the raw command
+the hook entry itself — `hooks/event-route-tool-before.<host>.mjs`, about
+1 MiB with the lazy provider registry but no React or Flight worker — and
+loads the rendered view only when the handler calls `context.render`. The
+handler decides on the raw command
 (`src/internal/host-hooks/tokens.ts`; `session-ping.ts` for the one bounded completion ping
 after a tool ran): `continue` for the shell calls that name neither cargo nor
 hauler, a rendered view for the rest. Neither handler resolves the

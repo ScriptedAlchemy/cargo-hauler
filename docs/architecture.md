@@ -180,7 +180,11 @@ commands or paths.
   `rpc.ts`, `hook-state.ts`, `platform/*`, `util/*`) must not import React,
   Effect, or server-only modules. No `index.ts` barrels under `internal/`
   that could pull them in. `tests/integration/event-handler.test.ts` and
-  `tests/integration/hooks-simulate.test.ts` prove the compiled entries.
+  `tests/unit/boundaries.test.ts` prove that source closure;
+  `tests/integration/hooks-simulate.test.ts` proves the compiled handlers
+  remain bounded and exclude React and the Flight worker. Agent Bundle's lazy
+  provider registry is bundled into the wrapper but is not resolved by these
+  handlers.
 - **Two renderers.** `ui/documents/` renders for agents (JSX, server side);
   `ui/dashboard/` and `mcp/hauler/apps/dashboard.tsx` render in a browser.
   They share `ui/shared/` and `integrations/kache/pressure-model.ts` only.

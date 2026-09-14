@@ -335,7 +335,9 @@ describe('agent-bundle hooks simulate', () => {
         expect(entry).toBeDefined();
         const source = readFileSync(entry!, 'utf8');
         // The cheap handler — token test and socket ping — stays smaller than
-        // the rendered view beside it and never pulls in React or Flight.
+        // the rendered view beside it, remains bounded with the framework's
+        // lazy provider registry, and never pulls in React or Flight.
+        expect(statSync(entry!).size).toBeLessThan(1.25 * 1024 * 1024);
         expect(statSync(entry!).size).toBeLessThan(statSync(entry!.replace(/\.mjs$/u, '.execute.mjs')).size);
         expect(source).not.toContain('react-dom');
         expect(source).not.toContain('hooks-flight');
