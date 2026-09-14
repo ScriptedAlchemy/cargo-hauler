@@ -79,7 +79,7 @@
     "react-dom": "^19.2.8",
     "scheduler": "^0.27.0",
     "typescript": "7.0.2",
-    "zod": "4.5.4"
+    "zod": "4.6.5"
   },
   "packageManager": "pnpm@12.3.4"
 }
