@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.4
+
+### Patch Changes
+
+- f07880f: Adopt Agent Bundle manifest v6 authoring for event handlers, lazy providers, and routed CLI input metadata. (#226)
+
 ## 0.8.3
 
 ### Patch Changes
