@@ -13,6 +13,12 @@ export const config = {
   annotations: { destructiveHint: true, idempotentHint: true },
   description:
     'Stop a cargo-hauler ticket: a queued request is dropped, a running one has its cargo process terminated (SIGTERM, then SIGKILL after the grace period) and its lane freed. Use this instead of killing cargo PIDs — the daemon settles riders and the ledger. Returns killed: false when the ticket is unknown or already finished.',
+  inputJsonSchema: {
+    additionalProperties: false,
+    properties: { ticket: { type: 'string' } },
+    required: ['ticket'],
+    type: 'object',
+  },
   title: 'Kill hauler ticket',
 } satisfies ToolConfig;
 
@@ -23,6 +29,6 @@ export const resultSchema = killResultSchema;
 
 export default async function HaulerKill({ input, signal }: ToolRouteProps<typeof inputSchema>) {
   const context = await agent();
-  const result = await killTicketResult(input, { config: requestDaemonConfig(context), signal });
+  const result = await killTicketResult(input, { config: await requestDaemonConfig(context), signal });
   return <KillDocument names={surfaceNames(context)} nowMs={Date.now()} result={result} />;
 }

@@ -17,7 +17,6 @@ import { requestDaemonConfig } from '../../internal/operations/request-config.js
 export const config = {
   requires: ['events.sessionStart.context'],
   // The route probes within its own budget; ordinary rendered routes do not.
-  providers: [],
   runtime: 'standalone',
   timeoutMs: 5_000,
 } satisfies AgentEventRouteConfig;
@@ -41,7 +40,7 @@ const notice = (model: ReturnType<typeof daemonBadgeModel>): string => {
 
 export default async function SessionStart({ signal }: AgentEventRouteProps) {
   const context = await agent();
-  const health = await probeDaemonHealth(requestDaemonConfig(context), { signal });
+  const health = await probeDaemonHealth(await requestDaemonConfig(context), { signal });
   return (
     <Agent.Result value={decisionValue({ outcome: 'continue' })}>
       <Agent.Context>{notice(daemonBadgeModel(health, Date.now()))}</Agent.Context>

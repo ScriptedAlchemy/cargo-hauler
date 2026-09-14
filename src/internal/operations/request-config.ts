@@ -1,4 +1,4 @@
-import type { AgentRequestContext } from '@agent-bundle/runtime';
+import type { AgentRequestContext } from '@agent-bundle/runtime/request';
 
 import { resolveDaemonConfig, type DaemonConfigShape } from '../daemon/config.js';
 import type { HaulerDaemonContext } from '../../providers/hauler-daemon.js';
@@ -19,11 +19,16 @@ const isHaulerDaemonContext = (value: unknown): value is HaulerDaemonContext =>
  * the request scope mounted one, otherwise `undefined` (a scope with an
  * explicit empty provider map, such as a degraded-path test).
  */
-export const requestDaemon = (
-  context: Pick<AgentRequestContext, 'providers'>,
-): HaulerDaemonContext | undefined => {
-  const provided: unknown = context.providers.haulerDaemon;
-  return isHaulerDaemonContext(provided) ? provided : undefined;
+export const requestDaemon = async (
+  context: Pick<AgentRequestContext, 'provider'>,
+): Promise<HaulerDaemonContext | undefined> => {
+  try {
+    const provided: unknown = await context.provider('haulerDaemon');
+    return isHaulerDaemonContext(provided) ? provided : undefined;
+  } catch (error) {
+    if (error instanceof TypeError && error.message.startsWith('Unknown provider ')) return undefined;
+    throw error;
+  }
 };
 
 /**
@@ -31,6 +36,6 @@ export const requestDaemon = (
  * resolved from the environment (the same answer a script or hook wrapper
  * gets).
  */
-export const requestDaemonConfig = (
-  context: Pick<AgentRequestContext, 'providers'>,
-): DaemonConfigShape => requestDaemon(context)?.config ?? resolveDaemonConfig();
+export const requestDaemonConfig = async (
+  context: Pick<AgentRequestContext, 'provider'>,
+): Promise<DaemonConfigShape> => (await requestDaemon(context))?.config ?? resolveDaemonConfig();

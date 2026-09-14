@@ -28,8 +28,8 @@ export type SessionCompletedPing =
     }
   | { readonly kind: 'unavailable'; readonly reason: 'unreachable'; readonly code: string | null };
 
-/** Tickets the `tool/after` preflight handed the route, or undefined when it did not ping. */
-export const finishedTicketsFromPreflight = (
+/** Tickets the `tool/after` handler handed the rendered view, or undefined when it did not ping. */
+export const finishedTicketsFromRenderInput = (
   value: unknown,
 ): { readonly asOfMs?: number; readonly tickets: readonly FinishedTicket[] } | undefined => {
   if (!isRecord(value) || value.kind !== 'finished' || !Array.isArray(value.tickets)) {
@@ -54,8 +54,8 @@ export interface SessionPingOptions {
  * The smallest client of the daemon's `session-completed` request: one
  * `net.connect` on the Unix socket, one NDJSON line out, the first line back
  * (`requestOutcome`, which is dependency-free — no Effect runtime, no shared
- * `LineBuffer`). The `tool/after` preflight runs this on every shell call before
- * deciding whether the rendered route needs to load at all. It never throws
+ * `LineBuffer`). The `tool/after` handler runs this on every shell call before
+ * deciding whether the rendered view needs to load at all. It never throws
  * and never writes to stdout or stderr: a daemon that is down or slow is an
  * `unavailable` value, not an error.
  *

@@ -8,6 +8,14 @@ export const config = {
   description:
     'Control the hauler daemon: run in the foreground, start detached, stop, restart (stop, wait for exit, start), or report status.',
   exitCode: 'result',
+  inputJsonSchema: {
+    additionalProperties: false,
+    properties: {
+      subcommand: { enum: ['run', 'start', 'stop', 'status', 'restart'], type: 'string' },
+    },
+    required: ['subcommand'],
+    type: 'object',
+  },
   positionals: ['subcommand'],
 } satisfies CliRouteConfig;
 

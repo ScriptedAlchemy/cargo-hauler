@@ -76,9 +76,9 @@ describe('ownership boundaries', () => {
     expect(offenders(files, (spec) => forbidden.some((bad) => bad(spec)))).toEqual([]);
   });
 
-  it('the hook preflights reach neither React nor Effect nor the daemon', () => {
+  it('the cheap hook handlers reach neither React nor Effect nor the daemon', () => {
     const seen = new Set<string>();
-    const queue = ['events/tool/before.preflight', 'events/tool/after.preflight'];
+    const queue = ['events/tool/before', 'events/tool/after'];
     while (queue.length > 0) {
       const module = queue.pop() ?? '';
       if (seen.has(module)) continue;

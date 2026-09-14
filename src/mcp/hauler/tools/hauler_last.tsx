@@ -20,6 +20,6 @@ export const resultSchema = lastResultSchema;
 
 export default async function HaulerLast({ signal }: ToolRouteProps<typeof inputSchema>) {
   const context = await agent();
-  const last = await loadLastResult({ config: requestDaemonConfig(context), signal });
+  const last = await loadLastResult({ config: await requestDaemonConfig(context), signal });
   return <LastDocument names={surfaceNames(context)} nowMs={Date.now()} result={last} />;
 }

@@ -29,6 +29,6 @@ export const resultSchema = statusResultSchema;
 
 export default async function HaulerDashboard({ input, signal }: ToolRouteProps<typeof inputSchema>) {
   const context = await agent();
-  const status = await loadStatusResult(input, { config: requestDaemonConfig(context), signal });
+  const status = await loadStatusResult(input, { config: await requestDaemonConfig(context), signal });
   return <DashboardDocument names={surfaceNames(context)} result={status} />;
 }

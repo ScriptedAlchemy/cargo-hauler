@@ -68,8 +68,8 @@ const runWrapper = (
 
 /**
  * The compiled shell hook entry for one host: the `tool/before` or
- * `tool/after` event route's preflight shell, which runs the gate and loads
- * the rendered route (`*.execute.mjs`) only when it says `execute`.
+ * `tool/after` event route's cheap handler, which runs the gate and loads
+ * the rendered view only when it returns `context.render`.
  */
 const findHookEntry = (event: 'before-tool' | 'after-tool', host: 'claude' | 'cursor'): string | undefined => {
   const entry = join(hooksRoot, `event-route-tool-${event === 'before-tool' ? 'before' : 'after'}.${host}.mjs`);
@@ -328,16 +328,15 @@ describe('agent-bundle hooks simulate', () => {
     },
   );
 
-  it.skipIf(!existsSync(hooksRoot))('ships the shell hook preflight entries without the rendering runtime', () => {
+  it.skipIf(!existsSync(hooksRoot))('ships the cheap shell hook handlers without the rendering runtime', () => {
     for (const host of ['claude', 'cursor'] as const) {
       for (const event of ['before-tool', 'after-tool'] as const) {
         const entry = findHookEntry(event, host);
         expect(entry).toBeDefined();
         const source = readFileSync(entry!, 'utf8');
-        // The preflight shell — token test and socket ping — stays a fraction
-        // of the 3.6 MB rendered route beside it, and never pulls in React or
-        // the Flight worker.
-        expect(statSync(entry!).size).toBeLessThan(512 * 1024);
+        // The cheap handler — token test and socket ping — stays smaller than
+        // the rendered view beside it and never pulls in React or Flight.
+        expect(statSync(entry!).size).toBeLessThan(statSync(entry!.replace(/\.mjs$/u, '.execute.mjs')).size);
         expect(source).not.toContain('react-dom');
         expect(source).not.toContain('hooks-flight');
         expect(source).not.toContain('event-ipc');

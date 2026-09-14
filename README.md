@@ -797,7 +797,8 @@ src/
   mcp/hauler/apps/dashboard.tsx the MCP App (ui://cargo-hauler/dashboard.html)
   cli/daemon.ts                 the one plain CLI command
   events/{session/start,stop}.tsx   rendered hook routes
-  events/tool/{before,after}.tsx    the shell hook routes, gated by *.preflight.ts
+  events/tool/{before,after}.ts     cheap shell hook handlers
+  events/tool/{before,after}.view.tsx   rendered shell hook views
   skills/cargo-hauler/SKILL.md, skills/hauler-dashboard/SKILL.tsx
   scripts/hauler.ts             the `hauler` process entry hooks rewrite cargo to
   internal/                     the implementation the entrypoints import, by owner
@@ -841,16 +842,15 @@ Event routes are host protocol responses and are never wrapped.
 
 #### The shell hooks (`src/events/tool/`)
 
-`tool/before` and `tool/after` are event routes like the other two, with one
-addition: each re-exports a `preflight` (`before.preflight.ts`,
-`after.preflight.ts`) that the framework compiles into the hook entry itself —
-`hooks/event-route-tool-before.<host>.mjs`, a few hundred KB with no React,
-Flight worker, or Effect — and runs before the rendered route
-(`*.execute.mjs`) is loaded. The gate decides on the raw command
+`tool/before` and `tool/after` are split into cheap `events.*` handlers and
+sibling `.view.tsx` modules. The framework compiles each `.ts` handler into
+the hook entry itself — `hooks/event-route-tool-before.<host>.mjs`, a few
+hundred KB with no React, Flight worker, or Effect — and loads the rendered
+view only when the handler calls `context.render`. The handler decides on the raw command
 (`src/internal/host-hooks/tokens.ts`; `session-ping.ts` for the one bounded completion ping
 after a tool ran): `continue` for the shell calls that name neither cargo nor
-hauler, `execute` for the rest. Both routes declare `providers: []`, so
-neither mounts the daemon-config provider; the rendered route calls
+hauler, a rendered view for the rest. Neither handler resolves the
+daemon-config provider; the rendered view calls
 `before-shell.ts` (the rewrite, the `cargo clean` guard) or `after-shell.ts`
 (telemetry, finished-ticket context) and returns `allow`, `continue` +
 `updatedInput`, `deny` with a reason, or `additionalContext` through the
@@ -858,11 +858,12 @@ framework's host projection.
 
 #### The daemon provider (`src/providers/hauler-daemon.ts`)
 
-One request-context provider mounts `providers.haulerDaemon` for rendered tools,
-commands, and scripts. It resolves only cheap `config` data (state directory,
-socket, and ledger paths); active health and status I/O belongs to the operation
-that needs it. Routes read the config through `requestDaemonConfig(context)`,
-and tests inject a fixture through the harness `context.providers` seam.
+One request-context provider supplies `await context.provider('haulerDaemon')`
+to rendered tools, commands, and scripts. It resolves only cheap `config` data
+(state directory, socket, and ledger paths); active health and status I/O
+belongs to the operation that needs it. Routes read the config through
+`requestDaemonConfig(context)`, and tests inject a fixture through the harness
+`context.providers` initialization seam.
 
 #### Components (`src/internal/ui/documents/`)
 
@@ -935,8 +936,8 @@ the same filter as its `session` field). Results carry
 | `cli:daemon` | `run` / `start` / `stop` / `status` / `restart` | plain JSON, exit code from the result |
 | `event:session/start` | new session | daemon state and the no-kill rule as context |
 | `event:stop` | agent stopping | holds the stop while a foreground ticket is pending (bounded, re-deniable) |
-| `event:tool/before` | shell tool about to run | the preflight continues a non-cargo command without loading the route; otherwise rewrites `cargo …` to `hauler exec --session … --host … -- cargo …`, denies `cargo clean` during in-flight builds, brokers it while the daemon is too busy to answer |
-| `event:tool/after` | shell tool finished | the preflight pings the daemon once per call; the route records cargo commands, injects finished background-ticket results once per session, and flags cargo that ran unbrokered through a wrapper script (cargo status lines in the output of a command that never named cargo) |
+| `event:tool/before` | shell tool about to run | the cheap handler continues a non-cargo command without loading the view; otherwise the view rewrites `cargo …` to `hauler exec --session … --host … -- cargo …`, denies `cargo clean` during in-flight builds, brokers it while the daemon is too busy to answer |
+| `event:tool/after` | shell tool finished | the cheap handler pings the daemon once per call; the view records cargo commands, injects finished background-ticket results once per session, and flags cargo that ran unbrokered through a wrapper script (cargo status lines in the output of a command that never named cargo) |
 
 #### Skills
 
@@ -990,7 +991,7 @@ artifact build, at the harness proof levels:
 
 | Level | Suite | What it proves |
 | --- | --- | --- |
-| route-unit | `routes`, `layout`, `streaming`, `events` | documents, shell metadata, Suspense fallbacks and settled values, lineage attribution, event decisions (the shell routes' preflight gates are unit-tested in `tests/integration/event-preflight.test.ts` and against their compiled entries in `tests/integration/hooks-simulate.test.ts`) |
+| route-unit | `routes`, `layout`, `streaming`, `events` | documents, shell metadata, Suspense fallbacks and settled values, lineage attribution, event decisions (the shell routes' cheap handlers are unit-tested in `tests/integration/event-handler.test.ts` and against their compiled entries in `tests/integration/hooks-simulate.test.ts`) |
 | cli-dispatch | `cli-dispatch`, `layout` | argv through the routed CLI shell; Markdown wrapped by the shell, `--json` bare |
 | script-dispatch | `script-dispatch` | the `hauler` entry through its `main` envelope as its own process |
 | mcp-in-memory | `mcp-surface`, `layout` | tool names, `outputSchema`, the dashboard resource link, `_meta.hauler`, and a live fixture broker over the in-memory transport |
@@ -1023,10 +1024,10 @@ ships no preview harness of its own.
 
 agent-bundle does not yet have an npm release; this repository pins the
 [pkg.pr.new](https://pkg.pr.new) preview of Agent Bundle main commit
-[`e040c32`](https://github.com/ScriptedAlchemy/agent-bundle/commit/e040c32591d586eba72da6fa5c1bc1c881993000),
-built from [Agent Bundle PR #779](https://github.com/ScriptedAlchemy/agent-bundle/pull/779),
+[`3d769d6`](https://github.com/ScriptedAlchemy/agent-bundle/commit/3d769d6c52ed33532ec3927d64aa66f54486af8d),
+through [Agent Bundle PR #792](https://github.com/ScriptedAlchemy/agent-bundle/pull/792),
 for `agent-bundle`, `@agent-bundle/runtime`, and their paired
-`rsc-markdown-stream` preview. `inspect` reports the
+`rsc-markdown-stream` preview. This pin emits manifest v6. `inspect` reports the
 `agent` component kind as unavailable on every host (agent-bundle G5
 deferral); this plugin defines no agents.
 

@@ -3,35 +3,36 @@ import { createServer, type Server, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import type { EventPreflightContext } from 'agent-bundle';
+import type { JsonValue } from '@agent-bundle/runtime';
 import { version } from 'agent-bundle/meta';
+import type { EventContext } from 'agent-bundle/routes';
 import { describe, expect, it } from 'effect-rstest';
 import * as Effect from 'effect/Effect';
 
 import { runExecClient } from '../../src/internal/client/exec.js';
-import afterPreflight from '../../src/events/tool/after.preflight.js';
-import beforePreflight from '../../src/events/tool/before.preflight.js';
+import afterEvent from '../../src/events/tool/after.js';
+import beforeEvent from '../../src/events/tool/before.js';
 import { pingSessionCompleted } from '../../src/internal/host-hooks/session-ping.js';
 
 import { fakeCargoEnv, pollReport, scopedDaemon } from '../support/harness.js';
 
 /**
- * The shell routes' preflight gates decide on the raw command before the
- * rendered route — bash parser, rewrite, telemetry — is loaded: `execute`
+ * The shell routes' handlers decide on the raw command before the rendered
+ * view — bash parser, rewrite, telemetry — is loaded: `render`
  * only for a command that names cargo or hauler (or, after the tool ran, when
  * the daemon reports a finished background ticket for the session), plain
  * `continue` for everything else.
  */
-const preflightContext = <E extends 'tool/before' | 'tool/after'>(
+const eventContext = <E extends 'tool/before' | 'tool/after'>(
   event: E,
   payload: Record<string, unknown>,
-): EventPreflightContext<E> =>
+): EventContext<E> =>
   ({
     canonical: { event, payload, provenance: { host: 'claude', nativeEvent: 'PreToolUse' } },
-    host: { name: 'claude', nativeEvent: 'PreToolUse' },
+    native: {},
+    render: (module: string, data: JsonValue) => ({ data, module, outcome: 'render' }),
     signal: new AbortController().signal,
-    terminal: { color: 'none', stderr: { kind: 'pipe' }, stdout: { kind: 'pipe' } },
-  }) as unknown as EventPreflightContext<E>;
+  }) as unknown as EventContext<E>;
 
 const shellPayload = (command: string | undefined, session = 'sess-claude'): Record<string, unknown> => ({
   cwd: { value: '/tmp/ws' },
@@ -40,51 +41,59 @@ const shellPayload = (command: string | undefined, session = 'sess-claude'): Rec
   toolName: { value: command === undefined ? 'Read' : 'Bash' },
 });
 
-describe('tool/before preflight', () => {
+describe('tool/before event handler', () => {
   it('continues a non-cargo command and a tool input without a command', async () => {
-    expect(await beforePreflight(preflightContext('tool/before', shellPayload('ls -la')))).toEqual({ outcome: 'continue' });
-    expect(await beforePreflight(preflightContext('tool/before', shellPayload('git status && pnpm test')))).toEqual({
+    expect(await beforeEvent(eventContext('tool/before', shellPayload('ls -la')))).toEqual({ outcome: 'continue' });
+    expect(await beforeEvent(eventContext('tool/before', shellPayload('git status && pnpm test')))).toEqual({
       outcome: 'continue',
     });
-    expect(await beforePreflight(preflightContext('tool/before', shellPayload(undefined)))).toEqual({ outcome: 'continue' });
+    expect(await beforeEvent(eventContext('tool/before', shellPayload(undefined)))).toEqual({ outcome: 'continue' });
   });
 
-  it('executes the route for cargo and hauler commands', async () => {
+  it('renders the view for cargo and hauler commands', async () => {
     for (const command of ['cargo test -p foo', 'cargo clean', 'cd crates/foo && cargo build', 'hauler status', 'hauler exec -- cargo check']) {
-      expect(await beforePreflight(preflightContext('tool/before', shellPayload(command)))).toBe('execute');
+      expect(await beforeEvent(eventContext('tool/before', shellPayload(command)))).toEqual({
+        data: {},
+        module: './before.view.js',
+        outcome: 'render',
+      });
     }
   });
 });
 
-describe('tool/after preflight', () => {
-  it('executes the route for a cargo command without pinging the daemon', async () => {
-    expect(await afterPreflight(preflightContext('tool/after', shellPayload('cargo test -p foo')))).toBe('execute');
+describe('tool/after event handler', () => {
+  it('renders the view for a cargo command without pinging the daemon', async () => {
+    expect(await afterEvent(eventContext('tool/after', shellPayload('cargo test -p foo')))).toEqual({
+      data: {},
+      module: './after.view.js',
+      outcome: 'render',
+    });
   });
 
-  it('executes the route, without a ping, for a wrapper script whose output is cargo status lines', async () => {
+  it('renders the view, without a ping, for a wrapper script whose output is cargo status lines', async () => {
     const cargoOutput = { exit_code: 0, stdout: '   Compiling foo v0.1.0\n    Finished `test` profile target(s) in 2.00s\n' };
     expect(
-      await afterPreflight(
-        preflightContext('tool/after', { ...shellPayload('/tmp/scratch/cg.sh test -p foo', ''), toolResponse: { value: cargoOutput } }),
+      await afterEvent(
+        eventContext('tool/after', { ...shellPayload('/tmp/scratch/cg.sh test -p foo', ''), toolResponse: { value: cargoOutput } }),
       ),
-    ).toBe('execute');
+    ).toEqual({ data: {}, module: './after.view.js', outcome: 'render' });
     // A saved log shown with a file reader is not a run: no session, so no ping, plain continue.
     expect(
-      await afterPreflight(preflightContext('tool/after', { ...shellPayload('tail -30 build.log', ''), toolResponse: { value: cargoOutput } })),
+      await afterEvent(eventContext('tool/after', { ...shellPayload('tail -30 build.log', ''), toolResponse: { value: cargoOutput } })),
     ).toEqual({ outcome: 'continue' });
   });
 
   it('continues without a ping when the host names no session', async () => {
-    expect(await afterPreflight(preflightContext('tool/after', shellPayload('ls -la', '')))).toEqual({ outcome: 'continue' });
+    expect(await afterEvent(eventContext('tool/after', shellPayload('ls -la', '')))).toEqual({ outcome: 'continue' });
   });
 
   it('continues quietly when no daemon listens', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'hauler-preflight-'));
+    const root = mkdtempSync(join(tmpdir(), 'hauler-event-handler-'));
     try {
       const previous = process.env.CARGO_HAULER_STATE_DIR;
       process.env.CARGO_HAULER_STATE_DIR = root;
       try {
-        expect(await afterPreflight(preflightContext('tool/after', shellPayload('ls -la')))).toEqual({ outcome: 'continue' });
+        expect(await afterEvent(eventContext('tool/after', shellPayload('ls -la')))).toEqual({ outcome: 'continue' });
       } finally {
         if (previous === undefined) {
           delete process.env.CARGO_HAULER_STATE_DIR;
@@ -257,20 +266,21 @@ describe('pingSessionCompleted', () => {
         tickets: [],
       });
 
-      // The gate against the live daemon: a non-cargo `ls` in the session
+      // The handler against the live daemon: a non-cargo `ls` in the session
       // that ran cargo loads the route; another session's does not.
       const previous = process.env.CARGO_HAULER_STATE_DIR;
       process.env.CARGO_HAULER_STATE_DIR = fixture.config.stateDir;
       try {
-        expect(yield* Effect.promise(() => afterPreflight(preflightContext('tool/after', shellPayload('ls -la', session))))).toEqual({
+        expect(yield* Effect.promise(() => Promise.resolve(afterEvent(eventContext('tool/after', shellPayload('ls -la', session)))))).toEqual({
           data: {
             asOfMs: expect.any(Number),
             kind: 'finished',
             tickets: [expect.objectContaining({ exitCode: 0, status: 'done' })],
           },
-          outcome: 'execute',
+          module: './after.view.js',
+          outcome: 'render',
         });
-        expect(yield* Effect.promise(() => afterPreflight(preflightContext('tool/after', shellPayload('ls -la', 'sess-other'))))).toEqual({
+        expect(yield* Effect.promise(() => Promise.resolve(afterEvent(eventContext('tool/after', shellPayload('ls -la', 'sess-other')))))).toEqual({
           outcome: 'continue',
         });
       } finally {

@@ -14,9 +14,9 @@
   shell), `src/providers/hauler-daemon.ts` (daemon connection),
   `src/internal/ui/documents` (typed components over `view-models.ts`), `src/mcp/hauler/tools` and
   `src/mcp/hauler/apps` (MCP; each tool's `<tool>.cli.ts` is its `hauler`
-  command), `src/events` (hook routes; `tool/before.preflight.ts` and
-  `tool/after.preflight.ts` decide on the raw command before the route
-  loads — keep them free of React and Effect), `src/internal/host-hooks` (the
+  command), `src/events` (hook routes; `tool/before.ts` and
+  `tool/after.ts` decide on the raw command before their `.view.tsx` modules
+  load — keep the handlers free of React and Effect), `src/internal/host-hooks` (the
   handlers the routes call), `src/cli/daemon.ts`, `src/scripts/hauler.ts` (process
   entry), `src/skills`. Everything else lives under `src/internal/<owner>/`
   (`docs/architecture.md` is the ownership map); do not reintroduce a

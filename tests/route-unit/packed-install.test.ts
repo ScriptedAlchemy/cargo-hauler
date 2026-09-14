@@ -352,10 +352,15 @@ describe('packed install', () => {
               .map(([check, outcome]) => `${check}: ${outcome.reason ?? ''}`);
             expect(failed).toEqual([]);
             const tools = await session.client.listTools();
-            expect(tools.tools.map((tool) => tool.name)).toContain('hauler_status');
+            expect(tools.tools.map((tool) => tool.name)).toEqual(
+              expect.arrayContaining(['hauler_status', 'hauler_dashboard']),
+            );
             const status = await session.client.callTool({ arguments: {}, name: 'hauler_status' });
             expect(status.isError ?? false).toBe(false);
             expect(status.structuredContent).toMatchObject({ daemon: 'stopped', operation: 'status' });
+            const dashboard = await session.client.callTool({ arguments: {}, name: 'hauler_dashboard' });
+            expect(dashboard.isError ?? false).toBe(false);
+            expect(dashboard.structuredContent).toMatchObject({ daemon: 'stopped', operation: 'status' });
             const requested = await session.client.callTool({
               arguments: { argv: ['cargo', 'check'] },
               name: 'hauler_request',

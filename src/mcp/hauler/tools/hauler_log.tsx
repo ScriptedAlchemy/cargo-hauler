@@ -11,6 +11,11 @@ import { requestDaemonConfig } from '../../../internal/operations/request-config
 export const config = {
   annotations: { readOnlyHint: true },
   description: 'List recent cargo-hauler requests from the ledger, newest first.',
+  inputJsonSchema: {
+    additionalProperties: false,
+    properties: { limit: { type: 'number' } },
+    type: 'object',
+  },
   title: 'Hauler log',
 } satisfies ToolConfig;
 
@@ -21,7 +26,7 @@ export default async function HaulerLog({ input, signal }: ToolRouteProps<typeof
   const context = await agent();
   return (
     <LogStream
-      loading={loadLogResult(input, { config: requestDaemonConfig(context), signal })}
+      loading={loadLogResult(input, { config: await requestDaemonConfig(context), signal })}
       names={surfaceNames(context)}
     />
   );

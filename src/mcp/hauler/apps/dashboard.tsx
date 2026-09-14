@@ -8,7 +8,6 @@ import { AsyncResult, Atom } from 'effect/unstable/reactivity';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { APP_RESOURCE_URI } from '../../../constants.js';
 import {
   admissionHoldDetail,
   argvText,
@@ -69,15 +68,11 @@ import {
 import { statusResultSchema } from '../../../internal/contracts/tool-schemas.js';
 
 /**
- * Framework App-route metadata. The compiler extracts it without evaluating
- * the module, following the one relative import to read `APP_RESOURCE_URI`'s
- * string literal (`src/constants.ts` is the single source of the URI; the
- * `hauler_dashboard` tool references it through `appResourceUri` and the
- * rendered skill imports the same const).
- * `template` resolves beside this module, like its imports.
+ * Framework App-route metadata. The compiler extracts these literals without
+ * evaluating the module; `template` resolves beside this module.
  */
 export const config = {
-  resourceUri: APP_RESOURCE_URI,
+  resourceUri: 'ui://cargo-hauler/dashboard.html',
   template: './dashboard.html',
 } satisfies AppRouteConfig;
 

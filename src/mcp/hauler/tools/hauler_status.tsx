@@ -13,6 +13,25 @@ export const config = {
   annotations: { readOnlyHint: true },
   description:
     'Show cargo-hauler queue and in-flight work as text. Filter by cwd, session, laneKey, tickets, statuses, or commandContains instead of piping CLI JSON through jq. Rows are bounded summaries: no output tail, only a short outputPreview (last 8 lines) on running rows; read one ticket with hauler_result for its whole live tail. To open the visual dashboard (MCP App) call hauler_dashboard.',
+  inputJsonSchema: {
+    additionalProperties: false,
+    properties: {
+      commandContains: { type: 'string' },
+      cwd: { type: 'string' },
+      laneKey: { type: 'string' },
+      limit: { type: 'number' },
+      session: { type: 'string' },
+      statuses: {
+        items: {
+          enum: ['requested', 'queued', 'running', 'done', 'failed', 'killed', 'denied', 'passthrough'],
+          type: 'string',
+        },
+        type: 'array',
+      },
+      tickets: { items: { type: 'string' }, type: 'array' },
+    },
+    type: 'object',
+  },
   title: 'Hauler status',
 } satisfies ToolConfig;
 
@@ -21,7 +40,7 @@ export const resultSchema = statusResultSchema;
 
 export default async function HaulerStatus({ input, signal }: ToolRouteProps<typeof inputSchema>) {
   const context = await agent();
-  const status = await loadStatusResult(input, { config: requestDaemonConfig(context), signal });
+  const status = await loadStatusResult(input, { config: await requestDaemonConfig(context), signal });
   return (
     <StatusDocument
       filtered={hasStatusFilters(input)}

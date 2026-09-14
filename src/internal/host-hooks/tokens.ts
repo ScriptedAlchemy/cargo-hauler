@@ -1,5 +1,5 @@
 /**
- * The pre-parse test the `tool/before` and `tool/after` preflights apply
+ * The pre-parse test the cheap `tool/before` and `tool/after` handlers apply
  * before anything heavy loads: does the shell command name `cargo` or
  * `hauler` as a token? Boundaries are any character outside
  * `[A-Za-z0-9_]`, so `cargo-hauler`, `~/.cargo/bin/cargo`, `cargo.exe`,

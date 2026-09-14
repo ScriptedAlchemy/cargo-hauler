@@ -68,7 +68,7 @@ describe('afterTool completion notify', () => {
     expect(down).toEqual({ outcome: 'continue' });
   });
 
-  it('announces preflight tickets without querying the daemon, at the ping watermark', async () => {
+  it('announces handler-provided tickets without querying the daemon, at the ping watermark', async () => {
     let queried = false;
     let cursor: number | undefined;
     const result = await handleAfterShell(

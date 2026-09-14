@@ -1,26 +1,19 @@
 import { Agent } from '@agent-bundle/runtime';
-import type { AgentEventRouteConfig, AgentEventRouteProps } from 'agent-bundle';
+import type { AgentEventRouteProps } from 'agent-bundle';
 import React from 'react';
 
 import { handleAfterShell } from '../../internal/host-hooks/after-shell.js';
-import { finishedTicketsFromPreflight } from '../../internal/host-hooks/session-ping.js';
+import { finishedTicketsFromRenderInput } from '../../internal/host-hooks/session-ping.js';
 import { decisionValue, shellEventFrom } from '../../internal/host-hooks/event-support.js';
 
-export const config = {
-  requires: ['events.toolAfter.context'],
-  providers: [],
-  runtime: 'standalone',
-  timeoutMs: 10_000,
-  tools: ['shell'],
-} satisfies AgentEventRouteConfig;
-
-export { default as preflight } from './after.preflight.js';
-
-/** The telemetry record for a cargo/hauler command and the finished-ticket context, after the preflight ping. */
-export default async function AfterShellTool({ canonical, preflight }: AgentEventRouteProps<'tool/after'>) {
+/** Record cargo telemetry and render any finished-ticket context selected by the handler. */
+export default async function AfterShellTool({
+  canonical,
+  renderInput,
+}: AgentEventRouteProps<'tool/after'>) {
   const { host, nativeEvent } = canonical.provenance;
   const event = shellEventFrom(canonical.payload);
-  const announcement = finishedTicketsFromPreflight(preflight);
+  const announcement = finishedTicketsFromRenderInput(renderInput);
   const result = await handleAfterShell(
     announcement === undefined
       ? event
