@@ -339,6 +339,40 @@ describe('runExecClient', () => {
       expect(collected.stderr()).toContain('[cargo-hauler] WARNING: unsafe shared target');
     }));
 
+  it.live('keeps a non-TTY PATH shim in the foreground over the host cap (#223)', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedFixture(5);
+      mkdirSync(fixture.config.stateDir, { recursive: true });
+      const exit: ServerMessage = {
+        error: null,
+        exitCode: 101,
+        id: 'x',
+        runMs: 500,
+        signal: null,
+        status: 'failed',
+        ticket: 'cc-1',
+        type: 'exit',
+        waitMs: 1,
+      };
+      const daemon = yield* scriptedDaemon(fixture.config.socketPath, {
+        ack: { etaMs: 10 * 60_000, etaSource: 'ewma', waitEtaMs: 6 * 60_000 },
+        after: [{ id: 'x', ticket: 'cc-1', type: 'started', waitMs: 1 }, exit],
+      });
+      const collected = collectIo();
+      const result = yield* runExecClient({
+        argv: ['cargo', 'test'],
+        autoSpawn: false,
+        config: fixture.config,
+        cwd: fixture.ws1,
+        host: 'shim',
+        io: collected.io,
+        terminal: terminalOf({ stdout: 'pipe' }),
+      });
+      expect(result).toEqual({ exitCode: 101, mode: 'brokered', ticket: 'cc-1' });
+      expect(daemon.sent().map((message) => message.type)).toEqual(['exec']);
+      expect(collected.stderr()).not.toContain('exit 75');
+    }));
+
   it.live('auto-backgrounds on a measured estimate over the host cap and exits 75', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedFixture(5);

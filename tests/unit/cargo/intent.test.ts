@@ -525,6 +525,19 @@ describe('normalizeCargoIntent', () => {
     expect(alpha.key).not.toBe(unfiltered.key);
   });
 
+  it('separates identity when forwarded env differs, without changing the compile digest (#222)', () => {
+    const options = {
+      argv: ['cargo', 'test', '--lib', 'write_out', '--', '--ignored', '--exact'],
+      cwd: '/work/repo',
+      workspaceRoot: '/work/repo',
+    } as const;
+    const first = normalizeCargoIntent({ ...options, env: { OUT: '/tmp/a/out' } });
+    const second = normalizeCargoIntent({ ...options, env: { OUT: '/tmp/b/out' } });
+    expect(first.envDigest).toBe(second.envDigest);
+    expect(first.estimateKey).toBe(second.estimateKey);
+    expect(first.key).not.toBe(second.key);
+  });
+
   it('uses RUSTUP_TOOLCHAIN only when argv has no explicit toolchain', () => {
     const options = {
       cwd: '/work/repo',

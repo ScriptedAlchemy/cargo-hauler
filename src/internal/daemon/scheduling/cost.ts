@@ -565,12 +565,12 @@ export const createCostModel = (options: CreateCostModelOptions): CostModelWithP
       return Effect.succeed(null);
     }
     return SynchronizedRef.modifyEffect(ewma, (current) => {
-      const existing = current.get(intent.key);
+      const existing = current.get(intent.estimateKey);
       if (existing !== undefined && (existing.clean !== null || existing.edited !== null)) {
         return Effect.succeed([null, current] as const);
       }
       return seed({
-        excludeIntentKey: intent.key,
+        excludeIntentKey: intent.estimateKey,
         limit: ewmaSeedLimit,
         packageName,
         testTarget: target,
@@ -589,7 +589,7 @@ export const createCostModel = (options: CreateCostModelOptions): CostModelWithP
           }
           // Same-package `--test <name>` neighbor, not the crate-wide prior.
           const seeded: IntentEwma = { clean: value, edited: null };
-          return [seeded, lruTouch(current, intent.key, seeded)] as const;
+          return [seeded, lruTouch(current, intent.estimateKey, seeded)] as const;
         }),
       );
     });
@@ -674,13 +674,13 @@ export const createCostModel = (options: CreateCostModelOptions): CostModelWithP
           crateName,
           observationKey: crateObservationKey(crateName, intent.profile, commandClass),
         }));
-        lruSetMutable(intentContexts, intent.key, {
+        lruSetMutable(intentContexts, intent.estimateKey, {
           crateKeys: crates.map(({ observationKey }) => observationKey),
           parallelism,
         });
 
         const edited = estimateOptions.editedRecently === true;
-        let observed = yield* seededEwma(intent.key);
+        let observed = yield* seededEwma(intent.estimateKey);
         // A `--test <name>` intent with no rows of its own borrows a
         // same-package neighbor that selected that target. If none exists,
         // the crate-wide kache prior (or the subcommand default) is the
@@ -688,7 +688,7 @@ export const createCostModel = (options: CreateCostModelOptions): CostModelWithP
         if (observed.clean === null && observed.edited === null) {
           observed = (yield* seedNeighborIfEmpty(intent)) ?? observed;
         }
-        const phases = yield* seededPhaseEwma(intent.key);
+        const phases = yield* seededPhaseEwma(intent.estimateKey);
         const ownRunMs = observedRunMs(observed, edited);
         const ownCompileMs = observedRunMs(phases.compile, edited);
         const executeMs = phases.execute;

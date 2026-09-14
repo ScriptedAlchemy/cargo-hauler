@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'effect-rstest';
 
 import { buildTransportedEnv } from '../../../src/internal/client/env.js';
-import { digestCargoEnvironment } from '../../../src/internal/cargo/intent.js';
 import {
+  digestCargoEnvironment,
+  digestForwardedEnvironment,
+} from '../../../src/internal/cargo/intent.js';
+import {
+  isForwardedEnvironmentVariable,
   isHaulerInternalEnvironmentVariable,
   isRelevantCargoEnvironmentVariable,
 } from '../../../src/internal/cargo/env.js';
@@ -35,17 +39,27 @@ describe('cargo environment relevance', () => {
     expect(isRelevantCargoEnvironmentVariable('HOME')).toBe(false);
   });
 
-  it('forwards arbitrary caller variables without letting them into identity', () => {
-    // The broker cannot know which variables a build.rs or env!() reads, so
-    // it forwards all of them; identity stays on the cargo/rustc knobs so
-    // sessions differing only in shell noise still coalesce.
+  it('forwards arbitrary caller variables into identity, not the compile surface', () => {
+    // Compile coverage still keys on rustc/linker knobs; identity must
+    // follow every variable cargo will see, because a test or build.rs may
+    // read OUT / SCHEMA_OUT / FOO (#222).
     for (const name of ['FOO', 'TRACEDECAY_SKIP_DASHBOARD_BUILD', 'PATH', 'HOME', 'PWD']) {
       expect(isRelevantCargoEnvironmentVariable(name)).toBe(false);
+      expect(isForwardedEnvironmentVariable(name, 'x')).toBe(true);
     }
     const base = { RUSTFLAGS: '-Dwarnings' };
     expect(digestCargoEnvironment({ ...base, FOO: 'bar', PATH: '/usr/bin' })).toBe(
       digestCargoEnvironment(base),
     );
+    expect(digestForwardedEnvironment({ ...base, FOO: 'bar' })).not.toBe(
+      digestForwardedEnvironment(base),
+    );
+    expect(
+      digestForwardedEnvironment({
+        ...base,
+        CARGO_MAKEFLAGS: '-j --jobserver-auth=3,4',
+      }),
+    ).toBe(digestForwardedEnvironment(base));
   });
 
   it('keeps hauler-internal settings out of transport and identity', () => {
@@ -65,11 +79,10 @@ describe('cargo environment relevance', () => {
     );
   });
 
-  it('transports color-decision variables without letting them into identity', () => {
+  it('transports color-decision variables without changing the compile surface', () => {
     for (const name of ['CLICOLOR', 'CLICOLOR_FORCE', 'FORCE_COLOR', 'NO_COLOR', 'TERM']) {
       expect(isRelevantCargoEnvironmentVariable(name)).toBe(false);
     }
-    // Sessions differing only in color/terminal env must still coalesce.
     const base = { RUSTFLAGS: '-Dwarnings' };
     expect(
       digestCargoEnvironment({ ...base, NO_COLOR: '1', TERM: 'dumb' }),
@@ -77,5 +90,8 @@ describe('cargo environment relevance', () => {
     expect(
       digestCargoEnvironment(buildTransportedEnv({ ...base, FORCE_COLOR: '1', TERM: 'xterm-256color' })),
     ).toBe(digestCargoEnvironment(base));
+    expect(digestForwardedEnvironment({ ...base, NO_COLOR: '1' })).not.toBe(
+      digestForwardedEnvironment(base),
+    );
   });
 });

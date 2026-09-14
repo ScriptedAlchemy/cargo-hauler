@@ -58,9 +58,18 @@ describe('attachModeFor identity', () => {
   it('distinguishes intents that differ only in compilation environment', () => {
     const leader = intent(['check'], { env: { RUSTFLAGS: '-Dwarnings' } });
     expect(attachModeFor(leader, intent(['check']))).toBeNull();
-    // Non-compilation env vars do not fragment identity.
-    const noisy = intent(['check'], { env: { FAKE_SLEEP: '1' } });
-    expect(attachModeFor(intent(['check']), noisy)).toBe('identity');
+  });
+
+  it('does not identity-attach when forwarded env differs (#222)', () => {
+    const leader = intent(['test', '--lib'], { env: { OUT: '/tmp/a' } });
+    expect(attachModeFor(leader, intent(['test', '--lib'], { env: { OUT: '/tmp/b' } }))).toBeNull();
+    expect(attachModeFor(leader, intent(['test', '--lib'], { env: { OUT: '/tmp/a' } }))).toBe(
+      'identity',
+    );
+    // Compile-only coverage still attaches: a check does not observe OUT.
+    expect(attachModeFor(intent(['build']), intent(['check'], { env: { OUT: '/tmp/x' } }))).toBe(
+      'coverage',
+    );
   });
 });
 

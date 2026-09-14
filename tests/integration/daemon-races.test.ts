@@ -229,7 +229,7 @@ describe('kill while parked (#51)', () => {
           const successor = yield* submitTracked(broker, {
             argv: ['cargo', 'check', '-p', 'flaky-ledger'],
             cwd: fixture.ws1,
-            env: cargoEnv(fixture),
+            env: cargoEnv(fixture, { FAKE_SLEEP: '0.3' }),
           });
           expect(successor.submitted.attachedTo).toBeUndefined();
           const settled = yield* broker.awaitTicket(successor.submitted.ticket, 5_000);
@@ -524,7 +524,11 @@ describe('attachment registration races (#52)', () => {
           const follower = yield* submitTracked(broker, {
             argv: ['cargo', 'check', '-p', 'ticker'],
             cwd: fixture.ws1,
-            env: cargoEnv(fixture),
+            env: cargoEnv(fixture, {
+              FAKE_OUTPUT_COUNT: '40',
+              FAKE_OUTPUT_INTERVAL: '0.02',
+              FAKE_SLEEP: '0.3',
+            }),
           });
           expect(follower.submitted.attachedTo).toBe(leader.submitted.ticket);
           const exit = yield* Deferred.await(follower.exit).pipe(Effect.timeout('10 seconds'));
@@ -574,7 +578,7 @@ describe('attachment registration races (#52)', () => {
               {
                 argv: ['cargo', 'check', '-p', 'racer'],
                 cwd: fixture.ws1,
-                env: cargoEnv(fixture),
+                env: cargoEnv(fixture, { FAKE_SLEEP: '0.4' }),
               },
               { onExit: (info) => Effect.asVoid(Deferred.succeed(followerExited, info)) },
             ),
@@ -672,7 +676,7 @@ describe('attachment registration races (#52)', () => {
             {
               argv: ['cargo', 'test', '-p', 'merged'],
               cwd: fixture.ws1,
-              env: cargoEnv(fixture),
+              env: cargoEnv(fixture, { FAKE_SLEEP: '10' }),
             },
             { onStarted: () => Effect.die(new Error('queued follower must not start')) },
           );
@@ -681,7 +685,7 @@ describe('attachment registration races (#52)', () => {
           const alsoMerged = yield* submitTracked(broker, {
             argv: ['cargo', 'test', '-p', 'merged'],
             cwd: fixture.ws1,
-            env: cargoEnv(fixture),
+            env: cargoEnv(fixture, { FAKE_SLEEP: '10' }),
             mergeStderr: true,
           });
           expect(alsoMerged.submitted.attachedTo).toBe(merged.submitted.ticket);

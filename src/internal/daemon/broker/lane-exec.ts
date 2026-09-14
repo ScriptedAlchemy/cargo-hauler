@@ -802,7 +802,7 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
             job.buildFinishedAtMs === null ? undefined : job.buildFinishedAtMs - runStartedAtMs;
           const executeMs =
             job.buildFinishedAtMs === null ? undefined : finishedAtMs - job.buildFinishedAtMs;
-          yield* costModel.recordOutcome(job.intent.key, finishedAtMs - runStartedAtMs, {
+          yield* costModel.recordOutcome(job.intent.estimateKey, finishedAtMs - runStartedAtMs, {
             outcome: result.outcome,
             editedRecently: job.editedRecently,
             ...(compileMs === undefined ? {} : { compileMs }),
@@ -1231,7 +1231,7 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
         const leader = entry.kind === 'leader' ? entry.job : entry.leader;
         // Only a started run can overrun; a queued one needs no history lookup.
         const p90Ms =
-          leader.startedAtMs === null ? null : yield* costModel.intentP90Ms(leader.intent.key);
+          leader.startedAtMs === null ? null : yield* costModel.intentP90Ms(leader.intent.estimateKey);
         const estimates = estimateFieldsFor(leader, atMs, p90Ms);
         if (leader.startedAtMs !== null) {
           const quietMs = quietMsSinceOutput(leader.lastOutputAtMs, atMs);
@@ -1287,7 +1287,7 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
           aheadTickets.unshift(head.ticket);
           position += 1;
           const headP90Ms =
-            head.startedAtMs === null ? null : yield* costModel.intentP90Ms(head.intent.key);
+            head.startedAtMs === null ? null : yield* costModel.intentP90Ms(head.intent.estimateKey);
           waitEtaMs += waitContributionMs(head, atMs, headP90Ms);
           const headEstimates = estimateFieldsFor(head, atMs, headP90Ms);
           headFields = {

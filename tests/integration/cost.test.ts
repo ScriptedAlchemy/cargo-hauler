@@ -245,7 +245,7 @@ describe('createCostModel', () => {
         seedDurations: () => Effect.succeed([]),
       });
       const scoped = intent(['cargo', 'check', '-p', 'alpha']);
-      yield* model.recordOutcome(scoped.key, 20_000);
+      yield* model.recordOutcome(scoped.estimateKey, 20_000);
       const estimate = yield* model.estimate(scoped);
       expect(estimate.source).toBe('ewma');
       expect(estimate.estimateMs).toBe(20_000);
@@ -323,7 +323,7 @@ describe('createCostModel', () => {
       // A compile error 3 s in says nothing about how long `alpha` takes to
       // build once it compiles; only the retry of this exact intent should
       // stop being estimated cold (#37).
-      yield* model.recordOutcome(broken.key, 3_000, { outcome: 'failed' });
+      yield* model.recordOutcome(broken.estimateKey, 3_000, { outcome: 'failed' });
 
       const retry = yield* model.estimate(broken);
       expect(retry.source).toBe('ewma');
@@ -340,7 +340,7 @@ describe('createCostModel', () => {
       });
       const observed = intent(['cargo', 'check', '-p', 'alpha']);
       yield* model.estimate(observed);
-      yield* model.recordOutcome(observed.key, 20_000);
+      yield* model.recordOutcome(observed.estimateKey, 20_000);
 
       const sameClass = yield* model.estimate(
         intent(['cargo', 'clippy', '-p', 'alpha', '--all-features']),
@@ -426,7 +426,7 @@ describe('createCostModel', () => {
         seedDurations: () => Effect.succeed([]),
       });
       const scoped = intent(['cargo', 'check', '-p', 'alpha']);
-      yield* model.recordOutcome(scoped.key, 20_000);
+      yield* model.recordOutcome(scoped.estimateKey, 20_000);
       yield* model.estimate(scoped);
 
       const iterations = 1_000;
@@ -498,7 +498,7 @@ describe('createCostModel', () => {
       });
       const scoped = intent(['cargo', 'check', '-p', 'alpha']);
 
-      yield* model.recordOutcome(scoped.key, Number.POSITIVE_INFINITY);
+      yield* model.recordOutcome(scoped.estimateKey, Number.POSITIVE_INFINITY);
       const estimate = yield* model.estimate(scoped);
 
       expect(Number.isFinite(estimate.estimateMs)).toBe(true);
@@ -522,7 +522,7 @@ describe('createCostModel', () => {
 
       const estimateFiber = yield* Effect.forkChild(model.estimate(scoped));
       yield* Deferred.await(seedStarted);
-      const outcomeFiber = yield* Effect.forkChild(model.recordOutcome(scoped.key, 200));
+      const outcomeFiber = yield* Effect.forkChild(model.recordOutcome(scoped.estimateKey, 200));
       yield* Deferred.succeed(releaseSeed, undefined);
 
       const estimate = yield* Fiber.join(estimateFiber);
@@ -550,7 +550,7 @@ describe('createCostModel', () => {
       }
       yield* model.estimate(first);
 
-      expect(seedCalls.get(first.key)).toBe(2);
+      expect(seedCalls.get(first.estimateKey)).toBe(2);
     }));
 });
 
@@ -618,7 +618,7 @@ describe('edit-aware estimates', () => {
       });
       const scoped = intent(['cargo', 'test', '-p', 'alpha']);
       yield* model.estimate(scoped);
-      yield* model.recordOutcome(scoped.key, 5_000, { editedRecently: false });
+      yield* model.recordOutcome(scoped.estimateKey, 5_000, { editedRecently: false });
       const cached = yield* model.estimate(scoped, [], { editedRecently: false });
       const edited = yield* model.estimate(scoped, [], { editedRecently: true });
       expect(cached).toEqual({ estimateMs: 5_000, source: 'ewma' });
@@ -633,7 +633,7 @@ describe('edit-aware estimates', () => {
       });
       const scoped = intent(['cargo', 'test', '-p', 'alpha']);
       yield* model.estimate(scoped);
-      yield* model.recordOutcome(scoped.key, 5_000, { editedRecently: false });
+      yield* model.recordOutcome(scoped.estimateKey, 5_000, { editedRecently: false });
       const edited = yield* model.estimate(scoped, [], { editedRecently: true });
       expect(edited).toEqual({ estimateMs: 5_000, source: 'ewma' });
     }));
@@ -647,8 +647,8 @@ describe('edit-aware estimates', () => {
       });
       const scoped = intent(['cargo', 'test', '-p', 'alpha']);
       yield* model.estimate(scoped);
-      yield* model.recordOutcome(scoped.key, 5_000, { editedRecently: false });
-      yield* model.recordOutcome(scoped.key, 30_000, { editedRecently: true });
+      yield* model.recordOutcome(scoped.estimateKey, 5_000, { editedRecently: false });
+      yield* model.recordOutcome(scoped.estimateKey, 30_000, { editedRecently: true });
       // Edited history exists now, so the prior no longer floors it.
       expect(yield* model.estimate(scoped, [], { editedRecently: true })).toEqual({
         estimateMs: 30_000,
@@ -661,7 +661,7 @@ describe('edit-aware estimates', () => {
       // A mode without history borrows the other rather than a cold prior.
       const other = intent(['cargo', 'test', '-p', 'beta']);
       yield* model.estimate(other);
-      yield* model.recordOutcome(other.key, 40_000, { editedRecently: true });
+      yield* model.recordOutcome(other.estimateKey, 40_000, { editedRecently: true });
       expect(yield* model.estimate(other, [], { editedRecently: false })).toEqual({
         estimateMs: 40_000,
         source: 'ewma',
@@ -677,7 +677,7 @@ describe('edit-aware estimates', () => {
       });
       const scoped = intent(['cargo', 'test', '-p', 'alpha']);
       yield* model.estimate(scoped);
-      yield* model.recordOutcome(scoped.key, 20_000);
+      yield* model.recordOutcome(scoped.estimateKey, 20_000);
       expect(yield* model.estimate(scoped, [], { editedRecently: true })).toEqual({
         estimateMs: 20_000,
         source: 'ewma',
@@ -710,9 +710,9 @@ describe('edit-aware estimates', () => {
       const observed = intent(['cargo', 'check', '-p', 'alpha']);
       const sameClass = intent(['cargo', 'clippy', '-p', 'alpha', '--all-features']);
       yield* model.estimate(observed);
-      yield* model.recordOutcome(observed.key, 20_000, { editedRecently: false });
+      yield* model.recordOutcome(observed.estimateKey, 20_000, { editedRecently: false });
       expect(yield* model.estimate(sameClass)).toEqual({ estimateMs: 150_000, source: 'default' });
-      yield* model.recordOutcome(observed.key, 20_000, { editedRecently: true });
+      yield* model.recordOutcome(observed.estimateKey, 20_000, { editedRecently: true });
       expect(yield* model.estimate(sameClass)).toEqual({ estimateMs: 20_000, source: 'ewma' });
     }));
 });
@@ -726,7 +726,7 @@ describe('phase estimates', () => {
       });
       const scoped = intent(['cargo', 'test', '-p', 'alpha']);
       yield* model.estimate(scoped);
-      yield* model.recordOutcome(scoped.key, 80_000, {
+      yield* model.recordOutcome(scoped.estimateKey, 80_000, {
         compileMs: 20_000,
         editedRecently: false,
         executeMs: 60_000,
@@ -747,7 +747,7 @@ describe('phase estimates', () => {
       });
       const scoped = intent(['cargo', 'test', '-p', 'alpha']);
       yield* model.estimate(scoped);
-      yield* model.recordOutcome(scoped.key, 80_000, { editedRecently: false, executeMs: 60_000 });
+      yield* model.recordOutcome(scoped.estimateKey, 80_000, { editedRecently: false, executeMs: 60_000 });
       // Whole run less execute is the compile evidence — not the whole run,
       // which would count execution twice.
       expect(yield* model.estimate(scoped, [], { editedRecently: false })).toEqual({
@@ -766,7 +766,7 @@ describe('phase estimates', () => {
       });
       const scoped = intent(['cargo', 'test', '-p', 'alpha']);
       yield* model.estimate(scoped);
-      yield* model.recordOutcome(scoped.key, 12_000, { editedRecently: false });
+      yield* model.recordOutcome(scoped.estimateKey, 12_000, { editedRecently: false });
       expect(yield* model.estimate(scoped, [], { editedRecently: false })).toEqual({
         estimateMs: 12_000,
         source: 'ewma',
@@ -781,7 +781,7 @@ describe('phase estimates', () => {
       });
       const scoped = intent(['cargo', 'check', '-p', 'alpha']);
       yield* model.estimate(scoped);
-      yield* model.recordOutcome(scoped.key, 8_000, {
+      yield* model.recordOutcome(scoped.estimateKey, 8_000, {
         compileMs: 8_000,
         editedRecently: false,
         executeMs: 0,
@@ -801,7 +801,7 @@ describe('phase estimates', () => {
       });
       const scoped = intent(['cargo', 'test', '-p', 'alpha']);
       yield* model.estimate(scoped);
-      yield* model.recordOutcome(scoped.key, 50_000, {
+      yield* model.recordOutcome(scoped.estimateKey, 50_000, {
         compileMs: 5_000,
         editedRecently: false,
         executeMs: 45_000,

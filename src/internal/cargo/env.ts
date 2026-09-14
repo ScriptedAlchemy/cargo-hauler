@@ -10,8 +10,19 @@ const exactEnvironmentNames = new Set([
 
 const haulerPrefix = 'CARGO_HAULER_';
 
+const jobserverFlagNames = new Set(['CARGO_MAKEFLAGS', 'MAKEFLAGS', 'MFLAGS']);
+
 const targetToolPattern =
   /^(?:AR|CC|CFLAGS|CXX|CXXFLAGS|LDFLAGS)_[A-Za-z0-9_-]+$/u;
+
+/**
+ * A GNU make jobserver handed down through file descriptors
+ * (`--jobserver-auth=R,W`, or the pre-4.4 `--jobserver-fds=R,W`) names
+ * descriptors open in the caller, not in the daemon. Only the FIFO form
+ * (`--jobserver-auth=fifo:PATH`) is a path another process can open.
+ */
+const carriesDescriptorJobserver = (value: string): boolean =>
+  /--jobserver-fds=/u.test(value) || /--jobserver-auth=(?!fifo:)/u.test(value);
 
 /**
  * Daemon and hook settings. They configure the broker itself and never ride
@@ -22,11 +33,19 @@ export const isHaulerInternalEnvironmentVariable = (name: string): boolean =>
   name.startsWith(haulerPrefix);
 
 /**
- * The variables that participate in request identity (coalescing). Two
- * requests that differ only outside this set share a leader, so the set is
- * deliberately the cargo/rustc/linker knobs that change build output for
- * every crate, not the open-ended space of variables a `build.rs` or
- * `env!()` may read.
+ * Variables the daemon-spawned cargo actually sees: everything except
+ * hauler-internal settings and make jobserver flags that name the caller's
+ * file descriptors (those would skip the daemon's shared FIFO).
+ */
+export const isForwardedEnvironmentVariable = (name: string, value: string): boolean =>
+  !isHaulerInternalEnvironmentVariable(name) &&
+  !(jobserverFlagNames.has(name) && carriesDescriptorJobserver(value));
+
+/**
+ * The variables that participate in the *compile surface* (coverage, target
+ * dir, toolchain). Request *identity* additionally hashes the full forwarded
+ * environment: a `build.rs` or test may read `OUT`, `SCHEMA_OUT`, and friends
+ * (#222).
  */
 export const isRelevantCargoEnvironmentVariable = (name: string): boolean =>
   !isHaulerInternalEnvironmentVariable(name) &&

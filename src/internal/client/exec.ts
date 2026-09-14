@@ -14,7 +14,7 @@ import * as Schedule from 'effect/Schedule';
 import type { Scope } from 'effect/Scope';
 
 import { executeCargo } from '../cargo/execution/executor.js';
-import { resolveDaemonConfig } from '../daemon/config.js';
+import { isEnabledFlag, resolveDaemonConfig } from '../daemon/config.js';
 import type { DaemonConfigShape } from '../daemon/config.js';
 import {
   ConnectionClosedError,
@@ -74,8 +74,9 @@ export interface RunExecOptions {
   /**
    * The process's terminal as the generated executable envelope probed it
    * (agent-bundle#511, `main(argv, { terminal })`) — the client probes
-   * nothing itself. `stdout.kind` decides whether an auto-background notice
-   * must say where a redirected stdout's output went; `sharesTarget` (fd 1
+   * nothing itself. `stdout.kind` decides whether a PATH shim may
+   * auto-background (#223) and whether an auto-background notice must say
+   * where a redirected stdout's output went; `sharesTarget` (fd 1)
    * and fd 2 name one open file: `2>&1`, `| tee`, a shared terminal) asks the
    * daemon for one merged pipe so write order survives as it would under
    * direct cargo; each channel's `color` decides whether cargo's captured
@@ -409,7 +410,11 @@ const handleServerMessage = (
         const autoBackground =
           options.background !== true &&
           totalEtaMs !== undefined &&
-          shouldAutoBackground(totalEtaMs, capHost, message.etaSource ?? 'default');
+          shouldAutoBackground(totalEtaMs, capHost, message.etaSource ?? 'default', {
+            requestHost: options.host,
+            shimBackground: isEnabledFlag(process.env.CARGO_HAULER_SHIM_BACKGROUND),
+            stdoutIsTty: options.stdoutIsTty,
+          });
         if (options.background === true || autoBackground) {
           options.io.writeStderr(
             formatProgressLine({
