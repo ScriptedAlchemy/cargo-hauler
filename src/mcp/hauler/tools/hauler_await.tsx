@@ -12,6 +12,15 @@ export const config = {
   annotations: { readOnlyHint: true },
   description:
     'Long-poll a cargo-hauler ticket until it finishes or the wait expires (maxWaitMs default 30000, ceiling 7200000 — the daemon\'s 2 h await ceiling; call again to keep waiting; a host with its own per-call deadline, such as Codex\'s tool_timeout_sec, still bounds one call). The document streams: the live ticket card first, then the settled result; progress notifications carry queue position, elapsed time, and the cost estimate while waiting.',
+  inputJsonSchema: {
+    additionalProperties: false,
+    properties: {
+      maxWaitMs: { type: 'number' },
+      ticket: { type: 'string' },
+    },
+    required: ['ticket'],
+    type: 'object',
+  },
   // The daemon's 2 h await ceiling (`awaitCeilingMs`) plus a minute for the
   // snapshot fetch before the wait and the socket round trip after it — a
   // literal, as route config is read statically; `tests/unit/contracts/await-budget.test.ts`
@@ -25,7 +34,7 @@ export const resultSchema = awaitResultSchema;
 
 export default async function HaulerAwait({ input, signal }: ToolRouteProps<typeof inputSchema>) {
   const context = await agent();
-  const daemonConfig = requestDaemonConfig(context);
+  const daemonConfig = await requestDaemonConfig(context);
   const maxWaitMs = input.maxWaitMs ?? defaultAwaitMs;
   const startedAt = Date.now();
   // The shell frame: the ticket as it is right now, before the wait blocks.

@@ -79,7 +79,7 @@ describe('session/start daemon notice', () => {
  * routes' decisions — `allow` for a rewritten cargo command, `continue` plus
  * `updatedInput` beside an ungoverned segment, plain `continue` for
  * everything else, never `ask` — are proven in `tests/unit/host-hooks/hooks.test.ts` against
- * the handler, `tests/integration/event-preflight.test.ts` against the gate, and
+ * the handler, `tests/integration/event-handler.test.ts` against the gate, and
  * `tests/integration/hooks-simulate.test.ts` against the compiled entries. The stop route
  * stays here: it makes no decision without a daemon hold.
  */

@@ -1,27 +1,14 @@
 import { Agent, agent } from '@agent-bundle/runtime';
-import type { AgentEventRouteConfig, AgentEventRouteProps } from 'agent-bundle';
+import type { AgentEventRouteProps } from 'agent-bundle';
 import React from 'react';
 
 import { handleBeforeShell } from '../../internal/host-hooks/before-shell.js';
 import { haulerArgvForRoot } from '../../internal/platform/hauler-binding.js';
 import { decisionValue, shellEventFrom } from '../../internal/host-hooks/event-support.js';
 
-export const config = {
-  requires: ['events.toolBefore.deny'],
-  // The route reads the daemon itself (`probeActiveBuilds`); no provider probe.
-  providers: [],
-  runtime: 'standalone',
-  timeoutMs: 10_000,
-  tools: ['shell'],
-} satisfies AgentEventRouteConfig;
-
-export { default as preflight } from './before.preflight.js';
-
 /**
- * The rewrite onto `hauler exec`, the `cargo clean` guard, and the telemetry
- * record, for the commands the preflight let through. `allow` approves a
- * fully brokered rewrite so the host never prompts for it; a rewrite beside
- * an ungoverned segment is `continue` + `updatedInput`, decided by the host.
+ * Rewrite cargo onto `hauler exec`, guard `cargo clean`, and record telemetry
+ * after the cheap handler selects this view.
  */
 export default async function BeforeShellTool({ canonical, signal }: AgentEventRouteProps<'tool/before'>) {
   const { host, nativeEvent } = canonical.provenance;

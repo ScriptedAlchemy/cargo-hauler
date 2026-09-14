@@ -9,7 +9,6 @@ import { decisionValue } from '../internal/host-hooks/event-support.js';
 // the shared MCP runtime. Budget mirrors the former 900 s stop hook.
 export const config = {
   requires: ['events.stop.deny'],
-  providers: [],
   runtime: 'standalone',
   timeoutMs: 900_000,
 } satisfies AgentEventRouteConfig;

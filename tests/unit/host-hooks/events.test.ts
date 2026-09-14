@@ -4,7 +4,12 @@ import { join } from 'node:path';
 
 import { Agent } from '@agent-bundle/runtime';
 import { afterEach, beforeEach, describe, expect, it } from 'effect-rstest';
-import type { AgentBundleConfig, AgentEventRouteProps, CanonicalAgentEvent } from 'agent-bundle';
+import type {
+  AgentBundleConfig,
+  AgentEventRouteConfig,
+  AgentEventRouteProps,
+  CanonicalAgentEvent,
+} from 'agent-bundle';
 import { createEventRouteInput } from 'agent-bundle/test';
 import { isValidElement, type ReactElement, type ReactNode } from 'react';
 
@@ -92,43 +97,48 @@ describe('agent event routes', () => {
       import('../../../src/events/session/start.js'),
     ]);
     expect(stop.config).toEqual({
-      providers: [],
       requires: ['events.stop.deny'],
       runtime: 'standalone',
       timeoutMs: 900_000,
     });
     expect(sessionStart.config).toEqual({
-      providers: [],
       requires: ['events.sessionStart.context'],
       runtime: 'standalone',
       timeoutMs: 5_000,
     });
   });
 
-  it('routes the shell tool hooks with preflight gates and no provider', async () => {
+  it('routes the shell tool hooks through cheap handlers and rendered views', async () => {
     // tool/before and tool/after are the two hooks every shell call pays for:
-    // their preflight decides on the raw command before the route loads (#90),
-    // and neither mounts the daemon-config provider.
+    // their handler decides on the raw command before the view loads (#90).
     const [before, after] = await Promise.all([
       import('../../../src/events/tool/before.js'),
       import('../../../src/events/tool/after.js'),
     ]);
-    expect(before.config).toEqual({
-      providers: [],
+    const beforeDefinition = before.default as typeof before.default & {
+      readonly config: AgentEventRouteConfig;
+      readonly event: string;
+    };
+    const afterDefinition = after.default as typeof after.default & {
+      readonly config: AgentEventRouteConfig;
+      readonly event: string;
+    };
+    expect(beforeDefinition.config).toEqual({
       requires: ['events.toolBefore.deny'],
       runtime: 'standalone',
       timeoutMs: 10_000,
       tools: ['shell'],
     });
-    expect(after.config).toEqual({
-      providers: [],
+    expect(afterDefinition.config).toEqual({
       requires: ['events.toolAfter.context'],
       runtime: 'standalone',
       timeoutMs: 10_000,
       tools: ['shell'],
     });
-    expect(typeof before.preflight).toBe('function');
-    expect(typeof after.preflight).toBe('function');
+    expect(beforeDefinition.event).toBe('tool/before');
+    expect(afterDefinition.event).toBe('tool/after');
+    expect('preflight' in before).toBe(false);
+    expect('preflight' in after).toBe(false);
     expect((bundleConfig as AgentBundleConfig).hooks).toBeUndefined();
   });
 

@@ -12,8 +12,8 @@ import { defineConfig } from 'agent-bundle/config';
  *   projection (positionals, flag names, `mapInput`);
  *   `src/mcp/hauler/apps/dashboard.tsx` → its MCP App.
  * - `src/events/**` → the event routes: session/start, stop, and the shell
- *   `tool/before` / `tool/after` routes, each with a `*.preflight.ts` gate
- *   that answers for a non-cargo command before the rendering runtime loads.
+ *   `tool/before` / `tool/after` handlers, each with a sibling `.view.tsx`
+ *   module loaded only when the cheap handler selects it.
  * - `src/cli/**` → the CLI-only commands (`daemon`) of the generated
  *   `cargo-hauler` routed CLI (package bin and `bin/cargo-hauler.mjs` in the
  *   artifact).

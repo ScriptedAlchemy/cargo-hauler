@@ -129,7 +129,7 @@ const requestOnce = (
 
 /**
  * One-shot hook read with the same protocol gate as the Effect client.
- * Hook preflights stay dependency-free on Effect and never turn a read into
+ * Cheap hook handlers stay dependency-free on Effect and never turn a read into
  * daemon replacement.
  */
 export const requestOutcome = async (

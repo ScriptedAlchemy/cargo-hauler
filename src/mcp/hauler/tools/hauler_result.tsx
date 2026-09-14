@@ -12,6 +12,15 @@ export const config = {
   annotations: { readOnlyHint: true },
   description:
     'Fetch one cargo-hauler ticket. Running tickets include a live output-tail snapshot; terminal tickets include the durable ledger result and the path of the full output log. Pass full: true to read that whole log (every test failure and panic section) instead of re-running the command.',
+  inputJsonSchema: {
+    additionalProperties: false,
+    properties: {
+      full: { type: 'boolean' },
+      ticket: { type: 'string' },
+    },
+    required: ['ticket'],
+    type: 'object',
+  },
   title: 'Hauler ticket result',
 } satisfies ToolConfig;
 
@@ -20,7 +29,7 @@ export const resultSchema = resultFetchResultSchema;
 
 export default async function HaulerResult({ input, signal }: ToolRouteProps<typeof inputSchema>) {
   const context = await agent();
-  const view = await fetchTicketResultView(input, { config: requestDaemonConfig(context), signal });
+  const view = await fetchTicketResultView(input, { config: await requestDaemonConfig(context), signal });
   return (
     <ResultDocument names={surfaceNames(context)} nowMs={Date.now()} output={view.output} result={view.result} />
   );

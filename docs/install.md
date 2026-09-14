@@ -38,8 +38,8 @@ pnpm run build   # or `pnpm run check` to also run the typecheck and test gate
 
 The root ships `mcp/` (the `hauler` MCP server), `hooks/` (one hook document
 per host and the four event routes — `session/start`, `stop`, and the
-`tool/before` / `tool/after` shell routes, whose preflight gates decide on the
-raw command before the route itself loads), `skills/`, `scripts/hauler.mjs`
+`tool/before` / `tool/after` shell routes, whose cheap handlers decide on the
+raw command before their rendered views load), `skills/`, `scripts/hauler.mjs`
 (the internal `exec` / `daemon run` entry used by hooks), `bin/cargo-hauler.mjs`
 (the routed CLI: `status`, `log`, `last`, `await`, `result`, `request`, `kill`,
 `daemon`, and `web`, which serves the dashboard App in a browser),

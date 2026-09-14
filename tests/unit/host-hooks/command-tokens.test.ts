@@ -52,7 +52,7 @@ describe('commandMentionsHauler', () => {
 });
 
 /**
- * The output-side test the `tool/after` preflight applies: cargo's status
+ * The output-side test the `tool/after` handler applies: cargo's status
  * lines in the output of a command that never named cargo mean a wrapper
  * script, alias, or shell variable ran it past the hook and the PATH shim. A
  * command that shows a file (a saved cargo log) is not a run.

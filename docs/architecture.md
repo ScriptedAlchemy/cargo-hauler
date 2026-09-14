@@ -14,13 +14,13 @@ Agent Bundle discovers entrypoints by convention (see the comment in
 | `layout.tsx` | the shell around every rendered route |
 | `mcp/hauler/tools/*.tsx`, `*.cli.ts` | the `hauler` MCP server's tools and their `hauler <command>` projections |
 | `mcp/hauler/apps/dashboard.tsx`, `dashboard.html` | the MCP App (`ui://cargo-hauler/dashboard.html`) |
-| `events/session/start.tsx`, `events/stop.tsx`, `events/tool/{before,after}.tsx` + `*.preflight.ts` | hook routes; the preflights run before the rendering runtime loads |
+| `events/session/start.tsx`, `events/stop.tsx`, `events/tool/{before,after}.ts` + `*.view.tsx` | hook routes; the cheap handlers select rendered views with `context.render` |
 | `cli/daemon.ts` | the plain `cargo-hauler daemon` command |
 | `providers/hauler-daemon.ts` | request-scoped daemon configuration |
 | `scripts/hauler.ts` | the `hauler` process entry (`scripts/hauler.mjs` in the artifact, the `hauler` npm bin) |
 | `cargo-hauler-install.ts` | the `cargo-hauler-install` npm bin |
 | `skills/*` | skills |
-| `constants.ts` | static metadata literals routes read at config time |
+| `constants.ts` | shared runtime literals used by rendered documents and skills |
 
 Everything else is ordinary imported code under `src/internal/<owner>/`.
 `internal/` is a namespace, not a layer: a route imports
@@ -37,7 +37,7 @@ repository chain and none should be added.
 | `internal/storage/` | the SQLite ledger and per-ticket output logs. Writable opening with migration is the daemon's; `openLedgerDatabaseReadOnly` (with its recovery fallback) is what a stopped-daemon status read uses | broker, UI |
 | `internal/client/` | everything that talks to the socket from outside the daemon: `control.ts` (one-shot requests, ping), `tickets.ts` (submit/await/fetch/kill), `ensure-daemon.ts` (spawn or replace), `shutdown.ts`, and the streaming foreground run in `exec.ts` | broker internals |
 | `internal/operations/` | what the routes call: `tickets.ts`, `status.ts` (live report or ledger snapshot), `inspection.ts` (`last`, `log`, `status` results), `daemon-health.ts`, attribution, output loading | React |
-| `internal/host-hooks/` | the shell and session hook handlers (`before-shell.ts`, `after-shell.ts`, `stop-hold.ts`), the preflight-safe token test (`tokens.ts`, `tool-input.ts`), the small native-socket RPC client (`rpc.ts`, `session-ping.ts`), hook state and records | React, Effect (see below) |
+| `internal/host-hooks/` | the shell and session hook handlers (`before-shell.ts`, `after-shell.ts`, `stop-hold.ts`), the cheap event-handler token test (`tokens.ts`, `tool-input.ts`), the small native-socket RPC client (`rpc.ts`, `session-ping.ts`), hook state and records | React, Effect (see below) |
 | `internal/integrations/kache/` | kache index status, store pressure readers, and the pressure presentation model | daemon runtime |
 | `internal/platform/` | machine facts: state and socket paths, the 0700/0600 private-file policy, socket errno walking, NDJSON line buffering, `hauler-binding.ts` (where the `hauler` executable is) | anything above it |
 | `internal/shim/` | the PATH shim installer and entry classification | daemon |
@@ -78,11 +78,12 @@ twice.
 
 Foreground, from a shell hook:
 
-1. `events/tool/before.preflight.ts` reads the raw command with
+1. `events/tool/before.ts` reads the raw command with
    `host-hooks/tool-input.ts` and `host-hooks/tokens.ts`; a command that
    names neither `cargo` nor `hauler` gets `continue` before anything else
    loads.
-2. `events/tool/before.tsx` calls `host-hooks/before-shell.ts`.
+2. `events/tool/before.view.tsx` calls `host-hooks/before-shell.ts` after the
+   handler selects it with `context.render`.
    `host-hooks/inspect.ts` parses the shell line (bashjsast) and
    `cargo/intent.ts` parses the cargo argv; `host-hooks/probe.ts` pings the
    daemon through `host-hooks/rpc.ts` for the `cargo clean` guard; the
@@ -153,12 +154,13 @@ The dashboard App (`mcp/hauler/apps/dashboard.tsx`) polls the same
 
 `tool/before` is Walkthrough 1 steps 1–2. `tool/after`:
 
-1. `events/tool/after.preflight.ts` reads the command and its output
+1. `events/tool/after.ts` reads the command and its output
    (`host-hooks/tool-input.ts`), and — once per call — pings the daemon for
    finished tickets with `host-hooks/session-ping.ts` over the native
    socket client in `host-hooks/rpc.ts`, using the cursor from
    `host-hooks/hook-state.ts`. Nothing here imports React or Effect.
-2. `events/tool/after.tsx` calls `host-hooks/after-shell.ts`: it records the
+2. `events/tool/after.view.tsx` receives the handler's `renderInput` and calls
+   `host-hooks/after-shell.ts`: it records the
    cargo command (`host-hooks/record.ts`), injects finished background
    tickets as context (`host-hooks/finished-ticket.ts`,
    `host-hooks/shared.ts` for the wording), advances the cursor, and flags
@@ -173,18 +175,22 @@ commands or paths.
 
 ## Boundaries the layout must keep
 
-- **Preflights stay light.** `events/tool/*.preflight.ts` and everything
+- **Event handlers stay light.** `events/tool/{before,after}.ts` and everything
   they reach (`host-hooks/tokens.ts`, `tool-input.ts`, `session-ping.ts`,
   `rpc.ts`, `hook-state.ts`, `platform/*`, `util/*`) must not import React,
   Effect, or server-only modules. No `index.ts` barrels under `internal/`
-  that could pull them in. `tests/integration/event-preflight.test.ts` and
-  `tests/integration/hooks-simulate.test.ts` prove the compiled entries.
+  that could pull them in. `tests/integration/event-handler.test.ts` and
+  `tests/unit/boundaries.test.ts` prove that source closure;
+  `tests/integration/hooks-simulate.test.ts` proves the compiled handlers
+  remain bounded and exclude React and the Flight worker. Agent Bundle's lazy
+  provider registry is bundled into the wrapper but is not resolved by these
+  handlers.
 - **Two renderers.** `ui/documents/` renders for agents (JSX, server side);
   `ui/dashboard/` and `mcp/hauler/apps/dashboard.tsx` render in a browser.
   They share `ui/shared/` and `integrations/kache/pressure-model.ts` only.
-- **Route metadata is static.** Tool configs, the dashboard's
-  `template: './dashboard.html'`, and `constants.ts` stay literal in the
-  entrypoints; the implementation they mount moves, the metadata does not.
+- **Route metadata is static.** Tool configs and the dashboard's
+  `resourceUri` / `template` stay literal in their entrypoints; the
+  implementation they mount moves, the metadata does not.
 - **Executable location is path-sensitive.** `scripts/hauler.ts` resolves
   its sibling routed CLI relative to `import.meta.url`;
   `client/ensure-daemon.ts` resolves the daemon entry from the bundled
@@ -199,7 +205,7 @@ commands or paths.
 
 `tests/unit/boundaries.test.ts` checks the cheap half of this on value
 imports: contracts import nothing below them, browser-side code imports no
-`node:` or daemon/storage/client code, and the preflight closure reaches no
+`node:` or daemon/storage/client code, and the cheap event-handler closure reaches no
 React, Effect, daemon, storage, client, or document module.
 
 ## Known seams still to extract
