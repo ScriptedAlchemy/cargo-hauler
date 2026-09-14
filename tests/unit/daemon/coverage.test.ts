@@ -66,10 +66,20 @@ describe('attachModeFor identity', () => {
     expect(attachModeFor(leader, intent(['test', '--lib'], { env: { OUT: '/tmp/a' } }))).toBe(
       'identity',
     );
-    // Compile-only coverage still attaches: a check does not observe OUT.
-    expect(attachModeFor(intent(['build']), intent(['check'], { env: { OUT: '/tmp/x' } }))).toBe(
-      'coverage',
-    );
+  });
+
+  it('refuses coverage and keeps identity when forwarded env differs (#222)', () => {
+    // A check riding a build must not inherit another caller's SCHEMA_OUT.
+    expect(attachModeFor(intent(['build']), intent(['check'], { env: { OUT: '/tmp/x' } }))).toBeNull();
+    expect(
+      attachModeFor(
+        intent(['build'], { env: { OUT: '/tmp/x' } }),
+        intent(['check'], { env: { OUT: '/tmp/x' } }),
+      ),
+    ).toBe('coverage');
+    expect(
+      attachModeFor(intent(['check'], { env: { FOO: '1' } }), intent(['check'], { env: { FOO: '2' } })),
+    ).toBeNull();
   });
 });
 

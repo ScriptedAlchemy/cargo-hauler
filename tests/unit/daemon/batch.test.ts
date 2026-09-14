@@ -16,15 +16,34 @@ import {
 } from '../../../src/internal/daemon/scheduling/batch.js';
 import { normalizeCargoIntent } from '../../../src/internal/cargo/intent.js';
 
-const intent = (argv: readonly string[], cwd = '/tmp/ws') =>
+const intent = (
+  argv: readonly string[],
+  overrides: { readonly cwd?: string; readonly env?: Readonly<Record<string, string>> } = {},
+) =>
   normalizeCargoIntent({
     argv,
-    cwd,
-    env: {},
-    workspaceRoot: cwd,
+    cwd: overrides.cwd ?? '/tmp/ws',
+    env: overrides.env ?? {},
+    workspaceRoot: overrides.cwd ?? '/tmp/ws',
   });
 
 describe('batchCompatible', () => {
+  it('refuses to fold when forwarded environment differs (#222)', () => {
+    expect(
+      batchCompatible(
+        intent(['cargo', 'check', '-p', 'alpha'], { env: { OUT: '/tmp/a' } }),
+        intent(['cargo', 'check', '-p', 'beta'], { env: { OUT: '/tmp/b' } }),
+      ),
+    ).toBe(false);
+    expect(
+      batchCompatibleFor(
+        'test',
+        intent(['cargo', 'test', '-p', 'alpha', '--lib'], { env: { SCHEMA_OUT: '/a' } }),
+        intent(['cargo', 'test', '-p', 'beta', '--lib'], { env: { SCHEMA_OUT: '/b' } }),
+      ),
+    ).toBe(false);
+  });
+
   it('merges scoped check/build/clippy intents that share a compile surface', () => {
     expect(
       batchCompatible(

@@ -119,14 +119,10 @@ const withoutRunPhaseArguments = (arguments_: readonly string[]): readonly strin
   arguments_.filter((argument) => !runPhaseArguments.has(argument));
 
 /**
- * The compile surface that must match EXACTLY for coverage: any difference
- * in feature resolution, profile, toolchain, target triple, or compilation
- * environment produces different artifacts and different diagnostics.
- */
-/**
- * The compile surface as one comparable string: exactly the fields
- * `sameCompileSurface` compares, so two intents share a key if and only if
- * they share a surface. The lane scheduler keys its surface affinity on it.
+ * Affinity key for the lane scheduler: rustc/linker knobs and feature
+ * resolution. Omits the forwarded environment so an `OUT=` path does not
+ * break cache-warm affinity; sharing still requires that via
+ * `sameCompileSurface`.
  */
 export const compileSurfaceKey = (intent: NormalizedCargoIntent): string =>
   JSON.stringify([
@@ -142,12 +138,18 @@ export const compileSurfaceKey = (intent: NormalizedCargoIntent): string =>
     intent.manifestPath ?? '',
   ]);
 
+/**
+ * Whether two intents may share a leader (coverage attach or batch/fold):
+ * the compile surface plus every forwarded variable cargo will see. A
+ * build.rs or test reading `OUT` / `SCHEMA_OUT` must not inherit another
+ * caller's result (#222).
+ */
 export const sameCompileSurface = (
   left: NormalizedCargoIntent,
   right: NormalizedCargoIntent,
 ): boolean => compileSurfaceDifference(left, right) === null;
 
-/** The first compile-surface field that differs, for the rejection detail; null when equal. */
+/** The first shareable-surface field that differs, for the rejection detail; null when equal. */
 const compileSurfaceDifference = (
   left: NormalizedCargoIntent,
   right: NormalizedCargoIntent,
@@ -163,6 +165,9 @@ const compileSurfaceDifference = (
   }
   if (left.envDigest !== right.envDigest) {
     return 'compilation environment';
+  }
+  if (left.forwardedEnvDigest !== right.forwardedEnvDigest) {
+    return 'forwarded environment';
   }
   if (left.profile !== right.profile) {
     return 'profile';

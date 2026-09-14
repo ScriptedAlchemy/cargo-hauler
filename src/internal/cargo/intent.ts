@@ -58,9 +58,16 @@ export type NormalizedCargoIntent = Omit<ParsedCargoArgv, 'manifestPath' | 'targ
   readonly envDigest: string;
   /**
    * Duration history / EWMA key: the compile surface and modeled argv, not
-   * one-off forwarded variables. An `OUT=` path must not cold-start estimates.
+   * one-off forwarded variables. An `OUT=` path must not cold-start estimates,
+   * whether it arrived as process env or via `env OUT=… cargo …`.
    */
   readonly estimateKey: string;
+  /**
+   * Digest of every variable cargo will see (post `env` prefix / shell
+   * assignments). Identity, coverage, and batch/fold refuse to share when
+   * this differs (#222).
+   */
+  readonly forwardedEnvDigest: string;
   /** Identity for attach: includes the forwarded environment (#222). */
   readonly key: string;
   readonly manifestPath: string | null;
@@ -719,12 +726,14 @@ export const normalizeCargoIntent = (
   const targetTriple = parsed.targetTriple ?? env.CARGO_BUILD_TARGET ?? null;
   const envDigest = digestCargoEnvironment(env);
   const forwardedEnvDigest = digestForwardedEnvironment(env);
+  // Estimate history keys on the effective compile surface only. Prefix
+  // assignments (`env OUT=…`) are already folded into envDigest /
+  // forwardedEnvDigest; keeping the raw edit lists here cold-started EWMA
+  // for one-off output paths (#222 review).
   const estimateSurface = {
     allFeatures: parsed.allFeatures,
     cwd,
-    envAssignments: parsed.envAssignments,
     envDigest,
-    envUnset: parsed.envUnset,
     excludes: parsed.excludes,
     features: parsed.features,
     filterExpressions: parsed.filterExpressions,
@@ -751,6 +760,7 @@ export const normalizeCargoIntent = (
     cwd,
     envDigest,
     estimateKey,
+    forwardedEnvDigest,
     key: sha256(
       `cargo-hauler-intent-v2\0${JSON.stringify({ ...estimateSurface, forwardedEnvDigest })}`,
     ),
