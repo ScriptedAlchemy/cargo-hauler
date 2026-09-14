@@ -63,7 +63,10 @@ exit "\$FAKE_EXIT"
 
 /**
  * Rewrite harness-only `FAKE_*` knobs to `CARGO_HAULER_TEST_FAKE_*` so they
- * ride to the fake cargo without fragmenting identity, coverage, or fold.
+ * ride to the fake cargo without fragmenting identity, coverage, or fold
+ * (digests strip `CARGO_HAULER_*`). Socket/`runExecClient` tests pass env
+ * verbatim; the packed PATH shim goes through `buildTransportedEnv` and
+ * must keep raw `FAKE_*` instead.
  */
 export const withFakeCargoKnobs = (
   env: Readonly<Record<string, string>>,

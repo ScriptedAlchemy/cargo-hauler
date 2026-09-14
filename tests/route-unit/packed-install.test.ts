@@ -282,10 +282,11 @@ describe('packed install', () => {
           const hauler = join(pluginRoot, 'bin', 'hauler.js');
           const env = {
             ...(process.env as Record<string, string>),
-            ...fakeCargoEnv(fixture, {
-              FAKE_EXIT: '17',
-              FAKE_RELEASE_FILE: releaseFile,
-            }),
+            // Keep FAKE_* unprefixed: the packed shim goes through
+            // buildTransportedEnv, which strips every CARGO_HAULER_* name.
+            ...fakeCargoEnv(fixture),
+            FAKE_EXIT: '17',
+            FAKE_RELEASE_FILE: releaseFile,
             CARGO_HAULER_STATE_DIR: fixture.config.stateDir,
           };
           const installed = spawnSync(
