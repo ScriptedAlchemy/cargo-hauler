@@ -21,6 +21,7 @@ export const config = {
   annotations: { readOnlyHint: true },
   description:
     'Open the live cargo-hauler dashboard (an MCP App) beside the conversation: contention and admission, lanes, in-flight and queued work, metrics windows, kache, and per-ticket live output. Returns one summary line, not the status text; call hauler_status for the queue as Markdown.',
+  inputJsonSchema: { type: 'object', additionalProperties: false, properties: { limit: { type: 'number' } } },
   title: 'Hauler dashboard',
 } satisfies ToolConfig;
 
