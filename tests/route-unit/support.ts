@@ -6,6 +6,7 @@ import type { AgentDocument, JsonValue } from '@agent-bundle/runtime';
 
 import type { DaemonConfigShape } from '../../src/internal/daemon/config.js';
 import type { HaulerDaemonContext } from '../../src/providers/hauler-daemon.js';
+import { withFakeCargoKnobs } from '../support/harness.js';
 
 /**
  * Route-unit support: isolate the daemon state directory per test so the
@@ -53,7 +54,12 @@ export const withDaemon = (config: DaemonConfigShape) => ({
 export const documentMetadata = (document: AgentDocument): JsonValue | undefined =>
   document.root.kind === 'result' ? document.root.metadata : undefined;
 
-export const fakeCargoEnv = (binDir: string): Record<string, string> => ({
-  CARGO_HAULER_CARGO_BIN: join(binDir, 'cargo'),
-  PATH: `${binDir}:${process.env.PATH ?? ''}`,
-});
+export const fakeCargoEnv = (
+  binDir: string,
+  extra: Readonly<Record<string, string>> = {},
+): Record<string, string> =>
+  withFakeCargoKnobs({
+    CARGO_HAULER_CARGO_BIN: join(binDir, 'cargo'),
+    PATH: `${binDir}:${process.env.PATH ?? ''}`,
+    ...extra,
+  });

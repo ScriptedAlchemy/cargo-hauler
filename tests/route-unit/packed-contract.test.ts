@@ -16,7 +16,7 @@ import * as Schedule from 'effect/Schedule';
 import { fetchTicket } from '../../src/internal/client/tickets.js';
 import { requestOverSocket } from '../../src/internal/client/control.js';
 import type { RequestRecord } from '../../src/internal/contracts/protocol.js';
-import { type Fixture, scopedDaemon } from '../support/harness.js';
+import { type Fixture, scopedDaemon, withFakeCargoKnobs } from '../support/harness.js';
 
 /**
  * Packed-stdio proof: the built `artifact/` MCP entry runs as a separate
@@ -81,7 +81,7 @@ const submitJob = (
         env: {
           CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
           PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-          ...extraEnv,
+          ...withFakeCargoKnobs(extraEnv),
         },
         host: 'packed-contract',
         id: `packed-contract-${id}`,

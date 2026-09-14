@@ -1,5 +1,3 @@
-import { join } from 'node:path';
-
 import { describe, expect, it } from 'effect-rstest';
 import * as Deferred from 'effect/Deferred';
 import * as Effect from 'effect/Effect';
@@ -10,7 +8,7 @@ import type { ExitInfo, SubmitInput } from '../../src/internal/daemon/broker/job
 import type { RequestRecord } from '../../src/internal/contracts/protocol.js';
 
 import { brokerFixture } from '../support/broker-fixture.js';
-import type { Fixture } from '../support/harness.js';
+import { fakeCargoEnv, type Fixture } from '../support/harness.js';
 
 /**
  * `--after`: a dependent ticket stays queued until every prerequisite has
@@ -39,11 +37,10 @@ const submit = (
   Effect.gen(function* () {
     const started = yield* Deferred.make<void>();
     const exited = yield* Deferred.make<ExitInfo>();
-    const env: Record<string, string> = {
-      CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
+    const env = fakeCargoEnv(fixture, {
       ...(options.sleep === undefined ? {} : { FAKE_SLEEP: options.sleep }),
       ...(options.exit === undefined ? {} : { FAKE_EXIT: options.exit }),
-    };
+    });
     const input: SubmitInput = {
       argv: options.argv,
       cwd: options.cwd,

@@ -27,7 +27,7 @@ import {
   scopedDaemon,
   scopedLedger,
 } from '../support/harness.js';
-import type { Fixture } from '../support/harness.js';
+import { fakeCargoEnv, type Fixture } from '../support/harness.js';
 
 const findAck = (messages: readonly { type: string }[]): AckMessage => {
   const ack = messages.find((message): message is AckMessage => message.type === 'ack');
@@ -326,10 +326,7 @@ describe('coverage gates over real argv shapes (#89)', () => {
 const cargoEnv = (
   fixture: Fixture,
   extra: Readonly<Record<string, string>> = {},
-): Record<string, string> => ({
-  CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-  ...extra,
-});
+): Record<string, string> => fakeCargoEnv(fixture, extra);
 
 interface Tracked {
   readonly submitted: SubmitResult;

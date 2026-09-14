@@ -15,7 +15,7 @@ import type { RequestRecord, StatusRow } from '../../src/internal/contracts/prot
 import { statusReportSchema } from '../../src/internal/contracts/tool-schemas.js';
 
 import { brokerFixture } from '../support/broker-fixture.js';
-import type { Fixture } from '../support/harness.js';
+import { fakeCargoEnv, type Fixture } from '../support/harness.js';
 
 const fullTailBytes = 16 * 1024;
 
@@ -52,11 +52,10 @@ const submitBulk = (
       {
         argv: ['cargo', subcommand, '-p', pkg],
         cwd,
-        env: {
-          CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
+        env: fakeCargoEnv(fixture, {
           FAKE_OUTPUT_BYTES: String(fullTailBytes + 4_096),
           FAKE_SLEEP: '20',
-        },
+        }),
       },
       noopCallbacks,
     )

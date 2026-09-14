@@ -87,7 +87,10 @@ plugin internals, not CLI entry points.
   failed doubles the cost and may not reproduce a flaky failure.
 - If a shell command was auto-backgrounded while its stdout was redirected
   (`cargo test > out.log` exited 75), the file holds only the notice: the
-  output is in the ticket log, `hauler result cc-N --full`.
+  output is in the ticket log, `hauler result cc-N --full`. The PATH shim
+  does not auto-background when stdout is not a TTY: a `spawnSync` or script
+  waits for cargo's exit. `CARGO_HAULER_SHIM_BACKGROUND=1` restores the old
+  detach for callers that consume tickets themselves.
 - Folded test runs share one process. Queued `cargo test` requests with the
   same `--test` / `--lib` selection and harness flags (`--test-threads=N`,
   `--nocapture`, `--quiet`, `--exact` only) may fold across different

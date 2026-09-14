@@ -26,7 +26,7 @@ import {
 import type { StallProbeShape } from '../../src/internal/daemon/broker/stall.js';
 
 import { brokerFixture } from '../support/broker-fixture.js';
-import type { Fixture } from '../support/harness.js';
+import { fakeCargoEnv, type Fixture } from '../support/harness.js';
 
 const minute = 60_000;
 
@@ -267,10 +267,7 @@ const fakeProbe = (): Effect.Effect<FakeProbe> =>
 const cargoEnv = (
   fixture: Fixture,
   extra: Readonly<Record<string, string>> = {},
-): Record<string, string> => ({
-  CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-  ...extra,
-});
+): Record<string, string> => fakeCargoEnv(fixture, extra);
 
 interface Tracked {
   readonly ticket: string;

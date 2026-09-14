@@ -378,16 +378,20 @@ too, along with any log whose row is gone. `hauler exec --bg -- cargo …` and
 `hauler_request` return the ticket immediately. A synchronous request also switches to background mode when a
 *measured* estimate — EWMA history or kache priors, never the cold-start
 default — exceeds the host's shell-tool cap (nine minutes for Claude, ten for
-Codex, fourteen for Cursor; the PATH shim uses `CARGO_HAULER_HOST` when it is
-exported, otherwise the Claude cap). The estimate that is compared is the
-whole wait: the work queued ahead in the lane plus the job's own runtime,
-which the queued line reports as `wait ~Ns, run ~Ns`. That conversion exits
-`75` (`EX_TEMPFAIL`) with the ticket on stderr, so `cargo build && …` chains
-and scripts cannot mistake "submitted" for "built"; explicit `--bg` keeps exit
-`0`. When the caller's stdout is not a terminal (`cargo test > out.log`), the
-notice adds that the redirect receives no output and to read it with
-`hauler result cc-N --full`. Failed runs feed the estimate history too, so a broken build is not
-re-estimated cold on every retry.
+Codex, fourteen for Cursor). The PATH shim (`--host shim`) is cargo to its
+caller: a non-TTY invocation (a script, `spawnSync`, `make`) waits for the
+ticket to finish and returns cargo's exit code. An interactive shim (stdout
+is a TTY) still auto-backgrounds on the cap, using `CARGO_HAULER_HOST` when
+it is exported, otherwise the Claude cap; `CARGO_HAULER_SHIM_BACKGROUND=1`
+restores that for scripts that consume tickets themselves. The estimate that
+is compared is the whole wait: the work queued ahead in the lane plus the
+job's own runtime, which the queued line reports as `wait ~Ns, run ~Ns`. That
+conversion exits `75` (`EX_TEMPFAIL`) with the ticket on stderr, so
+`cargo build && …` chains and scripts cannot mistake "submitted" for "built";
+explicit `--bg` keeps exit `0`. When the caller's stdout is not a terminal
+(`cargo test > out.log`), the notice adds that the redirect receives no
+output and to read it with `hauler result cc-N --full`. Failed runs feed the
+estimate history too, so a broken build is not re-estimated cold on every retry.
 
 A foreground `hauler exec` that receives SIGINT or SIGTERM (Ctrl-C, or a
 `timeout N …` wrapper) asks the daemon to kill its ticket, waits for the
@@ -674,7 +678,8 @@ Per-host notes and hook timeouts are in [docs/install.md](docs/install.md).
 | `CARGO_HAULER_LEDGER_MAX_ROWS` | `50000` | Total ledger rows beyond which the oldest finished rows are deleted when the daemon starts; `0` disables the row cap. Pruned rows take their `tickets/<ticket>.log` files with them. |
 | `CARGO_HAULER_TICKET_LOG_MAX_BYTES` | `67108864` (64 MiB) | Bytes of a leader run's combined output written to `<state dir>/tickets/<ticket>.log` before the log stops with one truncation line; `0` writes no ticket logs (`hauler result` then has only the tail). |
 | `CARGO_HAULER_LOG_LEVEL` | `Info` | Daemon log level. |
-| `CARGO_HAULER_HOST`, `CARGO_HAULER_SESSION` | Unset | Default `--host` and `--session` attribution for `hauler exec`; the PATH shim also borrows `CARGO_HAULER_HOST`'s shell cap for auto-background. |
+| `CARGO_HAULER_HOST`, `CARGO_HAULER_SESSION` | Unset | Default `--host` and `--session` attribution for `hauler exec`; the PATH shim also borrows `CARGO_HAULER_HOST`'s shell cap when auto-background is allowed. |
+| `CARGO_HAULER_SHIM_BACKGROUND` | Unset | `1` / `true` / `on` / `yes` lets a non-TTY PATH shim auto-background over the host cap (exit 75). Without it, a shim that is not a TTY waits for cargo's exit. |
 
 A numeric value that does not parse or falls outside its range is reported
 as a warning (daemon log, or stderr for hand-run commands) and the default

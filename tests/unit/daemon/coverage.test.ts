@@ -58,9 +58,28 @@ describe('attachModeFor identity', () => {
   it('distinguishes intents that differ only in compilation environment', () => {
     const leader = intent(['check'], { env: { RUSTFLAGS: '-Dwarnings' } });
     expect(attachModeFor(leader, intent(['check']))).toBeNull();
-    // Non-compilation env vars do not fragment identity.
-    const noisy = intent(['check'], { env: { FAKE_SLEEP: '1' } });
-    expect(attachModeFor(intent(['check']), noisy)).toBe('identity');
+  });
+
+  it('does not identity-attach when forwarded env differs (#222)', () => {
+    const leader = intent(['test', '--lib'], { env: { OUT: '/tmp/a' } });
+    expect(attachModeFor(leader, intent(['test', '--lib'], { env: { OUT: '/tmp/b' } }))).toBeNull();
+    expect(attachModeFor(leader, intent(['test', '--lib'], { env: { OUT: '/tmp/a' } }))).toBe(
+      'identity',
+    );
+  });
+
+  it('refuses coverage and keeps identity when forwarded env differs (#222)', () => {
+    // A check riding a build must not inherit another caller's SCHEMA_OUT.
+    expect(attachModeFor(intent(['build']), intent(['check'], { env: { OUT: '/tmp/x' } }))).toBeNull();
+    expect(
+      attachModeFor(
+        intent(['build'], { env: { OUT: '/tmp/x' } }),
+        intent(['check'], { env: { OUT: '/tmp/x' } }),
+      ),
+    ).toBe('coverage');
+    expect(
+      attachModeFor(intent(['check'], { env: { FOO: '1' } }), intent(['check'], { env: { FOO: '2' } })),
+    ).toBeNull();
   });
 });
 

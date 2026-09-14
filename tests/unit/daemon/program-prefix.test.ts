@@ -26,11 +26,16 @@ describe('env-prefixed requests', () => {
       _tag: 'rejected',
       gate: 'compile-surface',
     });
-    // An assignment outside the compile-relevant set (a test-only variable)
-    // separates identities but, like any other request environment, does
-    // not change what a build proves for a check.
+    // An assignment outside the compile-relevant set still reaches cargo, so
+    // coverage refuses when only the leader carries it (#222).
     expect(
       attachDecisionFor(intent(['env', 'FOO=1', 'cargo', 'build', '-p', 'alpha']), intent(['cargo', 'check', '-p', 'alpha'])),
+    ).toMatchObject({ _tag: 'rejected', gate: 'compile-surface', detail: 'forwarded environment differs' });
+    expect(
+      attachDecisionFor(
+        intent(['env', 'FOO=1', 'cargo', 'build', '-p', 'alpha']),
+        intent(['env', 'FOO=1', 'cargo', 'check', '-p', 'alpha']),
+      ),
     ).toEqual({ _tag: 'attach', mode: 'coverage' });
   });
 });

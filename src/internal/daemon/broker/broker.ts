@@ -369,7 +369,7 @@ export const BrokerLive: Layer.Layer<
               targetDir: normalized.targetDir,
               laneKey,
               argv: input.argv,
-              intentKey: normalized.key,
+              intentKey: normalized.estimateKey,
               intentJson: JSON.stringify(normalized),
               background: input.background === true,
               holdStop,

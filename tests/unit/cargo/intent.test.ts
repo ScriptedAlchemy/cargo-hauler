@@ -525,6 +525,35 @@ describe('normalizeCargoIntent', () => {
     expect(alpha.key).not.toBe(unfiltered.key);
   });
 
+  it('separates identity when forwarded env differs, without changing the estimate key (#222)', () => {
+    const options = {
+      argv: ['cargo', 'test', '--lib', 'write_out', '--', '--ignored', '--exact'],
+      cwd: '/work/repo',
+      workspaceRoot: '/work/repo',
+    } as const;
+    const first = normalizeCargoIntent({ ...options, env: { OUT: '/tmp/a/out' } });
+    const second = normalizeCargoIntent({ ...options, env: { OUT: '/tmp/b/out' } });
+    expect(first.envDigest).toBe(second.envDigest);
+    expect(first.estimateKey).toBe(second.estimateKey);
+    expect(first.key).not.toBe(second.key);
+  });
+
+  it('shares the estimate key across env-prefix OUT assignments that only change identity', () => {
+    const a = normalizeCargoIntent({
+      argv: ['env', 'OUT=/tmp/a', 'cargo', 'test', '--lib'],
+      cwd: '/work/repo',
+      workspaceRoot: '/work/repo',
+    });
+    const b = normalizeCargoIntent({
+      argv: ['env', 'OUT=/tmp/b', 'cargo', 'test', '--lib'],
+      cwd: '/work/repo',
+      workspaceRoot: '/work/repo',
+    });
+    expect(a.estimateKey).toBe(b.estimateKey);
+    expect(a.key).not.toBe(b.key);
+    expect(a.forwardedEnvDigest).not.toBe(b.forwardedEnvDigest);
+  });
+
   it('uses RUSTUP_TOOLCHAIN only when argv has no explicit toolchain', () => {
     const options = {
       cwd: '/work/repo',

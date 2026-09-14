@@ -39,4 +39,34 @@ describe('host shell caps', () => {
     expect(shellCapHost('claude', { CARGO_HAULER_HOST: 'cursor' })).toBe('claude');
     expect(shellCapHost(undefined, { CARGO_HAULER_HOST: 'cursor' })).toBeUndefined();
   });
+
+  it('never auto-backgrounds a non-TTY PATH shim unless the operator opts in (#223)', () => {
+    const overCap = 9 * 60_000 + 1;
+    const capHost = shellCapHost('shim', { CARGO_HAULER_HOST: 'claude' });
+    expect(
+      shouldAutoBackground(overCap, capHost, 'ewma', {
+        requestHost: 'shim',
+        stdoutIsTty: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldAutoBackground(overCap, capHost, 'ewma', {
+        requestHost: 'shim',
+        stdoutIsTty: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldAutoBackground(overCap, capHost, 'ewma', {
+        requestHost: 'shim',
+        shimBackground: true,
+        stdoutIsTty: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldAutoBackground(overCap, 'claude', 'ewma', {
+        requestHost: 'claude',
+        stdoutIsTty: false,
+      }),
+    ).toBe(true);
+  });
 });

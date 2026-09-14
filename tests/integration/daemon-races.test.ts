@@ -13,7 +13,7 @@ import type { BrokerApi, SubmitResult } from '../../src/internal/daemon/broker/b
 import type { ExitInfo, SubmitCallbacks, SubmitInput } from '../../src/internal/daemon/broker/job-state.js';
 
 import { brokerFixture } from '../support/broker-fixture.js';
-import type { Fixture } from '../support/harness.js';
+import { fakeCargoEnv, type Fixture } from '../support/harness.js';
 
 class FilePending extends Data.TaggedError('FilePending')<{ readonly path: string }> {}
 
@@ -25,10 +25,7 @@ const waitForFile = (path: string): Effect.Effect<void, FilePending> =>
 const cargoEnv = (
   fixture: Fixture,
   extra: Readonly<Record<string, string>> = {},
-): Record<string, string> => ({
-  CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-  ...extra,
-});
+): Record<string, string> => fakeCargoEnv(fixture, extra);
 
 interface Tracked {
   readonly submitted: SubmitResult;
@@ -72,7 +69,7 @@ while IFS= read -r line; do
     exit:*) exit "\${line#exit:}" ;;
     *) printf '%s\\n' "$line" ;;
   esac
-done < "$FAKE_STAGE_FILE"
+done < "\${CARGO_HAULER_TEST_FAKE_STAGE_FILE:-\$FAKE_STAGE_FILE}"
 exit 0
 `;
 
@@ -95,7 +92,7 @@ const stagedCargo = (
   chmodSync(cargoPath, 0o755);
   const stageFile = join(dir, 'stages.txt');
   writeFileSync(stageFile, `${stages.join('\n')}\n`);
-  return { CARGO_HAULER_CARGO_BIN: cargoPath, FAKE_STAGE_FILE: stageFile };
+  return fakeCargoEnv(fixture, { CARGO_HAULER_CARGO_BIN: cargoPath, FAKE_STAGE_FILE: stageFile });
 };
 
 describe('kill while parked (#51)', () => {
@@ -229,7 +226,7 @@ describe('kill while parked (#51)', () => {
           const successor = yield* submitTracked(broker, {
             argv: ['cargo', 'check', '-p', 'flaky-ledger'],
             cwd: fixture.ws1,
-            env: cargoEnv(fixture),
+            env: cargoEnv(fixture, { FAKE_SLEEP: '0.3' }),
           });
           expect(successor.submitted.attachedTo).toBeUndefined();
           const settled = yield* broker.awaitTicket(successor.submitted.ticket, 5_000);
@@ -524,7 +521,11 @@ describe('attachment registration races (#52)', () => {
           const follower = yield* submitTracked(broker, {
             argv: ['cargo', 'check', '-p', 'ticker'],
             cwd: fixture.ws1,
-            env: cargoEnv(fixture),
+            env: cargoEnv(fixture, {
+              FAKE_OUTPUT_COUNT: '40',
+              FAKE_OUTPUT_INTERVAL: '0.02',
+              FAKE_SLEEP: '0.3',
+            }),
           });
           expect(follower.submitted.attachedTo).toBe(leader.submitted.ticket);
           const exit = yield* Deferred.await(follower.exit).pipe(Effect.timeout('10 seconds'));
@@ -574,7 +575,7 @@ describe('attachment registration races (#52)', () => {
               {
                 argv: ['cargo', 'check', '-p', 'racer'],
                 cwd: fixture.ws1,
-                env: cargoEnv(fixture),
+                env: cargoEnv(fixture, { FAKE_SLEEP: '0.4' }),
               },
               { onExit: (info) => Effect.asVoid(Deferred.succeed(followerExited, info)) },
             ),
@@ -672,7 +673,7 @@ describe('attachment registration races (#52)', () => {
             {
               argv: ['cargo', 'test', '-p', 'merged'],
               cwd: fixture.ws1,
-              env: cargoEnv(fixture),
+              env: cargoEnv(fixture, { FAKE_SLEEP: '10' }),
             },
             { onStarted: () => Effect.die(new Error('queued follower must not start')) },
           );
@@ -681,7 +682,7 @@ describe('attachment registration races (#52)', () => {
           const alsoMerged = yield* submitTracked(broker, {
             argv: ['cargo', 'test', '-p', 'merged'],
             cwd: fixture.ws1,
-            env: cargoEnv(fixture),
+            env: cargoEnv(fixture, { FAKE_SLEEP: '10' }),
             mergeStderr: true,
           });
           expect(alsoMerged.submitted.attachedTo).toBe(merged.submitted.ticket);

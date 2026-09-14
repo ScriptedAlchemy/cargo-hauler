@@ -30,11 +30,7 @@ describe('awaitTicketWithProgress', () => {
         background: true,
         config: fixture.config,
         cwd: fixture.ws1,
-        env: {
-          CARGO_HAULER_CARGO_BIN: `${fixture.binDir}/cargo`,
-          FAKE_SLEEP: '2',
-          PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-        },
+        env: fakeCargoEnv(fixture, { FAKE_SLEEP: '2' }),
         io: silentIo,
       });
       expect(submitted.ticket).toMatch(/^cc-\d+$/u);
@@ -69,11 +65,7 @@ describe('awaitTicketWithProgress', () => {
         background: true,
         config: fixture.config,
         cwd: fixture.ws1,
-        env: {
-          CARGO_HAULER_CARGO_BIN: `${fixture.binDir}/cargo`,
-          FAKE_SLEEP: '0.5',
-          PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-        },
+        env: fakeCargoEnv(fixture, { FAKE_SLEEP: '0.5' }),
         io: silentIo,
       });
       const ticket = submitted.ticket ?? '';

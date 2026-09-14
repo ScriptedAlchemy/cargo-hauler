@@ -1,5 +1,3 @@
-import { join } from 'node:path';
-
 import { describe, expect, it } from 'effect-rstest';
 import * as Deferred from 'effect/Deferred';
 import * as Effect from 'effect/Effect';
@@ -10,7 +8,7 @@ import { requestOverSocket } from '../../src/internal/client/control.js';
 import type { AckMessage, AwaitResultMessage, ResultResultMessage } from '../../src/internal/contracts/protocol.js';
 
 import { brokerFixture } from '../support/broker-fixture.js';
-import { pollReport, scopedDaemon, shortId } from '../support/harness.js';
+import { fakeCargoEnv, pollReport, scopedDaemon, shortId } from '../support/harness.js';
 
 describe('broker ticket lifecycle', () => {
   it.live('removes an interrupted ticket waiter immediately', () =>
@@ -23,10 +21,7 @@ describe('broker ticket lifecycle', () => {
               {
                 argv: ['cargo', 'check'],
                 cwd: fixture.ws1,
-                env: {
-                  CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-                  FAKE_SLEEP: '10',
-                },
+                env: fakeCargoEnv(fixture, { FAKE_SLEEP: '10' }),
               },
               {
                 onExit: () => Effect.void,
@@ -57,10 +52,7 @@ describe('broker ticket lifecycle', () => {
               {
                 argv: ['cargo', 'check', '-p', 'live-tail'],
                 cwd: fixture.ws1,
-                env: {
-                  CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-                  FAKE_SLEEP: '10',
-                },
+                env: fakeCargoEnv(fixture, { FAKE_SLEEP: '10' }),
               },
               {
                 onExit: () => Effect.void,
@@ -104,10 +96,7 @@ describe('broker ticket lifecycle', () => {
               {
                 argv: ['cargo', 'check', '-p', 'running'],
                 cwd: fixture.ws1,
-                env: {
-                  CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-                  FAKE_SLEEP: '10',
-                },
+                env: fakeCargoEnv(fixture, { FAKE_SLEEP: '10' }),
               },
               callbacks,
             );
@@ -118,9 +107,7 @@ describe('broker ticket lifecycle', () => {
               {
                 argv: ['cargo', 'check', '-p', 'queued'],
                 cwd: fixture.ws2,
-                env: {
-                  CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-                },
+                env: fakeCargoEnv(fixture),
               },
               callbacks,
             );
@@ -129,9 +116,7 @@ describe('broker ticket lifecycle', () => {
               {
                 argv: ['cargo', 'check', '-p', 'queued'],
                 cwd: fixture.ws2,
-                env: {
-                  CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-                },
+                env: fakeCargoEnv(fixture),
               },
               callbacks,
             );
@@ -140,9 +125,7 @@ describe('broker ticket lifecycle', () => {
               {
                 argv: ['cargo', 'check', '-p', 'another'],
                 cwd: fixture.ws2,
-                env: {
-                  CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-                },
+                env: fakeCargoEnv(fixture),
               },
               callbacks,
             );
@@ -176,9 +159,7 @@ describe('broker ticket lifecycle', () => {
               {
                 argv: ['cargo', 'check'],
                 cwd: fixture.ws1,
-                env: {
-                  CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-                },
+                env: fakeCargoEnv(fixture),
               },
               {
                 onExit: () => Effect.void,
@@ -223,10 +204,7 @@ describe('broker ticket lifecycle', () => {
               {
                 argv: ['cargo', 'check'],
                 cwd: fixture.ws1,
-                env: {
-                  CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-                  FAKE_SLEEP: '0.2',
-                },
+                env: fakeCargoEnv(fixture, { FAKE_SLEEP: '0.2' }),
               },
               {
                 onExit: () => Effect.asVoid(Deferred.succeed(runFinished, undefined)),
@@ -257,13 +235,7 @@ describe('broker ticket lifecycle', () => {
             argv: ['cargo', 'check', '-p', 'bg-probe'],
             background: true,
             cwd: fixture.ws1,
-            env: {
-              // Bare `cargo` no longer resolves through PATH (shim recursion
-              // guard); pin the job at the fixture's fake cargo explicitly.
-              CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
-              FAKE_SLEEP: '0.2',
-              PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-            },
+            env: fakeCargoEnv(fixture, { FAKE_SLEEP: '0.2' }),
             id: shortId(),
             session: 'sess-bg',
             type: 'exec',

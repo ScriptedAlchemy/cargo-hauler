@@ -42,7 +42,7 @@ const submitSlowJob = (fixture: Fixture) =>
         argv: ['cargo', 'check', '-p', 'ws1'],
         background: true,
         cwd: fixture.ws1,
-        env: { ...fakeCargoEnv(fixture.binDir), FAKE_SLEEP: '2' },
+        env: fakeCargoEnv(fixture.binDir, { FAKE_SLEEP: '2' }),
         host: 'streaming',
         id: 'streaming-1',
         session: 's-stream',

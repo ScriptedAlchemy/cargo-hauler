@@ -3,7 +3,7 @@ import { realpathSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 
 import { defaultCargoProfile, optionParts } from './argv.js';
-import { isRelevantCargoEnvironmentVariable } from './env.js';
+import { isForwardedEnvironmentVariable, isRelevantCargoEnvironmentVariable } from './env.js';
 
 export interface ParsedCargoArgv {
   readonly allFeatures: boolean;
@@ -56,6 +56,19 @@ export interface NormalizeCargoIntentOptions {
 export type NormalizedCargoIntent = Omit<ParsedCargoArgv, 'manifestPath' | 'targetDir' | 'toolchain'> & {
   readonly cwd: string;
   readonly envDigest: string;
+  /**
+   * Duration history / EWMA key: the compile surface and modeled argv, not
+   * one-off forwarded variables. An `OUT=` path must not cold-start estimates,
+   * whether it arrived as process env or via `env OUT=… cargo …`.
+   */
+  readonly estimateKey: string;
+  /**
+   * Digest of every variable cargo will see (post `env` prefix / shell
+   * assignments). Identity, coverage, and batch/fold refuse to share when
+   * this differs (#222).
+   */
+  readonly forwardedEnvDigest: string;
+  /** Identity for attach: includes the forwarded environment (#222). */
   readonly key: string;
   readonly manifestPath: string | null;
   readonly targetDir: string;
@@ -418,14 +431,16 @@ const canonicalPath = (path: string): string => {
 const resolveFrom = (base: string, path: string): string =>
   canonicalPath(isAbsolute(path) ? path : resolve(base, path));
 
-export const digestCargoEnvironment = (
+const digestEnvironment = (
   env: Readonly<Record<string, string | undefined>>,
+  prefix: string,
+  include: (name: string, value: string) => boolean,
 ): string => {
   const entries = Object.entries(env)
-    .filter((entry): entry is [string, string] => entry[1] !== undefined && affectsCompilation(entry[0]))
+    .filter((entry): entry is [string, string] => entry[1] !== undefined && include(entry[0], entry[1]))
     .sort(([left], [right]) => left.localeCompare(right));
   const hash = createHash('sha256');
-  hash.update('cargo-hauler-env-v1\0');
+  hash.update(prefix);
   for (const [name, value] of entries) {
     hash.update(name);
     hash.update('\0');
@@ -434,6 +449,20 @@ export const digestCargoEnvironment = (
   }
   return hash.digest('hex');
 };
+
+/** Compile-surface digest: rustc/linker knobs only. */
+export const digestCargoEnvironment = (
+  env: Readonly<Record<string, string | undefined>>,
+): string => digestEnvironment(env, 'cargo-hauler-env-v1\0', (name) => affectsCompilation(name));
+
+/**
+ * Identity digest of the environment cargo will actually see. Two requests
+ * that differ in any forwarded variable (an output path a test writes, a
+ * `build.rs` knob) must not share a leader (#222).
+ */
+export const digestForwardedEnvironment = (
+  env: Readonly<Record<string, string | undefined>>,
+): string => digestEnvironment(env, 'cargo-hauler-forwarded-env-v1\0', isForwardedEnvironmentVariable);
 
 export const parseCargoArgv = (input: readonly string[]): ParsedCargoArgv => {
   const prefix = peelEnvPrefix(input);
@@ -696,12 +725,15 @@ export const normalizeCargoIntent = (
   const toolchain = parsed.toolchain ?? env.RUSTUP_TOOLCHAIN ?? 'default';
   const targetTriple = parsed.targetTriple ?? env.CARGO_BUILD_TARGET ?? null;
   const envDigest = digestCargoEnvironment(env);
-  const surface = {
+  const forwardedEnvDigest = digestForwardedEnvironment(env);
+  // Estimate history keys on the effective compile surface only. Prefix
+  // assignments (`env OUT=…`) are already folded into envDigest /
+  // forwardedEnvDigest; keeping the raw edit lists here cold-started EWMA
+  // for one-off output paths (#222 review).
+  const estimateSurface = {
     allFeatures: parsed.allFeatures,
     cwd,
-    envAssignments: parsed.envAssignments,
     envDigest,
-    envUnset: parsed.envUnset,
     excludes: parsed.excludes,
     features: parsed.features,
     filterExpressions: parsed.filterExpressions,
@@ -721,12 +753,17 @@ export const normalizeCargoIntent = (
     workspace: parsed.workspace,
     workspaceRoot,
   };
+  const estimateKey = sha256(`cargo-hauler-intent-v2\0${JSON.stringify(estimateSurface)}`);
 
   return {
     ...parsed,
     cwd,
     envDigest,
-    key: sha256(`cargo-hauler-intent-v2\0${JSON.stringify(surface)}`),
+    estimateKey,
+    forwardedEnvDigest,
+    key: sha256(
+      `cargo-hauler-intent-v2\0${JSON.stringify({ ...estimateSurface, forwardedEnvDigest })}`,
+    ),
     manifestPath,
     targetDir,
     targetTriple,
