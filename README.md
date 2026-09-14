@@ -1025,8 +1025,8 @@ ships no preview harness of its own.
 
 agent-bundle does not yet have an npm release; this repository pins the
 [pkg.pr.new](https://pkg.pr.new) preview of Agent Bundle main commit
-[`3d769d6`](https://github.com/ScriptedAlchemy/agent-bundle/commit/3d769d6c52ed33532ec3927d64aa66f54486af8d),
-through [Agent Bundle PR #792](https://github.com/ScriptedAlchemy/agent-bundle/pull/792),
+[`62ffe40`](https://github.com/ScriptedAlchemy/agent-bundle/commit/62ffe403c5af73499fe7f5767c6d60be26e250db),
+through [Agent Bundle PR #794](https://github.com/ScriptedAlchemy/agent-bundle/pull/794),
 for `agent-bundle`, `@agent-bundle/runtime`, and their paired
 `rsc-markdown-stream` preview. This pin emits manifest v6. `inspect` reports the
 `agent` component kind as unavailable on every host (agent-bundle G5

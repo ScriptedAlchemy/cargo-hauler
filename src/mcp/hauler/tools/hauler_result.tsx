@@ -15,7 +15,7 @@ export const config = {
   inputJsonSchema: {
     additionalProperties: false,
     properties: {
-      full: { type: 'boolean' },
+      full: { description: 'Render the whole on-disk output log instead of the stored tail', type: 'boolean' },
       ticket: { type: 'string' },
     },
     required: ['ticket'],

@@ -15,7 +15,7 @@ export const config = {
     'Stop a cargo-hauler ticket: a queued request is dropped, a running one has its cargo process terminated (SIGTERM, then SIGKILL after the grace period) and its lane freed. Use this instead of killing cargo PIDs — the daemon settles riders and the ledger. Returns killed: false when the ticket is unknown or already finished.',
   inputJsonSchema: {
     additionalProperties: false,
-    properties: { ticket: { type: 'string' } },
+    properties: { ticket: { description: 'Ticket id, e.g. cc-123', type: 'string' } },
     required: ['ticket'],
     type: 'object',
   },

@@ -12,6 +12,9 @@ import { requestDaemonConfig } from '../../../internal/operations/request-config
 export const config = {
   annotations: { readOnlyHint: true },
   description: 'Show the most recent cargo-hauler request with its output tail and outcome.',
+  // Declared empty so `hauler last` compiles to a flagless command instead of
+  // the implicit `--input <json>` a tool without input metadata receives.
+  inputJsonSchema: { type: 'object', additionalProperties: false, properties: {} },
   title: 'Hauler last request',
 } satisfies ToolConfig;
 

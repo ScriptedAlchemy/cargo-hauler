@@ -16,7 +16,11 @@ export const config = {
   inputJsonSchema: {
     additionalProperties: false,
     properties: {
-      after: { items: { type: 'string' }, type: 'array' },
+      after: {
+        description: 'Tickets (cc-N) that must finish before this request starts; it fails if any of them fails or is killed',
+        items: { type: 'string' },
+        type: 'array',
+      },
       argv: { items: { type: 'string' }, type: 'array' },
       cwd: { type: 'string' },
       host: { type: 'string' },
