@@ -82,4 +82,8 @@ describe('inputJsonSchema mirrors the zod inputSchema', () => {
       expect(route.config.inputJsonSchema, `paste into ${path}: ${JSON.stringify(expected)}`).toEqual(expected);
     });
   }
+
+  it('defaults omitted hauler_log arguments', () => {
+    expect(haulerLog.inputSchema.parse(undefined)).toEqual({});
+  });
 });

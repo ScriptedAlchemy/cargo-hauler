@@ -439,10 +439,17 @@ describe('directional replacement', () => {
   it.effect('never shuts down a daemon newer than this client; fails as DaemonNewer naming both', () =>
     Effect.gen(function* () {
       const { calls, dependencies } = tracking({});
-      const error = yield* ensureDaemonVersion(config, dependencies).pipe(Effect.flip);
+      const error = yield* ensureDaemonRunning(config, dependencies).pipe(Effect.flip);
       expect(error._tag).toBe('DaemonNewer');
       expect(error.message).toContain('pid 77 (999.0.0) is newer than this client');
       expect(error.message).toContain(`(${version})`);
+      expect(calls).toEqual([]);
+    }));
+
+  it.effect('reuses a protocol-compatible newer daemon for reads without requesting shutdown', () =>
+    Effect.gen(function* () {
+      const { calls, dependencies } = tracking({});
+      expect(yield* ensureDaemonVersion(config, dependencies, 500, 'read')).toBe(newer);
       expect(calls).toEqual([]);
     }));
 

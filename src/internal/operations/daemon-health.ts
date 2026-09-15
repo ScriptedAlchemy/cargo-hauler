@@ -165,6 +165,7 @@ export const probeDaemonHealth = (
         ),
     },
     timeoutMs,
+    'read',
   ).pipe(
     Effect.flatMap((daemon) =>
       daemon === null

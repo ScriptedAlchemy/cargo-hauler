@@ -275,9 +275,7 @@ export const defaultEnsureDependencies: EnsureDaemonDependencies = {
 };
 
 /**
- * Read-only protocol gate. Compatible daemons are returned without lifecycle
- * side effects; absent stays absent, newer remains directional, and an older
- * incompatible peer fails with its identity before a payload is parsed.
+ * Probe the current socket without lifecycle side effects; absent stays absent.
  */
 const pingOrAbsent = (
   socketPath: string,
@@ -360,6 +358,7 @@ export const ensureDaemonVersion = (
   config: DaemonConfigShape = resolveDaemonConfig(),
   dependencies: EnsureDaemonDependencies = defaultEnsureDependencies,
   pingTimeoutMs = 500,
+  access: 'read' | 'write' = 'write',
 ): Effect.Effect<PongMessage | null, EnsureDaemonError> =>
   Effect.gen(function* () {
     const already = yield* pingOrAbsent(config.socketPath, dependencies, pingTimeoutMs);
@@ -367,6 +366,9 @@ export const ensureDaemonVersion = (
       return null;
     }
     if (already.version === version) {
+      return already;
+    }
+    if (access === 'read' && speaksCurrentWireProtocol(already, version)) {
       return already;
     }
     const identity = {
