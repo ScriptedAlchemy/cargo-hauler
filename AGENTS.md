@@ -37,13 +37,12 @@ often do not apply; check the vendored v4 source before assuming an API exists.
 
 ## Learning more about Effect
 
-Before writing any Effect code, first read `node_modules/effect/AGENTS.md`
-**completely**, and follow the links in the file when required.
-
-If you need to learn more about particular Effect apis and concepts that the
-guide doesn't cover, search through the source code in `node_modules/effect/src`
-**and** the vendored monorepo at `repos/effect` (the full monorepo at the same
-pin; never import from it).
+This branch is Effect v4. Prefer `node_modules/effect` (and
+`node_modules/effect/AGENTS.md`) for APIs you are about to use; follow its
+links when the guide points deeper. For APIs the guide does not cover, search
+`node_modules/effect/src` and the vendored monorepo at `repos/effect` (same
+pin; never import from it). Do not blanket-read the whole Effect tree before
+unrelated edits.
 
 ## `repos/` — vendored reference source (read-only)
 
