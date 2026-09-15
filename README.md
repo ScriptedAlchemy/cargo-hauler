@@ -743,10 +743,11 @@ there; state files keep the permissions the filesystem gives them.
   reporting a ticket as not found; `hauler_status`, `hauler_log`, and
   `hauler_last` read the ledger with the daemon marked `stopped` or
   `unresponsive`. Reads never request daemon shutdown. They use an older
-  daemon when its wire-protocol identity is compatible; a truly incompatible
-  daemon is reported with its pid and version. A client older than the daemon
-  it finds — a session still on a previous plugin — keeps the directional
-  `DaemonNewer` behavior and never shuts it down.
+  or newer daemon when its wire-protocol identity is compatible; a truly
+  incompatible daemon is reported with its pid and version. Submissions and
+  mutations from a client older than the daemon — a session still on a
+  previous plugin — keep the directional `DaemonNewer` behavior and never
+  write to or shut down that daemon.
 - The state directory is not migrated between installs. Every rendered
   document names the one in use (`state dir …` in the header; `stateRoot` in
   `--json`), so a `CARGO_HAULER_STATE_DIR` change is visible on the next

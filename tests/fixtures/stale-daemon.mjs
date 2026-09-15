@@ -9,10 +9,11 @@ if (
   (mode !== 'idle-older' &&
     mode !== 'busy-older' &&
     mode !== 'incompatible-older' &&
-    mode !== 'newer')
+    mode !== 'newer' &&
+    mode !== 'newer-compatible')
 ) {
   throw new Error(
-    'usage: stale-daemon.mjs <socket> <log> <idle-older|busy-older|incompatible-older|newer>',
+    'usage: stale-daemon.mjs <socket> <log> <idle-older|busy-older|incompatible-older|newer|newer-compatible>',
   );
 }
 
@@ -23,8 +24,11 @@ const log = (message) => {
   appendFileSync(logPath, `${message}\n`);
 };
 
-const daemonVersion =
-  mode === 'newer' ? '999.0.0' : mode === 'incompatible-older' ? '0.6.0' : '0.7.1';
+const daemonVersion = mode.startsWith('newer')
+  ? '999.0.0'
+  : mode === 'incompatible-older'
+    ? '0.6.0'
+    : '0.7.1';
 const emptyHistogram = {
   buckets: [],
   count: 0,
@@ -100,6 +104,7 @@ const server = createServer((socket) => {
         socket.write(`${JSON.stringify({
           id: message.id,
           pid: process.pid,
+          ...(mode === 'newer-compatible' ? { protocol: 1 } : {}),
           startedAtMs: 1,
           type: 'pong',
           version: daemonVersion,

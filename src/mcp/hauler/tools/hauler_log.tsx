@@ -19,7 +19,7 @@ export const config = {
   title: 'Hauler log',
 } satisfies ToolConfig;
 
-export const inputSchema = limitInputSchema;
+export const inputSchema = limitInputSchema.default({});
 export const resultSchema = logResultSchema;
 
 export default async function HaulerLog({ input, signal }: ToolRouteProps<typeof inputSchema>) {

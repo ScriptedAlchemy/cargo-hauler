@@ -74,7 +74,7 @@ const requestReply = <T extends ServerMessage>(
   ensure?: (config: DaemonConfigShape) => Effect.Effect<unknown, EnsureDaemonError>,
 ): Effect.Effect<T | undefined, TicketSocketError> =>
   (ensure ?? ((target) =>
-    ensureDaemonVersion(target, defaultEnsureDependencies, Math.min(timeoutMs, 5_000))))(config).pipe(
+    ensureDaemonVersion(target, defaultEnsureDependencies, Math.min(timeoutMs, 5_000), 'read')))(config).pipe(
     Effect.andThen(
       requestOverSocket({
         isTerminal: (reply) =>
@@ -128,6 +128,7 @@ export const killTicket = (
     { id: shortId(), ticket, type: 'kill' },
     5_000,
     (message): message is KillResultMessage => message.type === 'kill-result',
+    (target) => ensureDaemonVersion(target, defaultEnsureDependencies, 5_000),
   ).pipe(Effect.map((result) => result?.killed === true));
 
 const describeAwaitedRecord = (ticket: string, record: RequestRecord | null): string => {

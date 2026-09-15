@@ -291,7 +291,7 @@ export const loadHaulerSnapshot = (
 > => {
   const config = options.config ?? resolveDaemonConfig();
   const recentLimit = options.recentLimit ?? defaultRecentLimit;
-  return ensureDaemonVersion(config, defaultEnsureDependencies, statusTimeoutMs).pipe(
+  return ensureDaemonVersion(config, defaultEnsureDependencies, statusTimeoutMs, 'read').pipe(
     Effect.flatMap((daemon) =>
       daemon === null
         ? fromLedger(config, recentLimit)

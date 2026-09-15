@@ -55,7 +55,7 @@ const run = (
 const startStaleDaemon = (
   socketPath: string,
   logPath: string,
-  mode: 'idle-older' | 'busy-older' | 'incompatible-older' | 'newer',
+  mode: 'idle-older' | 'busy-older' | 'incompatible-older' | 'newer' | 'newer-compatible',
 ): Promise<ChildProcess> =>
   new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [fixtureEntry, socketPath, logPath, mode], {
@@ -167,6 +167,29 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
       expect(status.code).toBe(1);
       expect(status.stderr).toContain('(999.0.0) is newer than this client');
       expect(requests(logPath)).toEqual(['ping']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it('reads a protocol-compatible newer daemon but rejects broker admission before direct fallback', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-newer-compatible-'));
+    const logPath = join(root, 'requests.log');
+    const env = fixtureEnv(root);
+    try {
+      await startStaleDaemon(
+        join(env.CARGO_HAULER_STATE_DIR, 'daemon.sock'),
+        logPath,
+        'newer-compatible',
+      );
+      const status = await run(haulerEntry, ['status', '--json'], env);
+      const submitted = await run(haulerEntry, ['exec', '--bg', '--', 'cargo', 'check'], env);
+
+      expect(status.code).toBe(0);
+      expect(JSON.parse(status.stdout)).toMatchObject({ daemon: 'running', operation: 'status' });
+      expect(submitted.code).toBe(0);
+      expect(submitted.stderr).toContain('(999.0.0) is newer than this client');
+      expect(requests(logPath)).toEqual(['ping', 'status', 'ping']);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
