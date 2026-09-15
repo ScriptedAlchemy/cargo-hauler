@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.6
+
+### Patch Changes
+
+- a827798: Update dev dependencies: react, react-dom, @types/react, @types/react-dom 19.2 -> 19.3, scheduler 0.27 -> 0.28, @effect/tsgo 0.38.0 -> 0.45.0.
+- 8fbb2a9: Let `hauler status`, `hauler log`, `hauler daemon status`, `hauler_status`, `hauler_dashboard`, `hauler_last`, `hauler_log`, `hauler_result`, and `hauler_await` read a protocol-compatible newer daemon without `DaemonNewerError`, while `hauler_request`, `hauler_kill`, and Cargo admission keep rejecting it; default omitted `hauler_log` arguments (#234).
+
 ## 0.8.5
 
 ### Patch Changes
