@@ -625,21 +625,22 @@ export const BrokerLive: Layer.Layer<
           }
           yield* nameReason;
           yield* Deferred.succeed(job.killSignal, undefined);
+          yield* lanesRuntime.settleKilledPending(job);
           return true;
         }
         const claim = yield* Ref.modify(
           job.state,
-          (state): readonly [{ readonly signal: boolean; readonly inFlight: boolean }, JobState] => {
+          (state): readonly [{ readonly signal: boolean; readonly pending: boolean }, JobState] => {
             switch (state) {
               case 'queued':
-                return [{ signal: true, inFlight: false }, 'kill-requested'];
+                return [{ signal: true, pending: true }, 'kill-requested'];
               case 'starting':
               case 'running':
-                return [{ signal: true, inFlight: true }, state];
+                return [{ signal: true, pending: false }, state];
               case 'kill-requested':
-                return [{ signal: true, inFlight: false }, state];
+                return [{ signal: true, pending: false }, state];
               case 'finished':
-                return [{ signal: false, inFlight: false }, state];
+                return [{ signal: false, pending: false }, state];
               default: {
                 const exhaustive: never = state;
                 return exhaustive;
@@ -650,6 +651,9 @@ export const BrokerLive: Layer.Layer<
         if (claim.signal) {
           yield* nameReason;
           yield* Deferred.succeed(job.killSignal, undefined);
+        }
+        if (claim.pending) {
+          yield* lanesRuntime.settleKilledPending(job);
         }
         return claim.signal;
       });

@@ -429,6 +429,57 @@ describe('hauler daemon', () => {
       );
     }));
 
+  it.live('settles a killed queued ticket without waiting for the lane head (#236)', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(5);
+      const holderFiber = yield* Effect.forkChild(
+        execRequest(fixture, { cwd: fixture.ws1, sleep: '10', timeoutMs: 15_000 }),
+      );
+      const holder = yield* pollReport(fixture, (candidate) =>
+        candidate.active.some((record) => record.status === 'running'),
+      );
+      const holderTicket =
+        holder.active.find((record) => record.status === 'running')?.ticket ?? '';
+
+      const queuedMessages = yield* execRequest(fixture, {
+        cwd: fixture.ws1,
+        argv: ['cargo', 'check', '-p', 'kill-probe'],
+        isTerminal: (message) => message.type === 'ack',
+      });
+      const queuedTicket =
+        queuedMessages.find((message): message is AckMessage => message.type === 'ack')
+          ?.ticket ?? '';
+
+      const killMessages = yield* requestOverSocket({
+        socketPath: fixture.config.socketPath,
+        message: { type: 'kill', id: shortId(), ticket: queuedTicket },
+        isTerminal: (message) => message.type === 'kill-result',
+      });
+      const killResult = killMessages.find(
+        (message): message is KillResultMessage => message.type === 'kill-result',
+      );
+      expect(killResult?.killed).toBe(true);
+
+      const report = yield* pollReport(
+        fixture,
+        (candidate) =>
+          candidate.recent.find((record) => record.ticket === queuedTicket)?.status ===
+          'killed',
+        20,
+      );
+      const queuedRecord = report.recent.find((record) => record.ticket === queuedTicket);
+      expect(queuedRecord?.startedAtMs).toBeNull();
+      expect(queuedRecord?.error).toBe('killed while queued');
+      expect(report.active.map((record) => record.ticket)).toEqual([holderTicket]);
+
+      yield* requestOverSocket({
+        socketPath: fixture.config.socketPath,
+        message: { type: 'kill', id: shortId(), ticket: holderTicket },
+        isTerminal: (message) => message.type === 'kill-result',
+      });
+      expect(findExit(yield* Fiber.join(holderFiber)).status).toBe('killed');
+    }));
+
   // With the reattach grace window off, a disconnect kills queued work at
   // once — the pre-#187 policy, still selectable; tests/integration/daemon-reattach.test.ts
   // covers the default window.
