@@ -182,6 +182,8 @@ export interface LaneRuntime {
    * a kill already claimed settles `killed` instead.
    */
   readonly failPendingJob: (lane: Lane, job: Job, error: string) => Effect.Effect<void>;
+  /** Settles a killed job still in the lane's pending list; once the lane takes it, the head race owns settlement. */
+  readonly settleKilledPending: (job: Job) => Effect.Effect<void>;
   readonly settleInterruptedJob: (job: Job) => Effect.Effect<void>;
   readonly laneStatuses: () => Effect.Effect<readonly LaneStatus[]>;
   readonly requestStatusFields: (
@@ -671,20 +673,36 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
     const finishKilledBeforeRun = (lane: Lane, job: Job): Effect.Effect<void> =>
       settleJob(lane, job, 'killed', null, null, job.killReason ?? 'killed while queued', Date.now());
 
+    const removePending = (lane: Lane, job: Job): Effect.Effect<boolean> =>
+      Effect.sync(() => {
+        const index = lane.pending.indexOf(job);
+        if (index === -1) {
+          return false;
+        }
+        lane.pending.splice(index, 1);
+        return true;
+      });
+
     const failPendingJob = (lane: Lane, job: Job, error: string): Effect.Effect<void> =>
       Effect.gen(function* () {
-        yield* Effect.sync(() => {
-          const index = lane.pending.indexOf(job);
-          if (index !== -1) {
-            lane.pending.splice(index, 1);
-          }
-        });
+        yield* removePending(lane, job);
         const state = yield* Ref.get(job.state);
         if (state === 'kill-requested') {
           yield* finishKilledBeforeRun(lane, job);
           return;
         }
         yield* settleJob(lane, job, 'failed', null, null, error, Date.now());
+      });
+
+    const settleKilledPending = (job: Job): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        const lane = lanes.get(job.laneKey);
+        if (lane === undefined) {
+          return;
+        }
+        if (yield* removePending(lane, job)) {
+          yield* finishKilledBeforeRun(lane, job);
+        }
       });
 
     const settleInterruptedJob = (job: Job): Effect.Effect<void> =>
@@ -1343,6 +1361,7 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
       makeJob,
       enqueueJob,
       failPendingJob,
+      settleKilledPending,
       settleInterruptedJob,
       laneStatuses,
       requestStatusFields,
