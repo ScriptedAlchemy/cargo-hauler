@@ -931,6 +931,7 @@ describe('terminal statuses', () => {
       'done',
       'failed',
       'killed',
+      'orphaned',
       'passthrough',
     ]);
   });

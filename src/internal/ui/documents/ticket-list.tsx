@@ -45,6 +45,8 @@ const outcome = (record: TicketSummary, nowMs: number): string => {
     case 'denied':
     case 'passthrough':
       return `${record.status}${timing}`;
+    case 'orphaned':
+      return 'orphaned';
     default: {
       const exhaustive: never = record.status;
       return exhaustive;

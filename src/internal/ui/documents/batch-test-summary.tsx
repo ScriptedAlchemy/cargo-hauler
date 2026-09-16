@@ -1,13 +1,13 @@
 import { Agent } from '@agent-bundle/runtime';
 import React from 'react';
 
-import type { RequestRecord } from '../../contracts/protocol.js';
+import type { DisplayRequestRecord } from '../../contracts/protocol.js';
 import { isSharedTestRun, loadBatchTestOutput } from '../../operations/batch-test-output.js';
 
 import { CodeBlock, Heading } from './primitives.js';
 
 /** Shared by result, await, and last through TicketCard. No execution policy. */
-export const BatchTestSummary = async ({ record }: { readonly record: RequestRecord }) => {
+export const BatchTestSummary = async ({ record }: { readonly record: DisplayRequestRecord }) => {
   if (!isSharedTestRun(record)) return null;
   const output = await loadBatchTestOutput(record.outputPath);
   const invocation = record.execArgv === null && record.attachedTo !== null
