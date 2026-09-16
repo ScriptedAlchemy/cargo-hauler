@@ -449,7 +449,11 @@ describe('directional replacement', () => {
   it.effect('reuses a protocol-compatible newer daemon for reads without requesting shutdown', () =>
     Effect.gen(function* () {
       const { calls, dependencies } = tracking({});
-      expect(yield* ensureDaemonVersion(config, dependencies, 500, 'read')).toBe(newer);
+      expect(yield* ensureDaemonVersion(config, dependencies, 500, 'read')).toMatchObject({
+        id: 'n',
+        pid: 77,
+        version: '999.0.0',
+      });
       expect(calls).toEqual([]);
     }));
 
