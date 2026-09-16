@@ -25,7 +25,6 @@ import {
 } from './control.js';
 import {
   encodeClientMessage,
-  LineBuffer,
   passthroughSpoolFileName,
   parseServerMessageLine,
 } from '../contracts/protocol.js';
@@ -38,6 +37,7 @@ import type {
 
 import { AnsiStreamStripper } from '../util/ansi.js';
 import { shortId } from '../util/id.js';
+import { LineBuffer } from '../platform/ndjson.js';
 import { ensurePrivateDir, ensurePrivateFile } from '../platform/private-state.js';
 
 import { ensureDaemonRunning, type EnsureDaemonError } from './ensure-daemon.js';

@@ -18,9 +18,7 @@ import {
   delayedWaitCue,
   DEMUX_FLAG,
   diagnosticBadges,
-  formatBytes,
   formatCompactNumber,
-  formatMs,
   frequencyEntries,
   frequencyTotal,
   handBackView,
@@ -34,7 +32,6 @@ import {
   memoryStatView,
   outputPreviewLine,
   outputTextFor,
-  pathBasename,
   percentileMinSamples,
   phaseSplitView,
   pickMetricsWindow,
@@ -43,12 +40,10 @@ import {
   queueHeadEstimateState,
   quietOutputHint,
   ranAsFor,
-  relativeTime,
   remainingEstimateMs,
   resolveTicketDetail,
   sectionOrder,
   sharedTargetCell,
-  shortenPath,
   stalledHint,
   subcommandDisplayLabel,
   latencySavedStat,
@@ -57,7 +52,6 @@ import {
   terminalStatuses,
   ticketDetailFrom,
   type DashboardSection,
-  type KachePressureModel,
   type MetricsWindowId,
   type StatusPoll,
   type TicketDetail,
@@ -66,6 +60,14 @@ import {
   waitVsRunView,
 } from '../../../internal/ui/dashboard/lib.js';
 import { statusResultSchema } from '../../../internal/contracts/tool-schemas.js';
+import type { KachePressureModel } from '../../../internal/integrations/kache/pressure-model.js';
+import {
+  formatBytes,
+  formatMs,
+  pathBasename,
+  relativeTime,
+  shortenPath,
+} from '../../../internal/ui/shared/format.js';
 
 /**
  * Framework App-route metadata. The compiler extracts these literals without

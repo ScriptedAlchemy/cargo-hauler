@@ -21,7 +21,9 @@ import type {
   ReattachRequest,
   ServerMessage,
 } from '../../contracts/protocol.js';
-import { LineBuffer, clientMessageSchema, encodeServerMessage, wireProtocol } from '../../contracts/protocol.js';
+import { clientMessageSchema, encodeServerMessage } from '../../contracts/protocol.js';
+import { wireProtocol } from '../../contracts/wire-version.js';
+import { LineBuffer } from '../../platform/ndjson.js';
 
 export interface ConnectionHandlerOptions {
   readonly broker: BrokerApi;

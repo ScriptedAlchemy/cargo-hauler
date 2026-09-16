@@ -29,13 +29,9 @@ describe('compareVersions', () => {
 });
 
 describe('daemon wire protocol identity', () => {
-  it('recognizes published 0.7 peers and explicit protocol identity independently of patch version', () => {
-    expect(speaksCurrentWireProtocol({ version: '0.7.1' }, '0.7.3')).toBe(true);
-    expect(
-      speaksCurrentWireProtocol({ protocol: wireProtocol, version: '0.7.1' }, '0.7.3'),
-    ).toBe(true);
-    expect(speaksCurrentWireProtocol({ protocol: 2, version: '0.7.1' }, '0.7.3')).toBe(false);
-    expect(speaksCurrentWireProtocol({ version: '0.6.7' }, '0.7.3')).toBe(false);
-    expect(speaksCurrentWireProtocol({ version: '0.7.4' }, '0.7.3')).toBe(false);
+  it('requires the explicit current protocol independently of release version', () => {
+    expect(speaksCurrentWireProtocol({ protocol: wireProtocol })).toBe(true);
+    expect(speaksCurrentWireProtocol({ protocol: 2 })).toBe(false);
+    expect(speaksCurrentWireProtocol({})).toBe(false);
   });
 });

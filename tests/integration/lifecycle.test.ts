@@ -34,13 +34,13 @@ import {
   requestShutdown,
   type DaemonIdentity,
 } from '../../src/internal/client/shutdown.js';
+import { wireProtocol } from '../../src/internal/contracts/wire-version.js';
 import {
   monitorSocketOwnership,
   readSocketIdentity,
   removeSocketIfOwned,
 } from '../../src/internal/daemon/runtime/socket-ownership.js';
 import { UnsafeStatePathError } from '../../src/internal/platform/private-state.js';
-import { legacyRelocatedSocketPath } from '../../src/internal/platform/state-paths.js';
 import { scopedTempDir } from '../support/harness.js';
 
 const connectOnce = (socketPath: string): Effect.Effect<void, Error> =>
@@ -174,7 +174,14 @@ describe('daemon start under the one-version rule', () => {
         daemonIsIdle: () => Effect.succeed(true),
         exitGraceMs: 40,
         pingDaemon: () =>
-          Effect.succeed({ id: 'old', pid: 41, startedAtMs: 1, type: 'pong', version: '0.7.1' }),
+          Effect.succeed({
+            id: 'old',
+            pid: 41,
+            protocol: wireProtocol,
+            startedAtMs: 1,
+            type: 'pong',
+            version: '0.7.1',
+          }),
         pollMs: 5,
         processAlive: () => true,
         requestShutdown: () =>
@@ -206,7 +213,15 @@ describe('daemon start under the one-version rule', () => {
       const result = yield* startDaemon(config, {
         daemonIsIdle: () => Effect.succeed(true),
         exitGraceMs: 40,
-        pingDaemon: () => Effect.succeed({ id: 'same', pid: 42, startedAtMs: 2, type: 'pong', version }),
+        pingDaemon: () =>
+          Effect.succeed({
+            id: 'same',
+            pid: 42,
+            protocol: wireProtocol,
+            startedAtMs: 2,
+            type: 'pong',
+            version,
+          }),
         pollMs: 5,
         processAlive: () => true,
         requestShutdown: () => Effect.die(new Error('shutdown should not run')),
@@ -254,14 +269,9 @@ describe('daemon start under the one-version rule', () => {
     }));
 });
 
-describe('daemon stop after the control socket moved', () => {
-  // Only a state dir too deep for `sun_path` relocates its socket, and only a
-  // relocated socket has a previous path a pre-hardening daemon still serves.
+describe('daemon stop endpoint', () => {
   const deepConfig = resolveDaemonConfig({
     CARGO_HAULER_STATE_DIR: `/private/var/folders/3m/${'x'.repeat(60)}/T/cargo-hauler/state`,
-  });
-  const shallowConfig = resolveDaemonConfig({
-    CARGO_HAULER_STATE_DIR: '/tmp/cargo-hauler-stop-unit',
   });
 
   /** Answers as pid 41 at `serving`; nowhere else is anything listening. */
@@ -287,17 +297,6 @@ describe('daemon stop after the control socket moved', () => {
     return { asked, dependencies };
   };
 
-  it.effect('stops a daemon left serving the pre-hardening path when nothing answers the current one', () =>
-    Effect.gen(function* () {
-      const legacyPath = legacyRelocatedSocketPath(deepConfig.stateDir);
-      const { asked, dependencies } = stopFakes(legacyPath);
-      const result = yield* stopDaemon(deepConfig, dependencies);
-
-      expect(asked).toEqual([deepConfig.socketPath, legacyPath]);
-      expect(result.message).toBe('cargo-hauler daemon stopped');
-      expect(result.running).toBe(false);
-    }));
-
   it.effect('asks only the current path when a daemon answers it', () =>
     Effect.gen(function* () {
       const { asked, dependencies } = stopFakes(deepConfig.socketPath);
@@ -307,12 +306,12 @@ describe('daemon stop after the control socket moved', () => {
       expect(stopped.message).toBe('cargo-hauler daemon stopped');
     }));
 
-  it.effect('has no previous path to ask when the socket never moved', () =>
+  it.effect('asks only the current path when no daemon answers', () =>
     Effect.gen(function* () {
       const { asked, dependencies } = stopFakes(null);
-      const absent = yield* stopDaemon(shallowConfig, dependencies);
+      const absent = yield* stopDaemon(deepConfig, dependencies);
 
-      expect(asked).toEqual([shallowConfig.socketPath]);
+      expect(asked).toEqual([deepConfig.socketPath]);
       expect(absent.message).toBe('cargo-hauler daemon is not running');
     }));
 });

@@ -14,16 +14,14 @@ run `scripts/hauler.mjs` or a path under `.claude/plugins/cache`,
 `.codex/plugins/cache`, `.cursor/plugins`, or `artifact/` directly.
 
 After an upgrade, reads (`status`, `log`, `last`, `result`, `await`, their MCP
-tools, dashboard data, and hook probes) never request daemon shutdown. They use
+tools, and dashboard data) never request daemon shutdown. They use
 the running daemon when its wire-protocol identity is compatible; an
 incompatible daemon is reported with its pid and release version. Submissions
 (`exec`, `request`, the shim, and hook rewrites) replace an older daemon only
-when no running, queued, executing, or attached work remains. Daemons from
-0.7.4 onward make that confirmation atomically with admission; the already
-published 0.7.1–0.7.3 daemons receive a status preflight before shutdown.
-Otherwise the request is submitted to that daemon and one diagnostic says the
-upgrade will happen when idle. `hauler daemon restart` remains the explicit
-forced replacement path.
+when its atomic idle check finds no running, queued, executing, or attached
+work. Otherwise the request is submitted to that daemon and one diagnostic
+says the upgrade will happen when idle. `hauler daemon restart` remains the
+explicit forced replacement path.
 
 Supported platforms: Linux and macOS. Windows is experimental and untested
 (the daemon endpoint resolves to a named pipe, but the cargo PATH shim is

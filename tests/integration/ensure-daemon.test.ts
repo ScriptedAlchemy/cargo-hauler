@@ -29,9 +29,8 @@ import { runDaemon } from '../../src/internal/daemon/main.js';
 import {
   passthroughSpoolFileName,
   type PongMessage,
-  wireProtocol,
 } from '../../src/internal/contracts/protocol.js';
-import { legacyRelocatedSocketPath } from '../../src/internal/platform/state-paths.js';
+import { wireProtocol } from '../../src/internal/contracts/wire-version.js';
 import { scopedEnv, scopedTempDir } from '../support/harness.js';
 
 const configAt = (stateDir: string): DaemonConfigShape => ({
@@ -202,6 +201,7 @@ describe('ensureDaemonRunning', () => {
   const pong = (fields: Partial<PongMessage>): PongMessage => ({
     id: 'existing',
     pid: 41,
+    protocol: wireProtocol,
     startedAtMs: 1,
     type: 'pong',
     version,
@@ -419,7 +419,14 @@ describe('directional replacement', () => {
     type: 'pong',
     version: '999.0.0',
   };
-  const older: PongMessage = { id: 'o', pid: 78, startedAtMs: 1, type: 'pong', version: '0.7.1' };
+  const older: PongMessage = {
+    id: 'o',
+    pid: 78,
+    protocol: wireProtocol,
+    startedAtMs: 1,
+    type: 'pong',
+    version: '0.7.1',
+  };
   const tracking = (overrides: Partial<EnsureDaemonDependencies>) => {
     const calls: string[] = [];
     const dependencies: EnsureDaemonDependencies = {
@@ -457,6 +464,17 @@ describe('directional replacement', () => {
       expect(calls).toEqual([]);
     }));
 
+  it.effect('rejects a protocol-less older daemon without requesting shutdown', () =>
+    Effect.gen(function* () {
+      const { calls, dependencies } = tracking({
+        pingDaemon: () => Effect.succeed({ ...older, protocol: undefined }),
+      });
+      const error = yield* ensureDaemonRunning(config, dependencies).pipe(Effect.flip);
+
+      expect(error._tag).toBe('DaemonIncompatible');
+      expect(calls).toEqual([]);
+    }));
+
   it.effect('reuses a protocol-compatible older daemon for reads without requesting shutdown', () =>
     Effect.gen(function* () {
       const { calls, dependencies } = tracking({
@@ -475,104 +493,21 @@ describe('directional replacement', () => {
       expect(calls).toEqual([]);
     }));
 
-  describe('relocated socket left by a pre-hardening install', () => {
-    // Deep enough that the socket leaves the state dir, which is the only
-    // case whose endpoint moved. Resolved rather than hand-built, so both
-    // endpoints come from the real derivation.
+  it.effect('uses only the current endpoint when an absent daemon must start', () =>
+    Effect.gen(function* () {
     const deepConfig = resolveDaemonConfig({
       CARGO_HAULER_STATE_DIR: `/private/var/folders/3m/${'x'.repeat(60)}/T/cargo-hauler/state`,
     });
-    const legacyPath = legacyRelocatedSocketPath(deepConfig.stateDir);
+      const answered: string[] = [];
+      const { calls, dependencies } = tracking({
+        pingDaemon: (socketPath) => {
+          answered.push(socketPath);
+          return Effect.fail(absentDaemon(socketPath));
+        },
+      });
 
-    it('is a different path from the current endpoint, and absent for an in-state socket', () => {
-      expect(legacyPath).not.toBeNull();
-      expect(legacyPath).not.toBe(deepConfig.socketPath);
-      expect(legacyRelocatedSocketPath(config.stateDir)).toBeNull();
-    });
-
-    it.effect('does not probe or retire a legacy endpoint during a read', () =>
-      Effect.gen(function* () {
-        // Nothing answers at the current endpoint; the old daemon answers at
-        // the legacy one and still holds this state dir's singleton lock.
-        const answered: string[] = [];
-        const { calls, dependencies } = tracking({
-          pingDaemon: (socketPath) => {
-            answered.push(socketPath);
-            return socketPath === legacyPath
-              ? Effect.succeed(older)
-              : Effect.fail(absentDaemon(socketPath));
-          },
-        });
-
-        expect(yield* ensureDaemonVersion(deepConfig, dependencies)).toBeNull();
-        expect(answered).toEqual([deepConfig.socketPath]);
-        expect(calls).toEqual([]);
-      }));
-
-    it.effect('does not inspect a newer daemon at the legacy path during a read', () =>
-      Effect.gen(function* () {
-        const { calls, dependencies } = tracking({
-          pingDaemon: (socketPath) =>
-            socketPath === legacyPath
-              ? Effect.succeed(newer)
-              : Effect.fail(absentDaemon(socketPath)),
-        });
-        expect(yield* ensureDaemonVersion(deepConfig, dependencies)).toBeNull();
-        expect(calls).toEqual([]);
-      }));
-
-    it.effect('does not spawn behind a busy daemon holding the legacy-path singleton', () =>
-      Effect.gen(function* () {
-        const answered: string[] = [];
-        const { calls, dependencies } = tracking({
-          daemonIsIdle: () => Effect.succeed(false),
-          pingDaemon: (socketPath) => {
-            answered.push(socketPath);
-            return socketPath === legacyPath
-              ? Effect.succeed(older)
-              : Effect.fail(absentDaemon(socketPath));
-          },
-          spawnDetachedDaemon: () => Effect.die(new Error('spawn should not run')),
-        });
-
-        const error = yield* ensureDaemonRunning(deepConfig, dependencies).pipe(Effect.flip);
-        expect(error._tag).toBe('DaemonIncompatible');
-        expect(answered).toEqual([deepConfig.socketPath, legacyPath]);
-        expect(calls).toEqual([]);
-      }));
-
-    it.effect('does not fail the caller when the legacy path itself cannot be probed', () =>
-      Effect.gen(function* () {
-        // Nothing this build writes lives there — an `EACCES` on another
-        // account's leftover at a colliding digest must not break every
-        // command run from this state dir.
-        const { calls, dependencies } = tracking({
-          pingDaemon: (socketPath) =>
-            Effect.fail(
-              socketPath === legacyPath
-                ? new DaemonUnreachableError({
-                    socketPath,
-                    cause: Object.assign(new Error('permission denied'), { code: 'EACCES' }),
-                  })
-                : absentDaemon(socketPath),
-            ),
-        });
-        expect(yield* ensureDaemonVersion(deepConfig, dependencies)).toBeNull();
-        expect(calls).toEqual([]);
-      }));
-
-    it.effect('does not probe the legacy path when the socket lives in the state dir', () =>
-      Effect.gen(function* () {
-        const answered: string[] = [];
-        const { calls, dependencies } = tracking({
-          pingDaemon: (socketPath) => {
-            answered.push(socketPath);
-            return Effect.fail(absentDaemon(socketPath));
-          },
-        });
-        expect(yield* ensureDaemonVersion(config, dependencies)).toBeNull();
-        expect(answered).toEqual([config.socketPath]);
-        expect(calls).toEqual([]);
-      }));
-  });
+      expect(yield* ensureDaemonRunning(deepConfig, dependencies)).toBe(newer);
+      expect(answered).toEqual([deepConfig.socketPath]);
+      expect(calls).toEqual(['spawn']);
+    }));
 });

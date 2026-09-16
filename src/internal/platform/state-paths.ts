@@ -142,32 +142,6 @@ export const daemonSocketPath = (
 };
 
 /**
- * Where an install before the owner-private hardening put a relocated
- * socket: directly in the runtime root, under a digest that case-folded
- * every platform's path. A daemon from such an install is still listening
- * there and still holds this state dir's singleton lock, so a client that
- * probed only the current path would spawn a daemon that cannot take the
- * lock and would leave the old one serving nobody. Clients retire it
- * through the usual one-version rule instead. Null when this state dir does
- * not relocate its socket, and never equal to the current path.
- */
-export const legacyRelocatedSocketPath = (
-  stateDir: string,
-  platform: NodeJS.Platform = process.platform,
-  env: Readonly<Record<string, string | undefined>> = process.env,
-): string | null => {
-  if (platform === 'win32') {
-    return null;
-  }
-  const inState = join(stateDir, 'daemon.sock');
-  if (Buffer.byteLength(inState) <= maxSocketPathBytes(platform)) {
-    return null;
-  }
-  const runtimeDir = env.XDG_RUNTIME_DIR ?? env.TMPDIR ?? tmpdir();
-  return join(runtimeDir, `cargo-hauler-${digestOf(stateDir.toLowerCase())}.sock`);
-};
-
-/**
  * kache's configured store root, read from its own config
  * (`$XDG_CONFIG_HOME/kache/config.toml`, else `~/.config/kache/config.toml`):
  * the `local_store` key under `[cache]`. Guessing a sibling cache directory

@@ -1,13 +1,12 @@
-import { extractShellOutput } from './tool-input.js';
+import { isRecord } from '../util/guards.js';
+import { extractShellCommand, extractShellOutput } from './tool-input.js';
 
 import { readCursor, writeCursor } from './hook-state.js';
 import { appendHookRecord } from './record.js';
 import { listSessionCompleted } from './rpc.js';
 import type { FinishedTicket } from './rpc.js';
 import {
-  extractShellCommand,
   formatFinishedTicket,
-  isRecord,
   resolveHookHost,
   type HookContext,
   type HookServices,

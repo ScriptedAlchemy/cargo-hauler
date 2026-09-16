@@ -17,10 +17,10 @@ import {
   durationPercentile,
   laneWaitRemainingMs,
   openKacheReader,
-  readKacheEventPriors,
   singleIntegrationTestTarget,
 } from '../../src/internal/daemon/scheduling/cost.js';
-import type { KacheIndexPriors } from '../../src/internal/daemon/scheduling/cost.js';
+import { readKacheEventPriors } from '../../src/internal/integrations/kache/status.js';
+import type { KacheIndexPriors } from '../../src/internal/integrations/kache/status.js';
 import { resolveDaemonConfig } from '../../src/internal/daemon/config.js';
 import { normalizeCargoIntent } from '../../src/internal/cargo/intent.js';
 import { scopedTempDir } from '../support/harness.js';

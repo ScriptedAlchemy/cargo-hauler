@@ -148,17 +148,13 @@ export const requestOutcome = async (
   if (ping.message.type !== 'pong' || typeof ping.message.version !== 'string') {
     return { kind: 'malformed' };
   }
-  const peer = {
-    version: ping.message.version,
-    ...(typeof ping.message.protocol === 'number' ? { protocol: ping.message.protocol } : {}),
-  };
   if (isNewerVersion(ping.message.version, version)) {
     return {
       detail: `cargo-hauler daemon ${ping.message.version} is newer than this client ${version}`,
       kind: 'replacement-failed',
     };
   }
-  if (ping.message.version !== version && !speaksCurrentWireProtocol(peer, version)) {
+  if (!speaksCurrentWireProtocol(ping.message)) {
     return {
       detail: `cargo-hauler daemon ${ping.message.version} is incompatible with this client ${version}`,
       kind: 'replacement-failed',

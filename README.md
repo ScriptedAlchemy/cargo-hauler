@@ -86,7 +86,7 @@ The CLI is `hauler` on PATH from `npm i -g cargo-hauler`. Never run
 | `hauler result <ticket> [--full]` | A stored ticket in full: the settled 16 KiB output tail, or the whole live in-memory tail while it runs (not the status preview). The document names the full on-disk output log (`Full output: <path> (size)`) and `--json` carries it as `request.outputPath`; `--full` prints that whole log instead of the tail (the last ~768 KiB when it does not fit, with the path for the rest). |
 | `hauler kill <ticket>` | Stop a ticket: drop it from the queue or SIGTERM (then SIGKILL) its cargo process group, freeing the lane. Riders return to their lane or fail with it. |
 | `hauler request [--session ID] [--host HOST] [--cwd DIR] [--after TICKET …] -- <cargo …>` | Submit a background request and return its ticket, with where it landed in its lane (`queued behind cc-3281 (~13m)`, `waiting for cc-3281`, or `attached to cc-3281`). `--cwd` overrides the current CLI workspace; `--after` works as for `exec`. |
-| `hauler daemon <run\|start\|stop\|status\|restart>` | Manage the daemon lifecycle. `stop` records its typed `shutdown` outcome in JSON and exits `0` only after a `shutting-down` acknowledgement followed by the original pid's exit, or when the daemon was already absent. Refusal, timeout, protocol error, disconnect before acknowledgement, and an acknowledged daemon still alive after 5 s exit `1`; `running` remains `true` when the original pid is alive and `null` when liveness could not be established. `restart` is the explicit replacement path: it sends the graceful stop, waits up to 5 s for the old pid to exit, then starts a daemon from this install and prints both (`restarted: pid 741314 (0.6.0) → pid 742001 (0.6.1)`). Tickets in flight are not handed over: the old daemon settles them itself as it shuts down — `killed`, error `daemon shutdown` — and callers resubmit. Automatic upgrades are gentler: read-only commands and MCP/dashboard reads never retire a daemon; a protocol-compatible older daemon serves them directly. Submission commands replace an older daemon only after an idle status check; daemons from 0.7.4 onward hold admission closed while confirming that state, while 0.7.1–0.7.3 receive a client preflight. A busy or slow-to-retire daemon keeps serving the submission and emits one line such as `daemon 0.7.1 will be replaced by 0.7.3 when idle`. A truly incompatible daemon is reported with its pid and version instead of having its payload parsed. |
+| `hauler daemon <run\|start\|stop\|status\|restart>` | Manage the daemon lifecycle. `stop` records its typed `shutdown` outcome in JSON and exits `0` only after a `shutting-down` acknowledgement followed by the original pid's exit, or when the daemon was already absent. Refusal, timeout, protocol error, disconnect before acknowledgement, and an acknowledged daemon still alive after 5 s exit `1`; `running` remains `true` when the original pid is alive and `null` when liveness could not be established. `restart` is the explicit replacement path: it sends the graceful stop, waits up to 5 s for the old pid to exit, then starts a daemon from this install and prints both (`restarted: pid 741314 (0.8.5) → pid 742001 (0.8.6)`). Tickets in flight are not handed over: the old daemon settles them itself as it shuts down — `killed`, error `daemon shutdown` — and callers resubmit. Automatic upgrades are gentler: read-only commands and MCP/dashboard reads never retire a daemon; a protocol-compatible older or newer daemon serves them directly. Submission commands replace an older daemon only after its atomic idle check. A busy or slow-to-retire daemon keeps serving the submission and emits one line such as `daemon 0.8.5 will be replaced by 0.8.6 when idle`. A daemon that does not advertise the current wire protocol is reported with its pid and version instead of having its payload parsed. |
 | `hauler install-shim [--dir DIR] [--real-cargo PATH] [--force]` | Install the optional PATH shim. |
 | `hauler web [--port N] [--no-open]` | Open the dashboard from the checkout, npm package, or installed plugin. Agent Bundle's generated web command serves the built App against the plugin's own `hauler` server, opens it populated by `hauler_dashboard`, and stays in the foreground until Ctrl-C. In an MCP host, call `hauler_dashboard` instead. |
 
@@ -460,10 +460,8 @@ daemon. How a ticket ends depends on how the daemon went. A graceful stop —
 an idle older daemon by the next `hauler exec`, `hauler request`, hook
 submission, or `hauler daemon start` — is the shutdown request. Automatic
 replacement checks for queued, running, executing, or attached work first;
-0.7.4 and later daemons hold admission closed through that decision, while
-0.7.1–0.7.3 receive the compatible client's status preflight. When a stop does
-proceed, the old daemon settles every queued, running, and attached ticket
-itself as it exits:
+the daemon holds admission closed through that decision. When a stop does
+proceed, the old daemon settles every queued, running, and attached ticket itself as it exits:
 its cargo processes are terminated (SIGTERM, then SIGKILL after
 `CARGO_HAULER_KILL_GRACE_MS`) and each row is marked `killed` with the error
 `daemon shutdown`, so `hauler result cc-N` shows the ticket `killed` with
@@ -721,10 +719,11 @@ it from the umask:
   the control socket moves to a `cargo-hauler-<uid>` directory (mode `0700`)
   under `XDG_RUNTIME_DIR`, `TMPDIR`, or the system temporary directory —
   never directly into a shared temporary root. Two accounts sharing one
-  temporary root get separate directories. A daemon from an earlier install
-  still listening at the previous relocated path is considered only by a
-  daemon-starting submission, never by a read; `hauler daemon stop` asks it
-  too before reporting nothing running.
+  temporary root get separate directories.
+- If upgrading directly from 0.7.2 or earlier with a deeply nested state
+  directory leaves the old daemon on its former relocated socket, stop that
+  daemon from the old install (or terminate its recorded pid) before starting
+  the current version.
 
 Windows has neither POSIX modes nor uids, and its control endpoint is a
 named pipe rather than a filesystem entry, so none of the above applies

@@ -35,7 +35,6 @@ import { isHaulerInternalEnvironmentVariable } from '../cargo/env.js';
 import { ensurePrivateDir, ensurePrivateFile } from '../platform/private-state.js';
 import { shortId } from '../util/id.js';
 import { speaksCurrentWireProtocol } from '../contracts/wire-version.js';
-import { legacyRelocatedSocketPath } from '../platform/state-paths.js';
 
 export class SpawnDaemonError extends Data.TaggedError('SpawnDaemonError')<{
   readonly cause: unknown;
@@ -321,39 +320,7 @@ const retireDaemon = (
     return true;
   });
 
-/**
- * Nothing answers at this state dir's current endpoint, so check the one a
- * pre-hardening install would have used for a relocated socket. This build
- * never binds that path, so a daemon answering there cannot serve this
- * client and is retired under the same version gate; the caller then spawns
- * at the current path with the singleton lock free.
- */
-const retireLegacyRelocatedDaemon = (
-  config: DaemonConfigShape,
-  dependencies: EnsureDaemonDependencies,
-  pingTimeoutMs: number,
-): Effect.Effect<PongMessage | null, EnsureDaemonError> =>
-  Effect.gen(function* () {
-    const legacyPath = legacyRelocatedSocketPath(config.stateDir);
-    if (legacyPath === null || legacyPath === config.socketPath) {
-      return null;
-    }
-    const legacy = yield* pingOrAbsent(legacyPath, dependencies, pingTimeoutMs).pipe(
-      // Nothing this build writes lives at that path, so a probe that fails
-      // for any other reason — a hung daemon, an `EACCES` on a leftover
-      // belonging to another account — is not worth failing the caller's
-      // command over; the spawn at the current path proceeds instead.
-      Effect.orElseSucceed(() => null),
-    );
-    if (legacy === null) {
-      return null;
-    }
-    if (!(yield* dependencies.daemonIsIdle(legacyPath))) {
-      return legacy;
-    }
-    return (yield* retireDaemon(legacyPath, legacy, dependencies)) ? null : legacy;
-  });
-
+/** Identify a daemon at the current endpoint and enforce its wire and release direction. */
 export const ensureDaemonVersion = (
   config: DaemonConfigShape = resolveDaemonConfig(),
   dependencies: EnsureDaemonDependencies = defaultEnsureDependencies,
@@ -365,32 +332,29 @@ export const ensureDaemonVersion = (
     if (already === null) {
       return null;
     }
-    if (already.version === version) {
-      return already;
-    }
-    if (access === 'read' && speaksCurrentWireProtocol(already, version)) {
-      return already;
-    }
     const identity = {
       pid: already.pid,
       startedAtMs: already.startedAtMs,
       version: already.version,
     };
     if (isNewerVersion(already.version, version)) {
+      if (access === 'read' && speaksCurrentWireProtocol(already)) {
+        return already;
+      }
       return yield* new DaemonNewerError({
         clientVersion: version,
         daemon: identity,
         socketPath: config.socketPath,
       });
     }
-    if (speaksCurrentWireProtocol(already, version)) {
-      return already;
+    if (!speaksCurrentWireProtocol(already)) {
+      return yield* new DaemonIncompatibleError({
+        clientVersion: version,
+        daemon: identity,
+        socketPath: config.socketPath,
+      });
     }
-    return yield* new DaemonIncompatibleError({
-      clientVersion: version,
-      daemon: identity,
-      socketPath: config.socketPath,
-    });
+    return already;
   });
 
 export const ensureDaemonRunning = (
@@ -401,21 +365,9 @@ export const ensureDaemonRunning = (
   },
 ): Effect.Effect<PongMessage, EnsureDaemonError> =>
   ensureDaemonVersion(config, dependencies).pipe(
-    Effect.flatMap((daemon) => {
+    Effect.flatMap((daemon): Effect.Effect<PongMessage, EnsureDaemonError> => {
       if (daemon === null) {
         return Effect.gen(function* () {
-          const legacy = yield* retireLegacyRelocatedDaemon(config, dependencies, 500);
-          if (legacy !== null) {
-            return yield* new DaemonIncompatibleError({
-              clientVersion: version,
-              daemon: {
-                pid: legacy.pid,
-                startedAtMs: legacy.startedAtMs,
-                version: legacy.version,
-              },
-              socketPath: legacyRelocatedSocketPath(config.stateDir) ?? config.socketPath,
-            });
-          }
           yield* dependencies.spawnDetachedDaemon(config);
           return yield* dependencies.waitForDaemon(config.socketPath);
         });

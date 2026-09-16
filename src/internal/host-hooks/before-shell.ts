@@ -1,16 +1,16 @@
 import { recordBestEffort, reportHookDiagnostic } from './best-effort.js';
 import { prepareShellCommand } from './inspect.js';
 import { resolveHaulerArgv } from '../platform/hauler-binding.js';
+import { isRecord } from '../util/guards.js';
 import { probeActiveBuilds, type DaemonProbe } from './probe.js';
 import { appendHookRecord } from './record.js';
 import { recordDeniedAttempt } from './rpc.js';
 import {
-  extractShellCommand,
-  isRecord,
   resolveHookHost,
   type HookContext,
   type HookServices,
 } from './shared.js';
+import { extractShellCommand } from './tool-input.js';
 
 export type { HookContext, HookServices };
 

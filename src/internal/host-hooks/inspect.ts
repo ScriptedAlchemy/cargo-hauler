@@ -2,8 +2,7 @@ import { Lexer, T, parse, print } from 'bashjsast';
 import type { BashSimpleCommand, BashWord } from 'bashjsast';
 
 import { parseCargoArgv } from '../cargo/intent.js';
-
-import { isRecord } from './shared.js';
+import { isRecord } from '../util/guards.js';
 
 const cargoExecutable = /(?:^|[/\\])cargo(?:\.exe)?$/u;
 const haulerExecutable = /(?:^|[/\\])(?:cargo-hauler|hauler)(?:\.mjs)?$/u;
