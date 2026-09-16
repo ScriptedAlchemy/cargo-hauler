@@ -22,6 +22,7 @@ import { createLedgerApi, openLedgerDatabase, openLedgerDatabaseReadOnly } from 
 import { isOrphanedByRestart, orphanedByRestartError, toStatusRow } from '../contracts/protocol.js';
 import type {
   AttachmentSavingsReport,
+  DisplayRequestRecord,
   KacheStatusReport,
   LaneStatus,
   RequestRecord,
@@ -138,6 +139,40 @@ export const displayStatusRow = (row: StatusRow): StatusRow => ({
 export const displayStatusRows = (rows: readonly StatusRow[]): readonly StatusRow[] =>
   rows.map(displayStatusRow);
 
+type UnavailableDaemonStatus = Exclude<DaemonStatus, 'running'>;
+
+const strandedReasons: Record<UnavailableDaemonStatus, string> = {
+  stopped: 'stranded by a stopped daemon',
+  unresponsive: 'daemon did not answer; ownership unconfirmed',
+};
+
+export const ledgerRequestRecord = (
+  record: RequestRecord,
+  daemon: UnavailableDaemonStatus,
+): DisplayRequestRecord => {
+  switch (record.status) {
+    case 'requested':
+    case 'queued':
+    case 'running':
+      return { ...record, error: strandedReasons[daemon], status: 'orphaned' };
+    case 'done':
+    case 'failed':
+    case 'killed':
+    case 'denied':
+    case 'passthrough':
+      return record;
+    default: {
+      const exhaustive: never = record.status;
+      return exhaustive;
+    }
+  }
+};
+
+const ledgerStatusRow = (
+  record: RequestRecord,
+  daemon: UnavailableDaemonStatus,
+): StatusRow => toStatusRow(ledgerRequestRecord(record, daemon));
+
 const stoppedSummary = (recentCount: number): string => {
   if (recentCount === 0) {
     return 'cargo-hauler daemon is not running';
@@ -246,6 +281,7 @@ const acquireSnapshotDb = (databasePath: string): Effect.Effect<DatabaseSync, ne
 const fromLedger = (
   config: DaemonConfigShape,
   recentLimit: number,
+  daemon: UnavailableDaemonStatus = 'stopped',
 ): Effect.Effect<HaulerSnapshot> => {
   if (!existsSync(config.databasePath)) {
     return Effect.succeed(emptyStopped(config));
@@ -254,14 +290,12 @@ const fromLedger = (
     Effect.gen(function* () {
       const db = yield* acquireSnapshotDb(config.databasePath);
       const ledger = createLedgerApi(db);
-      // The ledger path reads full records; the snapshot lists them as status
-      // rows, so a stopped daemon's listing is the same bounded contract.
-      const recent = (yield* ledger.recentRequests(recentLimit)).map((record) => toStatusRow(record));
-      const active = (yield* ledger.activeRequests()).map((record) => toStatusRow(record));
+      const recent = (yield* ledger.recentRequests(recentLimit)).map((record) =>
+        ledgerStatusRow(record, daemon));
       const savings = yield* ledger.attachmentSavings();
       return withReport(
         {
-          active,
+          active: [],
           daemon: 'stopped' as const,
           lanes: [],
           maxConcurrent: null,
@@ -334,7 +368,7 @@ const unresponsiveSnapshot = (
   recentLimit: number,
   what: string,
 ): Effect.Effect<HaulerSnapshot> =>
-  fromLedger(config, recentLimit).pipe(
+  fromLedger(config, recentLimit, 'unresponsive').pipe(
     Effect.map((snapshot) =>
       withReport(
         {

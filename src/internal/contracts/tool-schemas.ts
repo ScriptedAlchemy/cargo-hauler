@@ -5,10 +5,12 @@ import {
   awaitCeilingMs,
   requestStatuses,
   statusOutputPreviewBytes,
+  statusRowStatuses,
 } from './protocol.js';
 import type {
   AdmissionHold,
   AttachmentSavingsReport,
+  DisplayRequestRecord,
   SystemLoadReport,
   KacheGcReport,
   KacheStatusReport,
@@ -129,6 +131,10 @@ export const requestRecordSchema = z.object({
   orphaned: z.boolean().optional(),
 }) satisfies z.ZodType<RequestRecord>;
 
+const displayRequestRecordSchema = requestRecordSchema
+  .omit({ status: true })
+  .extend({ status: z.enum(statusRowStatuses) }) satisfies z.ZodType<DisplayRequestRecord>;
+
 const laneStatusSchema = z.object({
   key: z.string(),
   queued: z.number().int(),
@@ -156,7 +162,7 @@ const histogramMetricSchema = z.object({
  * the detail contract: `hauler_result` / `hauler_await` answer a
  * `requestRecordSchema` record.
  */
-export const statusRowSchema = requestRecordSchema
+export const statusRowSchema = displayRequestRecordSchema
   .omit({ outputTail: true, outputTailLive: true })
   .extend({
     outputPreview: z.string().max(statusOutputPreviewBytes).nullable(),
@@ -376,7 +382,13 @@ export const statusInputSchema = z
     session: z.string().min(1).optional(),
     laneKey: z.string().min(1).optional(),
     tickets: z.array(z.string().min(1)).max(100).optional(),
-    statuses: z.array(requestStatusSchema).max(8).optional(),
+    statuses: z
+      .array(z.enum(statusRowStatuses))
+      .max(statusRowStatuses.length)
+      .optional()
+      .describe(
+        'Filter by projected status, where stopped-daemon active rows appear as orphaned and running matches nothing',
+      ),
     commandContains: z.string().min(1).optional(),
   })
   .strict();
@@ -416,7 +428,7 @@ export interface LogResult {
 export interface LastResult {
   readonly daemon: DaemonStatus;
   readonly operation: 'last';
-  readonly request: RequestRecord | null;
+  readonly request: DisplayRequestRecord | null;
   readonly summary: string;
 }
 
@@ -470,7 +482,7 @@ export const lastResultSchema = z
   .object({
     daemon: daemonStatusSchema,
     operation: z.literal('last'),
-    request: requestRecordSchema.nullable(),
+    request: displayRequestRecordSchema.nullable(),
     summary: z.string(),
   })
   .strict() satisfies z.ZodType<LastResult>;

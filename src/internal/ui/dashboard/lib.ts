@@ -41,6 +41,7 @@ export const terminalStatuses: ReadonlySet<string> = new Set([
   'killed',
   'denied',
   'passthrough',
+  'orphaned',
 ]);
 
 export type DashboardSection =

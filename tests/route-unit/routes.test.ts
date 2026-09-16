@@ -6,7 +6,8 @@ import * as Effect from 'effect/Effect';
 
 import { requestOverSocket } from '../../src/internal/client/control.js';
 import type { RequestRecord, StatusRow } from '../../src/internal/contracts/protocol.js';
-import { scopedDaemon } from '../support/harness.js';
+import { resolveDaemonConfig } from '../../src/internal/daemon/config.js';
+import { scopedDaemon, scopedLedger } from '../support/harness.js';
 
 import { documentMetadata, fakeCargoEnv, withDaemon, withIsolatedStateDir } from './support.js';
 
@@ -69,6 +70,90 @@ describe('tool documents without a daemon', () => {
           surface: 'tool',
         },
       });
+    });
+  });
+
+  it('projects ledger-active rows as orphaned when the daemon is stopped', async () => {
+    await withIsolatedStateDir(async (stateDir) => {
+      const config = resolveDaemonConfig({ CARGO_HAULER_STATE_DIR: stateDir });
+      await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+        const ledger = yield* scopedLedger(config);
+        const input = {
+          argv: ['cargo', 'check'],
+          createdAtMs: 1_000,
+          cwd: '/repo',
+          host: 'cursor',
+          intentJson: null,
+          intentKey: 'k',
+          laneKey: '/repo::/repo/target',
+          session: 's',
+          targetDir: '/repo/target',
+          workspaceRoot: '/repo',
+        };
+        yield* ledger.createRequest(input);
+        yield* ledger.markQueued(1, 1_100);
+        yield* ledger.markRunning(1, 1_200);
+        yield* ledger.createRequest({ ...input, createdAtMs: 2_000 });
+        yield* ledger.markQueued(2, 2_100);
+      })));
+
+      const rendered = await renderRoute('tool:hauler/hauler_status', { input: {} });
+      expect(rendered.result).toMatchObject({
+        active: [],
+        daemon: 'stopped',
+        recent: [
+          { error: 'stranded by a stopped daemon', status: 'orphaned', ticket: 'cc-2' },
+          { error: 'stranded by a stopped daemon', status: 'orphaned', ticket: 'cc-1' },
+        ],
+        summary: 'cargo-hauler daemon is not running; 0 active, 2 recent',
+      });
+      expectDocument(rendered)
+        .toContainText('Nothing queued or running.')
+        .toContainMarkdown('cc-1')
+        .toContainMarkdown('orphaned')
+        .toContainContext(
+          '2 orphaned tickets were stranded by the stopped daemon and will not finish; resubmit the ones still wanted.',
+        );
+      expect(JSON.stringify(rendered.document)).not.toContain('Do not start a duplicate cargo run');
+    });
+  });
+
+  it('renders the last ledger-active ticket as orphaned when the daemon is stopped', async () => {
+    await withIsolatedStateDir(async (stateDir) => {
+      const config = resolveDaemonConfig({ CARGO_HAULER_STATE_DIR: stateDir });
+      await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+        const ledger = yield* scopedLedger(config);
+        yield* ledger.createRequest({
+          argv: ['cargo', 'check'],
+          createdAtMs: 1_000,
+          cwd: '/repo',
+          host: 'cursor',
+          intentJson: null,
+          intentKey: 'k',
+          laneKey: '/repo::/repo/target',
+          session: 's',
+          targetDir: '/repo/target',
+          workspaceRoot: '/repo',
+        });
+        yield* ledger.markQueued(1, 1_100);
+        yield* ledger.markRunning(1, 1_200);
+      })));
+
+      const rendered = await renderRoute('tool:hauler/hauler_last', { input: {} });
+      expect(rendered.result).toMatchObject({
+        daemon: 'stopped',
+        request: {
+          error: 'stranded by a stopped daemon',
+          status: 'orphaned',
+          ticket: 'cc-1',
+        },
+        summary: 'cc-1 orphaned',
+      });
+      expectDocument(rendered)
+        .toContainText('cc-1 orphaned')
+        .toContainMarkdown('stranded by a stopped daemon');
+      expect(JSON.stringify(rendered.document)).not.toContain('cc-1 running');
+      expect(JSON.stringify(rendered.document)).not.toContain('hauler_await');
     });
   });
 

@@ -17,6 +17,8 @@ export const elapsedMs = (record: TicketSummary, nowMs: number): number | null =
     case 'denied':
     case 'passthrough':
       return record.runMs;
+    case 'orphaned':
+      return null;
     default: {
       const exhaustive: never = record.status;
       return exhaustive;

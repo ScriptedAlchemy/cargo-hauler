@@ -80,6 +80,7 @@ describe('MCP App dashboard', () => {
     expect(html).toContain('wait exceeds estimate');
     expect(html).toContain('no output — long compile/link phases can be silent');
     expect(html).toContain('likely deadlocked');
+    expect(html).toContain('.pill.orphaned');
     expect(html).not.toContain('src="http');
   });
 });
@@ -930,6 +931,7 @@ describe('terminal statuses', () => {
       'done',
       'failed',
       'killed',
+      'orphaned',
       'passthrough',
     ]);
   });

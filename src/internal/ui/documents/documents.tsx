@@ -2,9 +2,10 @@ import { Agent } from '@agent-bundle/runtime';
 import React from 'react';
 
 import { APP_RESOURCE_URI } from '../../../constants.js';
-import { awaitCeilingMs, orphanedByRestartError, type RequestRecord } from '../../contracts/protocol.js';
+import { awaitCeilingMs, type DisplayRequestRecord } from '../../contracts/protocol.js';
 import { formatMs } from '../shared/format.js';
 import { documentValue } from '../../util/json.js';
+import { countWord } from '../../util/text.js';
 import type {
   AwaitResult,
   KillResult,
@@ -14,7 +15,6 @@ import type {
   ResultFetchResult,
   StatusResult,
 } from '../../contracts/tool-schemas.js';
-import { countWord } from '../../util/text.js';
 import type { TicketOutputModel } from '../../operations/ticket-output.js';
 
 import { AdmissionState } from './admission-state.js';
@@ -41,12 +41,20 @@ interface DocumentProps<Result> {
   readonly result: Result;
 }
 
-const StoppedWithActive = ({ status }: { readonly status: StatusResult }) =>
-  status.daemon === 'stopped' && status.active.length > 0 ? (
+const OrphanedStatus = ({ result }: { readonly result: StatusResult }) => {
+  const count = result.recent.filter((row) => row.status === 'orphaned').length;
+  if (count === 0) {
+    return null;
+  }
+  const tickets = countWord(count, 'orphaned ticket');
+  return (
     <Agent.Context>
-      {`${countWord(status.active.length, 'request')} show as active in the ledger but the daemon is stopped; they were interrupted and will not finish. The next daemon start marks them killed (${orphanedByRestartError}); resubmit the ones still wanted.`}
+      {result.daemon === 'unresponsive'
+        ? `${tickets} ${count === 1 ? 'has' : 'have'} unconfirmed ownership because the daemon did not answer; check daemon health before resubmitting.`
+        : `${tickets} ${count === 1 ? 'was' : 'were'} stranded by the stopped daemon and will not finish; resubmit the ones still wanted.`}
     </Agent.Context>
-  ) : null;
+  );
+};
 
 export const StatusDocument = ({
   filtered,
@@ -71,7 +79,7 @@ export const StatusDocument = ({
       records={result.recent}
     />
     <KacheStats kache={result.kache} nowMs={nowMs} />
-    <StoppedWithActive status={result} />
+    <OrphanedStatus result={result} />
     {result.active.length > 0 ? (
       <Agent.Context>
         {`Do not start a duplicate cargo run for anything listed in flight: submit through ${names.request} or run cargo normally and the hauler attaches you to the existing run. Wait with ${names.await} <ticket>.`}
@@ -115,11 +123,11 @@ const TicketDetail = ({
 }: {
   readonly names: SurfaceNames;
   readonly nowMs: number;
-  readonly record: RequestRecord;
+  readonly record: DisplayRequestRecord;
 }) => (
   <>
     <TicketCard nowMs={nowMs} record={record} />
-    <TicketGuidance names={names} record={record} />
+    {record.status === 'orphaned' ? null : <TicketGuidance names={names} record={record} />}
   </>
 );
 

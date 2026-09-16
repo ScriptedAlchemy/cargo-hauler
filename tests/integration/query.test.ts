@@ -251,6 +251,19 @@ describe('loadHaulerSnapshot', () => {
               workspaceRoot: '/repo',
             });
             yield* ledger.markFinished(1, { atMs: 2_000, exitCode: 0, outputTail: 'ok\n', status: 'done' });
+            yield* ledger.createRequest({
+              argv: ['cargo', 'test'],
+              createdAtMs: 500,
+              cwd: '/repo',
+              host: 'cursor',
+              intentJson: null,
+              intentKey: 'k2',
+              laneKey: '/repo::/repo/target',
+              session: 's',
+              targetDir: '/repo/target',
+              workspaceRoot: '/repo',
+            });
+            yield* ledger.markQueued(2, 600);
           }),
         );
         const accepted = new Set<Socket>();
@@ -271,6 +284,12 @@ describe('loadHaulerSnapshot', () => {
         );
         const snapshot = yield* loadHaulerSnapshot({ config });
         expect(snapshot.daemon).toBe('unresponsive');
+        expect(snapshot.active).toEqual([]);
+        expect(snapshot.recent[1]).toMatchObject({
+          error: 'daemon did not answer; ownership unconfirmed',
+          status: 'orphaned',
+          ticket: 'cc-2',
+        });
         expect(snapshot.summary).toContain('did not answer within');
         expect(snapshot.summary).not.toContain('not running');
         // `last` is a detail read; with no daemon answering it comes from the

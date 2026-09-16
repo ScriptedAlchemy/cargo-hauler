@@ -3,7 +3,13 @@ import * as Effect from 'effect/Effect';
 import { fetchTicket } from '../client/tickets.js';
 import type { DaemonConfigShape } from '../daemon/config.js';
 import type { RequestRecord } from '../contracts/protocol.js';
-import { displayRequestRecord, displayStatusRows, loadHaulerSnapshot, loadLedgerRequest } from './status.js';
+import {
+  displayRequestRecord,
+  displayStatusRows,
+  ledgerRequestRecord,
+  loadHaulerSnapshot,
+  loadLedgerRequest,
+} from './status.js';
 
 import type {
   LastResult,
@@ -47,11 +53,16 @@ export const loadLastResult = async (options: InspectOptions): Promise<LastResul
       ? fetchTicket(ticket, options.config).pipe(Effect.catch(() => fromLedger))
       : fromLedger;
   };
-  const request = latest === null ? null : await runTicketEffect(detailOf(latest.ticket), options.signal);
+  const stored = latest === null ? null : await runTicketEffect(detailOf(latest.ticket), options.signal);
+  const displayed = stored === null ? null : displayRequestRecord(stored);
+  const request =
+    displayed === null || snapshot.daemon === 'running'
+      ? displayed
+      : ledgerRequestRecord(displayed, snapshot.daemon);
   return {
     daemon: snapshot.daemon,
     operation: 'last',
-    request: request === null ? null : displayRequestRecord(request),
+    request,
     summary:
       request === null
         ? latest === null

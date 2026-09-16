@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { RequestRecord } from '../../contracts/protocol.js';
+import type { DisplayRequestRecord } from '../../contracts/protocol.js';
 
 import { BatchTestSummary } from './batch-test-summary.js';
 import { BuildDiagnostics } from './build-diagnostics.js';
@@ -13,7 +13,7 @@ export interface TicketCardProps {
   /** Leave the output tail out (the caller renders the full log instead). */
   readonly hideTail?: boolean;
   readonly nowMs: number;
-  readonly record: RequestRecord;
+  readonly record: DisplayRequestRecord;
   readonly tailLines?: number;
 }
 

@@ -22,6 +22,8 @@ export const requestStatuses = [
   'passthrough',
 ] as const;
 export type RequestStatus = (typeof requestStatuses)[number];
+export const statusRowStatuses = [...requestStatuses, 'orphaned'] as const;
+export type StatusRowStatus = (typeof statusRowStatuses)[number];
 
 /** Statuses of a request the daemon still owns. */
 export const activeStatuses = ['requested', 'queued', 'running'] as const;
@@ -256,6 +258,10 @@ export interface RequestRecord {
   readonly orphaned?: boolean;
 }
 
+export type DisplayRequestRecord =
+  | RequestRecord
+  | (Omit<RequestRecord, 'status'> & { readonly status: 'orphaned' });
+
 /**
  * Bytes of a running ticket's live output a status row carries (#95). The
  * bound is part of the status contract (`statusRowSchema`), independent of
@@ -285,10 +291,15 @@ export interface StatusRow extends TicketSummary {
  * rows, log rows, lane boards) reads. A `RequestRecord` is one, so detail
  * readers can pass their record to the same components.
  */
-export type TicketSummary = Omit<RequestRecord, 'outputTail' | 'outputTailLive'>;
+export type TicketSummary = Omit<
+  RequestRecord,
+  'outputTail' | 'outputTailLive' | 'status'
+> & {
+  readonly status: StatusRowStatus;
+};
 
 /** The status row for a record: the tail fields dropped, the preview supplied by the caller. */
-export const toStatusRow = (record: RequestRecord, outputPreview: string | null = null): StatusRow => {
+export const toStatusRow = (record: DisplayRequestRecord, outputPreview: string | null = null): StatusRow => {
   const { outputTail: _outputTail, outputTailLive: _outputTailLive, ...summary } = record;
   return { ...summary, outputPreview };
 };

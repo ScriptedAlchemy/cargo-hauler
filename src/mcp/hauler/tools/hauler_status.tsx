@@ -22,8 +22,10 @@ export const config = {
       limit: { type: 'number' },
       session: { type: 'string' },
       statuses: {
+        description:
+          'Filter by projected status, where stopped-daemon active rows appear as orphaned and running matches nothing',
         items: {
-          enum: ['requested', 'queued', 'running', 'done', 'failed', 'killed', 'denied', 'passthrough'],
+          enum: ['requested', 'queued', 'running', 'done', 'failed', 'killed', 'denied', 'passthrough', 'orphaned'],
           type: 'string',
         },
         type: 'array',
