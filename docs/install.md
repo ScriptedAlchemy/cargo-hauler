@@ -17,11 +17,13 @@ After an upgrade, reads (`status`, `log`, `last`, `result`, `await`, their MCP
 tools, and dashboard data) never request daemon shutdown. They use
 the running daemon when its wire-protocol identity is compatible; an
 incompatible daemon is reported with its pid and release version. Submissions
-(`exec`, `request`, the shim, and hook rewrites) replace an older daemon only
-when its atomic idle check finds no running, queued, executing, or attached
-work. Otherwise the request is submitted to that daemon and one diagnostic
-says the upgrade will happen when idle. `hauler daemon restart` remains the
-explicit forced replacement path.
+(`exec`, `request`, the shim, and hook rewrites) replace a protocol-compatible
+older daemon only when its atomic idle check finds no running, queued,
+executing, or attached work. Otherwise the request is submitted to that daemon
+and one diagnostic says the upgrade will happen when idle. A daemon from
+0.7.1–0.7.3 does not advertise its protocol; after upgrading, stop it once with
+`hauler daemon stop` or replace it with `hauler daemon restart` from the new
+install. `restart` remains the explicit forced replacement path.
 
 Supported platforms: Linux and macOS. Windows is experimental and untested
 (the daemon endpoint resolves to a named pipe, but the cargo PATH shim is
