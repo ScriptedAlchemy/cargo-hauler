@@ -14,7 +14,6 @@ import type {
 } from '../../client/ensure-daemon.js';
 import { formatMs } from '../../ui/shared/format.js';
 import { loadHaulerSnapshot } from '../../operations/status.js';
-import { legacyRelocatedSocketPath } from '../../platform/state-paths.js';
 
 import { resolveDaemonConfig } from '../config.js';
 import type { DaemonConfigShape } from '../config.js';
@@ -168,7 +167,7 @@ export const parseDaemonSubcommand = (argv: readonly string[]): DaemonSubcommand
     throw new Error(`daemon requires one of: ${daemonSubcommands.join(', ')}`);
   }
   const extra = argv.slice(1);
-  if (extra.length === 0 || (subcommand === 'stop' && extra.length === 1 && extra[0] === '--force')) {
+  if (extra.length === 0) {
     return subcommand;
   }
   throw new Error(`daemon ${subcommand} does not accept extra arguments`);
@@ -385,28 +384,11 @@ const stopDaemonAt = (
   );
 };
 
-/**
- * `hauler daemon stop`. Nothing answering the current endpoint is not yet
- * "not running" for a state dir whose socket relocates: a daemon from a
- * pre-hardening install serves the path that install derived and still holds
- * this state dir's lock, so it is asked too before the absent verdict
- * stands.
- */
 export const stopDaemon = (
   config: DaemonConfigShape = resolveDaemonConfig(),
   dependencies: StopDaemonDependencies = defaultStopDependencies,
-): Effect.Effect<DaemonControlResult> => {
-  const legacyPath = legacyRelocatedSocketPath(config.stateDir);
-  return stopDaemonAt(config, config.socketPath, dependencies).pipe(
-    Effect.flatMap((outcome) =>
-      outcome.shutdown?.kind === 'absent' &&
-      legacyPath !== null &&
-      legacyPath !== config.socketPath
-        ? stopDaemonAt(config, legacyPath, dependencies)
-        : Effect.succeed(outcome),
-    ),
-  );
-};
+): Effect.Effect<DaemonControlResult> =>
+  stopDaemonAt(config, config.socketPath, dependencies);
 
 export const statusDaemon = (
   config: DaemonConfigShape = resolveDaemonConfig(),

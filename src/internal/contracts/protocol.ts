@@ -1,8 +1,5 @@
 import { z } from 'zod';
 
-export { wireProtocol } from './wire-version.js';
-export { LineBuffer } from '../platform/ndjson.js';
-
 /**
  * Wire protocol for the hauler daemon: one JSON document per line
  * (NDJSON) in each direction over the daemon's unix socket. This module is
@@ -864,8 +861,8 @@ export interface PongMessage {
   readonly pid: number;
   readonly startedAtMs: number;
   readonly version: string;
-  /** Stable wire identity; absent only on compatible 0.7.1–0.7.3 daemons. */
-  readonly protocol?: number;
+  /** Current daemons always send this; an untrusted or obsolete peer may omit it. */
+  readonly protocol: number | undefined;
 }
 
 export interface StatusResultMessage {

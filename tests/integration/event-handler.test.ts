@@ -127,7 +127,7 @@ describe('pingSessionCompleted', () => {
           const message = JSON.parse(line) as { readonly id?: string; readonly type?: string };
           if (message.type === 'ping') {
             socket.write(
-              `${JSON.stringify({ id: message.id, pid: process.pid, startedAtMs: 1, type: 'pong', version })}\n`,
+              `${JSON.stringify({ id: message.id, pid: process.pid, protocol: 1, startedAtMs: 1, type: 'pong', version })}\n`,
             );
           } else {
             received.push(line);

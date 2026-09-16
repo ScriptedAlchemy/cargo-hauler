@@ -13,12 +13,8 @@ import {
   shortenPath,
 } from '../shared/format.js';
 import { kachePressureModel } from '../../integrations/kache/pressure-model.js';
-import type { KachePressureModel, KachePressureWarning } from '../../integrations/kache/pressure-model.js';
+import type { KachePressureModel } from '../../integrations/kache/pressure-model.js';
 import { sharedTargetWarning } from '../shared/shared-target.js';
-
-export { formatBytes, formatMs, pathBasename, relativeTime, shortenPath };
-export { kachePressureModel };
-export type { KachePressureModel, KachePressureWarning };
 
 /**
  * Pure logic for the dashboard widget, kept DOM-free and compiler-free so unit

@@ -9,7 +9,8 @@ import * as Socket from 'effect/unstable/socket/Socket';
 import { shortId } from '../util/id.js';
 
 import type { ClientMessage, PongMessage, ServerMessage } from '../contracts/protocol.js';
-import { encodeClientMessage, LineBuffer, parseServerMessageLine } from '../contracts/protocol.js';
+import { encodeClientMessage, parseServerMessageLine } from '../contracts/protocol.js';
+import { LineBuffer } from '../platform/ndjson.js';
 
 export class DaemonUnreachableError extends Data.TaggedError('DaemonUnreachable')<{
   readonly socketPath: string;

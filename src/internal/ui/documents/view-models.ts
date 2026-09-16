@@ -18,9 +18,6 @@ import { countWord } from '../../util/text.js';
 
 import { commandText, diagnosticCounts } from './headlines.js';
 
-export type { KachePressureModel, KachePressureWarning } from '../../integrations/kache/pressure-model.js';
-export { kachePressureModel } from '../../integrations/kache/pressure-model.js';
-
 /*
  * View-models: pure projections from daemon records and request context onto
  * the fields a component prints. Components render these and nothing else,

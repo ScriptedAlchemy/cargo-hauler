@@ -41,6 +41,7 @@ const server = createServer((socket) => {
         socket.write(`${JSON.stringify({
           id: message.id,
           pid: process.pid,
+          protocol: 1,
           startedAtMs: 1,
           type: 'pong',
           version: '999.0.0',

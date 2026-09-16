@@ -245,17 +245,13 @@ describe('hauler script', () => {
     }
   });
 
-  it('accepts daemon stop --force', async () => {
+  it('rejects the removed daemon stop --force alias', async () => {
     const root = mkdtempSync(join(tmpdir(), 'cc-script-daemon-force-'));
     try {
       await withEnv({ CARGO_HAULER_STATE_DIR: join(root, 'state') }, async () => {
         const result = await run(['daemon', 'stop', '--force']);
-        expect(result.code).toBe(0);
-        expect(JSON.parse(result.text)).toMatchObject({
-          operation: 'daemon',
-          running: false,
-          subcommand: 'stop',
-        });
+        expect(result.code).toBe(2);
+        expect(result.text).toContain('Usage: hauler');
       });
     } finally {
       rmSync(root, { recursive: true, force: true });

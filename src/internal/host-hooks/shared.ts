@@ -1,13 +1,8 @@
 import { diagnosticCounts } from '../ui/documents/headlines.js';
-import { isRecord } from '../util/guards.js';
-import { countWord } from '../util/text.js';
-import { extractShellCommand } from './tool-input.js';
 
 import type { DaemonProbe } from './probe.js';
 import type { HookRecord } from './record.js';
 import type { DeniedAttempt, FinishedTicket } from './rpc.js';
-
-export { extractShellCommand, isRecord, countWord };
 
 export interface HookContext {
   readonly nativeEvent?: string;

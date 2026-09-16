@@ -21,7 +21,7 @@ describe('hook RPC NDJSON framing', () => {
         const message = JSON.parse(chunk.toString('utf8')) as { readonly id?: string; readonly type?: string };
         if (message.type === 'ping') {
           socket.end(
-            `${JSON.stringify({ id: message.id, pid: process.pid, startedAtMs: 1, type: 'pong', version })}\n`,
+            `${JSON.stringify({ id: message.id, pid: process.pid, protocol: 1, startedAtMs: 1, type: 'pong', version })}\n`,
           );
           return;
         }
@@ -101,6 +101,7 @@ describe('hook RPC NDJSON framing', () => {
               ? {
                   id: message.id,
                   pid: 1,
+                  protocol: 1,
                   startedAtMs: 1,
                   type: 'pong',
                   version: '0.7.1',

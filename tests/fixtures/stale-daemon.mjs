@@ -104,7 +104,9 @@ const server = createServer((socket) => {
         socket.write(`${JSON.stringify({
           id: message.id,
           pid: process.pid,
-          ...(mode === 'newer-compatible' ? { protocol: 1 } : {}),
+          ...(mode === 'newer'
+            ? {}
+            : { protocol: mode === 'incompatible-older' ? 2 : 1 }),
           startedAtMs: 1,
           type: 'pong',
           version: daemonVersion,

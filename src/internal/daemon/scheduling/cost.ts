@@ -26,9 +26,6 @@ import { Ledger } from '../../storage/ledger.js';
 import type { NeighborDurationQuery, PhaseDurationSample } from '../../storage/ledger.js';
 import type { EstimateSource, KacheStatusReport } from '../../contracts/protocol.js';
 
-export { readKacheEventPriors } from '../../integrations/kache/status.js';
-export type { KacheEventPriors, KacheIndexPriors } from '../../integrations/kache/status.js';
-
 export interface CostEstimate {
   readonly estimateMs: number;
   readonly source: EstimateSource;

@@ -25,7 +25,7 @@ describe('mapSocketFailure', () => {
   });
 
   it('reads read and write failures as a closed connection carrying what arrived', () => {
-    const pong = { id: 'x', pid: 1, startedAtMs: 0, type: 'pong' as const, version: '0' };
+    const pong = { id: 'x', pid: 1, protocol: 1, startedAtMs: 0, type: 'pong' as const, version: '0' };
     const mapped = mapSocketFailure(
       new Socket.SocketError({ reason: new Socket.SocketReadError({ cause: new Error('reset') }) }),
       socketPath,

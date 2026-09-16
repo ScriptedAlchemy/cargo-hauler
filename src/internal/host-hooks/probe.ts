@@ -1,8 +1,8 @@
 import { absentSocketCodes } from '../platform/socket-errors.js';
+import { isRecord } from '../util/guards.js';
 
 import { resolveHookSocketPath } from './paths.js';
 import { requestOutcome, type RequestOutcome } from './rpc.js';
-import { isRecord } from './shared.js';
 
 const defaultTimeoutMs = 250;
 

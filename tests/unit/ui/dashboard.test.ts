@@ -16,18 +16,15 @@ import {
   delayedWaitCue,
   diagnosticBadges,
   formatCompactNumber,
-  formatMs,
   frequencyEntries,
   frequencyTotal,
   handBackView,
   kacheColumns,
-  kachePressureModel,
   kachePressureView,
   kacheProfileGroups,
   laneIsActive,
   outputPreviewLine,
   outputTextFor,
-  pathBasename,
   percentileMinSamples,
   phaseSplitView,
   pickMetricsWindow,
@@ -37,14 +34,12 @@ import {
   queuedWaitThresholdMs,
   quietOutputHint,
   ranAsFor,
-  relativeTime,
   remainingEstimateMs,
   remainingMinMs,
   resolveTicketDetail,
   rowSubcommand,
   sectionOrder,
   sharedTargetCell,
-  shortenPath,
   stalledHint,
   latencySavedStat,
   subcommandDisplayLabel,
@@ -61,6 +56,13 @@ import {
   type DashboardKachePressure,
   type DashboardMetricsWindow,
 } from '../../../src/internal/ui/dashboard/lib.js';
+import { kachePressureModel } from '../../../src/internal/integrations/kache/pressure-model.js';
+import {
+  formatMs,
+  pathBasename,
+  relativeTime,
+  shortenPath,
+} from '../../../src/internal/ui/shared/format.js';
 import { sharedTargetWarning } from '../../../src/internal/ui/shared/shared-target.js';
 
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));

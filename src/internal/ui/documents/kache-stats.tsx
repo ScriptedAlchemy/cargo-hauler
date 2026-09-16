@@ -2,11 +2,11 @@ import { Agent } from '@agent-bundle/runtime';
 import React from 'react';
 
 import type { KacheStatusReport } from '../../contracts/protocol.js';
+import type { KachePressureModel } from '../../integrations/kache/pressure-model.js';
 
 import { DataList, Heading, Table } from './primitives.js';
 import { UnavailableState } from './states.js';
 import { kacheModel } from './view-models.js';
-import type { KachePressureModel } from './view-models.js';
 
 export interface KacheStatsProps {
   readonly kache: KacheStatusReport | null | undefined;
