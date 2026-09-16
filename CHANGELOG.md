@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.7
+
+### Patch Changes
+
+- 7136e0b: Report ledger rows as orphaned when no daemon answers for them.
+- 242cc42: Settle killed queued tickets immediately and remove them from the lane without waiting for earlier work.
+
 ## 0.8.6
 
 ### Patch Changes
