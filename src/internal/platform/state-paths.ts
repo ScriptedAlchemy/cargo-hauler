@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -56,7 +56,16 @@ export const resolveStateDir = (
   if (current !== undefined && current.length > 0) {
     return current;
   }
-  return defaultStateDir(env);
+  const fallback = defaultStateDir(env);
+  try {
+    // Package managers and operators commonly relocate the default cache onto
+    // a larger local volume with a symlink. Resolve only this application-
+    // chosen default; an explicit CARGO_HAULER_STATE_DIR retains the strict
+    // no-symlink policy enforced by ensurePrivateDir.
+    return realpathSync(fallback);
+  } catch {
+    return fallback;
+  }
 };
 
 const namedPipePrefix = '\\\\.\\pipe\\';
