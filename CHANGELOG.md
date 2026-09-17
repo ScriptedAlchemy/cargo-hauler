@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.2
+
+### Patch Changes
+
+- c7eb5c3: Preserve nested Codex MCP overrides when the generated installer replaces an enabled plugin. Refuse replacement when plugin-level enablement is disabled or unknown.
+
 ## 0.9.1
 
 ### Patch Changes
