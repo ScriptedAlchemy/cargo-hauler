@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1
+
+### Patch Changes
+
+- cc5540b: Preserve complete inventories when generated plugin installers inspect existing copies.
+
 ## 0.9.0
 
 ### Minor Changes
