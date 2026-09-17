@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.3
+
+### Patch Changes
+
+- 093368c: Resolve a symlinked default cache directory before daemon startup while retaining the strict no-symlink policy for explicit `CARGO_HAULER_STATE_DIR` paths.
+
 ## 0.9.2
 
 ### Patch Changes
