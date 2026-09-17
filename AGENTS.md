@@ -1,5 +1,18 @@
 # Agent instructions
 
+## Release and cleanup
+
+Publish exclusively through `.github/workflows/release.yml` with GitHub OIDC.
+The package release scripts are workflow entrypoints: never publish locally,
+request npm publishing tokens/login, or troubleshoot local publishing auth.
+Use the existing Changesets flow and verify Actions plus the registry before
+updating installations.
+
+Delete unused code, scripts, duplicate workarounds, and legacy installs after
+checking active owners/references. Preserve auth, operator env, durable data,
+and intentional duplicate suppression. Prefer existing helpers, stdlib, and
+native features over new wrappers or fallback frameworks.
+
 ## Build and check
 
 - `pnpm run build` compiles one composite plugin root (`artifact/`: the

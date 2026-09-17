@@ -1026,10 +1026,9 @@ origin until Ctrl-C — so the data is the daemon's own. `pnpm run dev` and the
 Workbench's MCP page preview the same App with live rebuilds. The repository
 ships no preview harness of its own.
 
-agent-bundle does not yet have an npm release; this repository pins the
+This repository pins the
 [pkg.pr.new](https://pkg.pr.new) preview of Agent Bundle main commit
-[`62ffe40`](https://github.com/ScriptedAlchemy/agent-bundle/commit/62ffe403c5af73499fe7f5767c6d60be26e250db),
-through [Agent Bundle PR #794](https://github.com/ScriptedAlchemy/agent-bundle/pull/794),
+[`ab5ae66`](https://github.com/ScriptedAlchemy/agent-bundle/commit/ab5ae66e1d9c2829a092640c586e2b3eacc4be88),
 for `agent-bundle`, `@agent-bundle/runtime`, and their paired
 `rsc-markdown-stream` preview. This pin emits manifest v6. `inspect` reports the
 `agent` component kind as unavailable on every host (agent-bundle G5

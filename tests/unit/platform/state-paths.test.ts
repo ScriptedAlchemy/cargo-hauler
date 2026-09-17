@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 
@@ -52,10 +52,29 @@ describe('portable state root', () => {
 
   it('treats an empty hauler override as unset', () => {
     const env = { CARGO_HAULER_STATE_DIR: '' };
-    const expected = defaultStateDir(env);
+    const expected = resolveStateDir({});
     expect(resolveStateDir(env)).toBe(expected);
     expect(resolveDaemonConfig(env).stateDir).toBe(expected);
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'resolves a relocated default cache without weakening explicit state paths',
+    () => {
+      const root = mkdtempSync(join(tmpdir(), 'cargo-hauler-state-symlink-'));
+      const cacheRoot = join(root, 'cache');
+      const target = join(root, 'fast-state');
+      mkdirSync(cacheRoot);
+      mkdirSync(target);
+      const link = join(cacheRoot, 'cargo-hauler');
+      symlinkSync(target, link);
+      try {
+        expect(resolveStateDir({ XDG_CACHE_HOME: cacheRoot })).toBe(target);
+        expect(resolveStateDir({ CARGO_HAULER_STATE_DIR: link })).toBe(link);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
 
   it('resolves the state dir from the environment alone, never by probing for existing directories', () => {
     // The default is computed, not discovered: a sibling that happens to exist
@@ -77,7 +96,6 @@ describe('portable state root', () => {
     const env = {};
     const config = resolveDaemonConfig(env);
     expect(config.stateDir).toBe(resolveStateDir(env));
-    expect(config.stateDir).toBe(defaultStateDir(env));
     expect(config.socketPath).toBe(join(config.stateDir, 'daemon.sock'));
   });
 });

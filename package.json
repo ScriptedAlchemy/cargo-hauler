@@ -1,6 +1,6 @@
 {
   "name": "cargo-hauler",
-  "version": "0.9.0",
+  "version": "0.9.3",
   "license": "MIT",
   "private": false,
   "description": "Orchestrate cargo across Claude, Codex, and Cursor so concurrent agent sessions share work instead of fighting locks.",
@@ -57,7 +57,7 @@
     "release:version": "changeset version"
   },
   "devDependencies": {
-    "@agent-bundle/runtime": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@62ffe403c5af73499fe7f5767c6d60be26e250db",
+    "@agent-bundle/runtime": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@ab5ae66e1d9c2829a092640c586e2b3eacc4be88",
     "@changesets/cli": "3.0.3",
     "@effect/atom-react": "4.0.0-rc.112",
     "@effect/platform-node": "4.0.0-rc.112",
@@ -69,7 +69,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-    "agent-bundle": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@62ffe403c5af73499fe7f5767c6d60be26e250db",
+    "agent-bundle": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@ab5ae66e1d9c2829a092640c586e2b3eacc4be88",
     "bashjsast": "github:woolkingx/bashjsast#131f4b677d1906774fc49cfceab0ccb7b370b2e6",
     "effect": "4.0.0-rc.112",
     "effect-rstest": "https://pkg.pr.new/ScriptedAlchemy/effect-rstest@e5f8d5f",
