@@ -61,7 +61,8 @@ jobs:
 
           const { name, version } = JSON.parse(await readFile('package.json', 'utf8'));
           const endpoint = `https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`;
-          for (let attempt = 1; attempt <= 24; attempt++) {
+          // npm finalized the previous release more than six minutes after upload.
+          for (let attempt = 1; attempt <= 40; attempt++) {
             const url = new URL(endpoint);
             url.searchParams.set('release-verification', `${Date.now()}-${attempt}`);
             try {
@@ -78,7 +79,7 @@ jobs:
               }
             } catch {}
             console.log(`attempt ${attempt}: registry has not confirmed ${name}@${version}`);
-            if (attempt < 24) await delay(15_000);
+            if (attempt < 40) await delay(15_000);
           }
           console.error(`::error::Registry did not confirm ${name}@${version} after bounded visibility retries.`);
           process.exit(1);
