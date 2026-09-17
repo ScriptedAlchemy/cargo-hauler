@@ -1028,7 +1028,7 @@ ships no preview harness of its own.
 
 This repository pins the
 [pkg.pr.new](https://pkg.pr.new) preview of Agent Bundle main commit
-[`57a9196`](https://github.com/ScriptedAlchemy/agent-bundle/commit/57a9196caf2590ece001799eaeed92613352bc21),
+[`ab5ae66`](https://github.com/ScriptedAlchemy/agent-bundle/commit/ab5ae66e1d9c2829a092640c586e2b3eacc4be88),
 for `agent-bundle`, `@agent-bundle/runtime`, and their paired
 `rsc-markdown-stream` preview. This pin emits manifest v6. `inspect` reports the
 `agent` component kind as unavailable on every host (agent-bundle G5
