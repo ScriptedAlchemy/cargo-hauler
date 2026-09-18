@@ -40,7 +40,8 @@
   ],
   "scripts": {
     "build": "agent-bundle build",
-    "check": "pnpm validate && pnpm build && pnpm typecheck && pnpm diagnostics && pnpm test && pnpm test:routes && pnpm test:browser && pnpm validate:artifact",
+    "check": "pnpm check:artifact && pnpm validate && pnpm build && pnpm typecheck && pnpm diagnostics && pnpm test && pnpm test:routes && pnpm test:browser && pnpm validate:artifact",
+    "check:artifact": "node --test tests/packaging/committed-artifact.test.mjs && pnpm validate:artifact",
     "changeset": "changeset",
     "dev": "agent-bundle dev",
     "diagnostics": "effect-tsgo diagnostics --project tsconfig.json",
