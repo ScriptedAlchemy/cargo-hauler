@@ -5,6 +5,5 @@ allowBuilds:
 # `rsc-markdown-stream`, which is not on npm. pnpm 11 blocks URL-resolved
 # transitive dependencies by default; remove this once agent-bundle is on npm.
 blockExoticSubdeps: false
-minimumReleaseAgeExclude:
-  - '@rstest/browser@0.12.0'
-  - '@rstest/core@0.12.0'
+# Do not block brand-new npm publishes; CI and Renovate bump deps the same day.
+minimumReleaseAge: 0
