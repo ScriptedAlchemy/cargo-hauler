@@ -83,9 +83,10 @@ codex plugin add cargo-hauler@cargo-hauler-marketplace
 In Cursor, use Customize → From GitHub Repository and select
 `ScriptedAlchemy/cargo-hauler`. The repository-root marketplaces point at the
 committed `artifact/` plugin root. `pnpm build` generates both from the same
-configuration; the release workflow validates and refreshes them before
-Changesets, and release versioning rebuilds them with the new package version.
-Never edit these generated files manually.
+configuration. Commit the generated output with source changes; `pnpm check`
+compares its full source-input inventory, digests, and executable modes before
+rebuilding. Changesets release versioning rebuilds it with the new package
+version in its version PR. Never edit these generated files manually.
 
 Or the host commands directly from `dist/` in the npm package, or `artifact/`
 in a checkout. Each root's `INSTALL.md` repeats them with the compiled names:

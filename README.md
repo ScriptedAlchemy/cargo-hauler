@@ -636,8 +636,9 @@ codex plugin add cargo-hauler@cargo-hauler-marketplace
 ```
 
 In Cursor, use Customize → From GitHub Repository and select
-`ScriptedAlchemy/cargo-hauler`. The release workflow refreshes the committed
-framework output; release versioning rebuilds it with the new version.
+`ScriptedAlchemy/cargo-hauler`. Contributors commit native build output with
+source changes; `pnpm check` rejects stale committed artifacts before rebuilding.
+Release versioning rebuilds the artifacts with the new version in its version PR.
 
 ### Developing from a checkout
 
