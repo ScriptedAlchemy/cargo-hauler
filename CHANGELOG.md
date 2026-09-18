@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.4
+
+### Patch Changes
+
+- 1986024: Keep GitHub cargo-hauler artifacts current by rejecting stale source inputs and executable modes before `pnpm check` rebuilds, and generate next-version artifacts through `release:version` without main self-pushes. (#261)
+- ecc05aa: Install cargo-hauler directly from GitHub with framework-generated repository marketplaces and committed plugin artifacts, and preserve Codex settings during refresh. (#259)
+
 ## 0.9.3
 
 ### Patch Changes
