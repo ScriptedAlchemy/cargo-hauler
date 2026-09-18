@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 
@@ -68,7 +68,7 @@ describe('portable state root', () => {
       const link = join(cacheRoot, 'cargo-hauler');
       symlinkSync(target, link);
       try {
-        expect(resolveStateDir({ XDG_CACHE_HOME: cacheRoot })).toBe(target);
+        expect(resolveStateDir({ XDG_CACHE_HOME: cacheRoot })).toBe(realpathSync(target));
         expect(resolveStateDir({ CARGO_HAULER_STATE_DIR: link })).toBe(link);
       } finally {
         rmSync(root, { recursive: true, force: true });
