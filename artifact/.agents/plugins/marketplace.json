@@ -1,0 +1,1 @@
+{"interface":{"displayName":"cargo-hauler"},"name":"cargo-hauler-marketplace","plugins":[{"category":"Productivity","name":"cargo-hauler","policy":{"authentication":"ON_INSTALL","installation":"AVAILABLE"},"source":{"path":"./","source":"local"}}]}

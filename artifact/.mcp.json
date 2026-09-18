@@ -1,0 +1,1 @@
+{"mcpServers":{"hauler":{"args":["${CLAUDE_PLUGIN_ROOT}/mcp/mcp-hauler-2b8242f9.mjs"],"command":"node","env":{"AGENT_BUNDLE_PLUGIN_ROOT":"${CLAUDE_PLUGIN_ROOT}"},"type":"stdio"}}}

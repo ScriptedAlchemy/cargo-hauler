@@ -617,13 +617,29 @@ node ./install.mjs --mode marketplace  # local marketplace repository
 
 Upgrading to a new version: `claude plugin marketplace update cargo-hauler-marketplace
 && claude plugin update cargo-hauler@cargo-hauler-marketplace`, `codex plugin
-remove … && codex plugin marketplace add ./ && codex plugin add …`, and
+marketplace add ./ && codex plugin add …` (without removing its settings), and
 `node "$PLUGIN_ROOT/install.mjs" --replace`. `claude plugin update` is
 version-gated, so after a rebuild that did not bump the version use
 `claude plugin uninstall … --keep-data` and install again (the installer does
 this automatically). Restart or reload the host after installing.
 
-### From a checkout
+### From GitHub
+
+The repository includes the generated `artifact/` plugin root and native
+marketplaces, so GitHub installs need no local build or framework dependency:
+
+```sh
+claude plugin marketplace add ScriptedAlchemy/cargo-hauler
+claude plugin install cargo-hauler@cargo-hauler-marketplace --scope user
+codex plugin marketplace add ScriptedAlchemy/cargo-hauler
+codex plugin add cargo-hauler@cargo-hauler-marketplace
+```
+
+In Cursor, use Customize → From GitHub Repository and select
+`ScriptedAlchemy/cargo-hauler`. CI refreshes the committed framework output;
+release versioning rebuilds it with the new version.
+
+### Developing from a checkout
 
 ```sh
 pnpm install
@@ -1028,7 +1044,7 @@ ships no preview harness of its own.
 
 This repository pins the
 [pkg.pr.new](https://pkg.pr.new) preview of Agent Bundle main commit
-[`ab5ae66`](https://github.com/ScriptedAlchemy/agent-bundle/commit/ab5ae66e1d9c2829a092640c586e2b3eacc4be88),
+[`477abe9`](https://github.com/ScriptedAlchemy/agent-bundle/commit/477abe956bdb1a862d957733c9d936580d65b5a9),
 for `agent-bundle`, `@agent-bundle/runtime`, and their paired
 `rsc-markdown-stream` preview. This pin emits manifest v6. `inspect` reports the
 `agent` component kind as unavailable on every host (agent-bundle G5

@@ -40,7 +40,7 @@ export default defineConfig({
   // The composite plugin root every selected host reads; the npm package
   // build stays in `dist/` (the `bin` entries above require the two to be
   // separate).
-  output: { distPath: 'artifact' },
+  output: { distPath: 'artifact', repositoryMarketplace: true },
   plugin: {
     description:
       'Coalesce, schedule, and stream cargo so concurrent agent sessions share compiles instead of fighting locks.',

@@ -1,0 +1,1 @@
+{"name":"cargo-hauler-marketplace","owner":{"name":"cargo-hauler"},"plugins":[{"description":"Coalesce, schedule, and stream cargo so concurrent agent sessions share compiles instead of fighting locks.","name":"cargo-hauler","source":"./artifact"}]}

@@ -434,10 +434,10 @@ describe('hauler script', () => {
     expect(result.text).toContain('cargo-hauler --help');
   });
 
-  const artifactScript = join(import.meta.dirname, '..', 'artifact', 'cursor', 'scripts', 'hauler.mjs');
+  const artifactScript = join(import.meta.dirname, '../..', 'artifact', 'scripts', 'hauler.mjs');
 
-  it.skipIf(!existsSync(artifactScript))(
-    'refuses routed commands from a built host artifact',
+  it(
+    'refuses routed commands from the composite artifact',
     async () => {
       const stateDir = mkdtempSync(join(tmpdir(), 'cargo-hauler-artifact-'));
       try {
