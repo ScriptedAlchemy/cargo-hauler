@@ -71,6 +71,21 @@ cargo-hauler-install install codex
 cargo-hauler-install install cursor --mode local
 ```
 
+From GitHub, no checkout build or framework dependency is needed:
+
+```sh
+claude plugin marketplace add ScriptedAlchemy/cargo-hauler
+claude plugin install cargo-hauler@cargo-hauler-marketplace --scope user
+codex plugin marketplace add ScriptedAlchemy/cargo-hauler
+codex plugin add cargo-hauler@cargo-hauler-marketplace
+```
+
+In Cursor, use Customize → From GitHub Repository and select
+`ScriptedAlchemy/cargo-hauler`. The repository-root marketplaces point at the
+committed `artifact/` plugin root. `pnpm build` generates both from the same
+configuration; CI validates and refreshes them, and release versioning rebuilds
+them with the new package version. Never edit these generated files manually.
+
 Or the host commands directly from `dist/` in the npm package, or `artifact/`
 in a checkout. Each root's `INSTALL.md` repeats them with the compiled names:
 
@@ -86,8 +101,10 @@ node "$PLUGIN_ROOT/install.mjs" [--mode local|marketplace] [--replace]
   pre-receipt copy; a same-version rebuild is replaced in place (owned files
   only, `state/` survives). Claude's `plugin update` is version-gated, so a
   same-version rebuild needs `claude plugin uninstall … --keep-data` then a
-  fresh install; Codex needs `codex plugin remove …` then `marketplace add` +
-  `plugin add`. The installer performs these sequences itself.
+  fresh install; Codex refreshes with `marketplace add` + `plugin add` without
+  removing its settings. The installer performs these sequences itself.
+  Codex add re-enables disabled plugins, so the installer refuses disabled or
+  unknown-enabled installs (`AB7004`); enable the plugin first, then retry.
 - `cargo-hauler-install doctor --host <host>` reports the real installed
   status without changing anything. `cargo-hauler-install uninstall <host>
   --plan` reports the exact receipt-owned removals. Both accept `--json`;

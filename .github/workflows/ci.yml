@@ -71,3 +71,40 @@ jobs:
 
       - name: Run checks
         run: pnpm check
+
+  refresh-artifact:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install package tooling
+        run: npm install --global "$(node -p "require('./package.json').packageManager")"
+
+      - name: Build and validate repository plugin
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm validate:artifact
+
+      - name: Commit generated host outputs
+        run: |
+          git add artifact .claude-plugin/marketplace.json .agents/plugins/marketplace.json .cursor-plugin/marketplace.json
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'chore: refresh generated repository plugin'
+            git push origin HEAD:master
+          fi
