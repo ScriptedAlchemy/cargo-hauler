@@ -48,6 +48,7 @@ jobs:
           version-script: pnpm release:version
           publish-script: pnpm release:publish
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          push-with-git-cli: true
 
       # Green must mean published. Once no changesets are pending, the version
       # in package.json is the one that should be on npm, whether this run
