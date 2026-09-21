@@ -189,7 +189,7 @@ importers:
         version: 0.12.0
       '@types/node':
         specifier: ^22.18.0
-        version: 22.20.3
+        version: 22.20.4
       '@types/proper-lockfile':
         specifier: ^4.1.4
         version: 4.1.4
@@ -836,8 +836,8 @@ packages:
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
 
-  '@types/node@22.20.3':
-    resolution: {integrity: sha512-DZmzkmwHzXrLPAXPyKNDzlIwMMUZCVacoD25ywdy5YTKGbOx/2ld+Q38Im2zJ0vBuZP5Prd3VZutKZyXwkOS8A==}
+  '@types/node@22.20.4':
+    resolution: {integrity: sha512-zJRE40jpHtKqE/C4fgHrAKQLJuSpzEnP9ff9Y7YtoR3Wd2pwqzlekDeEuUQXjRd+QCYnVnNwuJYmhdk9XV8gvA==}
 
   '@types/proper-lockfile@4.1.4':
     resolution: {integrity: sha512-uo2ABllncSqg9F1D4nugVl9v93RmjxF6LJzQLMLDdPaXCUIDPeOJ21Gbqi43xNKzBi/WQ0Q0dICqufzQbMjipQ==}
@@ -2155,7 +2155,7 @@ snapshots:
 
   '@types/deep-eql@4.0.2': {}
 
-  '@types/node@22.20.3':
+  '@types/node@22.20.4':
     dependencies:
       undici-types: 6.21.0
 
@@ -2175,7 +2175,7 @@ snapshots:
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 22.20.3
+      '@types/node': 22.20.4
 
   '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260707.2':
     optional: true
