@@ -113,7 +113,7 @@ const servedSavings = (
     atMs,
     leaderRunMs,
     leader.startedAtMs,
-    leader.estimateMs,
+    leader.compileEstimateMs,
   );
 
 export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRuntime => {

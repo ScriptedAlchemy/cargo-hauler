@@ -26,7 +26,8 @@ export const riddenFromMs = (createdAtMs: number, leaderStartedAtMs: number | nu
  * measurable compute. Latency compares the rider's estimated solo run,
  * starting at `riddenFromMs`, with the time it actually spent riding; a batch
  * rider was queued behind the leader in its lane, so its solo run starts only
- * after the leader's estimated solo run. It stays signed, so a rider whose
+ * after the leader's estimated compile, when the leader would have handed the
+ * lane on. It stays signed, so a rider whose
  * leader ran longer than the rider's own run would have shows the regression
  * rather than hiding it.
  */
@@ -37,7 +38,7 @@ export const calculateServedSavings = (
   settledAtMs: number,
   leaderRunMs: number | null,
   leaderStartedAtMs: number | null = null,
-  leaderEstimateMs = 0,
+  leaderCompileEstimateMs = 0,
 ): ServedSavings => {
   const estimateMs = nonNegativeMs(estimateMsValue);
   let compute: Pick<ServedSavings, 'savedComputeMs' | 'savedComputeSource'>;
@@ -70,7 +71,7 @@ export const calculateServedSavings = (
     }
   }
   const riddenMs = Math.max(0, settledAtMs - riddenFromMs(createdAtMs, leaderStartedAtMs));
-  const behindLeaderMs = mode === 'batch' && leaderStartedAtMs !== null ? nonNegativeMs(leaderEstimateMs) : 0;
+  const behindLeaderMs = mode === 'batch' && leaderStartedAtMs !== null ? nonNegativeMs(leaderCompileEstimateMs) : 0;
   return {
     ...compute,
     savedLatencyMs: Math.round(estimateMs + behindLeaderMs - riddenMs),

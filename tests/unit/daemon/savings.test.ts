@@ -73,8 +73,9 @@ describe('calculateServedSavings', () => {
   });
 
   it('credits a batch rider no compute and measures its latency from behind the leader', () => {
-    // Folded at the leader's start (0s): leader alone ~60s, rider alone ~40s,
-    // the combined run took 80s. Alone, the rider would have finished at 100s.
+    // Folded at the leader's start (0s): the leader alone compiles in ~60s,
+    // the rider alone ~40s, the combined run took 80s. Alone, the rider would
+    // have finished at 100s.
     expect(calculateServedSavings('batch', 40_000, 0, 80_000, 80_000, 0, 60_000)).toEqual({
       savedComputeMs: 0,
       savedComputeSource: 'estimate',
