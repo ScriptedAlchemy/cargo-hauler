@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.6
+
+### Patch Changes
+
+- 84d9487: `hauler daemon stop` and `hauler daemon restart` no longer hang on a cargo or test binary that ignores SIGTERM. Shutdown now escalates to SIGKILL after `CARGO_HAULER_KILL_GRACE_MS`, as an explicit `hauler kill` already did, and the `cargo metadata` lookup behind dependency-aware estimates follows the same rule.
+- 31d165f: `hauler kill` on a ticket waiting in its lane's batch window now settles it killed right away. The kill used to wait out the whole window (`CARGO_HAULER_BATCH_WINDOW_MS`) before the ticket settled.
+- 7a29425: `hauler kill` now says what happened to the ticket. A queued ticket reads `killed before it started; no cargo process ran`, a rider reads `killed; detached from cc-N`, and only a running leader still reads `the daemon stops its cargo process and frees the lane`.
+- 192a27d: `hauler request` now attributes its ticket to the calling agent. It reads `CARGO_HAULER_HOST` and `CARGO_HAULER_SESSION` like `hauler exec`, then the session id the agent host exports to its shell (`CLAUDE_CODE_SESSION_ID`, `CODEX_THREAD_ID`, `CURSOR_CONVERSATION_ID`). Background requests and PATH-shim runs from an agent shell no longer land in the ledger with a null session.
+- 1fe16a4: `cargo-hauler-install install <host>` now rewrites a PATH `cargo` shim that runs another cargo-hauler version, or a `node` or `hauler.js` that is gone, and keeps its Cargo path. A Node or cargo-hauler upgrade no longer leaves scripted cargo on an old client that falls back to passthrough. `cargo-hauler-install doctor` adds that finding to its report as an error, in text and `--json`, and exits `1`. A newly written shim also runs the real Cargo when its embedded `node` is gone, instead of failing every `cargo` with exit 127.
+- 7adf6e3: `hauler result` and `hauler await` answer from the ledger when the daemon is stopped instead of exiting with `render-failed`. A ticket the stopped daemon left in flight reads as `orphaned` with the reason `stranded by a stopped daemon`, the same projection `hauler status` and `hauler last` show. A ticket missing from the ledger says so and names the stopped daemon. Both results now carry `daemon` (`running` or `stopped`), and an orphaned ticket gets next-step guidance on every detail surface.
+
 ## 0.9.5
 
 ### Patch Changes
