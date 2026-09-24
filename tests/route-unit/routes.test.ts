@@ -1,3 +1,4 @@
+import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'effect-rstest';
@@ -5,6 +6,7 @@ import { cliJson, expectDocument, invokeCli, renderRoute, renderRouteEvents, tes
 import * as Effect from 'effect/Effect';
 
 import { requestOverSocket } from '../../src/internal/client/control.js';
+import { awaitTicketWithProgress, killTicket } from '../../src/internal/client/tickets.js';
 import type { RequestRecord, StatusRow } from '../../src/internal/contracts/protocol.js';
 import { resolveDaemonConfig } from '../../src/internal/daemon/config.js';
 import { scopedDaemon, scopedEnv, scopedLedger } from '../support/harness.js';
@@ -313,6 +315,83 @@ describe('tool documents against a live daemon', () => {
             .toContainContext(`${ticket} succeeded`);
           expect(JSON.stringify(full.document)).not.toContain('Output tail:');
         });
+      }), 30_000);
+
+  it.live('describes each kill by what happened to the ticket: dropped, detached, or stopping', () =>
+      Effect.gen(function* () {
+        const fixture = yield* scopedDaemon(1);
+        const sigtermIgnoringCargoBin = join(fixture.root, 'sigterm-ignoring');
+        mkdirSync(sigtermIgnoringCargoBin);
+        writeFileSync(join(sigtermIgnoringCargoBin, 'cargo'), "#!/bin/sh\ntrap '' TERM\nwhile :; do sleep 0.05; done\n");
+        chmodSync(join(sigtermIgnoringCargoBin, 'cargo'), 0o755);
+        const submit = (id: string, argv: readonly string[]) =>
+          requestOverSocket({
+            isTerminal: (message) => message.type === 'ack' || message.type === 'error',
+            message: {
+              argv: [...argv],
+              background: true,
+              cwd: fixture.ws1,
+              env: fakeCargoEnv(sigtermIgnoringCargoBin, { CARGO_HAULER_KILL_GRACE_MS: '1000' }),
+              host: 'test',
+              id,
+              session: 's-kill',
+              type: 'exec',
+            },
+            socketPath: fixture.config.socketPath,
+            timeoutMs: 8_000,
+          }).pipe(
+            Effect.map((messages) => {
+              const acked = messages.find((message) => message.type === 'ack');
+              if (acked === undefined || acked.type !== 'ack') {
+                throw new Error(`daemon did not ack: ${JSON.stringify(messages)}`);
+              }
+              return acked.ticket;
+            }),
+          );
+        const leader = yield* submit('kill-leader', ['cargo', 'build', '-p', 'ws1']);
+
+        yield* Effect.promise(async () => {
+          const daemon = await withDaemon(fixture.config);
+          const deadline = Date.now() + 8_000;
+          for (;;) {
+            const fetched = await renderRoute('tool:hauler/hauler_result', { ...daemon, input: { ticket: leader } });
+            if ((fetched.result as { readonly request: RequestRecord | null }).request?.status === 'running') {
+              break;
+            }
+            if (Date.now() > deadline) {
+              throw new Error(`${leader} never started`);
+            }
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+        });
+        const rider = yield* submit('kill-rider', ['cargo', 'build', '-p', 'ws1']);
+        const queued = yield* submit('kill-queued', ['cargo', 'check', '-p', 'ws1', '--features', 'x']);
+
+        const settleRidersBeforeLeader = Effect.forEach([queued, rider, leader], (ticket) =>
+          killTicket(ticket, fixture.config),
+        ).pipe(Effect.andThen(awaitTicketWithProgress(leader, 10_000, () => undefined, fixture.config)));
+
+        yield* Effect.promise(async () => {
+          const daemon = await withDaemon(fixture.config);
+          const kill = (ticket: string) =>
+            renderRoute('tool:hauler/hauler_kill', { ...daemon, input: { ticket } });
+
+          const dropped = await kill(queued);
+          expect(dropped.result).toMatchObject({ killed: true, request: { status: 'killed' } });
+          expectDocument(dropped).toContainText(`${queued} killed before it started; no cargo process ran`);
+
+          const detached = await kill(rider);
+          expect(detached.result).toMatchObject({ killed: true, request: { status: 'killed' } });
+          expectDocument(detached).toContainText(`${rider} killed; detached from ${leader}`);
+
+          const stopping = await kill(leader);
+          expect(stopping.result).toMatchObject({ killed: true, request: { status: 'running' } });
+          expectDocument(stopping).toContainText(
+            `${leader} kill requested; the daemon stops its cargo process and frees the lane`,
+          );
+        }).pipe(
+          Effect.ensuring(Effect.ignore(settleRidersBeforeLeader)),
+        );
       }), 30_000);
 
   it.live('queues a request behind its --after prerequisite and rejects an unknown one', () =>

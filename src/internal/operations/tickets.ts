@@ -148,6 +148,35 @@ export const fetchTicketResultView = async (
   return { output: loadTicketOutput(result.request, input.full === true), result };
 };
 
+const acceptedKillSummary = (ticket: string, request: RequestRecord | null): string => {
+  if (request === null) {
+    return `${ticket} kill requested`;
+  }
+  switch (request.status) {
+    case 'requested':
+    case 'queued':
+      return `${ticket} kill requested before it started; it settles killed`;
+    case 'running':
+      return `${ticket} kill requested; the daemon stops its cargo process and frees the lane`;
+    case 'killed':
+      if (request.attachedTo !== null) {
+        return `${ticket} killed; detached from ${request.attachedTo}`;
+      }
+      return request.startedAtMs === null
+        ? `${ticket} killed before it started; no cargo process ran`
+        : `${ticket} killed`;
+    case 'done':
+    case 'failed':
+    case 'denied':
+    case 'passthrough':
+      return `${ticket} kill requested; it settled ${request.status}`;
+    default: {
+      const exhaustive: never = request.status;
+      return exhaustive;
+    }
+  }
+};
+
 export const killTicketResult = async (
   input: Pick<TicketInput, 'ticket'>,
   options: TicketOptions,
@@ -159,7 +188,7 @@ export const killTicketResult = async (
     operation: 'kill',
     request: requestForConsumer(request),
     summary: killed
-      ? `${input.ticket} kill requested; the daemon stops its cargo process and frees the lane`
+      ? acceptedKillSummary(input.ticket, request)
       : `${input.ticket}: nothing to kill (${request === null ? 'unknown ticket' : `already ${request.status}`})`,
     ticket: input.ticket,
   };
