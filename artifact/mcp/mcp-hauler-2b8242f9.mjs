@@ -18078,7 +18078,7 @@ const histogramMetricSchema = zod__rspack_import_1/* .object */.Ikc({
  * status row never carries a tail, settled or live — and a running row's
  * `outputPreview` is capped at `statusOutputPreviewBytes`. The whole tail is
  * the detail contract: `hauler_result` / `hauler_await` answer a
- * `requestRecordSchema` record.
+ * `displayRequestRecordSchema` record.
  */ const statusRowSchema = displayRequestRecordSchema.omit({
     outputTail: true,
     outputTailLive: true
@@ -156053,7 +156053,7 @@ const routes = Object.freeze({
         name: "hauler_status"
     })
 });
-const EVENT_ARTIFACT_EPOCH = "ca7ffe24750d0df967cf92ad8e996b6cd2f479037f5a481694a42ec537d3026c";
+const EVENT_ARTIFACT_EPOCH = "adf7711861ffe6a415a2dc0cb941c03c6cfdde53ac5b9f8a27954d68395f7102";
 const EVENT_ALLOWED_TARGETS = Object.freeze([
     "claude",
     "codex",

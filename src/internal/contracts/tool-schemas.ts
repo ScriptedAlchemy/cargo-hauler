@@ -160,7 +160,7 @@ const histogramMetricSchema = z.object({
  * status row never carries a tail, settled or live — and a running row's
  * `outputPreview` is capped at `statusOutputPreviewBytes`. The whole tail is
  * the detail contract: `hauler_result` / `hauler_await` answer a
- * `requestRecordSchema` record.
+ * `displayRequestRecordSchema` record.
  */
 export const statusRowSchema = displayRequestRecordSchema
   .omit({ outputTail: true, outputTailLive: true })
