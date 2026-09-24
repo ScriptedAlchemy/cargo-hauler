@@ -11,7 +11,7 @@ import { isRecord } from '../../util/guards.js';
 
 import { cargoExecutablePattern } from '../intent.js';
 import { sharedJobserverDelta } from '../../daemon/runtime/jobserver.js';
-import { realCargoBin } from './real-cargo.js';
+import { cargoKillOptions, realCargoBin } from './real-cargo.js';
 
 export interface ExecuteCargoOptions {
   readonly argv: readonly string[];
@@ -180,16 +180,6 @@ type ExecutionEvent =
       readonly cause: Cause.Cause<unknown>;
     };
 
-const defaultKillGraceMs = 8_000;
-
-const killGraceMs = (env: Readonly<Record<string, string>> | undefined): number => {
-  const parsed = Number.parseInt(
-    env?.CARGO_HAULER_KILL_GRACE_MS ?? process.env.CARGO_HAULER_KILL_GRACE_MS ?? '',
-    10,
-  );
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : defaultKillGraceMs;
-};
-
 const buildCommand = (options: ExecuteCargoOptions): ChildProcess.StandardCommand | undefined => {
   const executable = options.argv[0];
   if (executable === undefined) {
@@ -231,6 +221,7 @@ const buildCommand = (options: ExecuteCargoOptions): ChildProcess.StandardComman
   // `env` is a delta on top of the caller environment; extendEnv keeps the
   // inherited PATH/HOME etc. (v4 replaces the environment by default).
   return ChildProcess.make(program, args, {
+    ...cargoKillOptions(options.env),
     cwd: options.cwd,
     env: { ...color, ...jobserver, ...options.env, CARGO_HAULER_INSIDE: '1' },
     extendEnv: true,
@@ -378,12 +369,7 @@ export const executeCargo = (
                 // spawned detached, so rustc children die too), waits for the
                 // process to exit, and escalates to a group SIGKILL if it
                 // survives the grace window.
-                const killed = yield* Effect.exit(
-                  child.kill({
-                    killSignal: 'SIGTERM',
-                    forceKillAfter: killGraceMs(options.env),
-                  }),
-                );
+                const killed = yield* Effect.exit(child.kill(cargoKillOptions(options.env)));
                 if (Exit.isFailure(killed)) {
                   return {
                     error: `${reason}: failed to terminate: ${Cause.pretty(killed.cause)}`,

@@ -2,6 +2,8 @@ import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
+import type * as ChildProcess from 'effect/unstable/process/ChildProcess';
+
 /**
  * The real cargo binary for daemon-spawned work. Never resolve bare `cargo`
  * through PATH here: once the hauler shim is installed it sits first on
@@ -23,4 +25,26 @@ export const realCargoBin = (
   const cargoHome = env.CARGO_HOME ?? join(homedir(), '.cargo');
   const candidate = join(cargoHome, 'bin', 'cargo');
   return existsSync(candidate) ? candidate : 'cargo';
+};
+
+const defaultKillGraceMs = 8_000;
+
+/**
+ * SIGTERM to the process group, then SIGKILL after `CARGO_HAULER_KILL_GRACE_MS`.
+ * The scope finalizer that runs on daemon shutdown or a timeout reads these
+ * from the command's own options, so `ChildProcess.make` needs them as well as
+ * `kill`. Without `forceKillAfter` it waits forever on a cargo that ignores
+ * SIGTERM.
+ */
+export const cargoKillOptions = (
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): ChildProcess.KillOptions => {
+  const parsed = Number.parseInt(
+    env.CARGO_HAULER_KILL_GRACE_MS ?? process.env.CARGO_HAULER_KILL_GRACE_MS ?? '',
+    10,
+  );
+  return {
+    killSignal: 'SIGTERM',
+    forceKillAfter: Number.isInteger(parsed) && parsed >= 0 ? parsed : defaultKillGraceMs,
+  };
 };
