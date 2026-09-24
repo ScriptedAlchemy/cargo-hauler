@@ -184,14 +184,25 @@ describe('tool documents without a daemon', () => {
     });
   });
 
-  it('fails ticket lookups loudly when the daemon is unreachable instead of faking not-found', async () => {
+  it('answers ticket lookups from the ledger when the daemon is stopped, labelled as such', async () => {
     await withIsolatedStateDir(async () => {
-      await expect(
-        renderRoute('tool:hauler/hauler_result', { input: { ticket: 'cc-1' } }),
-      ).rejects.toThrow('daemon unreachable');
-      await expect(
-        renderRoute('tool:hauler/hauler_await', { input: { maxWaitMs: 100, ticket: 'cc-1' } }),
-      ).rejects.toThrow('daemon unreachable');
+      const result = await renderRoute('tool:hauler/hauler_result', { input: { ticket: 'cc-1' } });
+      expect(result.result).toEqual({
+        daemon: 'stopped',
+        operation: 'result',
+        request: null,
+        summary: 'cc-1 not found',
+        ticket: 'cc-1',
+      });
+      const awaited = await renderRoute('tool:hauler/hauler_await', { input: { maxWaitMs: 100, ticket: 'cc-1' } });
+      expect(awaited.result).toEqual({
+        daemon: 'stopped',
+        operation: 'await',
+        request: null,
+        summary: 'cc-1 not found',
+        ticket: 'cc-1',
+        timedOut: false,
+      });
     });
   });
 });

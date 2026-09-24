@@ -1003,7 +1003,7 @@ export const parseServerMessageLine = (line: string): ServerMessage =>
  */
 export const orphanedByRestartError = 'orphaned by daemon restart';
 
-export const isOrphanedByRestart = (record: Pick<RequestRecord, 'status' | 'error'>): boolean =>
+export const isOrphanedByRestart = (record: Pick<TicketSummary, 'status' | 'error'>): boolean =>
   record.status === 'killed' && record.error === orphanedByRestartError;
 
 export const formatTicket = (id: number): string => `cc-${id}`;

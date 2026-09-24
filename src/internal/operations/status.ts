@@ -31,6 +31,7 @@ import type {
   StatusResultMessage,
   StatusRow,
   SystemLoadReport,
+  TicketSummary,
 } from '../contracts/protocol.js';
 import { stripAnsi } from '../util/ansi.js';
 import { shortId } from '../util/id.js';
@@ -76,29 +77,37 @@ const statusTimeoutMs = 5_000;
  * the leader.
  */
 export const stalledGuidance = (
-  request: Pick<RequestRecord, 'ticket' | 'status'> & Partial<Pick<RequestRecord, 'attachedTo' | 'stall'>>,
+  request: Pick<TicketSummary, 'ticket' | 'status'> & Partial<Pick<TicketSummary, 'attachedTo' | 'stall'>>,
 ): string | null =>
   request.status === 'running' && request.stall !== undefined
     ? `ticket looks stalled (no CPU for ${Math.floor(request.stall.idleMs / 60_000)}m) — hauler kill ${request.attachedTo ?? request.ticket}`
     : null;
 
 /**
- * `hauler result` / `hauler_result` explanation for a ticket the daemon
- * restart ended: it was not killed by anyone and did not fail on its
- * own, so a plain `killed` would send the reader looking for a cause.
+ * `hauler result` / `hauler_result` explanation for a ticket no daemon will
+ * finish: one the daemon restart ended was not killed by anyone and did not
+ * fail on its own, so a plain `killed` would send the reader looking for a
+ * cause; one a stopped daemon stranded carries its reason as its error.
  */
 export const orphanedGuidance = (
-  request: Pick<RequestRecord, 'status'> & Partial<Pick<RequestRecord, 'error'>>,
-): string | null =>
-  request.error !== undefined && isOrphanedByRestart({ error: request.error, status: request.status })
+  request: Pick<TicketSummary, 'status'> & Partial<Pick<TicketSummary, 'error'>>,
+): string | null => {
+  if (request.error === undefined) {
+    return null;
+  }
+  if (request.status === 'orphaned') {
+    return request.error;
+  }
+  return isOrphanedByRestart({ error: request.error, status: request.status })
     ? `${orphanedByRestartError}: the daemon stopped while it was in flight and does not hand runs over; resubmit if the work is still needed`
     : null;
+};
 
 export const describeRequestRecord = (
   ticket: string,
   request:
-    | (Pick<RequestRecord, 'ticket' | 'status' | 'errorCount' | 'warningCount'> &
-        Partial<Pick<RequestRecord, 'attachedTo' | 'error' | 'stall'>>)
+    | (Pick<TicketSummary, 'ticket' | 'status' | 'errorCount' | 'warningCount'> &
+        Partial<Pick<TicketSummary, 'attachedTo' | 'error' | 'stall'>>)
     | null,
 ): string => {
   if (request === null) {
@@ -247,6 +256,15 @@ export const loadLedgerRequest = (
     }),
   );
 };
+
+export const loadLedgerTicket = (
+  ticket: string,
+  daemon: UnavailableDaemonStatus,
+  config?: DaemonConfigShape,
+): Effect.Effect<DisplayRequestRecord | null> =>
+  loadLedgerRequest(ticket, config).pipe(
+    Effect.map((record) => (record === null ? null : ledgerRequestRecord(displayRequestRecord(record), daemon))),
+  );
 
 const emptyStopped = (config: DaemonConfigShape): HaulerSnapshot =>
   withReport(

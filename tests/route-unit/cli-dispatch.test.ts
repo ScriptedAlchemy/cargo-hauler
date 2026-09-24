@@ -96,10 +96,20 @@ describe('routed CLI', () => {
     expect(unknown.exitCode).toBe(2);
   });
 
-  it('fails ticket lookups with the daemon down instead of pretending not-found', async () => {
+  it('answers ticket lookups from the ledger with the daemon down, naming that source', async () => {
     const run = await invokeCli(['result', 'cc-1']);
-    expect(run.exitCode).toBe(1);
-    expect(run.stderr).toContain('daemon unreachable');
+    expect(run.exitCode).toBe(0);
+    expect(run.stderr).toBe('');
+    expect(run.stdout).toContain(
+      'cc-1 unavailable: not in the ledger, and the daemon is stopped. Tickets look like cc-123; check hauler log for recent ids.',
+    );
+    expect(cliJson(await invokeCli(['result', 'cc-1', '--json']))).toEqual({
+      daemon: 'stopped',
+      operation: 'result',
+      request: null,
+      summary: 'cc-1 not found',
+      ticket: 'cc-1',
+    });
   });
 
   it('accepts result --full as a flag and still needs the ticket', async () => {
@@ -107,10 +117,8 @@ describe('routed CLI', () => {
     expect(help.exitCode).toBe(0);
     expect(help.stdout).toContain('--full');
 
-    // Parsed as a flag (not a usage error); the lookup itself needs the daemon.
     const full = await invokeCli(['result', 'cc-1', '--full']);
-    expect(full.exitCode).toBe(1);
-    expect(full.stderr).toContain('daemon unreachable');
+    expect(full.exitCode).toBe(0);
 
     const withValue = await invokeCli(['result', 'cc-1', '--full=yes']);
     expect(withValue.exitCode).toBe(2);

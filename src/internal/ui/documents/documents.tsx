@@ -2,12 +2,13 @@ import { Agent } from '@agent-bundle/runtime';
 import React from 'react';
 
 import { APP_RESOURCE_URI } from '../../../constants.js';
-import { awaitCeilingMs, type DisplayRequestRecord } from '../../contracts/protocol.js';
+import { awaitCeilingMs } from '../../contracts/protocol.js';
 import { formatMs } from '../shared/format.js';
 import { documentValue } from '../../util/json.js';
 import { countWord } from '../../util/text.js';
 import type {
   AwaitResult,
+  DaemonStatus,
   KillResult,
   LastResult,
   LogResult,
@@ -110,31 +111,29 @@ export const LogDocument = ({ nowMs, result }: DocumentProps<LogResult>) => (
   </Agent.Result>
 );
 
-const TicketNotKnown = ({ names, ticket }: { readonly names: SurfaceNames; readonly ticket: string }) => (
-  <UnavailableState what={ticket}>
-    {`not known to the daemon. Tickets look like cc-123; check ${names.log} for recent ids.`}
-  </UnavailableState>
-);
-
-const TicketDetail = ({
+const TicketNotKnown = ({
+  daemon,
   names,
-  nowMs,
-  record,
+  ticket,
 }: {
+  readonly daemon: DaemonStatus;
   readonly names: SurfaceNames;
-  readonly nowMs: number;
-  readonly record: DisplayRequestRecord;
+  readonly ticket: string;
 }) => (
-  <>
-    <TicketCard nowMs={nowMs} record={record} />
-    {record.status === 'orphaned' ? null : <TicketGuidance names={names} record={record} />}
-  </>
+  <UnavailableState what={ticket}>
+    {`${daemon === 'running' ? 'not known to the daemon' : `not in the ledger, and the daemon is ${daemon}`}. Tickets look like cc-123; check ${names.log} for recent ids.`}
+  </UnavailableState>
 );
 
 export const LastDocument = ({ names, nowMs, result }: DocumentProps<LastResult>) => (
   <Agent.Result value={documentValue(result)}>
     <Agent.Text>{result.summary}</Agent.Text>
-    {result.request === null ? null : <TicketDetail names={names} nowMs={nowMs} record={result.request} />}
+    {result.request === null ? null : (
+      <>
+        <TicketCard nowMs={nowMs} record={result.request} />
+        <TicketGuidance names={names} record={result.request} />
+      </>
+    )}
   </Agent.Result>
 );
 
@@ -152,7 +151,7 @@ export const ResultDocument = ({ names, nowMs, output, result }: ResultDocumentP
   <Agent.Result value={documentValue(result)}>
     <Agent.Text>{result.summary}</Agent.Text>
     {result.request === null ? (
-      <TicketNotKnown names={names} ticket={result.ticket} />
+      <TicketNotKnown daemon={result.daemon} names={names} ticket={result.ticket} />
     ) : (
       <>
         <TicketCard hideTail={output.kind === 'full'} nowMs={nowMs} record={result.request} />
@@ -189,7 +188,7 @@ export const AwaitDocument = ({
         {`The ${formatMs(maxWaitMs)} wait expired before ${result.ticket} finished. Call ${names.await} again (each call waits up to ${formatMs(awaitCeilingMs)}) rather than polling ${names.result} in a tight loop.`}
       </Agent.Context>
     ) : result.request === null ? (
-      <TicketNotKnown names={names} ticket={result.ticket} />
+      <TicketNotKnown daemon={result.daemon} names={names} ticket={result.ticket} />
     ) : (
       <TicketGuidance names={names} record={result.request} />
     )}

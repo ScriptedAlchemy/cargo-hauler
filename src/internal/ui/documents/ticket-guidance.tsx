@@ -1,7 +1,12 @@
 import { Agent } from '@agent-bundle/runtime';
 import React from 'react';
 
-import { awaitCeilingMs, isOrphanedByRestart, type RequestRecord, type RequestStatus } from '../../contracts/protocol.js';
+import {
+  awaitCeilingMs,
+  isOrphanedByRestart,
+  type DisplayRequestRecord,
+  type StatusRowStatus,
+} from '../../contracts/protocol.js';
 import { formatMs } from '../shared/format.js';
 
 import { failedPrerequisite } from './headlines.js';
@@ -9,13 +14,13 @@ import type { SurfaceNames } from './surface.js';
 
 export interface TicketGuidanceProps {
   readonly names: SurfaceNames;
-  readonly record: RequestRecord;
+  readonly record: DisplayRequestRecord;
 }
 
 type GuidanceComponent = (props: TicketGuidanceProps) => React.JSX.Element;
 
 /*
- * One component per ticket status. The record keyed by `RequestStatus` is
+ * One component per ticket status. The record keyed by `StatusRowStatus` is
  * exhaustive by construction — adding a status to the daemon protocol fails
  * this module's type-check until its guidance exists.
  */
@@ -57,11 +62,18 @@ const PassthroughGuidance: GuidanceComponent = ({ record }) => (
   <Agent.Context>{`${record.ticket} ran directly without broker coordination.`}</Agent.Context>
 );
 
-const guidanceByStatus: Readonly<Record<RequestStatus, GuidanceComponent>> = {
+const OrphanedGuidance: GuidanceComponent = ({ names, record }) => (
+  <Agent.Context>
+    {`${record.ticket} is orphaned. Check ${names.status} for the daemon's state before resubmitting through ${names.request}.`}
+  </Agent.Context>
+);
+
+const guidanceByStatus: Readonly<Record<StatusRowStatus, GuidanceComponent>> = {
   denied: DeniedGuidance,
   done: DoneGuidance,
   failed: FailedGuidance,
   killed: KilledGuidance,
+  orphaned: OrphanedGuidance,
   passthrough: PassthroughGuidance,
   queued: PendingGuidance,
   requested: PendingGuidance,
