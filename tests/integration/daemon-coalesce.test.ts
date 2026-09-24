@@ -26,7 +26,7 @@ const findAck = (messages: readonly { type: string }[]): AckMessage => {
 };
 
 describe('identity coalescing', () => {
-  it.live('attaches a request whose shell bookkeeping differs from the leader', () =>
+  it.live('attaches a request whose shell bookkeeping and agent session differ from the leader', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
       const leaderFiber = yield* Effect.forkChild(
@@ -34,7 +34,7 @@ describe('identity coalescing', () => {
           cwd: fixture.ws1,
           sleep: '1',
           timeoutMs: 12_000,
-          extraEnv: { OLDPWD: '/first', __MISE_SESSION: 'first' },
+          extraEnv: { OLDPWD: '/first', __MISE_SESSION: 'first', CURSOR_CONVERSATION_ID: 'first' },
         }),
       );
       yield* pollReport(fixture, (report) =>
@@ -44,7 +44,7 @@ describe('identity coalescing', () => {
         yield* execRequest(fixture, {
           cwd: fixture.ws1,
           timeoutMs: 12_000,
-          extraEnv: { OLDPWD: '/second', __MISE_SESSION: 'second' },
+          extraEnv: { OLDPWD: '/second', __MISE_SESSION: 'second', CURSOR_CONVERSATION_ID: 'second' },
         }),
       );
       const leaderExit = findExit(yield* Fiber.join(leaderFiber));

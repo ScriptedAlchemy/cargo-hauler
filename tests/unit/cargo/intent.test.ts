@@ -556,6 +556,36 @@ describe('normalizeCargoIntent', () => {
     expect(normalizeCargoIntent({ ...options, env: { OUT: '/tmp/a' } }).key).not.toBe(first.key);
   });
 
+  it('keeps identity across agents whose host session variables differ', () => {
+    const options = {
+      argv: ['cargo', 'check', '-p', 'x'],
+      cwd: '/work/repo',
+      workspaceRoot: '/work/repo',
+    } as const;
+    const agent = (id: string, out: string) =>
+      normalizeCargoIntent({
+        ...options,
+        env: {
+          OUT: out,
+          CURSOR_CONVERSATION_ID: `conversation-${id}`,
+          CURSOR_REQUEST_ID: `request-${id}`,
+          CURSOR_AGENT_STORE_FILES_DIR: `/stores/${id}/files`,
+          CURSOR_AGENT_STORE_SHARED_PATHS: `{"parent":"/stores/${id}"}`,
+          __CURSOR_SANDBOX_ENV_RESTORE: `export CURSOR_CONVERSATION_ID='conversation-${id}'`,
+          CLAUDE_CODE_SESSION_ID: `session-${id}`,
+          CLAUDE_CODE_HOST_SESSION_ID: `host-${id}`,
+          CLAUDE_PID: id,
+          CODEX_THREAD_ID: `thread-${id}`,
+          CODEX_SESSION_ID: `session-${id}`,
+          CURSOR_UNRELEASED_TAB_ID: `tab-${id}`,
+          CLAUDE_UNRELEASED_TURN_ID: `turn-${id}`,
+          CODEX_UNRELEASED_TURN_ID: `turn-${id}`,
+        },
+      });
+    expect(agent('b', '/tmp/a').key).toBe(agent('a', '/tmp/a').key);
+    expect(agent('b', '/tmp/b').key).not.toBe(agent('a', '/tmp/a').key);
+  });
+
   it('shares the estimate key across env-prefix OUT assignments that only change identity', () => {
     const a = normalizeCargoIntent({
       argv: ['env', 'OUT=/tmp/a', 'cargo', 'test', '--lib'],
