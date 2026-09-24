@@ -11,6 +11,7 @@ import { buildTransportedEnv } from '../internal/client/env.js';
 import { runExecClient, type RunExecOptions, type RunExecResult } from '../internal/client/exec.js';
 import { ExecUsageError, parseExecArgv } from '../internal/client/parse.js';
 import { isEnabledFlag } from '../internal/daemon/config.js';
+import { environmentAttribution } from '../internal/operations/attribution.js';
 import { daemonExitCode, parseDaemonSubcommand, runDaemonControl } from '../internal/daemon/runtime/lifecycle.js';
 import {
   defaultShimDir,
@@ -111,9 +112,8 @@ const runExecCommand = async (argv: readonly string[], options: ScriptOptions): 
   };
   const exec = options.runExec ?? runExecClient;
   const env = options.env ?? process.env;
-  const envHost = env.CARGO_HAULER_HOST;
-  const envSession = env.CARGO_HAULER_SESSION;
-  const session = parsed.session ?? envSession;
+  const attributed = environmentAttribution(env);
+  const session = parsed.session ?? attributed.session;
   return Effect.runPromise(
     exec({
       ...(parsed.allowSharedTarget || isEnabledFlag(env.CARGO_HAULER_ALLOW_SHARED_TARGET)
@@ -124,7 +124,7 @@ const runExecCommand = async (argv: readonly string[], options: ScriptOptions): 
       // against its own working directory, not the caller's.
       cwd: resolve(parsed.cwd ?? process.cwd()),
       env: buildTransportedEnv(env),
-      host: parsed.host ?? envHost ?? 'cli',
+      host: parsed.host ?? attributed.host ?? 'cli',
       io,
       ...(parsed.background ? { background: true } : {}),
       ...(parsed.after === undefined ? {} : { after: parsed.after }),

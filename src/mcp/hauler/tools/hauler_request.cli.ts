@@ -2,6 +2,7 @@ import type { CliProjectionConfig } from 'agent-bundle/routes';
 import type { z } from 'zod';
 
 import { parseTicketList } from '../../../internal/client/parse.js';
+import { environmentAttribution } from '../../../internal/operations/attribution.js';
 
 import type { inputSchema } from './hauler_request.js';
 
@@ -26,10 +27,14 @@ export const config = {
 
 type CliInput = z.input<typeof inputSchema>;
 
-/** Comma-separated `--after` lists split; request context resolves an omitted cwd. */
+/**
+ * Comma-separated `--after` lists split; the caller's shell environment
+ * attributes an omitted host or session; request context resolves an omitted cwd.
+ */
 export const mapInput = (input: CliInput): z.input<typeof inputSchema> => {
   const after = input.after === undefined ? [] : [...parseTicketList(input.after)];
   return {
+    ...environmentAttribution(process.env),
     ...input,
     ...(after.length === 0 ? {} : { after }),
   };

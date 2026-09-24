@@ -1,13 +1,13 @@
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'effect-rstest';
-import { expectDocument, renderRoute, renderRouteEvents, testManifest } from 'agent-bundle/test';
+import { cliJson, expectDocument, invokeCli, renderRoute, renderRouteEvents, testManifest } from 'agent-bundle/test';
 import * as Effect from 'effect/Effect';
 
 import { requestOverSocket } from '../../src/internal/client/control.js';
 import type { RequestRecord, StatusRow } from '../../src/internal/contracts/protocol.js';
 import { resolveDaemonConfig } from '../../src/internal/daemon/config.js';
-import { scopedDaemon, scopedLedger } from '../support/harness.js';
+import { scopedDaemon, scopedEnv, scopedLedger } from '../support/harness.js';
 
 import { documentMetadata, fakeCargoEnv, withDaemon, withIsolatedStateDir } from './support.js';
 
@@ -371,4 +371,47 @@ describe('tool documents against a live daemon', () => {
           ).rejects.toThrow(/bad-intent.*cc-999999/u);
         });
       }), 30_000);
+
+  it.live('attributes hauler request to the agent session its shell environment names', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(2);
+      const agentEnv = {
+        CARGO_HAULER_CARGO_BIN: join(fixture.binDir, 'cargo'),
+        CARGO_HAULER_HOST: undefined,
+        CARGO_HAULER_SESSION: undefined,
+        CLAUDE_CODE_SESSION_ID: undefined,
+        CODEX_THREAD_ID: undefined,
+        CURSOR_CONVERSATION_ID: undefined,
+      };
+      const cases = [
+        { env: { CLAUDE_CODE_SESSION_ID: 'claude-sess-1' }, flags: [], stored: { host: 'claude', session: 'claude-sess-1' } },
+        { env: { CODEX_THREAD_ID: 'codex-thread-1' }, flags: [], stored: { host: 'codex', session: 'codex-thread-1' } },
+        { env: { CURSOR_CONVERSATION_ID: 'cursor-conv-1' }, flags: [], stored: { host: 'cursor', session: 'cursor-conv-1' } },
+        {
+          env: { CARGO_HAULER_HOST: 'env-host', CARGO_HAULER_SESSION: 'env-sess', CURSOR_CONVERSATION_ID: 'cursor-conv-1' },
+          flags: [],
+          stored: { host: 'env-host', session: 'env-sess' },
+        },
+        {
+          env: { CLAUDE_CODE_SESSION_ID: 'claude-sess-1' },
+          flags: ['--host', 'flag-host', '--session', 'flag-sess'],
+          stored: { host: 'flag-host', session: 'flag-sess' },
+        },
+        { env: {}, flags: [], stored: { host: 'cli', session: null } },
+      ];
+      const stored = [];
+      for (const [index, item] of cases.entries()) {
+        stored.push(yield* Effect.scoped(Effect.gen(function* () {
+          yield* scopedEnv({ ...agentEnv, ...item.env, CARGO_HAULER_STATE_DIR: fixture.config.stateDir });
+          const submitted = yield* Effect.promise(() => invokeCli([
+            'request', '--json', '--cwd', fixture.ws1, ...item.flags, '--', 'cargo', 'check', '-p', `attr-${index}`,
+          ]));
+          const { ticket } = cliJson(submitted) as { readonly ticket: string };
+          const result = yield* Effect.promise(() => invokeCli(['result', ticket, '--json']));
+          const { request } = cliJson(result) as { readonly request: RequestRecord };
+          return { host: request.host ?? null, session: request.session ?? null };
+        })));
+      }
+      expect(stored).toEqual(cases.map((item) => item.stored));
+    }), 30_000);
 });

@@ -22535,6 +22535,41 @@ __webpack_require__.d(__webpack_exports__, {
 
 },
 "./src/internal/operations/attribution.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
+// A nested agent inherits its parent's variable beside its own; Cursor
+// launches Claude and Codex more often than the reverse, so it goes last.
+const agentSessionVariables = (/* unused pure expression or super */ null && ([
+    {
+        host: 'claude',
+        name: 'CLAUDE_CODE_SESSION_ID'
+    },
+    {
+        host: 'codex',
+        name: 'CODEX_THREAD_ID'
+    },
+    {
+        host: 'cursor',
+        name: 'CURSOR_CONVERSATION_ID'
+    }
+]));
+/**
+ * Who asked, as a CLI caller's shell names it. `CARGO_HAULER_HOST` and
+ * `CARGO_HAULER_SESSION` come first, then the session id the agent host exports
+ * to its shell tool. Only a CLI process may read this. An MCP server's
+ * environment belongs to the server, not the calling conversation.
+ */ const environmentAttribution = (env)=>{
+    const set = (name)=>env[name] === '' ? undefined : env[name];
+    const agent = agentSessionVariables.find(({ name })=>set(name) !== undefined);
+    const host = set('CARGO_HAULER_HOST') ?? agent?.host;
+    const session = set('CARGO_HAULER_SESSION') ?? (agent === undefined ? undefined : set(agent.name));
+    return {
+        ...host === undefined ? {} : {
+            host
+        },
+        ...session === undefined ? {} : {
+            session
+        }
+    };
+};
 const requestCwd = (input, requestContext)=>{
     if (input.cwd !== undefined) {
         return input.cwd;
@@ -22587,8 +22622,8 @@ const enrichTicketRequest = (input, requestContext)=>{
 
 __webpack_require__.d(__webpack_exports__, {
 }, {
-  T: enrichTicketRequest,
-  Y: ticketAttribution
+  TZ: enrichTicketRequest,
+  YW: ticketAttribution
 });
 
 
@@ -23418,8 +23453,8 @@ const formatWait = (ms)=>{
     return null;
 };
 const submitTicketRequest = async (input, requestContext, options)=>{
-    const request = (0,_attribution_js__rspack_import_4/* .enrichTicketRequest */.T)(input, requestContext);
-    const attribution = (0,_attribution_js__rspack_import_4/* .ticketAttribution */.Y)(request, requestContext);
+    const request = (0,_attribution_js__rspack_import_4/* .enrichTicketRequest */.TZ)(input, requestContext);
+    const attribution = (0,_attribution_js__rspack_import_4/* .ticketAttribution */.YW)(request, requestContext);
     const ack = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .submitBackgroundAck */.gK)(request, options.config), options.signal);
     if (ack === null) {
         return {
@@ -106260,33 +106295,33 @@ var __webpack_exports__ = {};
 /* import */ var _agent_bundle_runtime__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/49.js");
 /* import */ var _agent_bundle_runtime__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
 /* import */ var node_url__rspack_import_2 = __webpack_require__("node:url");
-/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
-/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_4 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
-/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_5 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
-/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_6 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
-/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
-/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
-/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
-/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_layout_tsx__rspack_import_10 = __webpack_require__("./src/layout.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_4 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_5 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_6 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_layout_tsx__rspack_import_10 = __webpack_require__("./src/layout.tsx");
 
 
 
 
 
 
-const route0 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3);
+const route0 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3);
 
-const route1 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_4, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_4);
+const route1 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_4, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_4);
 
-const route2 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_5, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_5);
+const route2 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_5, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_5);
 
-const route3 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_6, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_6);
+const route3 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_6, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_6);
 
-const route4 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_7, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_7);
+const route4 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_7, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_7);
 
-const route5 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_8, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_8);
+const route5 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_8, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_8);
 
-const route6 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_9, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_9);
+const route6 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_9, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_9);
 
 const pluginRoot = (0,_agent_bundle_runtime__rspack_import_11/* .resolvePluginRoot */.E7)({
     fallback: (0,node_url__rspack_import_2.fileURLToPath)(new URL('..', import.meta.url)),
@@ -106314,7 +106349,7 @@ const providers = Object.freeze([
 const layouts = Object.freeze([
     Object.freeze({
         id: "layout:root",
-        module: _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_layout_tsx__rspack_import_10,
+        module: _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_layout_tsx__rspack_import_10,
         source: "src/layout.tsx"
     })
 ]);

@@ -154,6 +154,18 @@ describe('hauler script', () => {
     );
   });
 
+  it('attributes a PATH-shim exec to the agent session its shell names', async () => {
+    let seen: RunExecOptions | undefined;
+    await run(['exec', '--host', 'shim', '--', 'cargo', 'check'], {
+      env: { CURSOR_AGENT: '1', CURSOR_CONVERSATION_ID: 'cursor-conv-2' },
+      runExec: (options) => {
+        seen = options;
+        return Effect.succeed({ exitCode: 0, mode: 'brokered', ticket: 'cc-11' });
+      },
+    });
+    expect({ host: seen?.host, session: seen?.session }).toEqual({ host: 'shim', session: 'cursor-conv-2' });
+  });
+
   it('passes --after prerequisites to the exec client and documents the flag', async () => {
     let seen: RunExecOptions | undefined;
     const result = await run(['exec', '--after', 'cc-3281,cc-3282', '--bg', '--', 'cargo', 'test', '-p', 'alpha'], {
