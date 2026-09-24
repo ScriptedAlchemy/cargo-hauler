@@ -203,6 +203,12 @@ resolves through PATH: the daemon uses `CARGO_HAULER_CARGO_BIN` when set,
 otherwise `$CARGO_HOME/bin/cargo`, otherwise a bare `cargo` as the last
 resort.
 
+Those absolute paths go stale when Node or cargo-hauler is upgraded.
+`cargo-hauler-install install <host>` rewrites the `cargo` shim found first on
+PATH to embed the current `hauler`, keeping its Cargo path, and a second run
+leaves the same bytes. `cargo-hauler-install doctor` exits `1` while that shim
+runs another `hauler` or one that no longer exists.
+
 ## State
 
 Daemon socket and ledger live under a per-user cache directory:

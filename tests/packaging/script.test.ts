@@ -417,8 +417,8 @@ describe('hauler script', () => {
       expect(result.code).toBe(0);
       expect(result.text).toContain(`Installed cargo shim at ${join(root, 'cargo')}`);
       // A Node upgrade that moves the global entry must not turn every `cargo`
-      // on PATH into "No such file"; the operator has to re-run this.
-      expect(result.text).toContain('hauler install-shim --force');
+      // on PATH into "No such file".
+      expect(result.text).toContain('`cargo-hauler-install install <host>` refreshes it');
       expect(readFileSync(join(root, 'cargo'), 'utf8')).toContain('|| exec /usr/bin/cargo "$@"');
     } finally {
       rmSync(root, { recursive: true, force: true });

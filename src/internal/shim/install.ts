@@ -5,8 +5,10 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
@@ -124,6 +126,16 @@ export const resolveRealCargo = (
   );
 };
 
+const pathCargo = (env: Readonly<Record<string, string | undefined>>): string | null => {
+  for (const entry of (env.PATH ?? '').split(delimiter)) {
+    const candidate = join(entry, 'cargo');
+    if (entry.length > 0 && existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+};
+
 export type ShimPathStatus =
   | { readonly kind: 'wins' }
   | { readonly kind: 'shadowed'; readonly by: string }
@@ -139,18 +151,57 @@ export const shimPathStatus = (
   shimPath: string,
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): ShimPathStatus => {
-  const shim = canonical(shimPath);
-  for (const entry of (env.PATH ?? '').split(delimiter)) {
-    if (entry.length === 0) {
-      continue;
-    }
-    const candidate = join(entry, 'cargo');
-    if (!existsSync(candidate)) {
-      continue;
-    }
-    return canonical(candidate) === shim ? { kind: 'wins' } : { kind: 'shadowed', by: candidate };
+  const found = pathCargo(env);
+  if (found === null) {
+    return { kind: 'not-on-path' };
   }
-  return { kind: 'not-on-path' };
+  return canonical(found) === canonical(shimPath) ? { kind: 'wins' } : { kind: 'shadowed', by: found };
+};
+
+export interface InstalledShim extends RenderShimOptions {
+  readonly path: string;
+}
+
+const shimExec = /^exec (.+) exec --host shim -- (.+) "\$@"$/mu;
+
+/** The words `shellQuote` joined: bare, or single-quoted with `'\''` for a quote. */
+const shellWords = (text: string): string[] =>
+  [...text.matchAll(/(?:'[^']*'|\\'|[^\s'\\])+/gu)].map(([word]) =>
+    word.replaceAll(/'([^']*)'|\\(')/gu, '$1$2'),
+  );
+
+/** The first `cargo` on PATH when `renderCargoShim` wrote it, with what it embeds. */
+export const findCargoShim = (
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): InstalledShim | null => {
+  const path = pathCargo(env);
+  // A shim is a few hundred bytes; the real cargo is a multi-megabyte binary.
+  if (path === null || statSync(path).size > 4096) {
+    return null;
+  }
+  const text = readFileSync(path, 'utf8');
+  const match = text.startsWith('#!/bin/sh\n# cargo-hauler PATH shim') ? shimExec.exec(text) : null;
+  if (match === null) {
+    return null;
+  }
+  const [realCargo, ...extra] = shellWords(match[2] ?? '');
+  return realCargo === undefined || extra.length > 0
+    ? null
+    : { haulerArgv: shellWords(match[1] ?? ''), path, realCargo };
+};
+
+export type CargoShimState =
+  | { readonly kind: 'current' }
+  | { readonly kind: 'missing'; readonly path: string }
+  | { readonly kind: 'stale' };
+
+/** An installed shim versus the one `haulerArgv` would install now. */
+export const cargoShimState = (shim: InstalledShim, haulerArgv: readonly string[]): CargoShimState => {
+  const missing = shim.haulerArgv.find((part) => isAbsolute(part) && !existsSync(part));
+  if (missing !== undefined) {
+    return { kind: 'missing', path: missing };
+  }
+  return shim.haulerArgv.join('\0') === haulerArgv.join('\0') ? { kind: 'current' } : { kind: 'stale' };
 };
 
 export const installCargoShim = (options: InstallShimOptions): InstallShimResult => {
