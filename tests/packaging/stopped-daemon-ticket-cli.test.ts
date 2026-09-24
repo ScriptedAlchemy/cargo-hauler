@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync } from 'node:fs';
+import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -142,5 +143,53 @@ describe.skipIf(!existsSync(haulerEntry))('ticket reads on a stopped daemon', ()
     expect(run.stderr).toBe('');
     expect(run.stdout.split('\n').slice(0, 1)).toEqual(['cc-1 orphaned — stranded by a stopped daemon']);
     expect(run.stdout).toContain('- **Error:** stranded by a stopped daemon');
+  });
+
+  describe.skipIf(process.getuid?.() === 0)('with a live socket this client may not open', () => {
+    let server: Server;
+    let socketPath = '';
+
+    beforeEach(async () => {
+      socketPath = join(root, 'state', 'daemon.sock');
+      server = createServer();
+      await new Promise<void>((resolve) => server.listen(socketPath, resolve));
+      chmodSync(socketPath, 0o000);
+    });
+
+    afterEach(async () => {
+      await new Promise((resolve) => server.close(resolve));
+    });
+
+    const unreachable = () => ({
+      code: 1,
+      json: null,
+      stderr: `${JSON.stringify({
+        error: {
+          code: 'render-failed',
+          message: `hauler daemon unreachable at ${socketPath}; it starts on demand with any exec, or run: hauler daemon start`,
+        },
+      })}\n`,
+    });
+
+    it('fails result instead of calling the running ticket orphaned', () => {
+      expect(haulerJson('result', 'cc-1')).toEqual(unreachable());
+    });
+
+    it('fails await instead of ending it on a stopped daemon', () => {
+      expect(haulerJson('await', 'cc-1')).toEqual(unreachable());
+    });
+
+    it('reports last on an unresponsive daemon, not a stopped one', () => {
+      expect(haulerJson('last')).toEqual({
+        code: 0,
+        json: {
+          daemon: 'unresponsive',
+          operation: 'last',
+          request: { ...seededRecord, error: 'daemon did not answer; ownership unconfirmed', status: 'orphaned' },
+          summary: 'cc-1 orphaned',
+        },
+        stderr: '',
+      });
+    });
   });
 });
