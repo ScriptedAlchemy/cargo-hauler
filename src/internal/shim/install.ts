@@ -59,8 +59,11 @@ export const renderCargoShim = (options: RenderShimOptions): string => {
   // A Node installation can still move the embedded global entry. Losing the
   // broker for a while beats turning every `cargo` on PATH into "No such file".
   const entry = shellQuote(shimHaulerEntry(options.haulerArgv));
+  const [node] = options.haulerArgv;
   const guard =
-    options.haulerArgv.length >= 2 ? `[ -f ${entry} ]` : `command -v ${entry} >/dev/null 2>&1`;
+    options.haulerArgv.length >= 2 && node !== undefined
+      ? `[ -x ${shellQuote(node)} ] && [ -f ${entry} ]`
+      : `command -v ${entry} >/dev/null 2>&1`;
   // --host shim: unlike hook rewrites, the shim has no agent identity, but the
   // ledger should still say where a request entered. CARGO_HAULER_INSIDE
   // marks cargo spawned by the daemon itself (the executor sets it on every

@@ -8,14 +8,19 @@ import { afterEach, beforeEach, describe, expect, it } from 'effect-rstest';
 
 const installer = fileURLToPath(new URL('../../dist/bin/cargo-hauler-install.js', import.meta.url));
 
-const shimText = (node: string, hauler: string, cargo: string): string => `#!/bin/sh
+const shimText = (
+  node: string,
+  hauler: string,
+  cargo: string,
+  guard = `[ -x ${node} ] && [ -f ${hauler} ]`,
+): string => `#!/bin/sh
 # cargo-hauler PATH shim — forwards cargo to the broker.
 # Installed by \`hauler install-shim\`. Hooks cannot see cargo inside scripts.
 if [ -n "\${CARGO_HAULER_INSIDE:-}" ]; then
   exec ${cargo} "$@"
 fi
 # Re-run \`hauler install-shim --force\` after an upgrade moves the hauler entry.
-[ -f ${hauler} ] || exec ${cargo} "$@"
+${guard} || exec ${cargo} "$@"
 exec ${node} ${hauler} exec --host shim -- ${cargo} "$@"
 `;
 
@@ -48,7 +53,7 @@ describe('cargo-hauler-install and the PATH cargo shim', () => {
     symlinkSync(newHauler, join(newBin, 'hauler'));
     newHauler = realpathSync(newHauler);
     shim = join(shimDir, 'cargo');
-    writeFileSync(shim, shimText(oldNode, oldHauler, '/opt/rust/bin/cargo'), { mode: 0o755 });
+    writeFileSync(shim, shimText(oldNode, oldHauler, '/opt/rust/bin/cargo', `[ -f ${oldHauler} ]`), { mode: 0o755 });
     env = {
       CARGO_HAULER_KACHE_INDEX: '',
       CARGO_HAULER_STATE_DIR: join(root, 'state'),
