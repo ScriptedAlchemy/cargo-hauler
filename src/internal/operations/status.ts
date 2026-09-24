@@ -6,13 +6,15 @@ import type * as Scope from 'effect/Scope';
 
 import {
   type DaemonReplacementFailedError,
+  daemonIsAbsent,
   defaultEnsureDependencies,
   ensureDaemonVersion,
   type SpawnDaemonError,
 } from '../client/ensure-daemon.js';
 import { resolveDaemonConfig } from '../daemon/config.js';
 import type { DaemonConfigShape } from '../daemon/config.js';
-import { requestExpecting } from '../client/control.js';
+import { type DaemonUnreachableError, requestExpecting } from '../client/control.js';
+import { socketErrorCode } from '../platform/socket-errors.js';
 import type {
   DaemonIncompatibleError,
   DaemonNewerError,
@@ -343,6 +345,14 @@ export const loadHaulerSnapshot = (
 > => {
   const config = options.config ?? resolveDaemonConfig();
   const recentLimit = options.recentLimit ?? defaultRecentLimit;
+  const unreachable = (error: DaemonUnreachableError) =>
+    daemonIsAbsent(error.cause)
+      ? fromLedger(config, recentLimit)
+      : unresponsiveSnapshot(
+          config,
+          recentLimit,
+          `socket could not be opened (${socketErrorCode(error.cause) ?? 'no errno'})`,
+        );
   return ensureDaemonVersion(config, defaultEnsureDependencies, statusTimeoutMs, 'read').pipe(
     Effect.flatMap((daemon) =>
       daemon === null
@@ -367,7 +377,7 @@ export const loadHaulerSnapshot = (
                 unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
               ConnectionClosed: () =>
                 unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
-              DaemonUnreachable: () => fromLedger(config, recentLimit),
+              DaemonUnreachable: unreachable,
             }),
           ),
     ),
@@ -376,7 +386,7 @@ export const loadHaulerSnapshot = (
       ControlTimeout: () =>
         unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
       ConnectionClosed: () => unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
-      DaemonUnreachable: () => fromLedger(config, recentLimit),
+      DaemonUnreachable: unreachable,
     }),
   );
 };
