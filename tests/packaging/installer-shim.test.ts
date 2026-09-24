@@ -121,6 +121,17 @@ describe('cargo-hauler-install and the PATH cargo shim', () => {
     expect(readFileSync(shim, 'utf8')).toBe(refreshed);
   });
 
+  it('refreshes to its own hauler when the hauler on PATH is another version, so a second install is a no-op', () => {
+    writeFileSync(join(dirname(newHauler), '..', 'package.json'), JSON.stringify({ name: 'cargo-hauler', version: '0.9.4' }));
+    const own = realpathSync(fileURLToPath(new URL('../../dist/bin/hauler.js', import.meta.url)));
+
+    expect(run('install', 'cursor').code).toBe(0);
+    expect(readFileSync(shim, 'utf8')).toBe(shimText(process.execPath, own, '/opt/rust/bin/cargo'));
+    expect(doctor()).toEqual({ code: 0, errors: 0, shim: [], stderr: '' });
+    const second = run('install', 'cursor');
+    expect([second.code, second.stderr]).toEqual([0, '']);
+  });
+
   it('doctor reports a stale or missing shim as an error in its own report, and passes once refreshed', () => {
     expect(doctor()).toEqual({
       code: 1,
