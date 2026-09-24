@@ -32544,6 +32544,33 @@ const fetchTicketResult = async (input, options)=>{
         result
     };
 };
+const acceptedKillSummary = (ticket, request)=>{
+    if (request === null) {
+        return `${ticket} kill requested`;
+    }
+    switch(request.status){
+        case 'requested':
+        case 'queued':
+            return `${ticket} kill requested before it started; it settles killed`;
+        case 'running':
+            return `${ticket} kill requested; the daemon stops its cargo process and frees the lane`;
+        case 'killed':
+            if (request.attachedTo !== null) {
+                return `${ticket} killed; detached from ${request.attachedTo}`;
+            }
+            return request.startedAtMs === null ? `${ticket} killed before it started; no cargo process ran` : `${ticket} killed`;
+        case 'done':
+        case 'failed':
+        case 'denied':
+        case 'passthrough':
+            return `${ticket} kill requested; it settled ${request.status}`;
+        default:
+            {
+                const exhaustive = request.status;
+                return exhaustive;
+            }
+    }
+};
 const killTicketResult = async (input, options)=>{
     const killed = await (0,_ticket_errors_js__rspack_import_4/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .killTicket */.N6)(input.ticket, options.config), options.signal);
     const request = await (0,_ticket_errors_js__rspack_import_4/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config), options.signal);
@@ -32551,7 +32578,7 @@ const killTicketResult = async (input, options)=>{
         killed,
         operation: 'kill',
         request: requestForConsumer(request),
-        summary: killed ? `${input.ticket} kill requested; the daemon stops its cargo process and frees the lane` : `${input.ticket}: nothing to kill (${request === null ? 'unknown ticket' : `already ${request.status}`})`,
+        summary: killed ? acceptedKillSummary(input.ticket, request) : `${input.ticket}: nothing to kill (${request === null ? 'unknown ticket' : `already ${request.status}`})`,
         ticket: input.ticket
     };
 };
