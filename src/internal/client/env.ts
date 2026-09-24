@@ -5,8 +5,9 @@ import { isForwardedEnvironmentVariable } from '../cargo/env.js';
  * shell exported except hauler-internal `CARGO_HAULER_*` settings and make
  * jobserver flags that name the caller's file descriptors. The daemon lays
  * it over its own environment when it spawns cargo. Request identity hashes
- * this same set, so two requests that differ in a forwarded variable (an
- * `OUT` path, a `build.rs` knob) never share a leader (#222).
+ * this set minus shell bookkeeping (`isIdentityEnvironmentVariable`), so two
+ * requests that differ in an `OUT` path or a `build.rs` knob never share a
+ * leader (#222).
  */
 export const buildTransportedEnv = (
   env: Readonly<Record<string, string | undefined>>,

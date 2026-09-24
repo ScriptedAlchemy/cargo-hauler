@@ -3,7 +3,7 @@ import { realpathSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 
 import { defaultCargoProfile, optionParts } from './argv.js';
-import { isForwardedEnvironmentVariable, isRelevantCargoEnvironmentVariable } from './env.js';
+import { isIdentityEnvironmentVariable, isRelevantCargoEnvironmentVariable } from './env.js';
 
 export interface ParsedCargoArgv {
   readonly allFeatures: boolean;
@@ -462,7 +462,7 @@ export const digestCargoEnvironment = (
  */
 export const digestForwardedEnvironment = (
   env: Readonly<Record<string, string | undefined>>,
-): string => digestEnvironment(env, 'cargo-hauler-forwarded-env-v1\0', isForwardedEnvironmentVariable);
+): string => digestEnvironment(env, 'cargo-hauler-forwarded-env-v1\0', isIdentityEnvironmentVariable);
 
 export const parseCargoArgv = (input: readonly string[]): ParsedCargoArgv => {
   const prefix = peelEnvPrefix(input);

@@ -7108,6 +7108,18 @@ const targetToolPattern = /^(?:AR|CC|CFLAGS|CXX|CXXFLAGS|LDFLAGS)_[A-Za-z0-9_-]+
  * hauler-internal settings and make jobserver flags that name the caller's
  * file descriptors (those would skip the daemon's shared FIFO).
  */ const isForwardedEnvironmentVariable = (name, value)=>!isHaulerInternalEnvironmentVariable(name) && !(jobserverFlagNames.has(name) && carriesDescriptorJobserver(value));
+const shellBookkeepingNames = new Set([
+    'OLDPWD',
+    'PWD',
+    'SHLVL',
+    '_'
+]);
+/**
+ * Forwarded variables that decide request identity. The shell rewrites its
+ * bookkeeping (`OLDPWD`, `SHLVL`, mise's `__MISE_*` session state) on every
+ * tool call, so hashing it would give every request a fresh identity and no
+ * run could ever be shared; `cwd` already carries what `PWD` would.
+ */ const isIdentityEnvironmentVariable = (name, value)=>isForwardedEnvironmentVariable(name, value) && !shellBookkeepingNames.has(name) && !name.startsWith('__MISE_');
 /**
  * The variables that participate in the *compile surface* (coverage, target
  * dir, toolchain). Request *identity* additionally hashes the full forwarded
@@ -7119,7 +7131,8 @@ __webpack_require__.d(__webpack_exports__, {
 }, {
   Pr: isRelevantCargoEnvironmentVariable,
   eG: isForwardedEnvironmentVariable,
-  k2: isHaulerInternalEnvironmentVariable
+  k2: isHaulerInternalEnvironmentVariable,
+  oz: isIdentityEnvironmentVariable
 });
 
 
@@ -8069,7 +8082,7 @@ const digestEnvironment = (env, prefix, include)=>{
  * Identity digest of the environment cargo will actually see. Two requests
  * that differ in any forwarded variable (an output path a test writes, a
  * `build.rs` knob) must not share a leader (#222).
- */ const digestForwardedEnvironment = (env)=>digestEnvironment(env, 'cargo-hauler-forwarded-env-v1\0', _env_js__rspack_import_3/* .isForwardedEnvironmentVariable */.eG);
+ */ const digestForwardedEnvironment = (env)=>digestEnvironment(env, 'cargo-hauler-forwarded-env-v1\0', _env_js__rspack_import_3/* .isIdentityEnvironmentVariable */.oz);
 const parseCargoArgv = (input)=>{
     const prefix = peelEnvPrefix(input);
     let argv = prefix.argv;
@@ -9615,8 +9628,9 @@ __webpack_require__.d(__webpack_exports__, {
  * shell exported except hauler-internal `CARGO_HAULER_*` settings and make
  * jobserver flags that name the caller's file descriptors. The daemon lays
  * it over its own environment when it spawns cargo. Request identity hashes
- * this same set, so two requests that differ in a forwarded variable (an
- * `OUT` path, a `build.rs` knob) never share a leader (#222).
+ * this set minus shell bookkeeping (`isIdentityEnvironmentVariable`), so two
+ * requests that differ in an `OUT` path or a `build.rs` knob never share a
+ * leader (#222).
  */ const buildTransportedEnv = (env)=>{
     const transported = {};
     for (const [key, value] of Object.entries(env)){
@@ -129706,12 +129720,12 @@ __webpack_require__.d(__webpack_exports__, {
 "./.agent-bundle-virtual/hauler-entry.mjs"(__webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
 __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_deps, __rspack_async_done) { try {
 /* import */ var agent_bundle_terminal_capability__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/terminal-capability.js");
-/* import */ var _tmp_cargo_hauler_pr263_poteto_src_scripts_hauler_ts__rspack_import_1 = __webpack_require__("./src/scripts/hauler.ts");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_pr_267_src_scripts_hauler_ts__rspack_import_1 = __webpack_require__("./src/scripts/hauler.ts");
 
 
-const main = _tmp_cargo_hauler_pr263_poteto_src_scripts_hauler_ts__rspack_import_1/* .main */.iW;
+const main = _fast_projects_agent_plugins_cargo_conductor_worktrees_pr_267_src_scripts_hauler_ts__rspack_import_1/* .main */.iW;
 if (typeof main !== 'function') {
-    throw new TypeError('Executable entry must export a main function: ' + "/tmp/cargo-hauler-pr263-poteto/src/scripts/hauler.ts");
+    throw new TypeError('Executable entry must export a main function: ' + "/fast/projects/agent-plugins/cargo-conductor/.worktrees/pr-267/src/scripts/hauler.ts");
 }
 const code = await main(process.argv.slice(2), Object.freeze({
     terminal: (0,agent_bundle_terminal_capability__rspack_import_0/* .detectProcessTerminal */.JH)("script")
