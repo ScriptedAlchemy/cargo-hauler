@@ -11866,7 +11866,7 @@ __webpack_require__.d(__webpack_exports__, {
  * never merge, so the flag is irrelevant there.
  */ const channelsCompatible = (leader, attachment)=>leader.demux !== null || leader.input.mergeStderr === true === (attachment.input.mergeStderr === true);
 const leaderRunMsAt = (job, atMs)=>job.startedAtMs === null ? null : (0,_reporting_savings_js__rspack_import_5/* .nonNegativeMs */.PG)(atMs - job.startedAtMs);
-const servedSavings = (attachment, atMs, leaderRunMs, leaderStartedAtMs)=>(0,_reporting_savings_js__rspack_import_5/* .calculateServedSavings */.J2)(attachment.mode, attachment.estimateMs, attachment.createdAtMs, atMs, leaderRunMs, leaderStartedAtMs);
+const servedSavings = (attachment, atMs, leaderRunMs, leader)=>(0,_reporting_savings_js__rspack_import_5/* .calculateServedSavings */.J2)(attachment.mode, attachment.estimateMs, attachment.createdAtMs, atMs, leaderRunMs, leader.startedAtMs, leader.compileEstimateMs);
 const makeAttachmentRuntime = (deps)=>{
     const { ledger, directory } = deps;
     /**
@@ -12225,7 +12225,7 @@ const makeAttachmentRuntime = (deps)=>{
                     exitCode: 101,
                     signal: null,
                     error: `compile errors in ${failed}`
-                }, servedSavings(attachment, atMs, null, job.startedAtMs))), {
+                }, servedSavings(attachment, atMs, null, job))), {
                 discard: true
             });
         });
@@ -12264,7 +12264,7 @@ const makeAttachmentRuntime = (deps)=>{
                     exitCode: 0,
                     signal: null,
                     error: null
-                }, servedSavings(attachment, atMs, leaderBuildMs, job.startedAtMs))), {
+                }, servedSavings(attachment, atMs, leaderBuildMs, job))), {
                 discard: true
             });
         });
@@ -12439,7 +12439,7 @@ const makeAttachmentRuntime = (deps)=>{
                         exitCode: 0,
                         signal: null,
                         error: null
-                    }, servedSavings(attachment, atMs, leaderRunMs, job.startedAtMs));
+                    }, servedSavings(attachment, atMs, leaderRunMs, job));
                 }
                 if (mirrors) {
                     return notifyAttachmentStarted(attachment, atMs).pipe(effect_Effect__rspack_import_6/* .andThen */.hgn(finishAttachment(attachment, atMs, {
@@ -12447,7 +12447,7 @@ const makeAttachmentRuntime = (deps)=>{
                         exitCode,
                         signal,
                         error
-                    }, servedSavings(attachment, atMs, leaderRunMs, job.startedAtMs))));
+                    }, servedSavings(attachment, atMs, leaderRunMs, job))));
                 }
                 if (requeue !== null) {
                     return requeue(attachment, (0,_job_state_js__rspack_import_4/* .requeueReasonFor */.c0)(attachment.mode, status));
@@ -16184,12 +16184,16 @@ const nonNegativeMs = (value)=>Math.max(0, Math.round(value));
  */ const riddenFromMs = (createdAtMs, leaderStartedAtMs)=>leaderStartedAtMs === null ? createdAtMs : Math.max(createdAtMs, leaderStartedAtMs);
 /**
  * Counterfactual credit for one request served by another cargo process.
- * Compute is what the rider's own process would have burned. Latency
- * compares the rider's estimated solo run, starting at `riddenFromMs`,
- * with the time it actually spent riding; it stays signed, so a rider whose
+ * Compute is what the rider's own process would have burned. A batch rider's
+ * packages still compile inside the leader's combined run, so it avoided no
+ * measurable compute. Latency compares the rider's estimated solo run,
+ * starting at `riddenFromMs`, with the time it actually spent riding; a batch
+ * rider was queued behind the leader in its lane, so its solo run starts only
+ * after the leader's estimated compile, when the leader would have handed the
+ * lane on. It stays signed, so a rider whose
  * leader ran longer than the rider's own run would have shows the regression
  * rather than hiding it.
- */ const calculateServedSavings = (mode, estimateMsValue, createdAtMs, settledAtMs, leaderRunMs, leaderStartedAtMs = null)=>{
+ */ const calculateServedSavings = (mode, estimateMsValue, createdAtMs, settledAtMs, leaderRunMs, leaderStartedAtMs = null, leaderCompileEstimateMs = 0)=>{
     const estimateMs = nonNegativeMs(estimateMsValue);
     let compute;
     switch(mode){
@@ -16221,7 +16225,7 @@ const nonNegativeMs = (value)=>Math.max(0, Math.round(value));
             }
         case 'batch':
             compute = {
-                savedComputeMs: estimateMs,
+                savedComputeMs: 0,
                 savedComputeSource: 'estimate'
             };
             break;
@@ -16232,9 +16236,10 @@ const nonNegativeMs = (value)=>Math.max(0, Math.round(value));
             }
     }
     const riddenMs = Math.max(0, settledAtMs - riddenFromMs(createdAtMs, leaderStartedAtMs));
+    const behindLeaderMs = mode === 'batch' && leaderStartedAtMs !== null ? nonNegativeMs(leaderCompileEstimateMs) : 0;
     return {
         ...compute,
-        savedLatencyMs: Math.round(estimateMs - riddenMs)
+        savedLatencyMs: Math.round(estimateMs + behindLeaderMs - riddenMs)
     };
 };
 
@@ -129955,12 +129960,12 @@ __webpack_require__.d(__webpack_exports__, {
 "./.agent-bundle-virtual/hauler-entry.mjs"(__webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
 __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_deps, __rspack_async_done) { try {
 /* import */ var agent_bundle_terminal_capability__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/terminal-capability.js");
-/* import */ var _tmp_poteto_guard_src_scripts_hauler_ts__rspack_import_1 = __webpack_require__("./src/scripts/hauler.ts");
+/* import */ var _tmp_poteto_savings_src_scripts_hauler_ts__rspack_import_1 = __webpack_require__("./src/scripts/hauler.ts");
 
 
-const main = _tmp_poteto_guard_src_scripts_hauler_ts__rspack_import_1/* .main */.iW;
+const main = _tmp_poteto_savings_src_scripts_hauler_ts__rspack_import_1/* .main */.iW;
 if (typeof main !== 'function') {
-    throw new TypeError('Executable entry must export a main function: ' + "/tmp/poteto-guard/src/scripts/hauler.ts");
+    throw new TypeError('Executable entry must export a main function: ' + "/tmp/poteto-savings/src/scripts/hauler.ts");
 }
 const code = await main(process.argv.slice(2), Object.freeze({
     terminal: (0,agent_bundle_terminal_capability__rspack_import_0/* .detectProcessTerminal */.JH)("script")
