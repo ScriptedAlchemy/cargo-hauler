@@ -20704,21 +20704,28 @@ const targetToolPattern = /^(?:AR|CC|CFLAGS|CXX|CXXFLAGS|LDFLAGS)_[A-Za-z0-9_-]+
  */ const isForwardedEnvironmentVariable = (name, value)=>!isHaulerInternalEnvironmentVariable(name) && !(jobserverFlagNames.has(name) && carriesDescriptorJobserver(value));
 const sessionState = {
     names: new Set([
-        'CLAUDECODE',
         'OLDPWD',
         'PWD',
         'SHLVL',
-        '_'
+        '_',
+        '__CURSOR_SANDBOX_ENV_RESTORE',
+        'CURSOR_AGENT_STORE_FILES_DIR',
+        'CURSOR_AGENT_STORE_SHARED_PATHS',
+        'CURSOR_CONVERSATION_ID',
+        'CURSOR_REQUEST_ID',
+        'CLAUDE_CODE_HOST_SESSION_ID',
+        'CLAUDE_CODE_MESSAGING_SOCKET',
+        'CLAUDE_CODE_MESSAGING_TOKEN',
+        'CLAUDE_CODE_SESSION_ID',
+        'CLAUDE_PID',
+        'CODEX_SESSION_ID',
+        'CODEX_THREAD_ID'
     ]),
     prefixes: [
-        '__CURSOR_',
-        '__MISE_',
-        'CLAUDE_',
-        'CODEX_',
-        'CURSOR_'
+        '__MISE_'
     ]
 };
-const isIdentityEnvironmentVariable = (name, value)=>isForwardedEnvironmentVariable(name, value) && !sessionState.names.has(name) && !sessionState.prefixes.some((prefix)=>name.startsWith(prefix));
+/** Forwarded variables except shell and agent session state (`cwd` already carries `PWD`). */ const isIdentityEnvironmentVariable = (name, value)=>isForwardedEnvironmentVariable(name, value) && !sessionState.names.has(name) && !sessionState.prefixes.some((prefix)=>name.startsWith(prefix));
 /**
  * The variables that participate in the *compile surface* (coverage, target
  * dir, toolchain). Request *identity* additionally hashes every forwarded
@@ -21084,8 +21091,9 @@ const digestEnvironment = (env, prefix, include)=>{
 /** Compile-surface digest: rustc/linker knobs only. */ const digestCargoEnvironment = (env)=>digestEnvironment(env, 'cargo-hauler-env-v1\0', (name)=>affectsCompilation(name));
 /**
  * Identity digest of the environment cargo will actually see. Two requests
- * that differ in any forwarded variable (an output path a test writes, a
- * `build.rs` knob) must not share a leader (#222).
+ * that differ in a forwarded variable (an output path a test writes, a
+ * `build.rs` knob) must not share a leader (#222). Shell and agent session
+ * state is the exception: it differs on every tool call or agent.
  */ const digestForwardedEnvironment = (env)=>digestEnvironment(env, 'cargo-hauler-forwarded-env-v1\0', isIdentityEnvironmentVariable);
 const parseCargoArgv = (input)=>{
     const prefix = peelEnvPrefix(input);

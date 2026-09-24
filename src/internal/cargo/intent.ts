@@ -457,8 +457,9 @@ export const digestCargoEnvironment = (
 
 /**
  * Identity digest of the environment cargo will actually see. Two requests
- * that differ in any forwarded variable (an output path a test writes, a
- * `build.rs` knob) must not share a leader (#222).
+ * that differ in a forwarded variable (an output path a test writes, a
+ * `build.rs` knob) must not share a leader (#222). Shell and agent session
+ * state is the exception: it differs on every tool call or agent.
  */
 export const digestForwardedEnvironment = (
   env: Readonly<Record<string, string | undefined>>,
