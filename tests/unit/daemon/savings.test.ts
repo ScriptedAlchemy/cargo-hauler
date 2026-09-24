@@ -39,7 +39,7 @@ describe('calculateServedSavings', () => {
 
   it('measures from the rider creation when the leader never started', () => {
     expect(calculateServedSavings('batch', 10_000, 1_000, 4_000, null, null)).toEqual({
-      savedComputeMs: 10_000,
+      savedComputeMs: 0,
       savedComputeSource: 'estimate',
       savedLatencyMs: 7_000,
     });
@@ -67,9 +67,23 @@ describe('calculateServedSavings', () => {
       savedComputeSource: 'estimate',
     });
     expect(calculateServedSavings('batch', 3_000, 0, 5_000, 4_000, 0)).toMatchObject({
-      savedComputeMs: 3_000,
+      savedComputeMs: 0,
       savedComputeSource: 'estimate',
     });
+  });
+
+  it('credits a batch rider no compute and measures its latency from behind the leader', () => {
+    // Folded at the leader's start (0s): leader alone ~60s, rider alone ~40s,
+    // the combined run took 80s. Alone, the rider would have finished at 100s.
+    expect(calculateServedSavings('batch', 40_000, 0, 80_000, 80_000, 0, 60_000)).toEqual({
+      savedComputeMs: 0,
+      savedComputeSource: 'estimate',
+      savedLatencyMs: 20_000,
+    });
+    // A combined run longer than both runs back to back is a real regression.
+    expect(calculateServedSavings('batch', 40_000, 0, 110_000, 110_000, 0, 60_000).savedLatencyMs).toBe(
+      -10_000,
+    );
   });
 
   it('sanitizes negative inputs and a settlement that precedes the origin', () => {
