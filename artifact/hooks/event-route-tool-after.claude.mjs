@@ -3276,15 +3276,15 @@ const requestOnce = (message, socketPath, timeoutMs)=>new Promise((resolve)=>{
             kind: 'malformed'
         };
     }
-    if ((0,_contracts_version_order_js__rspack_import_5/* .isNewerVersion */.M)(ping.message.version, (/* inlined export .version */"0.9.4"))) {
+    if ((0,_contracts_version_order_js__rspack_import_5/* .isNewerVersion */.M)(ping.message.version, (/* inlined export .version */"0.9.5"))) {
         return {
-            detail: `cargo-hauler daemon ${ping.message.version} is newer than this client ${(/* inlined export .version */"0.9.4")}`,
+            detail: `cargo-hauler daemon ${ping.message.version} is newer than this client ${(/* inlined export .version */"0.9.5")}`,
             kind: 'replacement-failed'
         };
     }
     if (!(0,_contracts_wire_version_js__rspack_import_6/* .speaksCurrentWireProtocol */.W)(ping.message)) {
         return {
-            detail: `cargo-hauler daemon ${ping.message.version} is incompatible with this client ${(/* inlined export .version */"0.9.4")}`,
+            detail: `cargo-hauler daemon ${ping.message.version} is incompatible with this client ${(/* inlined export .version */"0.9.5")}`,
             kind: 'replacement-failed'
         };
     }
@@ -27779,7 +27779,7 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 /* import */ var node_child_process__rspack_import_1 = __webpack_require__("node:child_process");
 /* import */ var node_url__rspack_import_2 = __webpack_require__("node:url");
 /* import */ var agent_bundle_event_project__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/event-project.js");
-/* import */ var _fast_projects_agent_plugins_cc_wt_identity_src_events_tool_after_ts__rspack_import_4 = __webpack_require__("./src/events/tool/after.ts");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_events_tool_after_ts__rspack_import_4 = __webpack_require__("./src/events/tool/after.ts");
 /* import */ var _agent_bundle_runtime_request__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/49.js");
 /* import */ var _agent_bundle_runtime_request__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
 /* import */ var _agent_bundle_runtime_lineage__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/40.js");
@@ -27807,7 +27807,7 @@ const processLifetime = {
     instanceId: crypto.randomUUID(),
     pid: process.pid
 };
-const handler = (context)=>(0,_fast_projects_agent_plugins_cc_wt_identity_src_events_tool_after_ts__rspack_import_4/* ["default"] */.A)(Object.freeze({
+const handler = (context)=>(0,_home_runner_work_cargo_hauler_cargo_hauler_src_events_tool_after_ts__rspack_import_4/* ["default"] */.A)(Object.freeze({
         ...context,
         provider: (0,_agent_bundle_runtime_request__rspack_import_6/* .useAgent */.fJ)().provider,
         process: (0,_agent_bundle_runtime_request__rspack_import_6/* .useAgent */.fJ)().process
@@ -27843,7 +27843,7 @@ const prepareRouteInvocation = async (nativeInput, signal, observer, receipt)=>{
             observer
         }
     });
-    if (_fast_projects_agent_plugins_cc_wt_identity_src_events_tool_after_ts__rspack_import_4/* ["default"].event */.A.event !== undefined && _fast_projects_agent_plugins_cc_wt_identity_src_events_tool_after_ts__rspack_import_4/* ["default"].event */.A.event !== canonicalEvent) throw new TypeError("Event definition disagrees with its conventional path.");
+    if (_home_runner_work_cargo_hauler_cargo_hauler_src_events_tool_after_ts__rspack_import_4/* ["default"].event */.A.event !== undefined && _home_runner_work_cargo_hauler_cargo_hauler_src_events_tool_after_ts__rspack_import_4/* ["default"].event */.A.event !== canonicalEvent) throw new TypeError("Event definition disagrees with its conventional path.");
     const sessionId = typeof native.session_id === "string" ? native.session_id : typeof native.conversation_id === "string" ? native.conversation_id : undefined;
     const workspaceRoot = typeof native.cwd === "string" ? native.cwd : Array.isArray(native.workspace_roots) && typeof native.workspace_roots[0] === "string" ? native.workspace_roots[0] : undefined;
     const lineage =  true ? await (0,_agent_bundle_runtime_lineage__rspack_import_7/* .resolveStandaloneLineage */.Bu)(target, native) : 0;
@@ -27858,7 +27858,7 @@ const prepareRouteInvocation = async (nativeInput, signal, observer, receipt)=>{
     return withEventState(signal, async (bindings)=>{
         const gate = await (0,_agent_bundle_runtime_request__rspack_import_6/* .runAgentRequest */.iC)({
             invocation: {
-                artifactEpoch: "ad6c040eae681c1d58cdc66f785cf8546616b1ee7c8482e6413939f92bb4eced",
+                artifactEpoch: "2cb44d67c2cb588184d35f432d2e045a1428fe5667a4c5551fb4511a03ad69b8",
                 hostContractRevision: capabilityRevision,
                 kind: "event",
                 operationId: `event:${canonicalEvent}`,
@@ -28088,8 +28088,8 @@ __rspack_async_done();
 // Generated by agent-bundle. Do not edit.
 const name = "cargo-hauler";
 const packageName = "cargo-hauler";
-const packageVersion = "0.9.4";
-const version = "0.9.4";
+const packageVersion = "0.9.5";
+const version = "0.9.5";
 const meta = Object.freeze({
     name,
     packageName,
