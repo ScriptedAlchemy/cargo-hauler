@@ -7,4 +7,4 @@ import { agentBundleRstest } from 'agent-bundle/rstest';
  * artifact build. The preset aliases `agent-bundle/meta` to a package.json
  * stand-in for source imports. Plain unit tests stay in `rstest.config.ts`.
  */
-export default defineConfig(await agentBundleRstest());
+export default defineConfig(await agentBundleRstest({ setupFiles: ['./tests/setup/isolate-state.ts'] }));
