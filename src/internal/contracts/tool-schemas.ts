@@ -559,13 +559,14 @@ export const resultInputSchema = z
 
 export const awaitResultSchema = z
   .object({
+    daemon: daemonStatusSchema,
     operation: z.literal('await'),
-    request: requestRecordSchema.nullable(),
+    request: displayRequestRecordSchema.nullable(),
     summary: z.string(),
     ticket: z.string(),
     timedOut: z.boolean(),
   })
-  .strict();
+  .strict() satisfies z.ZodType<AwaitResult>;
 
 export const killResultSchema = z
   .object({
@@ -579,12 +580,13 @@ export const killResultSchema = z
 
 export const resultFetchResultSchema = z
   .object({
+    daemon: daemonStatusSchema,
     operation: z.literal('result'),
-    request: requestRecordSchema.nullable(),
+    request: displayRequestRecordSchema.nullable(),
     summary: z.string(),
     ticket: z.string(),
   })
-  .strict();
+  .strict() satisfies z.ZodType<ResultFetchResult>;
 
 export const requestInputSchema = z
   .object({
@@ -645,8 +647,9 @@ export const requestResultSchema = z
   .strict();
 
 export interface AwaitResult {
+  readonly daemon: DaemonStatus;
   readonly operation: 'await';
-  readonly request: RequestRecord | null;
+  readonly request: DisplayRequestRecord | null;
   readonly summary: string;
   readonly ticket: string;
   readonly timedOut: boolean;
@@ -663,8 +666,9 @@ export interface KillResult {
 }
 
 export interface ResultFetchResult {
+  readonly daemon: DaemonStatus;
   readonly operation: 'result';
-  readonly request: RequestRecord | null;
+  readonly request: DisplayRequestRecord | null;
   readonly summary: string;
   readonly ticket: string;
 }

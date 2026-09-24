@@ -1,3 +1,5 @@
+import * as Effect from 'effect/Effect';
+
 import {
   awaitTicketWithProgress,
   fetchTicket,
@@ -5,10 +7,11 @@ import {
   submitBackgroundAck,
   type AwaitProgress,
   type BackgroundSubmitAck,
+  type TicketSocketError,
 } from '../client/tickets.js';
 import type { DaemonConfigShape } from '../daemon/config.js';
-import type { RequestRecord } from '../contracts/protocol.js';
-import { describeRequestRecord, displayRequestRecord } from './status.js';
+import type { DisplayRequestRecord, RequestRecord } from '../contracts/protocol.js';
+import { describeRequestRecord, displayRequestRecord, loadLedgerTicket } from './status.js';
 
 import type { TicketRequestContext } from './attribution.js';
 import { enrichTicketRequest, ticketAttribution } from './attribution.js';
@@ -51,22 +54,48 @@ export const progressMessage = (line: string): string =>
 const requestForConsumer = (request: RequestRecord | null): RequestRecord | null =>
   request === null ? null : displayRequestRecord(request);
 
+/**
+ * A stopped daemon leaves the ledger as a ticket's only record, so a read
+ * answers from it (a stranded run as orphaned) instead of failing.
+ */
+const fromLedgerWhenStopped = <A, B>(
+  read: Effect.Effect<A, TicketSocketError>,
+  ticket: string,
+  config: DaemonConfigShape | undefined,
+  answer: (request: DisplayRequestRecord | null) => B,
+): Effect.Effect<A | B, TicketSocketError> =>
+  read.pipe(
+    Effect.catchTag('DaemonUnreachable', () => loadLedgerTicket(ticket, 'stopped', config).pipe(Effect.map(answer))),
+  );
+
 export const awaitTicketResult = async (
   input: TicketInput,
   options: AwaitOptions,
 ): Promise<AwaitResult> => {
   const waited = await runTicketEffect(
-    awaitTicketWithProgress(
+    fromLedgerWhenStopped(
+      awaitTicketWithProgress(
+        input.ticket,
+        input.maxWaitMs ?? defaultAwaitMs,
+        options.onProgress ?? (() => undefined),
+        options.config,
+      ).pipe(
+        Effect.map(({ request, timedOut }) => ({
+          daemon: 'running' as const,
+          request: requestForConsumer(request),
+          timedOut,
+        })),
+      ),
       input.ticket,
-      input.maxWaitMs ?? defaultAwaitMs,
-      options.onProgress ?? (() => undefined),
       options.config,
+      (request) => ({ daemon: 'stopped' as const, request, timedOut: false }),
     ),
     options.signal,
   );
   return {
+    daemon: waited.daemon,
     operation: 'await',
-    request: requestForConsumer(waited.request),
+    request: waited.request,
     summary: waited.timedOut
       ? `${input.ticket} still pending`
       : describeRequestRecord(input.ticket, waited.request),
@@ -79,10 +108,21 @@ export const fetchTicketResult = async (
   input: Pick<TicketInput, 'ticket'>,
   options: TicketOptions,
 ): Promise<ResultFetchResult> => {
-  const request = await runTicketEffect(fetchTicket(input.ticket, options.config), options.signal);
+  const { daemon, request } = await runTicketEffect(
+    fromLedgerWhenStopped(
+      fetchTicket(input.ticket, options.config).pipe(
+        Effect.map((record) => ({ daemon: 'running' as const, request: requestForConsumer(record) })),
+      ),
+      input.ticket,
+      options.config,
+      (found) => ({ daemon: 'stopped' as const, request: found }),
+    ),
+    options.signal,
+  );
   return {
+    daemon,
     operation: 'result',
-    request: requestForConsumer(request),
+    request,
     summary: describeRequestRecord(input.ticket, request),
     ticket: input.ticket,
   };

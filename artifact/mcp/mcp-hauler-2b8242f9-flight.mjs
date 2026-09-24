@@ -23063,8 +23063,9 @@ const ticketInputSchema = zod__rspack_import_1/* .object */.Ikc({
     full: zod__rspack_import_1/* .boolean */.zMY().optional().describe('Render the whole on-disk output log instead of the stored tail')
 }).strict();
 const awaitResultSchema = zod__rspack_import_1/* .object */.Ikc({
+    daemon: daemonStatusSchema,
     operation: zod__rspack_import_1/* .literal */.euz('await'),
-    request: requestRecordSchema.nullable(),
+    request: displayRequestRecordSchema.nullable(),
     summary: zod__rspack_import_1/* .string */.YjP(),
     ticket: zod__rspack_import_1/* .string */.YjP(),
     timedOut: zod__rspack_import_1/* .boolean */.zMY()
@@ -23077,8 +23078,9 @@ const killResultSchema = zod__rspack_import_1/* .object */.Ikc({
     ticket: zod__rspack_import_1/* .string */.YjP()
 }).strict();
 const resultFetchResultSchema = zod__rspack_import_1/* .object */.Ikc({
+    daemon: daemonStatusSchema,
     operation: zod__rspack_import_1/* .literal */.euz('result'),
-    request: requestRecordSchema.nullable(),
+    request: displayRequestRecordSchema.nullable(),
     summary: zod__rspack_import_1/* .string */.YjP(),
     ticket: zod__rspack_import_1/* .string */.YjP()
 }).strict();
@@ -26909,13 +26911,8 @@ const loadSnapshot = (limit, options)=>(0,_ticket_errors_js__rspack_import_2/* .
  */ const loadLastResult = async (options)=>{
     const snapshot = await loadSnapshot(1, options);
     const latest = snapshot.recent[0] ?? null;
-    const detailOf = (ticket)=>{
-        const fromLedger = (0,_status_js__rspack_import_1/* .loadLedgerRequest */.ho)(ticket, options.config);
-        return snapshot.daemon === 'running' ? (0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(ticket, options.config).pipe(effect_Effect__rspack_import_3/* ["catch"] */.MfU(()=>fromLedger)) : fromLedger;
-    };
-    const stored = latest === null ? null : await (0,_ticket_errors_js__rspack_import_2/* .runTicketEffect */.n)(detailOf(latest.ticket), options.signal);
-    const displayed = stored === null ? null : (0,_status_js__rspack_import_1/* .displayRequestRecord */.xn)(stored);
-    const request = displayed === null || snapshot.daemon === 'running' ? displayed : (0,_status_js__rspack_import_1/* .ledgerRequestRecord */._4)(displayed, snapshot.daemon);
+    const detailOf = (ticket)=>snapshot.daemon === 'running' ? (0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(ticket, options.config).pipe(effect_Effect__rspack_import_3/* ["catch"] */.MfU(()=>(0,_status_js__rspack_import_1/* .loadLedgerRequest */.ho)(ticket, options.config)), effect_Effect__rspack_import_3/* .map */.TjK((record)=>record === null ? null : (0,_status_js__rspack_import_1/* .displayRequestRecord */.xn)(record))) : (0,_status_js__rspack_import_1/* .loadLedgerTicket */.UP)(ticket, snapshot.daemon, options.config);
+    const request = latest === null ? null : await (0,_ticket_errors_js__rspack_import_2/* .runTicketEffect */.n)(detailOf(latest.ticket), options.signal);
     return {
         daemon: snapshot.daemon,
         operation: 'last',
@@ -27079,13 +27076,22 @@ const defaultRecentLimit = 50;
  * the leader.
  */ const stalledGuidance = (request)=>request.status === 'running' && request.stall !== undefined ? `ticket looks stalled (no CPU for ${Math.floor(request.stall.idleMs / 60000)}m) — hauler kill ${request.attachedTo ?? request.ticket}` : null;
 /**
- * `hauler result` / `hauler_result` explanation for a ticket the daemon
- * restart ended: it was not killed by anyone and did not fail on its
- * own, so a plain `killed` would send the reader looking for a cause.
- */ const orphanedGuidance = (request)=>request.error !== undefined && (0,_contracts_protocol_js__rspack_import_5/* .isOrphanedByRestart */.oG)({
+ * `hauler result` / `hauler_result` explanation for a ticket no daemon will
+ * finish: one the daemon restart ended was not killed by anyone and did not
+ * fail on its own, so a plain `killed` would send the reader looking for a
+ * cause; one a stopped daemon stranded carries its reason as its error.
+ */ const orphanedGuidance = (request)=>{
+    if (request.error === undefined) {
+        return null;
+    }
+    if (request.status === 'orphaned') {
+        return request.error;
+    }
+    return (0,_contracts_protocol_js__rspack_import_5/* .isOrphanedByRestart */.oG)({
         error: request.error,
         status: request.status
     }) ? `${_contracts_protocol_js__rspack_import_5/* .orphanedByRestartError */.Su}: the daemon stopped while it was in flight and does not hand runs over; resubmit if the work is still needed` : null;
+};
 const describeRequestRecord = (ticket, request)=>{
     if (request === null) {
         return `${ticket} not found`;
@@ -27193,6 +27199,7 @@ const fromReport = (report, config)=>withReport({
         return yield* (0,_storage_ledger_js__rspack_import_4/* .createLedgerApi */.Ax)(db).getRequestByTicket(ticket);
     }));
 };
+const loadLedgerTicket = (ticket, daemon, config)=>loadLedgerRequest(ticket, config).pipe(effect_Effect__rspack_import_10/* .map */.TjK((record)=>record === null ? null : ledgerRequestRecord(displayRequestRecord(record), daemon)));
 const emptyStopped = (config)=>withReport({
         active: [],
         daemon: 'stopped',
@@ -27267,7 +27274,7 @@ const unresponsiveSnapshot = (config, recentLimit, what)=>fromLedger(config, rec
 __webpack_require__.d(__webpack_exports__, {
 }, {
   M3: loadHaulerSnapshot,
-  _4: ledgerRequestRecord,
+  UP: loadLedgerTicket,
   ho: loadLedgerRequest,
   qu: describeRequestRecord,
   sY: displayStatusRows,
@@ -27469,11 +27476,13 @@ __webpack_require__.d(__webpack_exports__, {
 
 },
 "./src/internal/operations/tickets.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
+/* import */ var effect_Effect__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
 /* import */ var _client_tickets_js__rspack_import_0 = __webpack_require__("./src/internal/client/tickets.ts");
 /* import */ var _status_js__rspack_import_1 = __webpack_require__("./src/internal/operations/status.ts");
-/* import */ var _attribution_js__rspack_import_4 = __webpack_require__("./src/internal/operations/attribution.ts");
-/* import */ var _ticket_errors_js__rspack_import_3 = __webpack_require__("./src/internal/operations/ticket-errors.ts");
+/* import */ var _attribution_js__rspack_import_5 = __webpack_require__("./src/internal/operations/attribution.ts");
+/* import */ var _ticket_errors_js__rspack_import_4 = __webpack_require__("./src/internal/operations/ticket-errors.ts");
 /* import */ var _ticket_output_js__rspack_import_2 = __webpack_require__("./src/internal/operations/ticket-output.ts");
+
 
 
 
@@ -27488,21 +27497,41 @@ const defaultAwaitMs = 30000;
  * an inherited FORCE_COLOR/CLICOLOR_FORCE must not leave ESC bytes to become
  * literal `\u001b[…` in the JSON.
  */ const requestForConsumer = (request)=>request === null ? null : (0,_status_js__rspack_import_1/* .displayRequestRecord */.xn)(request);
+/**
+ * A stopped daemon leaves the ledger as a ticket's only record, so a read
+ * answers from it (a stranded run as orphaned) instead of failing.
+ */ const fromLedgerWhenStopped = (read, ticket, config, answer)=>read.pipe(effect_Effect__rspack_import_3/* .catchTag */.KuX('DaemonUnreachable', ()=>(0,_status_js__rspack_import_1/* .loadLedgerTicket */.UP)(ticket, 'stopped', config).pipe(effect_Effect__rspack_import_3/* .map */.TjK(answer))));
 const awaitTicketResult = async (input, options)=>{
-    const waited = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .awaitTicketWithProgress */.Ik)(input.ticket, input.maxWaitMs ?? defaultAwaitMs, options.onProgress ?? (()=>undefined), options.config), options.signal);
+    const waited = await (0,_ticket_errors_js__rspack_import_4/* .runTicketEffect */.n)(fromLedgerWhenStopped((0,_client_tickets_js__rspack_import_0/* .awaitTicketWithProgress */.Ik)(input.ticket, input.maxWaitMs ?? defaultAwaitMs, options.onProgress ?? (()=>undefined), options.config).pipe(effect_Effect__rspack_import_3/* .map */.TjK(({ request, timedOut })=>({
+            daemon: 'running',
+            request: requestForConsumer(request),
+            timedOut
+        }))), input.ticket, options.config, (request)=>({
+            daemon: 'stopped',
+            request,
+            timedOut: false
+        })), options.signal);
     return {
+        daemon: waited.daemon,
         operation: 'await',
-        request: requestForConsumer(waited.request),
+        request: waited.request,
         summary: waited.timedOut ? `${input.ticket} still pending` : (0,_status_js__rspack_import_1/* .describeRequestRecord */.qu)(input.ticket, waited.request),
         ticket: input.ticket,
         timedOut: waited.timedOut
     };
 };
 const fetchTicketResult = async (input, options)=>{
-    const request = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config), options.signal);
+    const { daemon, request } = await (0,_ticket_errors_js__rspack_import_4/* .runTicketEffect */.n)(fromLedgerWhenStopped((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config).pipe(effect_Effect__rspack_import_3/* .map */.TjK((record)=>({
+            daemon: 'running',
+            request: requestForConsumer(record)
+        }))), input.ticket, options.config, (found)=>({
+            daemon: 'stopped',
+            request: found
+        })), options.signal);
     return {
+        daemon,
         operation: 'result',
-        request: requestForConsumer(request),
+        request,
         summary: (0,_status_js__rspack_import_1/* .describeRequestRecord */.qu)(input.ticket, request),
         ticket: input.ticket
     };
@@ -27520,8 +27549,8 @@ const fetchTicketResult = async (input, options)=>{
     };
 };
 const killTicketResult = async (input, options)=>{
-    const killed = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .killTicket */.N6)(input.ticket, options.config), options.signal);
-    const request = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config), options.signal);
+    const killed = await (0,_ticket_errors_js__rspack_import_4/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .killTicket */.N6)(input.ticket, options.config), options.signal);
+    const request = await (0,_ticket_errors_js__rspack_import_4/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config), options.signal);
     return {
         killed,
         operation: 'kill',
@@ -27552,9 +27581,9 @@ const formatWait = (ms)=>{
     return null;
 };
 const submitTicketRequest = async (input, requestContext, options)=>{
-    const request = (0,_attribution_js__rspack_import_4/* .enrichTicketRequest */.TZ)(input, requestContext);
-    const attribution = (0,_attribution_js__rspack_import_4/* .ticketAttribution */.YW)(request, requestContext);
-    const ack = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .submitBackgroundAck */.gK)(request, options.config), options.signal);
+    const request = (0,_attribution_js__rspack_import_5/* .enrichTicketRequest */.TZ)(input, requestContext);
+    const attribution = (0,_attribution_js__rspack_import_5/* .ticketAttribution */.YW)(request, requestContext);
+    const ack = await (0,_ticket_errors_js__rspack_import_4/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .submitBackgroundAck */.gK)(request, options.config), options.signal);
     if (ack === null) {
         return {
             attribution,
@@ -29507,21 +29536,9 @@ const LogDocument = ({ nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rsp
             })
         ]
     });
-const TicketNotKnown = ({ names, ticket })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_states_js__rspack_import_9/* .UnavailableState */.yb, {
+const TicketNotKnown = ({ daemon, names, ticket })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_states_js__rspack_import_9/* .UnavailableState */.yb, {
         what: ticket,
-        children: `not known to the daemon. Tickets look like cc-123; check ${names.log} for recent ids.`
-    });
-const TicketDetail = ({ names, nowMs, record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
-        children: [
-            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_ticket_card_js__rspack_import_10/* .TicketCard */.f, {
-                nowMs: nowMs,
-                record: record
-            }),
-            record.status === 'orphaned' ? null : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_ticket_guidance_js__rspack_import_11/* .TicketGuidance */.d, {
-                names: names,
-                record: record
-            })
-        ]
+        children: `${daemon === 'running' ? 'not known to the daemon' : `not in the ledger, and the daemon is ${daemon}`}. Tickets look like cc-123; check ${names.log} for recent ids.`
     });
 const LastDocument = ({ names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g6.Result, {
         value: (0,_util_json_js__rspack_import_15/* .documentValue */.H)(result),
@@ -29529,10 +29546,17 @@ const LastDocument = ({ names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runt
             /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g6.Text, {
                 children: result.summary
             }),
-            result.request === null ? null : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(TicketDetail, {
-                names: names,
-                nowMs: nowMs,
-                record: result.request
+            result.request === null ? null : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
+                children: [
+                    /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_ticket_card_js__rspack_import_10/* .TicketCard */.f, {
+                        nowMs: nowMs,
+                        record: result.request
+                    }),
+                    /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_ticket_guidance_js__rspack_import_11/* .TicketGuidance */.d, {
+                        names: names,
+                        record: result.request
+                    })
+                ]
             })
         ]
     });
@@ -29547,6 +29571,7 @@ const LastDocument = ({ names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runt
                 children: result.summary
             }),
             result.request === null ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(TicketNotKnown, {
+                daemon: result.daemon,
                 names: names,
                 ticket: result.ticket
             }) : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
@@ -29597,6 +29622,7 @@ const AwaitDocument = ({ maxWaitMs, names, nowMs, result })=>/*#__PURE__*/ (0,re
             result.timedOut ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g6.Context, {
                 children: `The ${(0,_shared_format_js__rspack_import_17/* .formatMs */._V)(maxWaitMs)} wait expired before ${result.ticket} finished. Call ${names.await} again (each call waits up to ${(0,_shared_format_js__rspack_import_17/* .formatMs */._V)(_contracts_protocol_js__rspack_import_2/* .awaitCeilingMs */._K)}) rather than polling ${names.result} in a tight loop.`
             }) : result.request === null ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(TicketNotKnown, {
+                daemon: result.daemon,
                 names: names,
                 ticket: result.ticket
             }) : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_ticket_guidance_js__rspack_import_11/* .TicketGuidance */.d, {
@@ -30364,7 +30390,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 /*
- * One component per ticket status. The record keyed by `RequestStatus` is
+ * One component per ticket status. The record keyed by `StatusRowStatus` is
  * exhaustive by construction — adding a status to the daemon protocol fails
  * this module's type-check until its guidance exists.
  */ const PendingGuidance = ({ names, record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g6.Context, {
@@ -30388,11 +30414,15 @@ const DeniedGuidance = ({ record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_
 const PassthroughGuidance = ({ record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g6.Context, {
         children: `${record.ticket} ran directly without broker coordination.`
     });
+const OrphanedGuidance = ({ names, record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g6.Context, {
+        children: `${record.ticket} is orphaned. Check ${names.status} for the daemon's state before resubmitting through ${names.request}.`
+    });
 const guidanceByStatus = {
     denied: DeniedGuidance,
     done: DoneGuidance,
     failed: FailedGuidance,
     killed: KilledGuidance,
+    orphaned: OrphanedGuidance,
     passthrough: PassthroughGuidance,
     queued: PendingGuidance,
     requested: PendingGuidance,

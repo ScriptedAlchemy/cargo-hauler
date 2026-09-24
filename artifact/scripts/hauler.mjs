@@ -11659,8 +11659,9 @@ const ticketInputSchema = zod__rspack_import_1/* .object */.Ikc({
     full: zod__rspack_import_1/* .boolean */.zMY().optional().describe('Render the whole on-disk output log instead of the stored tail')
 }).strict();
 const awaitResultSchema = zod__rspack_import_1/* .object */.Ikc({
+    daemon: daemonStatusSchema,
     operation: zod__rspack_import_1/* .literal */.euz('await'),
-    request: requestRecordSchema.nullable(),
+    request: displayRequestRecordSchema.nullable(),
     summary: zod__rspack_import_1/* .string */.YjP(),
     ticket: zod__rspack_import_1/* .string */.YjP(),
     timedOut: zod__rspack_import_1/* .boolean */.zMY()
@@ -11673,8 +11674,9 @@ const killResultSchema = zod__rspack_import_1/* .object */.Ikc({
     ticket: zod__rspack_import_1/* .string */.YjP()
 }).strict();
 const resultFetchResultSchema = zod__rspack_import_1/* .object */.Ikc({
+    daemon: daemonStatusSchema,
     operation: zod__rspack_import_1/* .literal */.euz('result'),
-    request: requestRecordSchema.nullable(),
+    request: displayRequestRecordSchema.nullable(),
     summary: zod__rspack_import_1/* .string */.YjP(),
     ticket: zod__rspack_import_1/* .string */.YjP()
 }).strict();
@@ -20619,13 +20621,22 @@ const defaultRecentLimit = 50;
  * the leader.
  */ const stalledGuidance = (request)=>request.status === 'running' && request.stall !== undefined ? `ticket looks stalled (no CPU for ${Math.floor(request.stall.idleMs / 60000)}m) — hauler kill ${request.attachedTo ?? request.ticket}` : null;
 /**
- * `hauler result` / `hauler_result` explanation for a ticket the daemon
- * restart ended: it was not killed by anyone and did not fail on its
- * own, so a plain `killed` would send the reader looking for a cause.
- */ const orphanedGuidance = (request)=>request.error !== undefined && isOrphanedByRestart({
+ * `hauler result` / `hauler_result` explanation for a ticket no daemon will
+ * finish: one the daemon restart ended was not killed by anyone and did not
+ * fail on its own, so a plain `killed` would send the reader looking for a
+ * cause; one a stopped daemon stranded carries its reason as its error.
+ */ const orphanedGuidance = (request)=>{
+    if (request.error === undefined) {
+        return null;
+    }
+    if (request.status === 'orphaned') {
+        return request.error;
+    }
+    return isOrphanedByRestart({
         error: request.error,
         status: request.status
     }) ? `${orphanedByRestartError}: the daemon stopped while it was in flight and does not hand runs over; resubmit if the work is still needed` : null;
+};
 const describeRequestRecord = (ticket, request)=>{
     if (request === null) {
         return `${ticket} not found`;
@@ -20733,6 +20744,7 @@ const fromReport = (report, config)=>withReport({
         return yield* createLedgerApi(db).getRequestByTicket(ticket);
     }));
 };
+const loadLedgerTicket = (ticket, daemon, config)=>loadLedgerRequest(ticket, config).pipe(Effect.map((record)=>record === null ? null : ledgerRequestRecord(displayRequestRecord(record), daemon)));
 const emptyStopped = (config)=>withReport({
         active: [],
         daemon: 'stopped',

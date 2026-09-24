@@ -2,13 +2,13 @@ import * as Effect from 'effect/Effect';
 
 import { fetchTicket } from '../client/tickets.js';
 import type { DaemonConfigShape } from '../daemon/config.js';
-import type { RequestRecord } from '../contracts/protocol.js';
+import type { DisplayRequestRecord } from '../contracts/protocol.js';
 import {
   displayRequestRecord,
   displayStatusRows,
-  ledgerRequestRecord,
   loadHaulerSnapshot,
   loadLedgerRequest,
+  loadLedgerTicket,
 } from './status.js';
 
 import type {
@@ -47,18 +47,14 @@ const loadSnapshot = (limit: number, options: InspectOptions) =>
 export const loadLastResult = async (options: InspectOptions): Promise<LastResult> => {
   const snapshot = await loadSnapshot(1, options);
   const latest = snapshot.recent[0] ?? null;
-  const detailOf = (ticket: string): Effect.Effect<RequestRecord | null> => {
-    const fromLedger = loadLedgerRequest(ticket, options.config);
-    return snapshot.daemon === 'running'
-      ? fetchTicket(ticket, options.config).pipe(Effect.catch(() => fromLedger))
-      : fromLedger;
-  };
-  const stored = latest === null ? null : await runTicketEffect(detailOf(latest.ticket), options.signal);
-  const displayed = stored === null ? null : displayRequestRecord(stored);
-  const request =
-    displayed === null || snapshot.daemon === 'running'
-      ? displayed
-      : ledgerRequestRecord(displayed, snapshot.daemon);
+  const detailOf = (ticket: string): Effect.Effect<DisplayRequestRecord | null> =>
+    snapshot.daemon === 'running'
+      ? fetchTicket(ticket, options.config).pipe(
+          Effect.catch(() => loadLedgerRequest(ticket, options.config)),
+          Effect.map((record) => (record === null ? null : displayRequestRecord(record))),
+        )
+      : loadLedgerTicket(ticket, snapshot.daemon, options.config);
+  const request = latest === null ? null : await runTicketEffect(detailOf(latest.ticket), options.signal);
   return {
     daemon: snapshot.daemon,
     operation: 'last',

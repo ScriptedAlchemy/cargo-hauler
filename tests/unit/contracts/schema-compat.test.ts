@@ -335,6 +335,7 @@ describe('status/result contract completeness (issue #16)', () => {
 
   it('round-trips a diagnosed record through the await handler schema', () => {
     const parsed = awaitResultSchema.parse({
+      daemon: 'running',
       operation: 'await',
       request: diagnosedRecord,
       summary: 'cc-1 failed',
@@ -347,6 +348,7 @@ describe('status/result contract completeness (issue #16)', () => {
 
   it('round-trips a diagnosed record through the result handler schema', () => {
     const parsed = resultFetchResultSchema.parse({
+      daemon: 'running',
       operation: 'result',
       request: diagnosedRecord,
       summary: 'cc-1 failed',
@@ -357,6 +359,7 @@ describe('status/result contract completeness (issue #16)', () => {
 
   it('accepts a live in-progress output tail on the result record', () => {
     const parsed = resultFetchResultSchema.parse({
+      daemon: 'running',
       operation: 'result',
       request: {
         ...diagnosedRecord,
@@ -370,6 +373,7 @@ describe('status/result contract completeness (issue #16)', () => {
     expect(parsed.request?.outputTailLive).toBe(true);
     // The flag is overlaid on in-flight rows only; a settled row has none.
     const settled = resultFetchResultSchema.parse({
+      daemon: 'running',
       operation: 'result',
       request: diagnosedRecord,
       summary: 'cc-1 failed',

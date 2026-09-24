@@ -1,7 +1,7 @@
 import { Agent } from '@agent-bundle/runtime';
 import React, { Suspense } from 'react';
 
-import type { RequestRecord } from '../../contracts/protocol.js';
+import type { DisplayRequestRecord } from '../../contracts/protocol.js';
 import { formatMs } from '../shared/format.js';
 import type { AwaitResult, LogResult } from '../../contracts/tool-schemas.js';
 
@@ -26,7 +26,7 @@ export interface AwaitStreamProps {
   readonly names: SurfaceNames;
   readonly nowMs: number;
   /** The ticket as it was when the wait began; `null` when the daemon does not know it yet. */
-  readonly snapshot: RequestRecord | null;
+  readonly snapshot: DisplayRequestRecord | null;
   readonly ticket: string;
 }
 
