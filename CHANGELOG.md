@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.5
+
+### Patch Changes
+
+- c561965: Different agents running the same cargo command in the same workspace share one run again. Request identity no longer hashes the per-conversation ids that Cursor, Claude Code, and Codex export, such as `CURSOR_CONVERSATION_ID`, `CLAUDE_CODE_SESSION_ID`, and `CODEX_THREAD_ID`, and cargo still receives them.
+
 ## 0.9.4
 
 ### Patch Changes
