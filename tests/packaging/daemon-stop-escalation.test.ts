@@ -1,9 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import { expect, it } from 'effect-rstest';
+
+import { removeTestPath } from '../support/tmp-guard.js';
 
 const hauler = join(resolve(import.meta.dirname, '../..'), 'dist/bin/hauler.js');
 
@@ -65,7 +67,7 @@ it.skipIf(!existsSync(hauler))(
       for (const pid of [daemonPid, ...cargoPids()].filter(alive)) {
         process.kill(pid, 'SIGKILL');
       }
-      rmSync(root, { force: true, recursive: true });
+      removeTestPath(root);
     }
   },
   30_000,

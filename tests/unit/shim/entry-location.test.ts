@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
 
@@ -8,6 +8,7 @@ import {
   globalHaulerArgv,
   haulerEntryLocation,
 } from '../../../src/internal/shim/entry-location.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 describe('hauler entry location', () => {
   it.each([
@@ -32,7 +33,7 @@ describe('hauler entry location', () => {
       writeFileSync(join(root, 'bin', 'cargo-hauler.mjs'), '');
       expect(haulerEntryLocation(entry)).toEqual({ kind: 'host-plugin', path: realpathSync(entry) });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -48,7 +49,7 @@ describe('hauler entry location', () => {
       expect(location).toEqual({ kind: 'npm-bin', path: realpathSync(entry) });
       expect(globalHaulerArgv(location, { PATH: '' })).toEqual([process.execPath, realpathSync(entry)]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -73,7 +74,7 @@ describe('hauler entry location', () => {
         realpathSync(globalEntry),
       ]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -116,7 +117,7 @@ describe('hauler entry location', () => {
         'npm i -g cargo-hauler',
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 

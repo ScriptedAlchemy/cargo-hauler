@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -20,6 +20,7 @@ import type {
   StatusReport,
   StatusResultMessage,
 } from '../../src/internal/contracts/protocol.js';
+import { removeTestPath } from './tmp-guard.js';
 
 const fakeCargoScript = `#!/usr/bin/env bash
 # Harness timing knobs travel as CARGO_HAULER_TEST_FAKE_* so they never enter
@@ -140,7 +141,7 @@ export const scopedFixture = (
 ): Effect.Effect<Fixture, never, Scope.Scope> =>
   Effect.acquireRelease(
     Effect.sync(() => makeFixture(maxConcurrent, env)),
-    (fixture) => Effect.sync(() => rmSync(fixture.root, { recursive: true, force: true })),
+    (fixture) => Effect.sync(() => removeTestPath(fixture.root)),
   );
 
 export const scopedDaemon = (
@@ -161,7 +162,7 @@ export const scopedTempDir = (
 ): Effect.Effect<string, never, Scope.Scope> =>
   Effect.acquireRelease(
     Effect.sync(() => canonicalTempDir(prefix)),
-    (directory) => Effect.sync(() => rmSync(directory, { recursive: true, force: true })),
+    (directory) => Effect.sync(() => removeTestPath(directory)),
   );
 
 export const scopedDatabase = <Database extends { close(): void }>(

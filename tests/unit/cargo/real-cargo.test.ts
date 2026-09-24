@@ -1,10 +1,11 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'effect-rstest';
 
 import { realCargoBin } from '../../../src/internal/cargo/execution/real-cargo.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 describe('realCargoBin', () => {
   it('honors the explicit override', () => {
@@ -37,7 +38,7 @@ describe('realCargoBin', () => {
       writeFileSync(join(binDir, 'cargo'), '#!/bin/sh\n');
       expect(realCargoBin({ CARGO_HOME: root })).toBe(join(binDir, 'cargo'));
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 

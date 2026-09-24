@@ -1,11 +1,13 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { version } from 'agent-bundle/meta';
 import { afterEach, describe, expect, it } from 'effect-rstest';
+
+import { removeTestPath } from '../support/tmp-guard.js';
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
 const haulerEntry = join(repoRoot, 'dist', 'bin', 'hauler.js');
@@ -112,7 +114,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
       expect(status.stderr).toBe('');
       expect(requests(logPath)).toEqual(['ping', 'status']);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   }, 30_000);
 
@@ -135,7 +137,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
       expect(requests(logPath)).toEqual(['ping', 'status', 'shutdown']);
       await run(haulerEntry, ['daemon', 'stop'], env);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   }, 30_000);
 
@@ -152,7 +154,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
       expect(submitted.stderr.split(diagnostic)).toHaveLength(2);
       expect(requests(logPath)).toEqual(['ping', 'status', 'exec']);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   }, 30_000);
 
@@ -168,7 +170,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
       expect(status.stderr).toContain('(999.0.0) is newer than this client');
       expect(requests(logPath)).toEqual(['ping']);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   }, 30_000);
 
@@ -191,7 +193,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
       expect(submitted.stderr).toContain('(999.0.0) is newer than this client');
       expect(requests(logPath)).toEqual(['ping', 'status', 'ping']);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   }, 30_000);
 
@@ -213,7 +215,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
       expect(status.stderr).toContain('incompatible with this client');
       expect(requests(logPath)).toEqual(['ping']);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   }, 30_000);
 });

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -8,6 +8,7 @@ import { Children, isValidElement, type ReactElement, type ReactNode } from 'rea
 import { BatchTestSummary } from '../../../src/internal/ui/documents/batch-test-summary.js';
 import { TicketCard } from '../../../src/internal/ui/documents/ticket-card.js';
 import type { RequestRecord } from '../../../src/internal/contracts/protocol.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 const record = (overrides: Partial<RequestRecord> = {}): RequestRecord => ({
   after: ['cc-9395'], argv: ['cargo', 'build'], attachMode: null, attachedTo: null,
@@ -61,7 +62,7 @@ describe('shared test-run report component', () => {
       expect(text(rendered)).toContain('4 passed');
       expect(text(rendered)).toContain('41 passed');
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 

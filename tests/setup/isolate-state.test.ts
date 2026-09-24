@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -7,6 +7,7 @@ import { expect, it } from 'effect-rstest';
 
 import { appendHookRecord, hookEventsFileName } from '../../src/internal/host-hooks/record.js';
 import { defaultStateDir, resolveStateDir } from '../../src/internal/platform/state-paths.js';
+import { removeTestPath } from '../support/tmp-guard.js';
 
 const projectRoot = resolve(import.meta.dirname, '../..');
 const probeName = 'records hooks at both state roots';
@@ -40,6 +41,6 @@ it('never writes into an inherited CARGO_HAULER_STATE_DIR or XDG_CACHE_HOME', ()
     expect(child.status).toBe(0);
     expect(readdirSync(inherited, { recursive: true })).toEqual([]);
   } finally {
-    rmSync(inherited, { force: true, recursive: true });
+    removeTestPath(inherited);
   }
 }, 60_000);

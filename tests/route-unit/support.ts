@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -7,6 +7,7 @@ import type { AgentDocument, JsonValue } from '@agent-bundle/runtime';
 import type { DaemonConfigShape } from '../../src/internal/daemon/config.js';
 import type { HaulerDaemonContext } from '../../src/providers/hauler-daemon.js';
 import { withFakeCargoKnobs } from '../support/harness.js';
+import { removeTestPath } from '../support/tmp-guard.js';
 
 /**
  * Route-unit support: isolate the daemon state directory per test so the
@@ -21,7 +22,7 @@ export const withIsolatedStateDir = async <A>(body: (stateDir: string) => Promis
   try {
     return await withStateDir(stateDir, () => body(stateDir));
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    removeTestPath(root);
   }
 };
 

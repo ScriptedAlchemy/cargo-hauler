@@ -1,10 +1,12 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'effect-rstest';
+
+import { removeTestPath } from '../support/tmp-guard.js';
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
 const fixtureEntry = join(repoRoot, 'tests', 'fixtures', 'shutdown-daemon.mjs');
@@ -93,7 +95,7 @@ const invokeWithFixture = async (
     return { child, invocation, result: JSON.parse(invocation.stdout) as DaemonResult };
   } finally {
     child.kill('SIGTERM');
-    rmSync(root, { force: true, recursive: true });
+    removeTestPath(root);
   }
 };
 
@@ -217,7 +219,7 @@ describe.skipIf(projections.some(({ entry }) => !existsSync(entry)))(
             shutdown: { kind: 'absent' },
           });
         } finally {
-          rmSync(root, { force: true, recursive: true });
+          removeTestPath(root);
         }
       });
     }

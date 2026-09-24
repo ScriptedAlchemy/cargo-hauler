@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -42,6 +42,7 @@ import {
 } from '../../src/internal/daemon/runtime/socket-ownership.js';
 import { UnsafeStatePathError } from '../../src/internal/platform/private-state.js';
 import { scopedTempDir } from '../support/harness.js';
+import { removeTestPath } from '../support/tmp-guard.js';
 
 const connectOnce = (socketPath: string): Effect.Effect<void, Error> =>
   Effect.callback<void, Error>((resume) => {
@@ -525,7 +526,7 @@ describe('socket ownership lifecycle', () => {
     Effect.gen(function* () {
       const stateDir = yield* Effect.acquireRelease(
         Effect.promise(() => mkdtemp(join(tmpdir(), 'cargo-hauler-socket-owner-'))),
-        (directory) => Effect.promise(() => rm(directory, { recursive: true, force: true })),
+        (directory) => Effect.sync(() => removeTestPath(directory)),
       );
       const socketPath = join(stateDir, 'daemon.sock');
       yield* Effect.promise(() => writeFile(socketPath, 'bound socket stand-in'));
@@ -557,7 +558,7 @@ describe('socket ownership lifecycle', () => {
 
       expect((await stat(socketPath)).isFile()).toBe(true);
     } finally {
-      await rm(stateDir, { recursive: true, force: true });
+      removeTestPath(stateDir);
     }
   });
 
@@ -575,7 +576,7 @@ describe('socket ownership lifecycle', () => {
           // A replacement daemon judged us dead: it removed the path and
           // bound its own socket there, exactly what monitorSocketOwnership
           // exists to detect. Our teardown must not take it down with us.
-          yield* Effect.promise(() => rm(socketPath, { force: true }));
+          yield* Effect.sync(() => removeTestPath(socketPath));
           return yield* bindDaemonSocket(socketPath).pipe(
             Effect.provideService(Scope.Scope, replacementScope),
           );

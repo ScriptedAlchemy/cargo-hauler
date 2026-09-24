@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
@@ -24,6 +24,7 @@ import type { KacheIndexPriors } from '../../src/internal/integrations/kache/sta
 import { resolveDaemonConfig } from '../../src/internal/daemon/config.js';
 import { normalizeCargoIntent } from '../../src/internal/cargo/intent.js';
 import { scopedTempDir } from '../support/harness.js';
+import { removeTestPath } from '../support/tmp-guard.js';
 
 const intent = (argv: readonly string[], cwd = '/tmp/ws') =>
   normalizeCargoIntent({
@@ -76,7 +77,7 @@ describe('openKacheReader', () => {
       reader?.close();
       expect(priors?.compileTimeMs('uncached', ['debug'])).toBeNull();
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -89,7 +90,7 @@ describe('openKacheReader', () => {
     try {
       expect(openKacheReader(join(root, 'index.db'))).toBeNull();
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -100,7 +101,7 @@ describe('openKacheReader', () => {
       writeFileSync(indexPath, 'not a sqlite database at all');
       expect(openKacheReader(indexPath)).toBeNull();
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -113,7 +114,7 @@ describe('openKacheReader', () => {
       database.close();
       expect(openKacheReader(indexPath)).toBeNull();
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -148,7 +149,7 @@ describe('openKacheReader', () => {
         reader?.close();
       }).not.toThrow();
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -205,7 +206,7 @@ describe('readKacheEventPriors', () => {
       expect(priors.compileTimeMs('gamma', ['release'])).toBe(900);
       expect(priors.compileTimeMs('missing', ['dev'])).toBeNull();
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 });

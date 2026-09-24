@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'effect-rstest';
 import * as Effect from 'effect/Effect';
 
 import { createLedgerApi, openLedgerDatabase } from '../../src/internal/storage/ledger.js';
+import { removeTestPath } from '../support/tmp-guard.js';
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
 const haulerEntry = join(repoRoot, 'dist', 'bin', 'hauler.js');
@@ -83,7 +84,7 @@ describe.skipIf(!existsSync(haulerEntry))('ticket reads on a stopped daemon', ()
   });
 
   afterEach(() => {
-    rmSync(root, { force: true, recursive: true });
+    removeTestPath(root);
   });
 
   const hauler = (...args: string[]) => {

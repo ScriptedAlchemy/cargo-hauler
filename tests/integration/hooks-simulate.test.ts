@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +16,7 @@ import { recordDeniedAttempt } from '../../src/internal/host-hooks/rpc.js';
 import { shellEventFrom } from '../../src/internal/host-hooks/event-support.js';
 
 import { pollReport, scopedDaemon } from '../support/harness.js';
+import { removeTestPath } from '../support/tmp-guard.js';
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
 const fixtureRoot = join(repoRoot, 'tests', 'fixtures', 'hooks');
@@ -39,7 +40,7 @@ const shellEventOf = (event: 'tool/before' | 'tool/after', host: FixtureHost, na
 const runWrapper = (
   wrapper: string,
   input: Record<string, unknown>,
-  stateDir = join(repoRoot, '.tmp-hook-simulate'),
+  stateDir = process.env.CARGO_HAULER_STATE_DIR,
 ): Promise<{ readonly code: number; readonly stderr: string; readonly stdout: string }> =>
   new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [wrapper], {
@@ -186,7 +187,8 @@ describe('agent-bundle hooks simulate', () => {
       const previousHost = process.env.AGENT_BUNDLE_HOOK_HOST;
       const previousState = process.env.CARGO_HAULER_STATE_DIR;
       process.env.AGENT_BUNDLE_HOOK_HOST = 'claude';
-      process.env.CARGO_HAULER_STATE_DIR = join(repoRoot, '.tmp-hook-simulate');
+      const simulateState = mkdtempSync(join(tmpdir(), 'cargo-hauler-hook-simulate-'));
+      process.env.CARGO_HAULER_STATE_DIR = simulateState;
       try {
         const hooks = await listHooks({ artifact: artifactRoot, root: repoRoot, target: 'claude' });
         const before = hooks.find((hook) => hook.event === 'beforeTool');
@@ -223,10 +225,7 @@ describe('agent-bundle hooks simulate', () => {
         });
         // afterTool without additionalContext encodes to empty host output.
         expect(recorded).toBeUndefined();
-        const events = readFileSync(
-          join(repoRoot, '.tmp-hook-simulate', 'hook-events.jsonl'),
-          'utf8',
-        );
+        const events = readFileSync(join(simulateState, 'hook-events.jsonl'), 'utf8');
         expect(events).toContain('"phase":"afterTool"');
         expect(events).toContain('cargo test -p foo');
 
@@ -258,7 +257,7 @@ describe('agent-bundle hooks simulate', () => {
         } else {
           process.env.CARGO_HAULER_STATE_DIR = previousState;
         }
-        rmSync(join(repoRoot, '.tmp-hook-simulate'), { force: true, recursive: true });
+        removeTestPath(simulateState);
       }
     },
     // Each simulateHook call re-prepares the project (~7 s); the wrappers
@@ -323,7 +322,7 @@ describe('agent-bundle hooks simulate', () => {
         expect(after).toEqual({ code: 0, stderr: '', stdout: '' });
         expect(readdirSync(stateDir)).toEqual([]);
       } finally {
-        rmSync(stateDir, { force: true, recursive: true });
+        removeTestPath(stateDir);
       }
     },
   );

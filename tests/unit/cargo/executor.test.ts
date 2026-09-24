@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -11,6 +11,7 @@ import type * as Scope from 'effect/Scope';
 import { buildTransportedEnv } from '../../../src/internal/client/env.js';
 import type { ExecuteCargoOptions, ExecutionResult } from '../../../src/internal/cargo/execution/executor.js';
 import { executeCargo, TailBuffer } from '../../../src/internal/cargo/execution/executor.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 const scriptSource = `#!/usr/bin/env bash
 if [ "$1" = pwd ]; then
@@ -70,7 +71,7 @@ const scopedWorkspace: Effect.Effect<Workspace, never, Scope.Scope> = Effect.acq
     chmodSync(script, 0o755);
     return { dir, script };
   }),
-  ({ dir }) => Effect.sync(() => rmSync(dir, { recursive: true, force: true })),
+  ({ dir }) => Effect.sync(() => removeTestPath(dir)),
 );
 
 const unusedKill = (): Deferred.Deferred<void> => Deferred.makeUnsafe<void>();

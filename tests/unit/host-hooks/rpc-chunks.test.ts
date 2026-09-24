@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -11,6 +11,7 @@ import {
   requestJson,
   requestOutcome,
 } from '../../../src/internal/host-hooks/rpc.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 describe('hook RPC NDJSON framing', () => {
   it('waits for a complete response split across socket data events', async () => {
@@ -47,7 +48,7 @@ describe('hook RPC NDJSON framing', () => {
       await new Promise<void>((resolve) => {
         server.close(() => resolve());
       });
-      rmSync(root, { force: true, recursive: true });
+      removeTestPath(root);
     }
   });
 
@@ -80,7 +81,7 @@ describe('hook RPC NDJSON framing', () => {
       await new Promise<void>((resolve) => {
         server.close(() => resolve());
       });
-      rmSync(root, { force: true, recursive: true });
+      removeTestPath(root);
     }
   });
 
@@ -130,7 +131,7 @@ describe('hook RPC NDJSON framing', () => {
       await new Promise<void>((resolve) => {
         server.close(() => resolve());
       });
-      rmSync(root, { force: true, recursive: true });
+      removeTestPath(root);
     }
   });
 
@@ -175,7 +176,7 @@ describe('hook RPC NDJSON framing', () => {
       await new Promise<void>((resolve) => {
         server.close(() => resolve());
       });
-      rmSync(root, { force: true, recursive: true });
+      removeTestPath(root);
     }
   });
 });

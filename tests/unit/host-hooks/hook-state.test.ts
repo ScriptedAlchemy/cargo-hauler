@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -11,13 +11,14 @@ import {
   readDenyCount,
   writeCursor,
 } from '../../../src/internal/host-hooks/hook-state.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 const withStateDir = (use: (directory: string) => void): void => {
   const directory = mkdtempSync(join(tmpdir(), 'cc-hook-state-'));
   try {
     use(directory);
   } finally {
-    rmSync(directory, { force: true, recursive: true });
+    removeTestPath(directory);
   }
 };
 

@@ -4,7 +4,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  rmSync,
   statSync,
   symlinkSync,
   writeFileSync,
@@ -41,6 +40,7 @@ import {
   type PrivateEntryStats,
 } from '../../../src/internal/platform/private-state.js';
 import { daemonSocketPath } from '../../../src/internal/platform/state-paths.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 /**
  * The whole policy is POSIX-only: `process.getuid` is undefined on Windows,
@@ -76,7 +76,7 @@ const withScratch = <A>(name: string, body: (root: string) => A): A => {
   try {
     return body(root);
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    removeTestPath(root);
   }
 };
 
@@ -88,7 +88,7 @@ const withScratchAsync = async <A>(
   try {
     return await body(root);
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    removeTestPath(root);
   }
 };
 
@@ -261,7 +261,7 @@ describe.skipIf(skipOnNonPosix)('sensitive state writers', () => {
     Effect.gen(function* () {
       const root = yield* Effect.acquireRelease(
         Effect.sync(() => scratch('writer-singleton')),
-        (directory) => Effect.sync(() => rmSync(directory, { recursive: true, force: true })),
+        (directory) => Effect.sync(() => removeTestPath(directory)),
       );
       const config = resolveDaemonConfig({ CARGO_HAULER_STATE_DIR: join(root, 'state') });
       yield* Effect.scoped(
@@ -327,7 +327,7 @@ describe.skipIf(skipOnNonPosix)('sensitive state writers', () => {
     Effect.gen(function* () {
       const root = yield* Effect.acquireRelease(
         Effect.sync(() => scratch('writer-daemon-log')),
-        (directory) => Effect.sync(() => rmSync(directory, { recursive: true, force: true })),
+        (directory) => Effect.sync(() => removeTestPath(directory)),
       );
       const config = resolveDaemonConfig({ CARGO_HAULER_STATE_DIR: join(root, 'state') });
       const previous = process.umask(0o022);
@@ -385,7 +385,7 @@ describe.skipIf(skipOnNonPosix)('relocated control socket', () => {
     Effect.gen(function* () {
       const root = yield* Effect.acquireRelease(
         Effect.sync(() => scratch('socket-runtime-dir')),
-        (directory) => Effect.sync(() => rmSync(directory, { recursive: true, force: true })),
+        (directory) => Effect.sync(() => removeTestPath(directory)),
       );
       const runtimeDir = join(root, 'runtime');
       const socketPath = join(runtimeDir, 'daemon.sock');

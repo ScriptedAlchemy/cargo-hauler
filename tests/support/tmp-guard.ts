@@ -16,7 +16,6 @@ export const assertUnderTmpdir = (path: PathLike): void => {
   }
 };
 
-/** The only way a test deletes a path; `tests/setup/tmp-guard.test.ts` bans direct `rm`. */
 export const removeTestPath = (path: PathLike): void => {
   assertUnderTmpdir(path);
   rmSync(path, { force: true, recursive: true });

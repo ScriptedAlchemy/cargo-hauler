@@ -1,12 +1,4 @@
-import {
-  appendFileSync,
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  statSync,
-  utimesSync,
-  writeFileSync,
-} from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -20,6 +12,7 @@ import {
   createKacheStatus,
   readKacheEventPriors,
 } from '../../../src/internal/integrations/kache/status.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 const createIndex = (indexPath: string, rows: readonly (readonly [string, string, number])[]) => {
   const database = new DatabaseSync(indexPath);
@@ -101,7 +94,7 @@ describe('createKacheSnapshotReader', () => {
       expect(snapshot.indexPriors.compileTimeMs('alpha', ['dev'])).toBe(300);
       expect(snapshot.eventPriors.compileTimeMs('beta', ['release'])).toBe(2_100);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -129,7 +122,7 @@ describe('createKacheSnapshotReader', () => {
       expect(byProfile.get('dev')).toBe(2);
       expect(status.topCrates.map((row) => row.crate)).toContain('dev-b');
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -141,7 +134,7 @@ describe('createKacheSnapshotReader', () => {
       expect(snapshot.status.entryCount).toBe(0);
       expect(snapshot.status.topCrates).toEqual([]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -154,7 +147,7 @@ describe('createKacheSnapshotReader', () => {
       expect(snapshot.status.available).toBe(false);
       expect(snapshot.indexPriors.compileTimeMs('alpha', ['dev'])).toBeNull();
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -181,7 +174,7 @@ describe('createKacheSnapshotReader', () => {
       // The events sidecar is independent of index health.
       expect(snapshot.eventPriors.compileTimeMs('alpha', ['dev'])).toBe(3_000);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -224,7 +217,7 @@ describe('createKacheSnapshotReader', () => {
       expect(rotated.eventPriors.compileTimeMs('alpha', ['dev'])).toBeNull();
       expect(rotated.eventPriors.compileTimeMs('gamma', ['dev'])).toBe(50);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -252,7 +245,7 @@ describe('createKacheSnapshotReader', () => {
       utimesSync(indexPath, pinnedAt, new Date(pinnedAt.getTime() + 5_000));
       expect((await reader.read(3_000)).status.entryCount).toBe(2);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -341,7 +334,7 @@ describe('createKacheSnapshotReader', () => {
         storeBytes: 541 * 1024 ** 3,
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -362,7 +355,7 @@ describe('createKacheSnapshotReader', () => {
         storeBytes: null,
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -410,7 +403,7 @@ describe('createKacheSnapshotReader', () => {
       }
       expect(turns).toBeGreaterThan(10);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 });
@@ -428,7 +421,7 @@ describe('readKacheEventPriors', () => {
       expect(priors.sampleCount).toBe(1);
       expect(priors.compileTimeMs('alpha', ['dev'])).toBe(400);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 });
@@ -449,7 +442,7 @@ describe('createKacheStatus', () => {
     Effect.gen(function* () {
       const root = yield* Effect.acquireRelease(
         Effect.sync(() => mkdtempSync(join(tmpdir(), 'cc-kache-status-midrun-'))),
-        (directory) => Effect.sync(() => rmSync(directory, { recursive: true, force: true })),
+        (directory) => Effect.sync(() => removeTestPath(directory)),
       );
       const indexPath = join(root, 'index.db');
       createIndex(indexPath, [['alpha', 'dev', 1_000]]);
@@ -464,7 +457,7 @@ describe('createKacheStatus', () => {
       const healthy = yield* service.current;
       expect(healthy?.available).toBe(true);
 
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
       nowMs = 200;
       // The first stale read serves the cached snapshot and forks a refresh
       // that completes asynchronously.

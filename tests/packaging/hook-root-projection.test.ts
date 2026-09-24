@@ -1,10 +1,21 @@
 import { spawn } from 'node:child_process';
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  realpathSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'effect-rstest';
+
+import { removeTestPath } from '../support/tmp-guard.js';
 
 const artifactRoot = fileURLToPath(new URL('../../artifact/', import.meta.url));
 
@@ -79,7 +90,7 @@ describe('relocated read-only semantic hook binding (#168)', () => {
           expect(existsSync(join(moved, 'state'))).toBe(false);
         } finally {
           if (existsSync(moved)) permissions(moved, false);
-          rmSync(root, { force: true, recursive: true });
+          removeTestPath(root);
         }
       });
     }

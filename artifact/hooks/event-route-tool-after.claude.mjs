@@ -27779,7 +27779,7 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 /* import */ var node_child_process__rspack_import_1 = __webpack_require__("node:child_process");
 /* import */ var node_url__rspack_import_2 = __webpack_require__("node:url");
 /* import */ var agent_bundle_event_project__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/event-project.js");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_events_tool_after_ts__rspack_import_4 = __webpack_require__("./src/events/tool/after.ts");
+/* import */ var _tmp_poteto_guard_src_events_tool_after_ts__rspack_import_4 = __webpack_require__("./src/events/tool/after.ts");
 /* import */ var _agent_bundle_runtime_request__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/49.js");
 /* import */ var _agent_bundle_runtime_request__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
 /* import */ var _agent_bundle_runtime_lineage__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/40.js");
@@ -27807,7 +27807,7 @@ const processLifetime = {
     instanceId: crypto.randomUUID(),
     pid: process.pid
 };
-const handler = (context)=>(0,_home_runner_work_cargo_hauler_cargo_hauler_src_events_tool_after_ts__rspack_import_4/* ["default"] */.A)(Object.freeze({
+const handler = (context)=>(0,_tmp_poteto_guard_src_events_tool_after_ts__rspack_import_4/* ["default"] */.A)(Object.freeze({
         ...context,
         provider: (0,_agent_bundle_runtime_request__rspack_import_6/* .useAgent */.fJ)().provider,
         process: (0,_agent_bundle_runtime_request__rspack_import_6/* .useAgent */.fJ)().process
@@ -27843,7 +27843,7 @@ const prepareRouteInvocation = async (nativeInput, signal, observer, receipt)=>{
             observer
         }
     });
-    if (_home_runner_work_cargo_hauler_cargo_hauler_src_events_tool_after_ts__rspack_import_4/* ["default"].event */.A.event !== undefined && _home_runner_work_cargo_hauler_cargo_hauler_src_events_tool_after_ts__rspack_import_4/* ["default"].event */.A.event !== canonicalEvent) throw new TypeError("Event definition disagrees with its conventional path.");
+    if (_tmp_poteto_guard_src_events_tool_after_ts__rspack_import_4/* ["default"].event */.A.event !== undefined && _tmp_poteto_guard_src_events_tool_after_ts__rspack_import_4/* ["default"].event */.A.event !== canonicalEvent) throw new TypeError("Event definition disagrees with its conventional path.");
     const sessionId = typeof native.session_id === "string" ? native.session_id : typeof native.conversation_id === "string" ? native.conversation_id : undefined;
     const workspaceRoot = typeof native.cwd === "string" ? native.cwd : Array.isArray(native.workspace_roots) && typeof native.workspace_roots[0] === "string" ? native.workspace_roots[0] : undefined;
     const lineage =  true ? await (0,_agent_bundle_runtime_lineage__rspack_import_7/* .resolveStandaloneLineage */.Bu)(target, native) : 0;
@@ -27858,7 +27858,7 @@ const prepareRouteInvocation = async (nativeInput, signal, observer, receipt)=>{
     return withEventState(signal, async (bindings)=>{
         const gate = await (0,_agent_bundle_runtime_request__rspack_import_6/* .runAgentRequest */.iC)({
             invocation: {
-                artifactEpoch: "4b4de93c6ceda77550ad461936ac6cf99982a0190eea6ee7aa8c5eb0cc4bdb31",
+                artifactEpoch: "d28044e30032aba210673478fc7c414e23abe991647b56c8166a53a92fc32bc9",
                 hostContractRevision: capabilityRevision,
                 kind: "event",
                 operationId: `event:${canonicalEvent}`,

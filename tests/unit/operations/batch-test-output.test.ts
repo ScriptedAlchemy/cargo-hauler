@@ -1,10 +1,11 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'effect-rstest';
 
 import { createTestSummaryIndex, isSharedTestRun, loadBatchTestOutput } from '../../../src/internal/operations/batch-test-output.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 const daemon = 'Running unittests src/lib.rs (target/debug/deps/tracedecay_daemon_service-a1)';
 const runtime = 'Running unittests src/lib.rs (target/debug/deps/tracedecay_runtime_core-b2)';
@@ -21,7 +22,7 @@ const withLog = async (text: string, run: (path: string) => Promise<void>) => {
     const path = join(root, 'cc-9499.log');
     writeFileSync(path, text);
     await run(path);
-  } finally { rmSync(root, { recursive: true, force: true }); }
+  } finally { removeTestPath(root); }
 };
 
 describe('batched test report attribution (#178)', () => {
@@ -62,7 +63,7 @@ describe('batched test report attribution (#178)', () => {
     try {
       expect((await loadBatchTestOutput(join(root, 'missing'))).kind).toBe('unavailable');
       expect((await loadBatchTestOutput(root)).kind).toBe('unavailable');
-    } finally { rmSync(root, { recursive: true, force: true }); }
+    } finally { removeTestPath(root); }
   });
 
   it('marks byte-budget truncation and never parses a cut summary', async () => {

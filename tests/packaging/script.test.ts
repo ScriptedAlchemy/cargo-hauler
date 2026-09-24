@@ -1,14 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import {
-  existsSync,
-  mkdtempSync,
-  mkdirSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -22,6 +13,7 @@ import {
   runScript,
   type ScriptOptions,
 } from '../../src/scripts/hauler.js';
+import { removeTestPath } from '../support/tmp-guard.js';
 
 const run = async (
   argv: readonly string[],
@@ -243,7 +235,7 @@ describe('hauler script', () => {
         });
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -266,7 +258,7 @@ describe('hauler script', () => {
         expect(result.text).toContain('Usage: hauler');
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -278,7 +270,7 @@ describe('hauler script', () => {
       expect(result.text).toContain('Usage: hauler install-shim');
       expect(existsSync(join(root, 'cargo'))).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -291,7 +283,7 @@ describe('hauler script', () => {
       expect(result).toEqual({ code: 1, text: pluginInstallShimRefusal });
       expect(existsSync(join(root, 'cargo'))).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -319,7 +311,7 @@ describe('hauler script', () => {
         `exec ${process.execPath} ${realpathSync(join(binDir, 'hauler'))} exec --host shim -- /usr/bin/cargo "$@"`,
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -383,7 +375,7 @@ describe('hauler script', () => {
       }
       expect(existsSync(join(root, 'cargo'))).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -421,7 +413,7 @@ describe('hauler script', () => {
       expect(result.text).toContain('`cargo-hauler-install install <host>` refreshes it');
       expect(readFileSync(join(root, 'cargo'), 'utf8')).toContain('|| exec /usr/bin/cargo "$@"');
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -436,7 +428,7 @@ describe('hauler script', () => {
       expect(result.text).toContain('npm i -g cargo-hauler');
       expect(existsSync(join(root, 'cargo'))).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -460,7 +452,7 @@ describe('hauler script', () => {
         expect(child.status).toBe(2);
         expect(child.stdout).toBe(pluginDirectCliRefusal);
       } finally {
-        rmSync(stateDir, { recursive: true, force: true });
+        removeTestPath(stateDir);
       }
     },
     30_000,

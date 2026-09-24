@@ -1,10 +1,12 @@
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'effect-rstest';
+
+import { removeTestPath } from '../support/tmp-guard.js';
 
 const artifactRoot = fileURLToPath(new URL('../../artifact/', import.meta.url));
 
@@ -57,7 +59,7 @@ describe('native shell projection survives recording failure', () => {
           expect(updated.command).toContain('-- cargo test -p DO_NOT_LOG_SECRET');
           expect(updated.command.endsWith(' && echo outside')).toBe(mixed);
         } finally {
-          rmSync(cwd, { force: true, recursive: true });
+          removeTestPath(cwd);
         }
       });
     }
