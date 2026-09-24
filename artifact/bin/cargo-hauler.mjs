@@ -19173,11 +19173,6 @@ const spawnFailure = (message)=>({
         outputTail: '',
         error: message
     });
-const defaultKillGraceMs = 8000;
-const killGraceMs = (env)=>{
-    const parsed = Number.parseInt(env?.CARGO_HAULER_KILL_GRACE_MS ?? process.env.CARGO_HAULER_KILL_GRACE_MS ?? '', 10);
-    return Number.isInteger(parsed) && parsed >= 0 ? parsed : defaultKillGraceMs;
-};
 const buildCommand = (options)=>{
     const executable = options.argv[0];
     if (executable === undefined) {
@@ -19227,6 +19222,7 @@ const buildCommand = (options)=>{
     // `env` is a delta on top of the caller environment; extendEnv keeps the
     // inherited PATH/HOME etc. (v4 replaces the environment by default).
     return effect_unstable_process_ChildProcess__rspack_import_4/* .make */.L8(program, args, {
+        ...(0,_real_cargo_js__rspack_import_2/* .cargoKillOptions */.N)(options.env),
         cwd: options.cwd,
         env: {
             ...color,
@@ -19334,10 +19330,7 @@ const executeCargo = (options)=>{
                         // spawned detached, so rustc children die too), waits for the
                         // process to exit, and escalates to a group SIGKILL if it
                         // survives the grace window.
-                        const killed = yield* effect_Effect__rspack_import_6/* .exit */.NS5(child.kill({
-                            killSignal: 'SIGTERM',
-                            forceKillAfter: killGraceMs(options.env)
-                        }));
+                        const killed = yield* effect_Effect__rspack_import_6/* .exit */.NS5(child.kill((0,_real_cargo_js__rspack_import_2/* .cargoKillOptions */.N)(options.env)));
                         if (effect_Exit__rspack_import_7/* .isFailure */.N6(killed)) {
                             return {
                                 error: `${reason}: failed to terminate: ${effect_Cause__rspack_import_8/* .pretty */.j9(killed.cause)}`
@@ -19446,9 +19439,24 @@ __webpack_require__.d(__webpack_exports__, {
     const candidate = (0,node_path__rspack_import_2.join)(cargoHome, 'bin', 'cargo');
     return (0,node_fs__rspack_import_0.existsSync)(candidate) ? candidate : 'cargo';
 };
+const defaultKillGraceMs = 8000;
+/**
+ * SIGTERM to the process group, then SIGKILL after `CARGO_HAULER_KILL_GRACE_MS`.
+ * The scope finalizer that runs on daemon shutdown or a timeout reads these
+ * from the command's own options, so `ChildProcess.make` needs them as well as
+ * `kill`. Without `forceKillAfter` it waits forever on a cargo that ignores
+ * SIGTERM.
+ */ const cargoKillOptions = (env = process.env)=>{
+    const parsed = Number.parseInt(env.CARGO_HAULER_KILL_GRACE_MS ?? process.env.CARGO_HAULER_KILL_GRACE_MS ?? '', 10);
+    return {
+        killSignal: 'SIGTERM',
+        forceKillAfter: Number.isInteger(parsed) && parsed >= 0 ? parsed : defaultKillGraceMs
+    };
+};
 
 __webpack_require__.d(__webpack_exports__, {
 }, {
+  N: cargoKillOptions,
   a: realCargoBin
 });
 
@@ -20360,6 +20368,7 @@ const TopologyLive = effect_Layer__rspack_import_6/* .effect */.QZ(Topology, eff
                 '--no-deps',
                 '--offline'
             ], {
+                ...(0,_execution_real_cargo_js__rspack_import_2/* .cargoKillOptions */.N)(),
                 cwd: workspaceRoot
             })).pipe(effect_Effect__rspack_import_5/* .timeout */.wRz(metadataTimeoutMs), effect_Effect__rspack_import_5/* .map */.TjK(parseWorkspaceMetadata)),
         scanNewestMtime: (packageDir)=>effect_Effect__rspack_import_5/* .sync */.OH5(()=>newestMtimeMs(packageDir))

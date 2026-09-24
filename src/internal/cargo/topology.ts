@@ -10,7 +10,7 @@ import * as ChildProcessSpawner from 'effect/unstable/process/ChildProcessSpawne
 
 import { isRecord } from '../util/guards.js';
 
-import { realCargoBin } from './execution/real-cargo.js';
+import { cargoKillOptions, realCargoBin } from './execution/real-cargo.js';
 
 export interface TopologyApi {
   /**
@@ -338,7 +338,7 @@ export const TopologyLive: Layer.Layer<Topology, never, ChildProcessSpawner.Chil
               ChildProcess.make(
                 realCargoBin(),
                 ['metadata', '--format-version', '1', '--no-deps', '--offline'],
-                { cwd: workspaceRoot },
+                { ...cargoKillOptions(), cwd: workspaceRoot },
               ),
             )
             .pipe(Effect.timeout(metadataTimeoutMs), Effect.map(parseWorkspaceMetadata)),
