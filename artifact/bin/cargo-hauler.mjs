@@ -25647,7 +25647,7 @@ const makeLaneRuntime = (deps)=>effect_Effect__rspack_import_15/* .gen */.JkU(fu
                 // A kill-requested head neither waits for nor leads a batch: it
                 // would fold followers only to requeue them one by one.
                 if (config.batchEnabled && config.batchWindowMs > 0 && !lane.pending.some(_dependencies_js__rspack_import_7/* .isSchedulable */.pg) && (0,_scheduling_batch_js__rspack_import_2/* .batchKindFor */.Wk)(job.intent) !== null && (yield* stillQueued(job))) {
-                    yield* effect_Effect__rspack_import_15/* .sleep */.yy4(`${config.batchWindowMs} millis`);
+                    yield* effect_Effect__rspack_import_15/* .raceFirst */.KT6(effect_Effect__rspack_import_15/* .sleep */.yy4(`${config.batchWindowMs} millis`), effect_Deferred__rspack_import_19/* ["await"] */.Tx(job.killSignal));
                 }
                 if (yield* stillQueued(job)) {
                     yield* foldBatch(lane, job);
@@ -176340,21 +176340,21 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 /* import */ var _agent_bundle_runtime__rspack_import_23 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/index.js");
 /* import */ var node_url__rspack_import_4 = __webpack_require__("node:url");
 /* import */ var node_worker_threads__rspack_import_5 = __webpack_require__("node:worker_threads");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_cli_daemon_ts__rspack_import_6 = __webpack_require__("./src/cli/daemon.ts");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.cli.ts");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.cli.ts");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.cli.ts");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.cli.ts");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.cli.ts");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.cli.ts");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.cli.ts");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_cli_daemon_ts__rspack_import_6 = __webpack_require__("./src/cli/daemon.ts");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.cli.ts");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.cli.ts");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.cli.ts");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.cli.ts");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.cli.ts");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.cli.ts");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.cli.ts");
 
 
 
@@ -176363,21 +176363,21 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 
 
 
-const route0 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_cli_daemon_ts__rspack_import_6, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_cli_daemon_ts__rspack_import_6);
+const route0 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_cli_daemon_ts__rspack_import_6, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_cli_daemon_ts__rspack_import_6);
 
-const route1 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7);
+const route1 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7);
 
-const route2 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
+const route2 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
 
-const route3 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
+const route3 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
 
-const route4 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
+const route4 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
 
-const route5 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
+const route5 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
 
-const route6 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
+const route6 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
 
-const route7 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
+const route7 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
 
 
 
@@ -176408,31 +176408,31 @@ const routes = Object.freeze({
     }),
     "tool:hauler/hauler_await": Object.freeze({
         module: route1,
-        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16
+        projection: _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16
     }),
     "tool:hauler/hauler_kill": Object.freeze({
         module: route2,
-        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17
+        projection: _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17
     }),
     "tool:hauler/hauler_last": Object.freeze({
         module: route3,
-        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18
+        projection: _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18
     }),
     "tool:hauler/hauler_log": Object.freeze({
         module: route4,
-        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19
+        projection: _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19
     }),
     "tool:hauler/hauler_request": Object.freeze({
         module: route5,
-        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14
+        projection: _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14
     }),
     "tool:hauler/hauler_result": Object.freeze({
         module: route6,
-        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20
+        projection: _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20
     }),
     "tool:hauler/hauler_status": Object.freeze({
         module: route7,
-        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21
+        projection: _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21
     })
 });
 const commands = Object.freeze([

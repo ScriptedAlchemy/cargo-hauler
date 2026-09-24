@@ -1004,7 +1004,10 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
           batchKindFor(job.intent) !== null &&
           (yield* stillQueued(job))
         ) {
-          yield* Effect.sleep(`${config.batchWindowMs} millis`);
+          yield* Effect.raceFirst(
+            Effect.sleep(`${config.batchWindowMs} millis`),
+            Deferred.await(job.killSignal),
+          );
         }
         if (yield* stillQueued(job)) {
           yield* foldBatch(lane, job);
