@@ -21470,6 +21470,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 
+
 const shellQuote = (value)=>{
     if (value.length === 0) {
         return "''";
@@ -21489,7 +21490,8 @@ const renderCargoShim = (options)=>{
     // A Node installation can still move the embedded global entry. Losing the
     // broker for a while beats turning every `cargo` on PATH into "No such file".
     const entry = shellQuote(shimHaulerEntry(options.haulerArgv));
-    const guard = options.haulerArgv.length >= 2 ? `[ -f ${entry} ]` : `command -v ${entry} >/dev/null 2>&1`;
+    const [node] = options.haulerArgv;
+    const guard = options.haulerArgv.length >= 2 && node !== undefined ? `[ -x ${shellQuote(node)} ] && [ -f ${entry} ]` : `command -v ${entry} >/dev/null 2>&1`;
     // --host shim: unlike hook rewrites, the shim has no agent identity, but the
     // ledger should still say where a request entered. CARGO_HAULER_INSIDE
     // marks cargo spawned by the daemon itself (the executor sets it on every
@@ -21543,31 +21545,160 @@ const defaultShimDir = ()=>(0,node_path__rspack_import_2.join)((0,node_os__rspac
     }
     throw new Error(`could not resolve a real ${realCargo} outside ${destDir}; pass --real-cargo /path/to/cargo`);
 };
+const isFile = (path)=>{
+    try {
+        return (0,node_fs__rspack_import_0.statSync)(path).isFile();
+    } catch  {
+        return false;
+    }
+};
+const isExecutableFile = (path)=>{
+    try {
+        accessSync(path, constants.X_OK);
+    } catch  {
+        return false;
+    }
+    return isFile(path);
+};
+const pathCargo = (env)=>{
+    for (const entry of (env.PATH ?? '').split(node_path__rspack_import_2.delimiter)){
+        const candidate = (0,node_path__rspack_import_2.join)(entry, 'cargo');
+        if (entry.length > 0 && isFile(candidate)) {
+            return candidate;
+        }
+    }
+    return null;
+};
 /**
  * Where a fresh PATH lookup of `cargo` lands relative to the installed shim.
  * rustup's `~/.cargo/bin` commonly precedes `~/.local/bin`, in which case
  * the shim never runs — surface that at install time instead of letting the
  * operator discover it from an idle dashboard.
  */ const shimPathStatus = (shimPath, env = process.env)=>{
-    const shim = (0,_entry_location_js__rspack_import_3/* .canonical */.$N)(shimPath);
-    for (const entry of (env.PATH ?? '').split(node_path__rspack_import_2.delimiter)){
-        if (entry.length === 0) {
-            continue;
-        }
-        const candidate = (0,node_path__rspack_import_2.join)(entry, 'cargo');
-        if (!(0,node_fs__rspack_import_0.existsSync)(candidate)) {
-            continue;
-        }
-        return (0,_entry_location_js__rspack_import_3/* .canonical */.$N)(candidate) === shim ? {
-            kind: 'wins'
-        } : {
-            kind: 'shadowed',
-            by: candidate
+    const found = pathCargo(env);
+    if (found === null) {
+        return {
+            kind: 'not-on-path'
         };
     }
-    return {
-        kind: 'not-on-path'
+    return (0,_entry_location_js__rspack_import_3/* .canonical */.$N)(found) === (0,_entry_location_js__rspack_import_3/* .canonical */.$N)(shimPath) ? {
+        kind: 'wins'
+    } : {
+        kind: 'shadowed',
+        by: found
     };
+};
+const shimExec = /^exec (.+) exec --host shim -- (.+) "\$@"$/mu;
+/** The words `shellQuote` joined: bare, or single-quoted with `'\''` for a quote. */ const shellWords = (text)=>[
+        ...text.matchAll(/(?:'[^']*'|\\'|[^\s'\\])+/gu)
+    ].map(([word])=>word.replaceAll(/'([^']*)'|\\(')/gu, '$1$2'));
+/** The first `cargo` on PATH when `renderCargoShim` wrote it, with what it embeds. */ const findCargoShim = (env = process.env)=>{
+    const found = pathCargo(env);
+    if (found === null) {
+        return null;
+    }
+    const path = canonical(found);
+    let text;
+    try {
+        // A shim is a few hundred bytes; the real cargo is a multi-megabyte binary.
+        if (statSync(path).size > 4096) {
+            return null;
+        }
+        text = readFileSync(path, 'utf8');
+    } catch  {
+        return null;
+    }
+    const match = text.startsWith('#!/bin/sh\n# cargo-hauler PATH shim') ? shimExec.exec(text) : null;
+    if (match === null) {
+        return null;
+    }
+    const [realCargo, ...extra] = shellWords(match[2] ?? '');
+    return realCargo === undefined || extra.length > 0 ? null : {
+        haulerArgv: shellWords(match[1] ?? ''),
+        path,
+        realCargo
+    };
+};
+/** The version in the nearest package.json above `script`, when that package is cargo-hauler. */ const cargoHaulerVersion = (script)=>{
+    for(let dir = dirname(script);; dir = dirname(dir)){
+        const manifest = join(dir, 'package.json');
+        if (existsSync(manifest)) {
+            try {
+                const parsed = JSON.parse(readFileSync(manifest, 'utf8'));
+                return isRecord(parsed) && parsed.name === 'cargo-hauler' && typeof parsed.version === 'string' ? parsed.version : null;
+            } catch  {
+                return null;
+            }
+        }
+        if (dirname(dir) === dir) {
+            return null;
+        }
+    }
+};
+/**
+ * A shim is current when it runs this cargo-hauler version through a node
+ * that still works. Which node, and which copy of that version, do not
+ * matter: mise can pin a different node per directory.
+ */ const cargoShimState = (shim, currentVersion)=>{
+    const [node, entry] = shim.haulerArgv;
+    if (node === undefined || entry === undefined) {
+        return {
+            entry: shimHaulerEntry(shim.haulerArgv),
+            kind: 'stale',
+            version: null
+        };
+    }
+    if (!isExecutableFile(node)) {
+        return {
+            kind: 'missing',
+            path: node
+        };
+    }
+    if (!isFile(entry)) {
+        return {
+            kind: 'missing',
+            path: entry
+        };
+    }
+    const version = cargoHaulerVersion(entry);
+    return version === currentVersion ? {
+        kind: 'current'
+    } : {
+        entry,
+        kind: 'stale',
+        version
+    };
+};
+/**
+ * Publish a complete executable without following symlinks or modifying
+ * other hard links to an existing cargo binary. Staging beside the final
+ * path keeps rename/link on the same filesystem.
+ */ const publishShim = (path, text, replace)=>{
+    const stagingDir = (0,node_fs__rspack_import_0.mkdtempSync)((0,node_path__rspack_import_2.join)((0,node_path__rspack_import_2.dirname)(path), '.cargo-hauler-shim-'));
+    try {
+        const staged = (0,node_path__rspack_import_2.join)(stagingDir, 'cargo');
+        (0,node_fs__rspack_import_0.writeFileSync)(staged, text, {
+            flag: 'wx'
+        });
+        (0,node_fs__rspack_import_0.chmodSync)(staged, 493);
+        if (replace) {
+            (0,node_fs__rspack_import_0.renameSync)(staged, path);
+        } else {
+            // Unlike rename, link fails if an entry appeared after the caller's lstat.
+            (0,node_fs__rspack_import_0.linkSync)(staged, path);
+        }
+    } finally{
+        (0,node_fs__rspack_import_0.rmSync)(stagingDir, {
+            recursive: true,
+            force: true
+        });
+    }
+};
+/** Rewrites an installed shim to run `haulerArgv`, keeping the Cargo path it already runs. */ const refreshCargoShim = (shim, haulerArgv)=>{
+    publishShim(shim.path, renderCargoShim({
+        haulerArgv,
+        realCargo: shim.realCargo
+    }), true);
 };
 const installCargoShim = (options)=>{
     // The shim is a POSIX shell script; installing it as `cargo` on Windows
@@ -21586,31 +21717,10 @@ const installCargoShim = (options)=>{
         throw new Error(`cargo already exists at ${path}; pass --force to replace it`);
     }
     const realCargo = resolveRealCargo(options.realCargo, destDir);
-    // Publish a complete executable without following symlinks or modifying
-    // other hard links to an existing cargo binary. Staging beside the final
-    // path keeps rename/link on the same filesystem.
-    const stagingDir = (0,node_fs__rspack_import_0.mkdtempSync)((0,node_path__rspack_import_2.join)(destDir, '.cargo-hauler-shim-'));
-    try {
-        const staged = (0,node_path__rspack_import_2.join)(stagingDir, 'cargo');
-        (0,node_fs__rspack_import_0.writeFileSync)(staged, renderCargoShim({
-            ...options,
-            realCargo
-        }), {
-            flag: 'wx'
-        });
-        (0,node_fs__rspack_import_0.chmodSync)(staged, 493);
-        if (options.force === true) {
-            (0,node_fs__rspack_import_0.renameSync)(staged, path);
-        } else {
-            // Unlike rename, link fails if an entry appeared after the lstat above.
-            (0,node_fs__rspack_import_0.linkSync)(staged, path);
-        }
-    } finally{
-        (0,node_fs__rspack_import_0.rmSync)(stagingDir, {
-            recursive: true,
-            force: true
-        });
-    }
+    publishShim(path, renderCargoShim({
+        ...options,
+        realCargo
+    }), options.force === true);
     return {
         haulerScript: shimHaulerEntry(options.haulerArgv),
         path,
@@ -23107,7 +23217,7 @@ const runInstallShim = (rest, write, location, env)=>{
         });
         write(`Installed cargo shim at ${installed.path}\n`);
         write(`${describeShimPathStatus((0,_internal_shim_install_js__rspack_import_9/* .shimPathStatus */.PR)(installed.path), destDir)}\n`);
-        write(`The shim embeds the hauler entry ${installed.haulerScript}. If a Node upgrade moves or replaces that file, the shim runs ${installed.realCargo} directly until you re-run \`hauler install-shim --force\`.\n`);
+        write(`The shim embeds the hauler entry ${installed.haulerScript}. After an upgrade, \`cargo-hauler-install doctor\` reports a stale entry and \`cargo-hauler-install install <host>\` refreshes it.\n`);
         return 0;
     } catch (error) {
         write(`${error instanceof Error ? error.message : String(error)}\n`);

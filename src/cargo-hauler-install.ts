@@ -5,6 +5,7 @@ import { version } from 'agent-bundle/meta';
 
 import { globalHaulerArgv, haulerEntryLocation } from './internal/shim/entry-location.js';
 import {
+  cargoHaulerVersion,
   cargoShimState,
   findCargoShim,
   refreshCargoShim,
@@ -53,6 +54,13 @@ const shimDiagnostic = (path: string, state: DriftedShim): Diagnostic => {
   }
 };
 
+/** What `hauler install-shim` would embed, unless that is another version; then this package's own hauler. */
+const refreshTarget = (): readonly string[] => {
+  const own = fileURLToPath(new URL('./hauler.js', import.meta.url));
+  const onPath = globalHaulerArgv(haulerEntryLocation(own));
+  return cargoHaulerVersion(onPath[1] ?? '') === version ? onPath : [process.execPath, own];
+};
+
 const refreshShim = (): number => {
   const drifted = driftedShim();
   if (drifted === null) {
@@ -60,9 +68,7 @@ const refreshShim = (): number => {
   }
   const { shim } = drifted;
   try {
-    const haulerArgv = globalHaulerArgv(
-      haulerEntryLocation(fileURLToPath(new URL('./hauler.js', import.meta.url))),
-    );
+    const haulerArgv = refreshTarget();
     refreshCargoShim(shim, haulerArgv);
     process.stderr.write(
       `Refreshed cargo shim ${shim.path}: it ran ${shim.haulerArgv.join(' ')}; it now runs ${haulerArgv.join(' ')}.\n`,

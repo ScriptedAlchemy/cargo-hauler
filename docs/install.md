@@ -208,15 +208,17 @@ Those absolute paths go stale when Node or cargo-hauler is upgraded. The
 above its embedded `hauler.js` names another cargo-hauler version, or when its
 embedded `node` is not executable or its `hauler.js` is gone.
 `cargo-hauler-install install <host>` rewrites a stale shim to the `hauler`
-that `hauler install-shim` would embed, writes through a symlinked `cargo`, and
-keeps the Cargo path the shim already runs. A second run leaves the same bytes.
+that `hauler install-shim` would embed when that `hauler` is this version, and
+to the installer's own `dist/bin/hauler.js` otherwise. It writes through a
+symlinked `cargo` and keeps the Cargo path the shim already runs. A second run
+leaves the same bytes.
 `cargo-hauler-install doctor` adds a `HAULER-SHIM-STALE` or
 `HAULER-SHIM-MISSING` error to its report, text or `--json`, and exits `1`. A
 shim that runs the same version under another working `node` is current, so
 doctor and install agree across per-directory Node pins. A development
-checkout with no global `hauler` on PATH leaves a same-version shim alone; it
-repoints a stale one at the checkout's `dist/bin/hauler.js`, as
-`hauler install-shim` would.
+checkout leaves a same-version shim alone. It repoints a stale one at the
+checkout's `dist/bin/hauler.js` unless a `hauler` of the same version is on
+PATH.
 
 ## State
 

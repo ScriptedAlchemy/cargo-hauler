@@ -225,7 +225,7 @@ export const findCargoShim = (
 };
 
 /** The version in the nearest package.json above `script`, when that package is cargo-hauler. */
-const cargoHaulerVersion = (script: string): string | null => {
+export const cargoHaulerVersion = (script: string): string | null => {
   for (let dir = dirname(script); ; dir = dirname(dir)) {
     const manifest = join(dir, 'package.json');
     if (existsSync(manifest)) {
