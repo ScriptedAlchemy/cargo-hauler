@@ -41,11 +41,24 @@ export const isForwardedEnvironmentVariable = (name: string, value: string): boo
   !isHaulerInternalEnvironmentVariable(name) &&
   !(jobserverFlagNames.has(name) && carriesDescriptorJobserver(value));
 
+const shellBookkeepingNames = new Set(['OLDPWD', 'PWD', 'SHLVL', '_']);
+
+/**
+ * Forwarded variables that decide request identity. The shell rewrites its
+ * bookkeeping (`OLDPWD`, `SHLVL`, mise's `__MISE_*` session state) on every
+ * tool call, so hashing it would give every request a fresh identity and no
+ * run could ever be shared; `cwd` already carries what `PWD` would.
+ */
+export const isIdentityEnvironmentVariable = (name: string, value: string): boolean =>
+  isForwardedEnvironmentVariable(name, value) &&
+  !shellBookkeepingNames.has(name) &&
+  !name.startsWith('__MISE_');
+
 /**
  * The variables that participate in the *compile surface* (coverage, target
- * dir, toolchain). Request *identity* additionally hashes the full forwarded
- * environment: a `build.rs` or test may read `OUT`, `SCHEMA_OUT`, and friends
- * (#222).
+ * dir, toolchain). Request *identity* additionally hashes every forwarded
+ * variable `isIdentityEnvironmentVariable` keeps: a `build.rs` or test may
+ * read `OUT`, `SCHEMA_OUT`, and friends (#222).
  */
 export const isRelevantCargoEnvironmentVariable = (name: string): boolean =>
   !isHaulerInternalEnvironmentVariable(name) &&

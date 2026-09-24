@@ -20702,11 +20702,23 @@ const targetToolPattern = /^(?:AR|CC|CFLAGS|CXX|CXXFLAGS|LDFLAGS)_[A-Za-z0-9_-]+
  * hauler-internal settings and make jobserver flags that name the caller's
  * file descriptors (those would skip the daemon's shared FIFO).
  */ const isForwardedEnvironmentVariable = (name, value)=>!isHaulerInternalEnvironmentVariable(name) && !(jobserverFlagNames.has(name) && carriesDescriptorJobserver(value));
+const shellBookkeepingNames = new Set([
+    'OLDPWD',
+    'PWD',
+    'SHLVL',
+    '_'
+]);
+/**
+ * Forwarded variables that decide request identity. The shell rewrites its
+ * bookkeeping (`OLDPWD`, `SHLVL`, mise's `__MISE_*` session state) on every
+ * tool call, so hashing it would give every request a fresh identity and no
+ * run could ever be shared; `cwd` already carries what `PWD` would.
+ */ const isIdentityEnvironmentVariable = (name, value)=>isForwardedEnvironmentVariable(name, value) && !shellBookkeepingNames.has(name) && !name.startsWith('__MISE_');
 /**
  * The variables that participate in the *compile surface* (coverage, target
- * dir, toolchain). Request *identity* additionally hashes the full forwarded
- * environment: a `build.rs` or test may read `OUT`, `SCHEMA_OUT`, and friends
- * (#222).
+ * dir, toolchain). Request *identity* additionally hashes every forwarded
+ * variable `isIdentityEnvironmentVariable` keeps: a `build.rs` or test may
+ * read `OUT`, `SCHEMA_OUT`, and friends (#222).
  */ const isRelevantCargoEnvironmentVariable = (name)=>!isHaulerInternalEnvironmentVariable(name) && (exactEnvironmentNames.has(name) || name.startsWith('CARGO_') || name.startsWith('RUST') || targetToolPattern.test(name));
 
 __webpack_require__.d(__webpack_exports__, {
@@ -21069,7 +21081,7 @@ const digestEnvironment = (env, prefix, include)=>{
  * Identity digest of the environment cargo will actually see. Two requests
  * that differ in any forwarded variable (an output path a test writes, a
  * `build.rs` knob) must not share a leader (#222).
- */ const digestForwardedEnvironment = (env)=>digestEnvironment(env, 'cargo-hauler-forwarded-env-v1\0', isForwardedEnvironmentVariable);
+ */ const digestForwardedEnvironment = (env)=>digestEnvironment(env, 'cargo-hauler-forwarded-env-v1\0', isIdentityEnvironmentVariable);
 const parseCargoArgv = (input)=>{
     const prefix = peelEnvPrefix(input);
     let argv = prefix.argv;
@@ -106708,10 +106720,10 @@ var __webpack_exports__ = {};
 /* import */ var _agent_bundle_runtime__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
 /* import */ var _agent_bundle_runtime__rspack_import_9 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var node_url__rspack_import_2 = __webpack_require__("node:url");
-/* import */ var _tmp_cargo_hauler_pr263_poteto_src_events_session_start_tsx__rspack_import_3 = __webpack_require__("./src/events/session/start.tsx");
-/* import */ var _tmp_cargo_hauler_pr263_poteto_src_events_tool_before_view_tsx__rspack_import_4 = __webpack_require__("./src/events/tool/before.view.tsx");
-/* import */ var _tmp_cargo_hauler_pr263_poteto_src_events_tool_after_view_tsx__rspack_import_5 = __webpack_require__("./src/events/tool/after.view.tsx");
-/* import */ var _tmp_cargo_hauler_pr263_poteto_src_events_stop_tsx__rspack_import_6 = __webpack_require__("./src/events/stop.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_pr_267_src_events_session_start_tsx__rspack_import_3 = __webpack_require__("./src/events/session/start.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_pr_267_src_events_tool_before_view_tsx__rspack_import_4 = __webpack_require__("./src/events/tool/before.view.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_pr_267_src_events_tool_after_view_tsx__rspack_import_5 = __webpack_require__("./src/events/tool/after.view.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_pr_267_src_events_stop_tsx__rspack_import_6 = __webpack_require__("./src/events/stop.tsx");
 
 
 
@@ -106750,28 +106762,28 @@ const routes = Object.freeze({
         event: "session/start",
         id: "event:session/start",
         kind: 'event-route',
-        module: _tmp_cargo_hauler_pr263_poteto_src_events_session_start_tsx__rspack_import_3,
+        module: _fast_projects_agent_plugins_cargo_conductor_worktrees_pr_267_src_events_session_start_tsx__rspack_import_3,
         name: "session/start"
     }),
     "hook:event-route:tool-before": Object.freeze({
         event: "tool/before",
         id: "event:tool/before",
         kind: 'event-route',
-        module: _tmp_cargo_hauler_pr263_poteto_src_events_tool_before_view_tsx__rspack_import_4,
+        module: _fast_projects_agent_plugins_cargo_conductor_worktrees_pr_267_src_events_tool_before_view_tsx__rspack_import_4,
         name: "tool/before"
     }),
     "hook:event-route:tool-after": Object.freeze({
         event: "tool/after",
         id: "event:tool/after",
         kind: 'event-route',
-        module: _tmp_cargo_hauler_pr263_poteto_src_events_tool_after_view_tsx__rspack_import_5,
+        module: _fast_projects_agent_plugins_cargo_conductor_worktrees_pr_267_src_events_tool_after_view_tsx__rspack_import_5,
         name: "tool/after"
     }),
     "hook:event-route:stop": Object.freeze({
         event: "stop",
         id: "event:stop",
         kind: 'event-route',
-        module: _tmp_cargo_hauler_pr263_poteto_src_events_stop_tsx__rspack_import_6,
+        module: _fast_projects_agent_plugins_cargo_conductor_worktrees_pr_267_src_events_stop_tsx__rspack_import_6,
         name: "stop"
     })
 });

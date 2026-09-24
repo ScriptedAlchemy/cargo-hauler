@@ -538,6 +538,24 @@ describe('normalizeCargoIntent', () => {
     expect(first.key).not.toBe(second.key);
   });
 
+  it('keeps identity across shell bookkeeping that changes between tool calls', () => {
+    const options = {
+      argv: ['cargo', 'check', '-p', 'x'],
+      cwd: '/work/repo',
+      workspaceRoot: '/work/repo',
+    } as const;
+    const first = normalizeCargoIntent({
+      ...options,
+      env: { OLDPWD: '/work', PWD: '/work/repo', SHLVL: '1', _: '/usr/bin/env', __MISE_SESSION: 'a1' },
+    });
+    const second = normalizeCargoIntent({
+      ...options,
+      env: { OLDPWD: '/tmp', PWD: '/work/repo/', SHLVL: '3', _: '/bin/sh', __MISE_SESSION: 'b2' },
+    });
+    expect(second.key).toBe(first.key);
+    expect(normalizeCargoIntent({ ...options, env: { OUT: '/tmp/a' } }).key).not.toBe(first.key);
+  });
+
   it('shares the estimate key across env-prefix OUT assignments that only change identity', () => {
     const a = normalizeCargoIntent({
       argv: ['env', 'OUT=/tmp/a', 'cargo', 'test', '--lib'],

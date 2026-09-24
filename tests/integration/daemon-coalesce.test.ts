@@ -26,6 +26,32 @@ const findAck = (messages: readonly { type: string }[]): AckMessage => {
 };
 
 describe('identity coalescing', () => {
+  it.live('attaches a request whose shell bookkeeping differs from the leader', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(5);
+      const leaderFiber = yield* Effect.forkChild(
+        execRequest(fixture, {
+          cwd: fixture.ws1,
+          sleep: '1',
+          timeoutMs: 12_000,
+          extraEnv: { OLDPWD: '/first', __MISE_SESSION: 'first' },
+        }),
+      );
+      yield* pollReport(fixture, (report) =>
+        report.active.some((record) => record.status === 'running'),
+      );
+      const followerAck = findAck(
+        yield* execRequest(fixture, {
+          cwd: fixture.ws1,
+          timeoutMs: 12_000,
+          extraEnv: { OLDPWD: '/second', __MISE_SESSION: 'second' },
+        }),
+      );
+      const leaderExit = findExit(yield* Fiber.join(leaderFiber));
+      expect(followerAck.attachMode).toBe('identity');
+      expect(followerAck.attachedTo).toBe(leaderExit.ticket);
+    }));
+
   it.live('attaches an identical concurrent request, replays output, and mirrors success', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
