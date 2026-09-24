@@ -13,6 +13,7 @@ const probeName = 'records hooks at both state roots';
 
 it(probeName, () => {
   for (const stateDir of [resolveStateDir(), defaultStateDir()]) {
+    expect(stateDir.startsWith(join(tmpdir(), 'cargo-hauler-test-'))).toBe(true);
     appendHookRecord({ atMs: 1, command: 'cargo check', host: 'claude', outcome: 'allow', phase: 'beforeTool' }, stateDir);
     expect(readFileSync(join(stateDir, hookEventsFileName), 'utf8')).toBe(
       '{"atMs":1,"command":"cargo check","host":"claude","outcome":"allow","phase":"beforeTool"}\n',
