@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -13,6 +13,7 @@ import {
   parseWorkspaceMetadata,
   workspaceClosure,
 } from '../../../src/internal/cargo/topology.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 const metadataJson = JSON.stringify({
   packages: [
@@ -96,7 +97,7 @@ describe('newestMtimeMs', () => {
       expect(newest).not.toBeNull();
       expect(newest!).toBeGreaterThan(editedSeconds * 1000 - 5_000);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -105,7 +106,7 @@ describe('newestMtimeMs', () => {
     try {
       expect(newestMtimeMs(join(root, 'missing-package'))).toBeNull();
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 });

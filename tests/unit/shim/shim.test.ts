@@ -1,14 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import {
-  chmodSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -20,6 +11,7 @@ import {
   resolveRealCargo,
   shimPathStatus,
 } from '../../../src/internal/shim/install.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 describe('PATH cargo shim', () => {
   it('emits a shim that forwards argv through hauler exec', () => {
@@ -66,7 +58,7 @@ describe('PATH cargo shim', () => {
       const output = execFileSync(shim, ['check', '-p', 'alpha'], { encoding: 'utf8' });
       expect(output).toBe('real:check -p alpha\n');
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -114,7 +106,7 @@ describe('PATH cargo shim', () => {
         'hauler exec --host shim -- /usr/bin/cargo',
       );
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -170,7 +162,7 @@ describe('PATH cargo shim', () => {
         process.env.PATH = previousPath;
       }
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -189,7 +181,7 @@ describe('PATH cargo shim', () => {
       // Nothing half-installed: the refusal happens before any writes.
       expect(existsSync(join(destDir, 'cargo'))).toBe(false);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 
@@ -213,7 +205,7 @@ describe('PATH cargo shim', () => {
       });
       expect(shimPathStatus(shim, { PATH: '/nonexistent-dir' })).toEqual({ kind: 'not-on-path' });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 });

@@ -10,7 +10,6 @@ import {
   readFileSync,
   readdirSync,
   readlinkSync,
-  rmSync,
   statSync,
   symlinkSync,
   writeFileSync,
@@ -21,6 +20,7 @@ import { delimiter, join } from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'effect-rstest';
 
 import { installCargoShim, resolveRealCargo } from '../../../src/internal/shim/install.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 describe('shim installation preserves existing link targets', () => {
   let root: string;
@@ -40,7 +40,7 @@ describe('shim installation preserves existing link targets', () => {
   });
 
   afterEach(() => {
-    rmSync(root, { recursive: true, force: true });
+    removeTestPath(root);
   });
 
   it('replaces a symlink rather than overwriting or chmodding its executable target', () => {

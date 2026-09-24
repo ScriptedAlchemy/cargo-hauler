@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, symlinkSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 
@@ -14,6 +14,7 @@ import {
   resolveStateDir,
   userCacheDir,
 } from '../../../src/internal/platform/state-paths.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 describe('portable state root', () => {
   it('defaults under the invoking user cache, never a machine-specific mount', () => {
@@ -71,7 +72,7 @@ describe('portable state root', () => {
         expect(resolveStateDir({ XDG_CACHE_HOME: cacheRoot })).toBe(realpathSync(target));
         expect(resolveStateDir({ CARGO_HAULER_STATE_DIR: link })).toBe(link);
       } finally {
-        rmSync(root, { recursive: true, force: true });
+        removeTestPath(root);
       }
     },
   );
@@ -88,7 +89,7 @@ describe('portable state root', () => {
       expect(resolveStateDir(env)).toBe(expected);
       expect(resolveDaemonConfig(env).stateDir).toBe(expected);
     } finally {
-      rmSync(cacheRoot, { recursive: true, force: true });
+      removeTestPath(cacheRoot);
     }
   });
 

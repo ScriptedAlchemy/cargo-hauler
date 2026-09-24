@@ -1,13 +1,4 @@
-import {
-  closeSync,
-  constants,
-  mkdtempSync,
-  openSync,
-  readSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
+import { closeSync, constants, mkdtempSync, openSync, readSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -23,6 +14,7 @@ import {
   releaseSharedJobserver,
   sharedJobserverDelta,
 } from '../../../src/internal/daemon/runtime/jobserver.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 const scratch = (): string => mkdtempSync(join(tmpdir(), 'cc-jobserver-'));
 
@@ -102,7 +94,7 @@ describe('shared jobserver', () => {
       expect(availableTokens(path)).toBe(3);
     } finally {
       releaseSharedJobserver();
-      rmSync(stateDir, { force: true, recursive: true });
+      removeTestPath(stateDir);
     }
   });
 
@@ -115,7 +107,7 @@ describe('shared jobserver', () => {
       expect(availableTokens(join(stateDir, jobserverFifoFileName))).toBe(2);
     } finally {
       releaseSharedJobserver();
-      rmSync(stateDir, { force: true, recursive: true });
+      removeTestPath(stateDir);
     }
   });
 
@@ -133,7 +125,7 @@ describe('shared jobserver', () => {
       expect(armSharedJobserver({ mode: 'fifo', stateDir, tokens: 2 })).toBe(false);
       expect(sharedJobserverDelta({})).toBeNull();
     } finally {
-      rmSync(stateDir, { force: true, recursive: true });
+      removeTestPath(stateDir);
     }
   });
 
@@ -146,7 +138,7 @@ describe('shared jobserver', () => {
       expect(armSharedJobserver({ mode: 'fifo', stateDir: join(blocking, 'state'), tokens: 2 })).toBe(false);
       expect(sharedJobserverDelta({})).toBeNull();
     } finally {
-      rmSync(root, { force: true, recursive: true });
+      removeTestPath(root);
     }
   });
 
@@ -162,7 +154,7 @@ describe('shared jobserver', () => {
       );
     } finally {
       releaseSharedJobserver();
-      rmSync(stateDir, { force: true, recursive: true });
+      removeTestPath(stateDir);
     }
   });
 });

@@ -6,7 +6,6 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
-  rmSync,
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -16,6 +15,8 @@ import { fileURLToPath } from 'node:url';
 
 import { version } from 'agent-bundle/meta';
 import { afterEach, beforeEach, describe, expect, it } from 'effect-rstest';
+
+import { removeTestPath } from '../support/tmp-guard.js';
 
 const installer = fileURLToPath(new URL('../../dist/bin/cargo-hauler-install.js', import.meta.url));
 
@@ -104,7 +105,7 @@ describe('cargo-hauler-install and the PATH cargo shim', () => {
   });
 
   afterEach(() => {
-    rmSync(root, { recursive: true, force: true });
+    removeTestPath(root);
   });
 
   it('install refreshes a shim that embeds an older cargo-hauler, and a second install leaves the same bytes', () => {
@@ -182,12 +183,12 @@ describe('cargo-hauler-install and the PATH cargo shim', () => {
   });
 
   it('ignores a first cargo on PATH that is a directory or an unreadable file', () => {
-    rmSync(shim);
+    removeTestPath(shim);
     mkdirSync(shim);
     expect(doctor()).toEqual({ code: 0, errors: 0, shim: [], stderr: '' });
     expect([run('install', 'cursor').code, run('install', 'cursor').stderr]).toEqual([0, '']);
 
-    rmSync(shim, { recursive: true });
+    removeTestPath(shim);
     writeFileSync(shim, shimText(oldNode, oldHauler, '/opt/rust/bin/cargo'), { mode: 0o111 });
     expect(doctor()).toEqual({ code: 0, errors: 0, shim: [], stderr: '' });
     expect(run('install', 'cursor').stderr).toBe('');
@@ -198,7 +199,7 @@ describe('cargo-hauler-install and the PATH cargo shim', () => {
     mkdirSync(dirname(target));
     writeFileSync(target, readFileSync(shim));
     chmodSync(target, 0o755);
-    rmSync(shim);
+    removeTestPath(shim);
     symlinkSync(target, shim);
 
     const install = run('install', 'cursor');

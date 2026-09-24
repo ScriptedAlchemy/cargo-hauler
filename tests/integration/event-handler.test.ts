@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { createServer, type Server, type Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -15,6 +15,7 @@ import beforeEvent from '../../src/events/tool/before.js';
 import { pingSessionCompleted } from '../../src/internal/host-hooks/session-ping.js';
 
 import { fakeCargoEnv, pollReport, scopedDaemon } from '../support/harness.js';
+import { removeTestPath } from '../support/tmp-guard.js';
 
 /**
  * The shell routes' handlers decide on the raw command before the rendered
@@ -102,7 +103,7 @@ describe('tool/after event handler', () => {
         }
       }
     } finally {
-      rmSync(root, { force: true, recursive: true });
+      removeTestPath(root);
     }
   });
 });
@@ -146,7 +147,7 @@ describe('pingSessionCompleted', () => {
       await new Promise<void>((resolve) => {
         server.close(() => resolve());
       });
-      rmSync(root, { force: true, recursive: true });
+      removeTestPath(root);
     }
   };
 
@@ -228,7 +229,7 @@ describe('pingSessionCompleted', () => {
       expect(ping).toEqual({ code: 'ENOENT', kind: 'unavailable', reason: 'unreachable' });
       expect(performance.now() - startedAt).toBeLessThan(1_000);
     } finally {
-      rmSync(root, { force: true, recursive: true });
+      removeTestPath(root);
     }
   });
 

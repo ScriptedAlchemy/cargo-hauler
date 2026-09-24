@@ -1,10 +1,11 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import { describe, expect, it } from 'effect-rstest';
 
 import { findConfiguredTargetDir, locateWorkspaceRoot } from '../../../src/internal/cargo/workspace.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 interface TempTree {
   readonly root: string;
@@ -21,7 +22,7 @@ const withTree = <A>(files: Readonly<Record<string, string>>, use: (tree: TempTr
     }
     return use({ path: (...segments) => join(root, ...segments), root });
   } finally {
-    rmSync(root, { force: true, recursive: true });
+    removeTestPath(root);
   }
 };
 

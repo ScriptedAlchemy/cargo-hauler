@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer, type Server, type Socket } from 'node:net';
@@ -11,6 +11,7 @@ import { resolveDaemonConfig } from '../../src/internal/daemon/config.js';
 import { probeDaemonHealth } from '../../src/internal/operations/daemon-health.js';
 
 import { scopedDaemon, scopedTempDir } from '../support/harness.js';
+import { removeTestPath } from '../support/tmp-guard.js';
 
 /**
  * The active health probe used by session-start and daemon operations:
@@ -61,7 +62,7 @@ describe('probeDaemonHealth', () => {
         state: 'stopped',
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestPath(root);
     }
   });
 

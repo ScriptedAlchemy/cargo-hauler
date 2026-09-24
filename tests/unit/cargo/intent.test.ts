@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -11,6 +11,7 @@ import {
   splitShellStatements,
   splitShellWords,
 } from '../../../src/internal/cargo/intent.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 describe('parseCargoArgv', () => {
   it('canonicalizes the cargo compile surface independently of argument order', () => {
@@ -357,7 +358,7 @@ describe('normalizeCargoIntent', () => {
       expect(intent.targetDir).toBe(realpathSync(target));
       expect(intent.key).toMatch(/^[a-f0-9]{64}$/u);
     } finally {
-      rmSync(directory, { force: true, recursive: true });
+      removeTestPath(directory);
     }
   });
 
@@ -389,7 +390,7 @@ describe('normalizeCargoIntent', () => {
       expect(afterCreation.targetDir).toBe(beforeCreation.targetDir);
       expect(afterCreation.key).toBe(beforeCreation.key);
     } finally {
-      rmSync(directory, { force: true, recursive: true });
+      removeTestPath(directory);
     }
   });
 

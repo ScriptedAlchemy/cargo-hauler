@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { mkdtempSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +9,7 @@ import * as Effect from 'effect/Effect';
 
 import { pingDaemon } from '../../../src/internal/client/control.js';
 import { requestShutdown } from '../../../src/internal/client/shutdown.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 const fixtureEntry = fileURLToPath(
   new URL('../../fixtures/shutdown-daemon.mjs', import.meta.url),
@@ -45,7 +46,7 @@ const withFixture = async <T>(
     return await body(socketPath, child);
   } finally {
     child.kill('SIGTERM');
-    rmSync(root, { force: true, recursive: true });
+    removeTestPath(root);
   }
 };
 

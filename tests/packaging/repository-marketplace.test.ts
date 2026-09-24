@@ -1,9 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import { expect, it } from 'effect-rstest';
+
+import { removeTestPath } from '../support/tmp-guard.js';
 
 const projectRoot = resolve(import.meta.dirname, '../..');
 
@@ -34,6 +36,6 @@ it('registers one source-free GitHub artifact for every native marketplace', () 
     expect(help.status).toBe(0);
     expect(help.stdout).toContain('cargo-hauler');
   } finally {
-    rmSync(repository, { force: true, recursive: true });
+    removeTestPath(repository);
   }
 });

@@ -129955,12 +129955,12 @@ __webpack_require__.d(__webpack_exports__, {
 "./.agent-bundle-virtual/hauler-entry.mjs"(__webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
 __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_deps, __rspack_async_done) { try {
 /* import */ var agent_bundle_terminal_capability__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/terminal-capability.js");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_scripts_hauler_ts__rspack_import_1 = __webpack_require__("./src/scripts/hauler.ts");
+/* import */ var _tmp_poteto_guard_src_scripts_hauler_ts__rspack_import_1 = __webpack_require__("./src/scripts/hauler.ts");
 
 
-const main = _home_runner_work_cargo_hauler_cargo_hauler_src_scripts_hauler_ts__rspack_import_1/* .main */.iW;
+const main = _tmp_poteto_guard_src_scripts_hauler_ts__rspack_import_1/* .main */.iW;
 if (typeof main !== 'function') {
-    throw new TypeError('Executable entry must export a main function: ' + "/home/runner/work/cargo-hauler/cargo-hauler/src/scripts/hauler.ts");
+    throw new TypeError('Executable entry must export a main function: ' + "/tmp/poteto-guard/src/scripts/hauler.ts");
 }
 const code = await main(process.argv.slice(2), Object.freeze({
     terminal: (0,agent_bundle_terminal_capability__rspack_import_0/* .detectProcessTerminal */.JH)("script")

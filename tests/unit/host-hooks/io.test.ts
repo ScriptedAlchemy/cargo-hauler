@@ -1,5 +1,5 @@
 import { createServer, type Socket } from 'node:net';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -8,13 +8,14 @@ import { describe, expect, it } from 'effect-rstest';
 
 import { appendHookRecord, hookEventsFileName } from '../../../src/internal/host-hooks/record.js';
 import { probeActiveBuilds } from '../../../src/internal/host-hooks/probe.js';
+import { removeTestPath } from '../../support/tmp-guard.js';
 
 const withTempDir = async <A>(use: (directory: string) => Promise<A>): Promise<A> => {
   const directory = mkdtempSync(join(tmpdir(), 'cc-hook-io-'));
   try {
     return await use(directory);
   } finally {
-    rmSync(directory, { force: true, recursive: true });
+    removeTestPath(directory);
   }
 };
 

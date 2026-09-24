@@ -1,9 +1,11 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'effect-rstest';
 import { cliJson, invokeCli } from 'agent-bundle/test';
+
+import { removeTestPath } from '../support/tmp-guard.js';
 
 /**
  * cli-dispatch proof: argv goes through the generated routed-CLI shell in
@@ -25,7 +27,7 @@ afterEach(() => {
   } else {
     process.env.CARGO_HAULER_STATE_DIR = previousStateDir;
   }
-  rmSync(root, { recursive: true, force: true });
+  removeTestPath(root);
 });
 
 describe('routed CLI', () => {

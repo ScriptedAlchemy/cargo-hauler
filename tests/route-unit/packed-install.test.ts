@@ -9,7 +9,6 @@ import {
   readFileSync,
   readdirSync,
   realpathSync,
-  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -26,6 +25,7 @@ import { runDaemon } from '../../src/internal/daemon/main.js';
 
 import { dropAfterAckProxy } from '../support/drop-after-ack-proxy.js';
 import { fakeCargoEnv, scopedEnv, scopedFixture } from '../support/harness.js';
+import { removeTestPath } from '../support/tmp-guard.js';
 
 /**
  * Host-install proof from the actual npm shape: pack a source staging copy,
@@ -212,7 +212,7 @@ beforeAll(() => {
     { cwd: consumer, encoding: 'utf8' },
   );
   expect(installed.status).toBe(0);
-  rmSync(sourceRoot, { force: true, recursive: true });
+  removeTestPath(sourceRoot);
   packageRoot = join(consumer, 'node_modules', 'cargo-hauler');
   pluginRoot = join(packageRoot, 'dist');
   installer = join(pluginRoot, 'bin', 'cargo-hauler-install.js');
@@ -221,7 +221,7 @@ beforeAll(() => {
 
 afterAll(() => {
   if (packageRoot !== '' && existsSync(packageRoot)) setTreeWritable(packageRoot, true);
-  if (fixtureRoot !== '') rmSync(fixtureRoot, { force: true, recursive: true });
+  if (fixtureRoot !== '') removeTestPath(fixtureRoot);
 });
 
 describe('packed install', () => {
@@ -377,7 +377,7 @@ describe('packed install', () => {
           expect(web.ready).toMatchObject({ app: 'hauler/dashboard', tool: 'hauler_dashboard' });
           expect(web.status).toBe(200);
         } finally {
-          rmSync(home, { force: true, recursive: true });
+          removeTestPath(home);
         }
       },
       120_000,
@@ -426,7 +426,7 @@ describe('packed install', () => {
       expect(JSON.parse(removed.stdout)).toMatchObject({ state: 'uninstalled' });
       expect(existsSync(installed.destination)).toBe(false);
     } finally {
-      rmSync(home, { force: true, recursive: true });
+      removeTestPath(home);
     }
   }, 120_000);
 });
