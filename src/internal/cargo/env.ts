@@ -56,9 +56,9 @@ export const isIdentityEnvironmentVariable = (name: string, value: string): bool
 
 /**
  * The variables that participate in the *compile surface* (coverage, target
- * dir, toolchain). Request *identity* additionally hashes the full forwarded
- * environment: a `build.rs` or test may read `OUT`, `SCHEMA_OUT`, and friends
- * (#222).
+ * dir, toolchain). Request *identity* additionally hashes every forwarded
+ * variable `isIdentityEnvironmentVariable` keeps: a `build.rs` or test may
+ * read `OUT`, `SCHEMA_OUT`, and friends (#222).
  */
 export const isRelevantCargoEnvironmentVariable = (name: string): boolean =>
   !isHaulerInternalEnvironmentVariable(name) &&

@@ -16068,9 +16068,9 @@ const shellBookkeepingNames = new Set([
  */ const isIdentityEnvironmentVariable = (name, value)=>isForwardedEnvironmentVariable(name, value) && !shellBookkeepingNames.has(name) && !name.startsWith('__MISE_');
 /**
  * The variables that participate in the *compile surface* (coverage, target
- * dir, toolchain). Request *identity* additionally hashes the full forwarded
- * environment: a `build.rs` or test may read `OUT`, `SCHEMA_OUT`, and friends
- * (#222).
+ * dir, toolchain). Request *identity* additionally hashes every forwarded
+ * variable `isIdentityEnvironmentVariable` keeps: a `build.rs` or test may
+ * read `OUT`, `SCHEMA_OUT`, and friends (#222).
  */ const isRelevantCargoEnvironmentVariable = (name)=>!isHaulerInternalEnvironmentVariable(name) && (exactEnvironmentNames.has(name) || name.startsWith('CARGO_') || name.startsWith('RUST') || targetToolPattern.test(name));
 
 __webpack_require__.d(__webpack_exports__, {
@@ -155975,7 +155975,7 @@ const routes = Object.freeze({
         name: "hauler_status"
     })
 });
-const EVENT_ARTIFACT_EPOCH = "c810dee68232e863441ae5748b3dfc0421c8a7d9cfc9fc9c11e02a793eb32b72";
+const EVENT_ARTIFACT_EPOCH = "da7cf4f0261aad08efaac65bda5e4de79d87d4a48c593f559627384db788f42e";
 const EVENT_ALLOWED_TARGETS = Object.freeze([
     "claude",
     "codex",

@@ -20729,9 +20729,9 @@ const shellBookkeepingNames = new Set([
  */ const isIdentityEnvironmentVariable = (name, value)=>isForwardedEnvironmentVariable(name, value) && !shellBookkeepingNames.has(name) && !name.startsWith('__MISE_');
 /**
  * The variables that participate in the *compile surface* (coverage, target
- * dir, toolchain). Request *identity* additionally hashes the full forwarded
- * environment: a `build.rs` or test may read `OUT`, `SCHEMA_OUT`, and friends
- * (#222).
+ * dir, toolchain). Request *identity* additionally hashes every forwarded
+ * variable `isIdentityEnvironmentVariable` keeps: a `build.rs` or test may
+ * read `OUT`, `SCHEMA_OUT`, and friends (#222).
  */ const isRelevantCargoEnvironmentVariable = (name)=>!isHaulerInternalEnvironmentVariable(name) && (exactEnvironmentNames.has(name) || name.startsWith('CARGO_') || name.startsWith('RUST') || targetToolPattern.test(name));
 
 __webpack_require__.d(__webpack_exports__, {
