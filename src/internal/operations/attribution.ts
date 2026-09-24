@@ -9,6 +9,38 @@ export type TicketRequestContext = Pick<AgentRequestContext, 'host' | 'lineage' 
 
 export type ResolvedRequestInput = Omit<RequestInput, 'cwd'> & { readonly cwd: string };
 
+export interface EnvironmentAttribution {
+  readonly host?: string;
+  readonly session?: string;
+}
+
+// A nested agent inherits its parent's variable beside its own; Cursor
+// launches Claude and Codex more often than the reverse, so it goes last.
+const agentSessionVariables = [
+  { host: 'claude', name: 'CLAUDE_CODE_SESSION_ID' },
+  { host: 'codex', name: 'CODEX_THREAD_ID' },
+  { host: 'cursor', name: 'CURSOR_CONVERSATION_ID' },
+] as const;
+
+/**
+ * Who asked, as a CLI caller's shell names it. `CARGO_HAULER_HOST` and
+ * `CARGO_HAULER_SESSION` come first, then the session id the agent host exports
+ * to its shell tool. Only a CLI process may read this. An MCP server's
+ * environment belongs to the server, not the calling conversation.
+ */
+export const environmentAttribution = (
+  env: Readonly<Record<string, string | undefined>>,
+): EnvironmentAttribution => {
+  const set = (name: string): string | undefined => (env[name] === '' ? undefined : env[name]);
+  const agent = agentSessionVariables.find(({ name }) => set(name) !== undefined);
+  const host = set('CARGO_HAULER_HOST') ?? agent?.host;
+  const session = set('CARGO_HAULER_SESSION') ?? (agent === undefined ? undefined : set(agent.name));
+  return {
+    ...(host === undefined ? {} : { host }),
+    ...(session === undefined ? {} : { session }),
+  };
+};
+
 const requestCwd = (input: RequestInput, requestContext: TicketRequestContext): string => {
   if (input.cwd !== undefined) {
     return input.cwd;

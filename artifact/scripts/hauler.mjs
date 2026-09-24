@@ -20490,6 +20490,99 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
+"./src/internal/operations/attribution.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
+// A nested agent inherits its parent's variable beside its own; Cursor
+// launches Claude and Codex more often than the reverse, so it goes last.
+const agentSessionVariables = [
+    {
+        host: 'claude',
+        name: 'CLAUDE_CODE_SESSION_ID'
+    },
+    {
+        host: 'codex',
+        name: 'CODEX_THREAD_ID'
+    },
+    {
+        host: 'cursor',
+        name: 'CURSOR_CONVERSATION_ID'
+    }
+];
+/**
+ * Who asked, as a CLI caller's shell names it. `CARGO_HAULER_HOST` and
+ * `CARGO_HAULER_SESSION` come first, then the session id the agent host exports
+ * to its shell tool. Only a CLI process may read this. An MCP server's
+ * environment belongs to the server, not the calling conversation.
+ */ const environmentAttribution = (env)=>{
+    const set = (name)=>env[name] === '' ? undefined : env[name];
+    const agent = agentSessionVariables.find(({ name })=>set(name) !== undefined);
+    const host = set('CARGO_HAULER_HOST') ?? agent?.host;
+    const session = set('CARGO_HAULER_SESSION') ?? (agent === undefined ? undefined : set(agent.name));
+    return {
+        ...host === undefined ? {} : {
+            host
+        },
+        ...session === undefined ? {} : {
+            session
+        }
+    };
+};
+const requestCwd = (input, requestContext)=>{
+    if (input.cwd !== undefined) {
+        return input.cwd;
+    }
+    if (requestContext.workspace?.state === 'available' && (requestContext.workspace.source !== 'derived' || requestContext.invocation.kind === 'cli')) {
+        return requestContext.workspace.value.root;
+    }
+    if (requestContext.invocation.kind === 'cli') {
+        return process.cwd();
+    }
+    throw new TypeError('cwd is required when Agent Bundle has no authoritative workspace');
+};
+/**
+ * Who asked for this ticket. Explicit host/session win; otherwise attribution
+ * comes from the observed request context. Bare-stdio MCP hosts publish no
+ * session id, so `request.lineage` — the conversation the host placed this
+ * call in — is the session of record there, which is what makes parallel
+ * agents' builds attributable in the ledger, the dashboard, and
+ * `hauler status --session`. The transport kind is the last fallback so a
+ * ticket is never recorded as anonymous.
+ */ const ticketAttribution = (input, requestContext)=>{
+    const lineage = requestContext.lineage.state === 'available' ? requestContext.lineage.value : null;
+    const host = input.host ?? (requestContext.host.state === 'available' ? requestContext.host.value.name : requestContext.invocation.kind === 'cli' ? 'cli' : 'mcp');
+    const session = input.session ?? (requestContext.session.state === 'available' ? requestContext.session.value.sessionId : lineage?.conversation ?? null);
+    return {
+        host,
+        lineage: lineage === null ? null : {
+            conversation: lineage.conversation,
+            depth: lineage.depth,
+            ...lineage.parent === undefined ? {} : {
+                parent: lineage.parent
+            },
+            resolution: lineage.resolution,
+            root: lineage.root
+        },
+        session
+    };
+};
+const enrichTicketRequest = (input, requestContext)=>{
+    const attribution = ticketAttribution(input, requestContext);
+    return {
+        ...input,
+        cwd: requestCwd(input, requestContext),
+        host: attribution.host,
+        ...attribution.session === null ? {} : {
+            session: attribution.session
+        }
+    };
+};
+
+__webpack_require__.d(__webpack_exports__, {
+}, {
+  Xu: environmentAttribution
+});
+
+
+},
 "./src/internal/operations/status.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var node_fs__rspack_import_0 = __webpack_require__("node:fs");
 /* import */ var effect_Effect__rspack_import_10 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
@@ -22844,15 +22937,17 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var node_fs__rspack_import_1 = __webpack_require__("node:fs");
 /* import */ var node_path__rspack_import_2 = __webpack_require__("node:path");
 /* import */ var node_url__rspack_import_3 = __webpack_require__("node:url");
-/* import */ var effect_Cause__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Cause.js");
-/* import */ var effect_Effect__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
+/* import */ var effect_Cause__rspack_import_13 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Cause.js");
+/* import */ var effect_Effect__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
 /* import */ var _internal_client_env_js__rspack_import_4 = __webpack_require__("./src/internal/client/env.ts");
 /* import */ var _internal_client_exec_js__rspack_import_5 = __webpack_require__("./src/internal/client/exec.ts");
 /* import */ var _internal_client_parse_js__rspack_import_6 = __webpack_require__("./src/internal/client/parse.ts");
 /* import */ var _internal_daemon_config_js__rspack_import_7 = __webpack_require__("./src/internal/daemon/config.ts");
+/* import */ var _internal_operations_attribution_js__rspack_import_11 = __webpack_require__("./src/internal/operations/attribution.ts");
 /* import */ var _internal_daemon_runtime_lifecycle_js__rspack_import_8 = __webpack_require__("./src/internal/daemon/runtime/lifecycle.ts");
 /* import */ var _internal_shim_install_js__rspack_import_9 = __webpack_require__("./src/internal/shim/install.ts");
 /* import */ var _internal_shim_entry_location_js__rspack_import_10 = __webpack_require__("./src/internal/shim/entry-location.ts");
+
 
 
 
@@ -22933,10 +23028,9 @@ const runExecCommand = async (argv, options)=>{
     };
     const exec = options.runExec ?? _internal_client_exec_js__rspack_import_5/* .runExecClient */.Qf;
     const env = options.env ?? process.env;
-    const envHost = env.CARGO_HAULER_HOST;
-    const envSession = env.CARGO_HAULER_SESSION;
-    const session = parsed.session ?? envSession;
-    return effect_Effect__rspack_import_11/* .runPromise */.pR5(exec({
+    const attributed = (0,_internal_operations_attribution_js__rspack_import_11/* .environmentAttribution */.Xu)(env);
+    const session = parsed.session ?? attributed.session;
+    return effect_Effect__rspack_import_12/* .runPromise */.pR5(exec({
         ...parsed.allowSharedTarget || (0,_internal_daemon_config_js__rspack_import_7/* .isEnabledFlag */.I1)(env.CARGO_HAULER_ALLOW_SHARED_TARGET) ? {
             allowSharedTarget: true
         } : {},
@@ -22945,7 +23039,7 @@ const runExecCommand = async (argv, options)=>{
         // against its own working directory, not the caller's.
         cwd: (0,node_path__rspack_import_2.resolve)(parsed.cwd ?? process.cwd()),
         env: (0,_internal_client_env_js__rspack_import_4/* .buildTransportedEnv */.o)(env),
-        host: parsed.host ?? envHost ?? 'cli',
+        host: parsed.host ?? attributed.host ?? 'cli',
         io,
         ...parsed.background ? {
             background: true
@@ -22959,7 +23053,7 @@ const runExecCommand = async (argv, options)=>{
         ...options.terminal === undefined ? {} : {
             terminal: options.terminal
         }
-    }).pipe(effect_Effect__rspack_import_11/* .map */.TjK((result)=>result.exitCode), effect_Effect__rspack_import_11/* .catchCause */.Tyx((cause)=>effect_Effect__rspack_import_11/* .sync */.OH5(()=>io.writeStderr(`${effect_Cause__rspack_import_12/* .pretty */.j9(cause)}\n`)).pipe(effect_Effect__rspack_import_11.as(1)))), {
+    }).pipe(effect_Effect__rspack_import_12/* .map */.TjK((result)=>result.exitCode), effect_Effect__rspack_import_12/* .catchCause */.Tyx((cause)=>effect_Effect__rspack_import_12/* .sync */.OH5(()=>io.writeStderr(`${effect_Cause__rspack_import_13/* .pretty */.j9(cause)}\n`)).pipe(effect_Effect__rspack_import_12.as(1)))), {
         signal: options.signal
     });
 };
@@ -129730,12 +129824,12 @@ __webpack_require__.d(__webpack_exports__, {
 "./.agent-bundle-virtual/hauler-entry.mjs"(__webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
 __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_deps, __rspack_async_done) { try {
 /* import */ var agent_bundle_terminal_capability__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/terminal-capability.js");
-/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_scripts_hauler_ts__rspack_import_1 = __webpack_require__("./src/scripts/hauler.ts");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_scripts_hauler_ts__rspack_import_1 = __webpack_require__("./src/scripts/hauler.ts");
 
 
-const main = _fast_projects_agent_plugins_cargo_conductor_worktrees_kill_batch_window_src_scripts_hauler_ts__rspack_import_1/* .main */.iW;
+const main = _fast_projects_agent_plugins_cargo_conductor_worktrees_merge_src_scripts_hauler_ts__rspack_import_1/* .main */.iW;
 if (typeof main !== 'function') {
-    throw new TypeError('Executable entry must export a main function: ' + "/fast/projects/agent-plugins/cargo-conductor/.worktrees/kill-batch-window/src/scripts/hauler.ts");
+    throw new TypeError('Executable entry must export a main function: ' + "/fast/projects/agent-plugins/cargo-conductor/.worktrees/merge/src/scripts/hauler.ts");
 }
 const code = await main(process.argv.slice(2), Object.freeze({
     terminal: (0,agent_bundle_terminal_capability__rspack_import_0/* .detectProcessTerminal */.JH)("script")

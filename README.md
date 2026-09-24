@@ -693,7 +693,7 @@ Per-host notes and hook timeouts are in [docs/install.md](docs/install.md).
 | `CARGO_HAULER_LEDGER_MAX_ROWS` | `50000` | Total ledger rows beyond which the oldest finished rows are deleted when the daemon starts; `0` disables the row cap. Pruned rows take their `tickets/<ticket>.log` files with them. |
 | `CARGO_HAULER_TICKET_LOG_MAX_BYTES` | `67108864` (64 MiB) | Bytes of a leader run's combined output written to `<state dir>/tickets/<ticket>.log` before the log stops with one truncation line; `0` writes no ticket logs (`hauler result` then has only the tail). |
 | `CARGO_HAULER_LOG_LEVEL` | `Info` | Daemon log level. |
-| `CARGO_HAULER_HOST`, `CARGO_HAULER_SESSION` | Unset | Default `--host` and `--session` attribution for `hauler exec`; the PATH shim also borrows `CARGO_HAULER_HOST`'s shell cap when auto-background is allowed. |
+| `CARGO_HAULER_HOST`, `CARGO_HAULER_SESSION` | Unset | Default `--host` and `--session` attribution for `hauler exec` and `hauler request`. Without them, the session id the agent host exports to its shell (`CLAUDE_CODE_SESSION_ID`, `CODEX_THREAD_ID`, `CURSOR_CONVERSATION_ID`) attributes the request to `claude`, `codex`, or `cursor`. The PATH shim also borrows `CARGO_HAULER_HOST`'s shell cap when auto-background is allowed. |
 | `CARGO_HAULER_SHIM_BACKGROUND` | Unset | `1` / `true` / `on` / `yes` lets a non-TTY PATH shim auto-background over the host cap (exit 75). Without it, a shim that is not a TTY waits for cargo's exit. |
 
 A numeric value that does not parse or falls outside its range is reported
@@ -941,6 +941,11 @@ what makes parallel agents' builds attributable in the ledger, the dashboard,
 and `hauler status --session <conversation>` (the `hauler_status` tool takes
 the same filter as its `session` field). Results carry
 `attribution: { host, session, lineage }`.
+
+The CLI `hauler request` reads its caller's shell instead: explicit flags
+win, then `CARGO_HAULER_HOST`/`CARGO_HAULER_SESSION`, then the session id the
+agent host exports to its shell tool. The MCP tool never reads its own process environment, which
+belongs to the server and not the calling conversation.
 
 #### Routes
 
