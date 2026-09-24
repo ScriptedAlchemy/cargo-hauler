@@ -1,16 +1,22 @@
 import {
+  accessSync,
   chmodSync,
+  constants,
   existsSync,
   linkSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
+
+import { isRecord } from '../util/guards.js';
 
 import { canonical } from './entry-location.js';
 
@@ -57,8 +63,11 @@ export const renderCargoShim = (options: RenderShimOptions): string => {
   // A Node installation can still move the embedded global entry. Losing the
   // broker for a while beats turning every `cargo` on PATH into "No such file".
   const entry = shellQuote(shimHaulerEntry(options.haulerArgv));
+  const [node] = options.haulerArgv;
   const guard =
-    options.haulerArgv.length >= 2 ? `[ -f ${entry} ]` : `command -v ${entry} >/dev/null 2>&1`;
+    options.haulerArgv.length >= 2 && node !== undefined
+      ? `[ -x ${shellQuote(node)} ] && [ -f ${entry} ]`
+      : `command -v ${entry} >/dev/null 2>&1`;
   // --host shim: unlike hook rewrites, the shim has no agent identity, but the
   // ledger should still say where a request entered. CARGO_HAULER_INSIDE
   // marks cargo spawned by the daemon itself (the executor sets it on every
@@ -124,6 +133,33 @@ export const resolveRealCargo = (
   );
 };
 
+const isFile = (path: string): boolean => {
+  try {
+    return statSync(path).isFile();
+  } catch {
+    return false;
+  }
+};
+
+const isExecutableFile = (path: string): boolean => {
+  try {
+    accessSync(path, constants.X_OK);
+  } catch {
+    return false;
+  }
+  return isFile(path);
+};
+
+const pathCargo = (env: Readonly<Record<string, string | undefined>>): string | null => {
+  for (const entry of (env.PATH ?? '').split(delimiter)) {
+    const candidate = join(entry, 'cargo');
+    if (entry.length > 0 && isFile(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+};
+
 export type ShimPathStatus =
   | { readonly kind: 'wins' }
   | { readonly kind: 'shadowed'; readonly by: string }
@@ -139,18 +175,125 @@ export const shimPathStatus = (
   shimPath: string,
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): ShimPathStatus => {
-  const shim = canonical(shimPath);
-  for (const entry of (env.PATH ?? '').split(delimiter)) {
-    if (entry.length === 0) {
-      continue;
-    }
-    const candidate = join(entry, 'cargo');
-    if (!existsSync(candidate)) {
-      continue;
-    }
-    return canonical(candidate) === shim ? { kind: 'wins' } : { kind: 'shadowed', by: candidate };
+  const found = pathCargo(env);
+  if (found === null) {
+    return { kind: 'not-on-path' };
   }
-  return { kind: 'not-on-path' };
+  return canonical(found) === canonical(shimPath) ? { kind: 'wins' } : { kind: 'shadowed', by: found };
+};
+
+export interface InstalledShim extends RenderShimOptions {
+  /** The canonical file, so a refresh writes through a symlinked `cargo`. */
+  readonly path: string;
+}
+
+const shimExec = /^exec (.+) exec --host shim -- (.+) "\$@"$/mu;
+
+/** The words `shellQuote` joined: bare, or single-quoted with `'\''` for a quote. */
+const shellWords = (text: string): string[] =>
+  [...text.matchAll(/(?:'[^']*'|\\'|[^\s'\\])+/gu)].map(([word]) =>
+    word.replaceAll(/'([^']*)'|\\(')/gu, '$1$2'),
+  );
+
+/** The first `cargo` on PATH when `renderCargoShim` wrote it, with what it embeds. */
+export const findCargoShim = (
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): InstalledShim | null => {
+  const found = pathCargo(env);
+  if (found === null) {
+    return null;
+  }
+  const path = canonical(found);
+  let text: string;
+  try {
+    // A shim is a few hundred bytes; the real cargo is a multi-megabyte binary.
+    if (statSync(path).size > 4096) {
+      return null;
+    }
+    text = readFileSync(path, 'utf8');
+  } catch {
+    return null;
+  }
+  const match = text.startsWith('#!/bin/sh\n# cargo-hauler PATH shim') ? shimExec.exec(text) : null;
+  if (match === null) {
+    return null;
+  }
+  const [realCargo, ...extra] = shellWords(match[2] ?? '');
+  return realCargo === undefined || extra.length > 0
+    ? null
+    : { haulerArgv: shellWords(match[1] ?? ''), path, realCargo };
+};
+
+/** The version in the nearest package.json above `script`, when that package is cargo-hauler. */
+export const cargoHaulerVersion = (script: string): string | null => {
+  for (let dir = dirname(script); ; dir = dirname(dir)) {
+    const manifest = join(dir, 'package.json');
+    if (existsSync(manifest)) {
+      try {
+        const parsed: unknown = JSON.parse(readFileSync(manifest, 'utf8'));
+        return isRecord(parsed) && parsed.name === 'cargo-hauler' && typeof parsed.version === 'string'
+          ? parsed.version
+          : null;
+      } catch {
+        return null;
+      }
+    }
+    if (dirname(dir) === dir) {
+      return null;
+    }
+  }
+};
+
+export type CargoShimState =
+  | { readonly kind: 'current' }
+  | { readonly kind: 'missing'; readonly path: string }
+  | { readonly kind: 'stale'; readonly entry: string; readonly version: string | null };
+
+/**
+ * A shim is current when it runs this cargo-hauler version through a node
+ * that still works. Which node, and which copy of that version, do not
+ * matter: mise can pin a different node per directory.
+ */
+export const cargoShimState = (shim: InstalledShim, currentVersion: string): CargoShimState => {
+  const [node, entry] = shim.haulerArgv;
+  if (node === undefined || entry === undefined) {
+    return { entry: shimHaulerEntry(shim.haulerArgv), kind: 'stale', version: null };
+  }
+  if (!isExecutableFile(node)) {
+    return { kind: 'missing', path: node };
+  }
+  if (!isFile(entry)) {
+    return { kind: 'missing', path: entry };
+  }
+  const version = cargoHaulerVersion(entry);
+  return version === currentVersion ? { kind: 'current' } : { entry, kind: 'stale', version };
+};
+
+/**
+ * Publish a complete executable without following symlinks or modifying
+ * other hard links to an existing cargo binary. Staging beside the final
+ * path keeps rename/link on the same filesystem.
+ */
+const publishShim = (path: string, text: string, replace: boolean): void => {
+  const stagingDir = mkdtempSync(join(dirname(path), '.cargo-hauler-shim-'));
+  try {
+    const staged = join(stagingDir, 'cargo');
+    writeFileSync(staged, text, { flag: 'wx' });
+    chmodSync(staged, 0o755);
+    if (replace) {
+      renameSync(staged, path);
+    } else {
+      // Unlike rename, link fails if an entry appeared after the caller's lstat.
+      linkSync(staged, path);
+    }
+  } finally {
+    rmSync(stagingDir, { recursive: true, force: true });
+  }
+};
+
+/** Rewrites an installed shim to run `haulerArgv`, keeping the Cargo path it already runs. */
+export const refreshCargoShim = (shim: InstalledShim, haulerArgv: readonly string[]): void => {
+  publishShim(shim.path, renderCargoShim({ haulerArgv, realCargo: shim.realCargo }), true);
 };
 
 export const installCargoShim = (options: InstallShimOptions): InstallShimResult => {
@@ -168,22 +311,6 @@ export const installCargoShim = (options: InstallShimOptions): InstallShimResult
     throw new Error(`cargo already exists at ${path}; pass --force to replace it`);
   }
   const realCargo = resolveRealCargo(options.realCargo, destDir);
-  // Publish a complete executable without following symlinks or modifying
-  // other hard links to an existing cargo binary. Staging beside the final
-  // path keeps rename/link on the same filesystem.
-  const stagingDir = mkdtempSync(join(destDir, '.cargo-hauler-shim-'));
-  try {
-    const staged = join(stagingDir, 'cargo');
-    writeFileSync(staged, renderCargoShim({ ...options, realCargo }), { flag: 'wx' });
-    chmodSync(staged, 0o755);
-    if (options.force === true) {
-      renameSync(staged, path);
-    } else {
-      // Unlike rename, link fails if an entry appeared after the lstat above.
-      linkSync(staged, path);
-    }
-  } finally {
-    rmSync(stagingDir, { recursive: true, force: true });
-  }
+  publishShim(path, renderCargoShim({ ...options, realCargo }), options.force === true);
   return { haulerScript: shimHaulerEntry(options.haulerArgv), path, realCargo };
 };

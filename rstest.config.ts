@@ -18,6 +18,6 @@ export default defineConfig({
   exclude: ['tests/browser-app/**', 'tests/route-unit/**'],
   include: ['tests/**/*.test.ts', 'tests/**/*.eval.ts'],
   resolve,
-  setupFiles: ['./tests/setup/isolate-state.ts'],
+  setupFiles: ['./tests/setup/isolate-state.ts', './tests/setup/isolate-path.ts'],
   testEnvironment: 'node',
 });
