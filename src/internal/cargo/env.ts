@@ -41,18 +41,33 @@ export const isForwardedEnvironmentVariable = (name: string, value: string): boo
   !isHaulerInternalEnvironmentVariable(name) &&
   !(jobserverFlagNames.has(name) && carriesDescriptorJobserver(value));
 
-const shellBookkeepingNames = new Set(['OLDPWD', 'PWD', 'SHLVL', '_']);
+const sessionState: { readonly names: ReadonlySet<string>; readonly prefixes: readonly string[] } = {
+  names: new Set([
+    'OLDPWD',
+    'PWD',
+    'SHLVL',
+    '_',
+    '__CURSOR_SANDBOX_ENV_RESTORE',
+    'CURSOR_AGENT_STORE_FILES_DIR',
+    'CURSOR_AGENT_STORE_SHARED_PATHS',
+    'CURSOR_CONVERSATION_ID',
+    'CURSOR_REQUEST_ID',
+    'CLAUDE_CODE_HOST_SESSION_ID',
+    'CLAUDE_CODE_MESSAGING_SOCKET',
+    'CLAUDE_CODE_MESSAGING_TOKEN',
+    'CLAUDE_CODE_SESSION_ID',
+    'CLAUDE_PID',
+    'CODEX_SESSION_ID',
+    'CODEX_THREAD_ID',
+  ]),
+  prefixes: ['__MISE_'],
+};
 
-/**
- * Forwarded variables that decide request identity. The shell rewrites its
- * bookkeeping (`OLDPWD`, `SHLVL`, mise's `__MISE_*` session state) on every
- * tool call, so hashing it would give every request a fresh identity and no
- * run could ever be shared; `cwd` already carries what `PWD` would.
- */
+/** Forwarded variables except shell and agent session state (`cwd` already carries `PWD`). */
 export const isIdentityEnvironmentVariable = (name: string, value: string): boolean =>
   isForwardedEnvironmentVariable(name, value) &&
-  !shellBookkeepingNames.has(name) &&
-  !name.startsWith('__MISE_');
+  !sessionState.names.has(name) &&
+  !sessionState.prefixes.some((prefix) => name.startsWith(prefix));
 
 /**
  * The variables that participate in the *compile surface* (coverage, target

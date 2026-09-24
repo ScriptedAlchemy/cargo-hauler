@@ -556,6 +556,43 @@ describe('normalizeCargoIntent', () => {
     expect(normalizeCargoIntent({ ...options, env: { OUT: '/tmp/a' } }).key).not.toBe(first.key);
   });
 
+  it('keeps identity across agent session ids but not host configuration', () => {
+    const options = {
+      argv: ['cargo', 'check', '-p', 'x'],
+      cwd: '/work/repo',
+      workspaceRoot: '/work/repo',
+    } as const;
+    const agent = (id: string, extra: Readonly<Record<string, string>> = {}) =>
+      normalizeCargoIntent({
+        ...options,
+        env: {
+          OUT: '/tmp/a',
+          CODEX_HOME: '/home/a/.codex',
+          CURSOR_PLUGIN_ROOT: '/plugins/a',
+          CLAUDE_PLUGIN_ROOT: '/plugins/a',
+          ...extra,
+          CURSOR_CONVERSATION_ID: `conversation-${id}`,
+          CURSOR_REQUEST_ID: `request-${id}`,
+          CURSOR_AGENT_STORE_FILES_DIR: `/stores/${id}/files`,
+          CURSOR_AGENT_STORE_SHARED_PATHS: `{"parent":"/stores/${id}"}`,
+          __CURSOR_SANDBOX_ENV_RESTORE: `export CURSOR_CONVERSATION_ID='conversation-${id}'`,
+          CLAUDE_CODE_SESSION_ID: `session-${id}`,
+          CLAUDE_CODE_HOST_SESSION_ID: `host-${id}`,
+          CLAUDE_CODE_MESSAGING_SOCKET: `/tmp/claude-${id}.sock`,
+          CLAUDE_CODE_MESSAGING_TOKEN: `token-${id}`,
+          CLAUDE_PID: id,
+          CODEX_THREAD_ID: `thread-${id}`,
+          CODEX_SESSION_ID: `session-${id}`,
+        },
+      });
+    const leader = agent('a').key;
+    expect(agent('b').key).toBe(leader);
+    expect(agent('b', { OUT: '/tmp/b' }).key).not.toBe(leader);
+    expect(agent('b', { CODEX_HOME: '/home/b/.codex' }).key).not.toBe(leader);
+    expect(agent('b', { CURSOR_PLUGIN_ROOT: '/plugins/b' }).key).not.toBe(leader);
+    expect(agent('b', { CLAUDE_PLUGIN_ROOT: '/plugins/b' }).key).not.toBe(leader);
+  });
+
   it('shares the estimate key across env-prefix OUT assignments that only change identity', () => {
     const a = normalizeCargoIntent({
       argv: ['env', 'OUT=/tmp/a', 'cargo', 'test', '--lib'],

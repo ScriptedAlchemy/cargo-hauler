@@ -16054,18 +16054,30 @@ const targetToolPattern = /^(?:AR|CC|CFLAGS|CXX|CXXFLAGS|LDFLAGS)_[A-Za-z0-9_-]+
  * hauler-internal settings and make jobserver flags that name the caller's
  * file descriptors (those would skip the daemon's shared FIFO).
  */ const isForwardedEnvironmentVariable = (name, value)=>!isHaulerInternalEnvironmentVariable(name) && !(jobserverFlagNames.has(name) && carriesDescriptorJobserver(value));
-const shellBookkeepingNames = new Set([
-    'OLDPWD',
-    'PWD',
-    'SHLVL',
-    '_'
-]);
-/**
- * Forwarded variables that decide request identity. The shell rewrites its
- * bookkeeping (`OLDPWD`, `SHLVL`, mise's `__MISE_*` session state) on every
- * tool call, so hashing it would give every request a fresh identity and no
- * run could ever be shared; `cwd` already carries what `PWD` would.
- */ const isIdentityEnvironmentVariable = (name, value)=>isForwardedEnvironmentVariable(name, value) && !shellBookkeepingNames.has(name) && !name.startsWith('__MISE_');
+const sessionState = {
+    names: new Set([
+        'OLDPWD',
+        'PWD',
+        'SHLVL',
+        '_',
+        '__CURSOR_SANDBOX_ENV_RESTORE',
+        'CURSOR_AGENT_STORE_FILES_DIR',
+        'CURSOR_AGENT_STORE_SHARED_PATHS',
+        'CURSOR_CONVERSATION_ID',
+        'CURSOR_REQUEST_ID',
+        'CLAUDE_CODE_HOST_SESSION_ID',
+        'CLAUDE_CODE_MESSAGING_SOCKET',
+        'CLAUDE_CODE_MESSAGING_TOKEN',
+        'CLAUDE_CODE_SESSION_ID',
+        'CLAUDE_PID',
+        'CODEX_SESSION_ID',
+        'CODEX_THREAD_ID'
+    ]),
+    prefixes: [
+        '__MISE_'
+    ]
+};
+/** Forwarded variables except shell and agent session state (`cwd` already carries `PWD`). */ const isIdentityEnvironmentVariable = (name, value)=>isForwardedEnvironmentVariable(name, value) && !sessionState.names.has(name) && !sessionState.prefixes.some((prefix)=>name.startsWith(prefix));
 /**
  * The variables that participate in the *compile surface* (coverage, target
  * dir, toolchain). Request *identity* additionally hashes every forwarded
@@ -16431,8 +16443,9 @@ const digestEnvironment = (env, prefix, include)=>{
 /** Compile-surface digest: rustc/linker knobs only. */ const digestCargoEnvironment = (env)=>digestEnvironment(env, 'cargo-hauler-env-v1\0', (name)=>affectsCompilation(name));
 /**
  * Identity digest of the environment cargo will actually see. Two requests
- * that differ in any forwarded variable (an output path a test writes, a
- * `build.rs` knob) must not share a leader (#222).
+ * that differ in a forwarded variable (an output path a test writes, a
+ * `build.rs` knob) must not share a leader (#222). Shell and agent session
+ * state is the exception: it differs on every tool call or agent.
  */ const digestForwardedEnvironment = (env)=>digestEnvironment(env, 'cargo-hauler-forwarded-env-v1\0', isIdentityEnvironmentVariable);
 const parseCargoArgv = (input)=>{
     const prefix = peelEnvPrefix(input);
@@ -155676,14 +155689,14 @@ __webpack_require__.r(__webpack_exports__);
 /* import */ var agent_bundle_event_project__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/event-project.js");
 /* import */ var _agent_bundle_runtime_lineage__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/lineage.js");
 /* import */ var agent_bundle_mcp_apps__rspack_import_5 = __webpack_require__("./.agent-bundle-virtual/mcp-hauler-2b8242f9-0.mjs");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_6 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_dashboard.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
-/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
+/* import */ var _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_6 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
+/* import */ var _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_dashboard.tsx");
+/* import */ var _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
+/* import */ var _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
+/* import */ var _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
+/* import */ var _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
+/* import */ var _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
+/* import */ var _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
 
 
 
@@ -155693,21 +155706,21 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const route0 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_6, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_6);
+const route0 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_6, 'default'), _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_6);
 
-const route1 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_7, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_7);
+const route1 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_7, 'default'), _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_7);
 
-const route2 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
+const route2 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
 
-const route3 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
+const route3 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
 
-const route4 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
+const route4 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
 
-const route5 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
+const route5 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
 
-const route6 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
+const route6 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
 
-const route7 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
+const route7 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _fast_projects_agent_plugins_cc_wt_identity_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
 const ARTIFACT_EPOCH = "cargo-hauler@0.9.4";
 const pluginRoot = (0,_agent_bundle_runtime__rspack_import_14/* .resolvePluginRoot */.E7)({
     fallback: (0,node_url__rspack_import_1.fileURLToPath)(new URL('..', import.meta.url)),
@@ -155975,7 +155988,7 @@ const routes = Object.freeze({
         name: "hauler_status"
     })
 });
-const EVENT_ARTIFACT_EPOCH = "3aa634769629bd032522e95494f5f6bbb7e77275d6d66224b96f48754a76b9d5";
+const EVENT_ARTIFACT_EPOCH = "ad6c040eae681c1d58cdc66f785cf8546616b1ee7c8482e6413939f92bb4eced";
 const EVENT_ALLOWED_TARGETS = Object.freeze([
     "claude",
     "codex",
