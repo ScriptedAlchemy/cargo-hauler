@@ -104,7 +104,7 @@ const servedSavings = (
   attachment: Attachment,
   atMs: number,
   leaderRunMs: number | null,
-  leaderStartedAtMs: number | null,
+  leader: Job,
 ): ReturnType<typeof calculateServedSavings> =>
   calculateServedSavings(
     attachment.mode,
@@ -112,7 +112,8 @@ const servedSavings = (
     attachment.createdAtMs,
     atMs,
     leaderRunMs,
-    leaderStartedAtMs,
+    leader.startedAtMs,
+    leader.estimateMs,
   );
 
 export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRuntime => {
@@ -564,7 +565,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
                     signal: null,
                     error: `compile errors in ${failed}`,
                   },
-              servedSavings(attachment, atMs, null, job.startedAtMs),
+              servedSavings(attachment, atMs, null, job),
             ),
           ),
         { discard: true },
@@ -613,7 +614,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
               atMs,
               `[cargo-hauler] released early: build finished under ${job.ticket}; --no-run has nothing left to do\n`,
               { status: 'done', exitCode: 0, signal: null, error: null },
-              servedSavings(attachment, atMs, leaderBuildMs, job.startedAtMs),
+              servedSavings(attachment, atMs, leaderBuildMs, job),
             ),
           ),
         { discard: true },
@@ -837,7 +838,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
             atMs,
             `[cargo-hauler] ${job.ticket} failed elsewhere, but your requested packages compiled cleanly\n`,
             { status: 'done', exitCode: 0, signal: null, error: null },
-            servedSavings(attachment, atMs, leaderRunMs, job.startedAtMs),
+            servedSavings(attachment, atMs, leaderRunMs, job),
           );
         }
         if (mirrors) {
@@ -847,7 +848,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
                 attachment,
                 atMs,
                 { status, exitCode, signal, error },
-                servedSavings(attachment, atMs, leaderRunMs, job.startedAtMs),
+                servedSavings(attachment, atMs, leaderRunMs, job),
               ),
             ),
           );

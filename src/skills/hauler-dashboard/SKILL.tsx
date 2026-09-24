@@ -59,6 +59,8 @@ export default () => (
         served are all-time SQLite-ledger totals. Latency compares each rider's solo estimate with the time it
         rode a started leader — waiting behind a leader that had not started yet is lane wait, not a cost of
         attaching — and negative values (the leader ran longer than the rider alone would have) are included.
+        A batch rider credits no compute avoided, because its packages compiled inside the leader's run, and
+        its solo run counts from after the leader's own estimate.
       </li>
       <li>
         <strong>Queue wait vs run:</strong> per window, total queue wait against total run time for leaders,
