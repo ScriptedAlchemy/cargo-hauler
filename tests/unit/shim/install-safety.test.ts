@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   existsSync,
@@ -156,5 +157,15 @@ describe('shim installation preserves existing link targets', () => {
     assert.equal(readFileSync(join(shim, 'keep'), 'utf8'), 'keep');
     assert.equal(readFileSync(realCargo, 'utf8'), original);
     assert.deepEqual(readdirSync(destDir), ['cargo']);
+  });
+
+  it('runs the real cargo when the embedded node is gone instead of failing every cargo with 127', () => {
+    writeFileSync(realCargo, '#!/bin/sh\necho real-cargo "$@"\n');
+    const script = join(root, 'hauler.js');
+    writeFileSync(script, '');
+    installCargoShim({ destDir, haulerArgv: [join(root, 'node-22', 'bin', 'node'), script], realCargo });
+
+    const run = spawnSync(shim, ['--version'], { encoding: 'utf8', env: { PATH: '/usr/bin:/bin' } });
+    assert.deepEqual({ status: run.status, stdout: run.stdout }, { status: 0, stdout: 'real-cargo --version\n' });
   });
 });
