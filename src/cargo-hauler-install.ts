@@ -1,48 +1,51 @@
-import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { runInstallCli } from 'agent-bundle/install';
+import { formatDoctorReport, runInstallCli, type DoctorReport } from 'agent-bundle/install';
+import { version } from 'agent-bundle/meta';
 
 import { globalHaulerArgv, haulerEntryLocation } from './internal/shim/entry-location.js';
-import { cargoShimState, findCargoShim, installCargoShim } from './internal/shim/install.js';
+import {
+  cargoShimState,
+  findCargoShim,
+  refreshCargoShim,
+  type CargoShimState,
+  type InstalledShim,
+} from './internal/shim/install.js';
+import { isRecord } from './internal/util/guards.js';
 
-const refreshHint = '`cargo-hauler-install install <host>` refreshes it.';
+type Diagnostic = DoctorReport['diagnostics'][number];
+type DriftedShim = Exclude<CargoShimState, { readonly kind: 'current' }>;
+
+const cli = { from: fileURLToPath(new URL('..', import.meta.url)), name: 'cargo-hauler-install' };
 
 /**
- * The PATH shim embeds an absolute hauler, so a Node or package upgrade leaves
- * it running the old one. `install` rewrites it to what `hauler install-shim`
- * would embed now; `doctor` reports the drift without changing anything.
+ * The PATH shim embeds an absolute node and hauler, so an upgrade leaves it
+ * on an old client that falls back to passthrough against a newer daemon.
  */
-const reconcileCargoShim = (command: 'doctor' | 'install'): number => {
+const driftedShim = (): { readonly shim: InstalledShim; readonly state: DriftedShim } | null => {
   const shim = findCargoShim();
   if (shim === null) {
-    return 0;
+    return null;
   }
-  const haulerArgv = globalHaulerArgv(
-    haulerEntryLocation(fileURLToPath(new URL('./hauler.js', import.meta.url))),
-  );
-  const state = cargoShimState(shim, haulerArgv);
-  if (state.kind === 'current') {
-    return 0;
-  }
-  if (command === 'install') {
-    installCargoShim({ destDir: dirname(shim.path), force: true, haulerArgv, realCargo: shim.realCargo });
-    process.stderr.write(
-      `Refreshed cargo shim ${shim.path}: it ran ${shim.haulerArgv.join(' ')}; it now runs ${haulerArgv.join(' ')}.\n`,
-    );
-    return 0;
-  }
+  const state = cargoShimState(shim, version);
+  return state.kind === 'current' ? null : { shim, state };
+};
+
+const shimDiagnostic = (path: string, state: DriftedShim): Diagnostic => {
+  const rest = { recovery: '`cargo-hauler-install install <host>` refreshes it.', severity: 'error', target: 'cargo-shim' } as const;
   switch (state.kind) {
     case 'missing':
-      process.stderr.write(
-        `error: cargo shim ${shim.path} runs ${state.path}, which no longer exists, so cargo does not reach the broker. ${refreshHint}\n`,
-      );
-      return 1;
+      return {
+        code: 'HAULER-SHIM-MISSING',
+        message: `cargo shim ${path} runs ${state.path}, which is missing or not executable, so cargo does not reach the broker.`,
+        ...rest,
+      };
     case 'stale':
-      process.stderr.write(
-        `error: cargo shim ${shim.path} runs ${shim.haulerArgv.join(' ')}, not the current ${haulerArgv.join(' ')}. ${refreshHint}\n`,
-      );
-      return 1;
+      return {
+        code: 'HAULER-SHIM-STALE',
+        message: `cargo shim ${path} runs ${state.entry} from ${state.version === null ? 'an unknown cargo-hauler version' : `cargo-hauler ${state.version}`}, not ${version}.`,
+        ...rest,
+      };
     default: {
       const exhaustive: never = state;
       throw new Error(`unhandled cargo shim state: ${JSON.stringify(exhaustive)}`);
@@ -50,20 +53,77 @@ const reconcileCargoShim = (command: 'doctor' | 'install'): number => {
   }
 };
 
-export const main = async (argv: readonly string[]): Promise<number> => {
-  const code = await runInstallCli(argv, {
-    from: fileURLToPath(new URL('..', import.meta.url)),
-    name: 'cargo-hauler-install',
+const refreshShim = (): number => {
+  const drifted = driftedShim();
+  if (drifted === null) {
+    return 0;
+  }
+  const { shim } = drifted;
+  try {
+    const haulerArgv = globalHaulerArgv(
+      haulerEntryLocation(fileURLToPath(new URL('./hauler.js', import.meta.url))),
+    );
+    refreshCargoShim(shim, haulerArgv);
+    process.stderr.write(
+      `Refreshed cargo shim ${shim.path}: it ran ${shim.haulerArgv.join(' ')}; it now runs ${haulerArgv.join(' ')}.\n`,
+    );
+    return 0;
+  } catch (error) {
+    process.stderr.write(
+      `error: could not refresh cargo shim ${shim.path}: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
+    return 1;
+  }
+};
+
+const parseDoctorReport = (text: string): DoctorReport | null => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  return isRecord(parsed) && Array.isArray(parsed.diagnostics) && isRecord(parsed.summary)
+    ? (parsed as unknown as DoctorReport)
+    : null;
+};
+
+/**
+ * agent-bundle's doctor takes no extra checks, so this runs it in JSON mode,
+ * adds the shim finding to that report, and prints the report in the format
+ * the caller asked for. The summary and exit code then agree with the output.
+ */
+const doctor = async (argv: readonly string[]): Promise<number> => {
+  const json = argv.includes('--json');
+  let output = '';
+  const code = await runInstallCli(json ? argv : [...argv, '--json'], {
+    ...cli,
+    stdout: (text) => {
+      output += text;
+    },
   });
-  const [command] = argv;
-  if (code === 2 || argv.includes('--help') || argv.includes('-h')) {
+  const report = parseDoctorReport(output);
+  const drifted = report === null ? null : driftedShim();
+  if (report === null || drifted === null) {
+    process.stdout.write(report === null || json ? output : formatDoctorReport(report));
     return code;
   }
-  if (command === 'install' && code === 0) {
-    return reconcileCargoShim('install');
-  }
+  const withShim: DoctorReport = {
+    ...report,
+    diagnostics: [...report.diagnostics, shimDiagnostic(drifted.shim.path, drifted.state)],
+    summary: { ...report.summary, errors: report.summary.errors + 1 },
+  };
+  process.stdout.write(json ? `${JSON.stringify(withShim)}\n` : formatDoctorReport(withShim));
+  return 1;
+};
+
+export const main = async (argv: readonly string[]): Promise<number> => {
+  const [command] = argv;
   if (command === 'doctor') {
-    return Math.max(code, reconcileCargoShim('doctor'));
+    return doctor(argv);
   }
-  return code;
+  const code = await runInstallCli(argv, cli);
+  return command === 'install' && code === 0 && !argv.includes('--help') && !argv.includes('-h')
+    ? refreshShim()
+    : code;
 };

@@ -507,10 +507,12 @@ realpath (a version-manager shim such as `mise/shims/hauler`, which resolves to
 a native binary, does not count); an npm `dist/bin/hauler.js` entry embeds
 itself only when that walk finds nothing. It refuses to run from a plugin-local
 `scripts/hauler.mjs`.
-After a Node or cargo-hauler upgrade, `cargo-hauler-install install <host>`
-rewrites an existing shim to the current `hauler` and keeps its Cargo path;
-`cargo-hauler-install doctor` fails while the shim runs another or a missing
-`hauler`.
+The shim is stale when its embedded `hauler.js` belongs to another
+cargo-hauler version, or when its embedded `node` or `hauler.js` is gone.
+`cargo-hauler-install install <host>` rewrites a stale shim, through a symlink
+if `cargo` is one, and keeps its Cargo path. `cargo-hauler-install doctor`
+reports a stale shim as an error in its report. The same version under another
+working `node` is current, so a per-directory Node pin does not flip it.
 
 ### Caller environment
 
