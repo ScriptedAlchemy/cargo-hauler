@@ -182,8 +182,8 @@ importers:
         specifier: 0.45.0
         version: 0.45.0
       '@rstest/browser':
-        specifier: 0.12.0
-        version: 0.12.0(@rstest/core@0.12.0)(playwright@1.63.0)
+        specifier: 0.12.1
+        version: 0.12.1(@rstest/core@0.12.0)(playwright@1.63.0)
       '@rstest/core':
         specifier: 0.12.0
         version: 0.12.0
@@ -794,11 +794,11 @@ packages:
       jiti:
         optional: true
 
-  '@rstest/browser@0.12.0':
-    resolution: {integrity: sha512-A8gjWIv86eCPysk5/tUXCQKWFxmFX14bvR0Tc166pfXkWu85Nazy/6ZuFCjZa/OJPeYzXvEyeVnfdISvPOE5zQ==}
+  '@rstest/browser@0.12.1':
+    resolution: {integrity: sha512-W28KhoZ4GqBC/f41HrQ5twhzNKqotPzV3Nib7fFp4gGBL7SGWClhDOmApT5Nuy5KOC7CHKuFo4B1CGn92ebeOQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
-      '@rstest/core': 0.12.0
+      '@rstest/core': 0.12.1
       playwright: ^1.49.1
     peerDependenciesMeta:
       playwright:
@@ -2111,7 +2111,7 @@ snapshots:
     optionalDependencies:
       jiti: 2.7.0
 
-  '@rstest/browser@0.12.0(@rstest/core@0.12.0)(playwright@1.63.0)':
+  '@rstest/browser@0.12.1(@rstest/core@0.12.0)(playwright@1.63.0)':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@rstest/core': 0.12.0
