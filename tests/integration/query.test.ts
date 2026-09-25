@@ -1,6 +1,9 @@
+import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { createServer, type Server, type Socket } from 'node:net';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { fileURLToPath } from 'node:url';
 
 import { version } from 'agent-bundle/meta';
 import { describe, expect, it } from 'effect-rstest';
@@ -10,6 +13,7 @@ import * as Schedule from 'effect/Schedule';
 import { resolveDaemonConfig } from '../../src/internal/daemon/config.js';
 import { pingDaemon, requestOverSocket } from '../../src/internal/client/control.js';
 import { runDaemon } from '../../src/internal/daemon/main.js';
+import { statusDaemon } from '../../src/internal/daemon/runtime/lifecycle.js';
 import { orphanedByRestartError, toStatusRow, type RequestRecord } from '../../src/internal/contracts/protocol.js';
 import { loadLastResult, loadStatusResult } from '../../src/internal/operations/inspection.js';
 import { statusResultSchema } from '../../src/internal/contracts/tool-schemas.js';
@@ -216,6 +220,8 @@ const isolatedConfig = scopedTempDir('cargo-hauler-query-').pipe(
   ),
 );
 
+const fixtureEntry = fileURLToPath(new URL('../fixtures/stale-daemon.mjs', import.meta.url));
+
 describe('loadHaulerSnapshot', () => {
   it.live('reports a stopped daemon and empty history when nothing has run', () =>
     Effect.gen(function* () {
@@ -304,6 +310,50 @@ describe('loadHaulerSnapshot', () => {
     15_000,
   );
 
+  it.live('shows a skewed daemon\'s tickets from the ledger with their recorded status, not as orphaned', () =>
+    Effect.gen(function* () {
+      const config = yield* isolatedConfig;
+      mkdirSync(config.stateDir, { recursive: true });
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const ledger = yield* scopedLedger(config);
+          const input = {
+            argv: ['cargo', 'check'],
+            cwd: '/repo',
+            host: 'cursor',
+            intentJson: null,
+            intentKey: 'k',
+            laneKey: '/repo::/repo/target',
+            session: 's',
+            targetDir: '/repo/target',
+            workspaceRoot: '/repo',
+          } as const;
+          yield* ledger.createRequest({ ...input, createdAtMs: 1_000 });
+          yield* ledger.markFinished(1, { atMs: 2_000, exitCode: 0, outputTail: 'ok\n', status: 'done' });
+          yield* ledger.createRequest({ ...input, argv: ['cargo', 'test'], createdAtMs: 500 });
+          yield* ledger.markQueued(2, 600);
+        }),
+      );
+      const fixture = yield* Effect.acquireRelease(
+        Effect.callback<ChildProcess>((resume) => {
+          const child = spawn(
+            process.execPath,
+            [fixtureEntry, config.socketPath, join(config.stateDir, 'requests.log'), 'skewed-older'],
+            { stdio: ['ignore', 'pipe', 'inherit'] },
+          );
+          child.stdout?.once('data', () => resume(Effect.succeed(child)));
+        }),
+        (child) => Effect.sync(() => child.kill('SIGTERM')),
+      );
+      const status = yield* Effect.promise((signal) => loadStatusResult({}, { config, signal }));
+      expect(statusResultSchema.parse(status)).toMatchObject({ daemon: 'skewed', pid: fixture.pid });
+      expect(status.active).toMatchObject([{ status: 'queued', ticket: 'cc-2' }]);
+      expect(status.recent.map((row) => [row.ticket, row.status])).toEqual([['cc-1', 'done'], ['cc-2', 'queued']]);
+      const last = yield* Effect.promise((signal) => loadLastResult({ config, signal }));
+      expect(last).toMatchObject({ daemon: 'skewed', request: { outputTail: 'ok\n', status: 'done', ticket: 'cc-1' } });
+      expect(yield* statusDaemon(config)).toMatchObject({ pid: fixture.pid, previousPid: fixture.pid, report: null, running: true });
+    }), 15_000);
+
   it.live('reads the ledger when the daemon is down', () =>
     Effect.gen(function* () {
       const config = yield* isolatedConfig;
@@ -345,6 +395,34 @@ describe('loadHaulerSnapshot', () => {
       expect(statusResultSchema.parse(status).recent[0]).not.toHaveProperty('outputTail');
       const last = yield* Effect.promise((signal) => loadLastResult({ config, signal }));
       expect(last.request?.outputTail).toBe('Finished dev profile\n');
+    }));
+
+  it.live('reads a ledger that predates a column migration instead of crashing on the missing column', () =>
+    Effect.gen(function* () {
+      const config = yield* isolatedConfig;
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const ledger = yield* scopedLedger(config);
+          yield* ledger.createRequest({
+            argv: ['cargo', 'check'],
+            createdAtMs: 1_000,
+            cwd: '/repo',
+            host: 'cursor',
+            intentJson: null,
+            intentKey: 'k',
+            laneKey: '/repo::/repo/target',
+            session: 's',
+            targetDir: '/repo/target',
+            workspaceRoot: '/repo',
+          });
+        }),
+      );
+      const older = new DatabaseSync(config.databasePath);
+      older.exec('ALTER TABLE requests DROP COLUMN hold_stop');
+      older.close();
+      const snapshot = yield* loadHaulerSnapshot({ config });
+      expect(snapshot.daemon).toBe('stopped');
+      expect(snapshot.recent.map((row) => [row.ticket, row.status])).toEqual([['cc-1', 'orphaned']]);
     }));
 
   it.live('keeps ESC out of structured operation results even under inherited FORCE_COLOR', () =>

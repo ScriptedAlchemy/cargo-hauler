@@ -347,7 +347,7 @@ own `-j` flag or `CARGO_BUILD_JOBS` always wins over both.
 | Persistence | Tickets, output tails, timings, outcomes, and savings are stored in SQLite; every leader run's whole combined output is kept on disk as `<state dir>/tickets/<ticket>.log`. |
 | Caller output and status | Output streams to attached callers; late callers receive buffered replay. After 30 seconds without output, the client emits a progress heartbeat every 15 seconds with lane queue position, the lane-head ticket, and an aggregate wait ETA. |
 | Wait escalation | A queued request waiting longer than the larger of twice its own estimate and ten minutes is flagged as delayed; running jobs silent for more than five minutes show a quiet-duration hint. A live head past three times its estimate that is still burning CPU or printing is flagged `estimateState: overrun` (its followers see `queue.headEstimateState`) and contributes its history p90 remaining — never less than one more estimate's worth — to the queue ETA instead of zero. A running job past three times its estimate whose process tree has burned no CPU and printed nothing for ten minutes is flagged `stalled`; only a stalled job whose submitting connection is gone is killed automatically. |
-| Daemon status | `running`, `stopped`, or `unresponsive`: a socket that exists but does not answer within its budget is reported as unresponsive, never as stopped. |
+| Daemon status | `running`, `stopped`, `unresponsive`, or `skewed`: a socket that exists but does not answer within its budget is reported as unresponsive, never as stopped; a daemon of another release whose status report this client cannot read is reported as skewed, with its pid, version, and the command that replaces it. |
 
 ### Tickets and long-running requests
 
@@ -765,9 +765,10 @@ there; state files keep the permissions the filesystem gives them.
   `hauler_await` read a stopped daemon's tickets from the ledger, and fail
   loudly with the errno when a live daemon's socket cannot be opened instead
   of reporting a ticket as not found; `hauler_status`, `hauler_log`, and
-  `hauler_last` read the ledger with the daemon marked `stopped` or
-  `unresponsive`. Reads never request daemon shutdown. They use an older
-  or newer daemon when its wire-protocol identity is compatible; a truly
+  `hauler_last` read the ledger with the daemon marked `stopped`,
+  `unresponsive`, or `skewed`. Reads never request daemon shutdown. They use
+  an older or newer daemon when its wire-protocol identity is compatible; one
+  whose status report this client cannot read is `skewed`, and a truly
   incompatible daemon is reported with its pid and version. Submissions and
   mutations from a client older than the daemon — a session still on a
   previous plugin — keep the directional `DaemonNewer` behavior and never

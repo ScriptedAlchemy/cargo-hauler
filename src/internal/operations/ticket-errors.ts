@@ -28,6 +28,7 @@ export const infraFailure = (error: TicketSocketError): Error => {
     case 'DaemonIncompatible':
     case 'DaemonNewer':
     case 'DaemonNotReplaced':
+    case 'DaemonRecordUnreadable':
       return new Error(error.message);
     case 'DaemonReplacementFailed':
       return new Error(

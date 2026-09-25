@@ -1,4 +1,4 @@
-import { appendFileSync, mkdirSync, rmSync } from 'node:fs';
+import { appendFileSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { dirname } from 'node:path';
 
@@ -10,10 +10,13 @@ if (
     mode !== 'busy-older' &&
     mode !== 'incompatible-older' &&
     mode !== 'newer' &&
-    mode !== 'newer-compatible')
+    mode !== 'newer-compatible' &&
+    mode !== 'skewed-older' &&
+    mode !== 'skewed-same' &&
+    mode !== 'skewed-newer')
 ) {
   throw new Error(
-    'usage: stale-daemon.mjs <socket> <log> <idle-older|busy-older|incompatible-older|newer|newer-compatible>',
+    'usage: stale-daemon.mjs <socket> <log> <idle-older|busy-older|incompatible-older|newer|newer-compatible|skewed-older|skewed-same|skewed-newer>',
   );
 }
 
@@ -24,11 +27,29 @@ const log = (message) => {
   appendFileSync(logPath, `${message}\n`);
 };
 
-const daemonVersion = mode.startsWith('newer')
-  ? '999.0.0'
-  : mode === 'incompatible-older'
-    ? '0.6.0'
-    : '0.7.1';
+const daemonVersion = mode === 'skewed-same'
+  ? JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version
+  : mode.startsWith('newer') || mode === 'skewed-newer'
+    ? '999.0.0'
+    : mode === 'incompatible-older'
+      ? '0.6.0'
+      : '0.7.1';
+// 0.9.7 reported kache readiness as `available`; 0.9.8 reads `indexState`.
+const olderKache = {
+  available: true,
+  distinctCrates: 0,
+  entryCount: 0,
+  eventsFreshMs: null,
+  indexSizeBytes: 0,
+  pressure: {
+    gc: { kind: 'unavailable', reason: 'missing' },
+    keyTiming: null,
+    limit: { detail: '', kind: 'unknown', reason: 'not-configured' },
+    storeBytes: null,
+  },
+  recentHeartbeatRoots: [],
+  topCrates: [],
+};
 const emptyHistogram = {
   buckets: [],
   count: 0,
@@ -38,7 +59,7 @@ const emptyHistogram = {
 };
 const statusReport = () => ({
   active: [],
-  kache: null,
+  kache: mode.startsWith('skewed') ? olderKache : null,
   lanes:
     mode === 'busy-older'
       ? [
@@ -117,6 +138,12 @@ const server = createServer((socket) => {
           report: statusReport(),
           type: 'status-result',
         })}\n`);
+      } else if (message.type === 'result' && mode.startsWith('skewed')) {
+        socket.write(`${JSON.stringify({
+          id: message.id,
+          request: { status: 'done', ticket: message.ticket },
+          type: 'result-result',
+        })}\n`);
       } else if (message.type === 'exec') {
         socket.write(`${JSON.stringify({
           id: message.id,
@@ -139,7 +166,7 @@ const server = createServer((socket) => {
           })}\n`);
         }
       } else if (message.type === 'shutdown') {
-        if (mode === 'idle-older') {
+        if (mode === 'idle-older' || mode === 'skewed-older') {
           socket.write(`${JSON.stringify({ id: message.id, type: 'shutting-down' })}\n`);
           server.close(() => process.exit(0));
         } else {

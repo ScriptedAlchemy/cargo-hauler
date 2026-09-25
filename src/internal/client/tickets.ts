@@ -1,5 +1,6 @@
 import { basename } from 'node:path';
 
+import { version } from 'agent-bundle/meta';
 import * as Data from 'effect/Data';
 import * as Effect from 'effect/Effect';
 
@@ -39,6 +40,19 @@ export class DaemonRejectedError extends Data.TaggedError('DaemonRejected')<{
   readonly message: string;
 }> {}
 
+/** A daemon of another release or build sent a ticket record this client's schema does not describe. */
+export class DaemonRecordUnreadableError extends Data.TaggedError('DaemonRecordUnreadable')<{
+  readonly socketPath: string;
+  readonly message: string;
+}> {
+  constructor(fields: { readonly socketPath: string }) {
+    super({
+      ...fields,
+      message: `cargo-hauler daemon at ${fields.socketPath} sent a ticket record this client (${version}) cannot read; it is another release or build, and \`hauler status\` names it with the command that replaces it`,
+    });
+  }
+}
+
 /**
  * Infrastructure failures stay typed in this library: a daemon that is down
  * is not the same as a ticket that does not exist. Callers convert to
@@ -49,16 +63,23 @@ export type TicketSocketError =
   | ControlTimeoutError
   | DaemonUnreachableError
   | EnsureDaemonError
-  | DaemonRejectedError;
+  | DaemonRejectedError
+  | DaemonRecordUnreadableError;
 
 const nullableRecordSchema = requestRecordSchema.nullable();
 
 /**
- * The record on a `result-result`/`await-result` reply. The daemon passed the
- * wire-protocol gate, so a row that does not fit the schema is a defect.
+ * The record on a `result-result`/`await-result` reply. The wire-protocol gate
+ * admits other releases, and a release can reshape the record, so a record
+ * that does not fit is a typed failure rather than a defect.
  */
-const readRecord = (request: unknown): Effect.Effect<RequestRecord | null> =>
-  Effect.sync(() => nullableRecordSchema.parse(request));
+const readRecord = (
+  request: unknown,
+  socketPath: string,
+): Effect.Effect<RequestRecord | null, DaemonRecordUnreadableError> => {
+  const decoded = nullableRecordSchema.safeParse(request);
+  return decoded.success ? Effect.succeed(decoded.data) : Effect.fail(new DaemonRecordUnreadableError({ socketPath }));
+};
 
 /**
  * One request, one answer: resolves on the reply carrying this request's id,
@@ -112,7 +133,7 @@ export const fetchTicket = (
     { id: shortId(), ticket, type: 'result' },
     2_000,
     (message): message is ResultResultMessage => message.type === 'result-result',
-  ).pipe(Effect.flatMap((result) => readRecord(result?.request ?? null)));
+  ).pipe(Effect.flatMap((result) => readRecord(result?.request ?? null, config.socketPath)));
 
 /**
  * Ask the daemon to stop a ticket: a queued job is dropped, a running leader
@@ -266,7 +287,7 @@ export const awaitTicket = (
     (message): message is AwaitResultMessage => message.type === 'await-result',
   ).pipe(
     Effect.flatMap((result) =>
-      readRecord(result?.request ?? null).pipe(
+      readRecord(result?.request ?? null, config.socketPath).pipe(
         Effect.map((request) => ({ request, timedOut: result?.timedOut ?? true })),
       ),
     ),

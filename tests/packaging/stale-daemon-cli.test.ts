@@ -57,7 +57,15 @@ const run = (
 const startStaleDaemon = (
   socketPath: string,
   logPath: string,
-  mode: 'idle-older' | 'busy-older' | 'incompatible-older' | 'newer' | 'newer-compatible',
+  mode:
+    | 'idle-older'
+    | 'busy-older'
+    | 'incompatible-older'
+    | 'newer'
+    | 'newer-compatible'
+    | 'skewed-older'
+    | 'skewed-same'
+    | 'skewed-newer',
 ): Promise<ChildProcess> =>
   new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [fixtureEntry, socketPath, logPath, mode], {
@@ -192,6 +200,92 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
       expect(submitted.code).toBe(0);
       expect(submitted.stderr).toContain('(999.0.0) is newer than this client');
       expect(requests(logPath)).toEqual(['ping', 'status', 'ping']);
+    } finally {
+      removeTestPath(root);
+    }
+  }, 30_000);
+
+  const skewLine = (release: string, daemonVersion: string, pid: number, fix: string): string =>
+    `cargo-hauler daemon pid ${pid} (${daemonVersion}) is ${release} whose status report this client (${version}) cannot read; showing tickets as the ledger recorded them. ${fix}`;
+
+  it('names a same-protocol older daemon whose status report this client cannot read, on every read surface', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-skewed-'));
+    const logPath = join(root, 'requests.log');
+    const env = fixtureEnv(root);
+    try {
+      const daemon = await startStaleDaemon(join(env.CARGO_HAULER_STATE_DIR, 'daemon.sock'), logPath, 'skewed-older');
+      const line = skewLine(
+        'an older release',
+        '0.7.1',
+        daemon.pid ?? -1,
+        'The next `hauler exec` or `hauler daemon start` replaces it once it is idle; `hauler daemon restart` replaces it now and ends its in-flight tickets.',
+      );
+      const status = await run(haulerEntry, ['status', '--json'], env);
+      expect(status).toMatchObject({ code: 0, stderr: '' });
+      expect(JSON.parse(status.stdout)).toMatchObject({ daemon: 'skewed', lanes: [], operation: 'status', pid: daemon.pid });
+      expect(JSON.parse(status.stdout).summary.split('\n', 1)[0]).toBe(line);
+      const text = await run(haulerEntry, ['status'], env);
+      expect(text).toMatchObject({ code: 0, stderr: '' });
+      expect(text.stdout.split('\n', 1)[0]).toBe(line);
+      const daemonStatus = await run(haulerEntry, ['daemon', 'status'], env);
+      expect(daemonStatus).toMatchObject({ code: 1, stderr: '' });
+      expect(JSON.parse(daemonStatus.stdout)).toMatchObject({ message: line, pid: daemon.pid, report: null, running: true });
+      const log = await run(haulerEntry, ['log'], env);
+      expect(log).toMatchObject({ code: 0, stderr: '' });
+      expect(log.stdout.split('\n', 1)[0]).toBe(line);
+      const last = await run(haulerEntry, ['last', '--json'], env);
+      expect(last.code).toBe(0);
+      expect(JSON.parse(last.stdout)).toMatchObject({ daemon: 'skewed', request: null });
+      expect(requests(logPath)).toEqual(['ping', 'status', 'ping', 'status', 'ping', 'status', 'ping', 'status', 'ping', 'status']);
+    } finally {
+      removeTestPath(root);
+    }
+  }, 30_000);
+
+  it('names a skewed daemon of the same release and of a newer release with the fix that applies', async () => {
+    for (const [mode, release, daemonVersion, fix] of [
+      ['skewed-same', 'another build of this release', version, '`hauler daemon restart` replaces it and ends its in-flight tickets.'],
+      ['skewed-newer', 'a newer release', '999.0.0', 'Upgrade this install, or restart the session so its hooks and MCP server come from the current plugin.'],
+    ] as const) {
+      const root = mkdtempSync(join(tmpdir(), `ch-stale-${mode}-`));
+      const env = fixtureEnv(root);
+      try {
+        const daemon = await startStaleDaemon(join(env.CARGO_HAULER_STATE_DIR, 'daemon.sock'), join(root, 'requests.log'), mode);
+        const status = await run(haulerEntry, ['status', '--json'], env);
+        expect(status.code).toBe(0);
+        expect(JSON.parse(status.stdout).summary.split('\n', 1)[0]).toBe(skewLine(release, daemonVersion, daemon.pid ?? -1, fix));
+      } finally {
+        removeTestPath(root);
+      }
+    }
+  }, 60_000);
+
+  it('names a ticket record the daemon sent that this client cannot read, instead of dumping the schema error', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-skewed-result-'));
+    const env = fixtureEnv(root);
+    try {
+      const socketPath = join(env.CARGO_HAULER_STATE_DIR, 'daemon.sock');
+      await startStaleDaemon(socketPath, join(root, 'requests.log'), 'skewed-older');
+      const result = await run(haulerEntry, ['result', 'cc-old'], env);
+      expect(result.code).toBe(1);
+      expect(result.stderr.trim()).toBe(
+        `[render-failed] cargo-hauler daemon at ${socketPath} sent a ticket record this client (${version}) cannot read; it is another release or build, and \`hauler status\` names it with the command that replaces it`,
+      );
+    } finally {
+      removeTestPath(root);
+    }
+  }, 30_000);
+
+  it('still replaces an idle skewed older daemon before submitting exec', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ch-stale-skewed-exec-'));
+    const logPath = join(root, 'requests.log');
+    const env = fixtureEnv(root);
+    try {
+      await startStaleDaemon(join(env.CARGO_HAULER_STATE_DIR, 'daemon.sock'), logPath, 'skewed-older');
+      const submitted = await run(haulerEntry, ['exec', '--bg', '--', 'cargo', 'check'], env);
+      expect(submitted.code).toBe(0);
+      expect(requests(logPath)).toEqual(['ping', 'status', 'shutdown']);
+      await run(haulerEntry, ['daemon', 'stop'], env);
     } finally {
       removeTestPath(root);
     }

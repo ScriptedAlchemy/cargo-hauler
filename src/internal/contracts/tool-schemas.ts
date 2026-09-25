@@ -35,8 +35,12 @@ const requestStatusSchema = z.enum(requestStatuses);
 
 const attachModeSchema = z.enum(attachModes);
 const savedComputeSourceSchema = z.enum(['exact', 'estimate']);
-/** `unresponsive`: the socket exists and a process holds it, but it did not answer in time. */
-const daemonStatusSchema = z.enum(['running', 'stopped', 'unresponsive']);
+/**
+ * `unresponsive`: the socket exists and a process holds it, but it did not answer in time.
+ * `skewed`: a live daemon of another release or build answered with a status report this
+ * client cannot decode; tickets come from the ledger with their recorded status.
+ */
+const daemonStatusSchema = z.enum(['running', 'stopped', 'unresponsive', 'skewed']);
 export type DaemonStatus = z.infer<typeof daemonStatusSchema>;
 
 const queueContextSchema = z.object({
