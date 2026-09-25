@@ -167,7 +167,7 @@ const offerBehindPeer = (options: ConstructorParameters<typeof ConnectionOutputB
 
 const expectTruncatedPrefix = (result: Effect.Success<ReturnType<typeof offerBehindPeer>>): void => {
   const sent = Array.from({ length: 100 }, (_, sequence) => sentText(sequence));
-  const dropped = /^\[cargo-hauler\] output truncated: client fell behind; (\d+) bytes dropped; full output: hauler result cc-1 --full\n$/u.exec(
+  const dropped = /^\[cargo-hauler\] output truncated: client fell behind; (\d+) bytes dropped; stored result: hauler result cc-1\n$/u.exec(
     result.notice ?? '',
   );
   expect(result.types[0]).toBe('started');

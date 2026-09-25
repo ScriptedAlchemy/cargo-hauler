@@ -750,13 +750,13 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
         yield* Ref.set(job.state, 'running');
         const waitMs = runStartedAtMs - job.queuedAtMs;
         yield* Effect.annotateCurrentSpan('waitMs', waitMs);
-        yield* guarded(job.callbacks.onStarted({ ticket: job.ticket, waitMs }));
+        yield* guarded(job.callbacks.onStarted({ ticket: job.ticket, waitMs, outputPath }));
         yield* Effect.forEach(
           queuedAttachments,
           (attachment) =>
             Effect.gen(function* () {
               yield* ledger.markRunning(attachment.id, runStartedAtMs, undefined, outputPath);
-              const won = yield* attachments.notifyAttachmentStarted(attachment, runStartedAtMs);
+              const won = yield* attachments.notifyAttachmentStarted(job, attachment, runStartedAtMs);
               if (won) {
                 // The winner attached while the leader was queued: no output
                 // exists yet, so it goes live directly (no replay needed).

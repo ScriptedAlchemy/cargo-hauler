@@ -547,9 +547,10 @@ export const ticketInputSchema = z
   .strict();
 
 /**
- * `hauler_result` alone takes `full`: the whole on-disk output log as the
- * document body. `hauler_await` keeps `ticketInputSchema` — a wait that ends
- * in a full log would blow the rendered-route budget for nothing.
+ * `hauler_result` alone takes `full`: the on-disk output log (its last
+ * 768 KiB when larger) as the document body. `hauler_await` keeps
+ * `ticketInputSchema` — a wait that ends in a full log would blow the
+ * rendered-route budget for nothing.
  */
 export const resultInputSchema = z
   .object({
@@ -557,7 +558,7 @@ export const resultInputSchema = z
     full: z
       .boolean()
       .optional()
-      .describe('Render the whole on-disk output log instead of the stored tail'),
+      .describe('Render the on-disk output log, its last 768 KiB when larger, instead of the stored tail'),
   })
   .strict();
 

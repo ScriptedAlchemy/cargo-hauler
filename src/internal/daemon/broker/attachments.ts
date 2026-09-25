@@ -42,13 +42,18 @@ export interface AttachmentRuntime {
     data: Uint8Array,
     audience?: ReplayAudience,
   ) => Effect.Effect<void>;
-  readonly notifyAttachmentStarted: (attachment: Attachment, atMs: number) => Effect.Effect<boolean>;
+  readonly notifyAttachmentStarted: (
+    leader: Job,
+    attachment: Attachment,
+    atMs: number,
+  ) => Effect.Effect<boolean>;
   readonly finishAttachment: (
     attachment: Attachment,
     atMs: number,
     exit: Omit<ExitInfo, 'ticket' | 'waitMs' | 'runMs'>,
   ) => Effect.Effect<void>;
   readonly finishAttachmentWithNote: (
+    leader: Job,
     attachment: Attachment,
     atMs: number,
     note: string,
@@ -266,6 +271,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
    * live chunks can never interleave.
    */
   const notifyAttachmentStarted = (
+    leader: Job,
     attachment: Attachment,
     atMs: number,
   ): Effect.Effect<boolean> =>
@@ -283,6 +289,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
           attachment.callbacks.onStarted({
             ticket: attachment.ticket,
             waitMs: Math.max(0, atMs - attachment.createdAtMs),
+            outputPath: leader.log?.path ?? null,
           }),
         );
       }
@@ -344,6 +351,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
 
   /** Deliver the at-most-once start notice plus one hauler stderr note, then finish. */
   const finishAttachmentWithNote = (
+    leader: Job,
     attachment: Attachment,
     atMs: number,
     note: string,
@@ -351,7 +359,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
     savings: ServedSavings | null = null,
   ): Effect.Effect<void> =>
     Effect.gen(function* () {
-      yield* notifyAttachmentStarted(attachment, atMs);
+      yield* notifyAttachmentStarted(leader, attachment, atMs);
       const noteData = Buffer.from(note);
       const encodedNote = noteData.toString('base64');
       yield* Effect.sync(() => attachment.tail.push(noteData));
@@ -552,6 +560,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
           settlementStep(
             `early release (${attachment.ticket})`,
             finishAttachmentWithNote(
+              job,
               attachment,
               atMs,
               failed === null
@@ -610,6 +619,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
           settlementStep(
             `build-finished release (${attachment.ticket})`,
             finishAttachmentWithNote(
+              job,
               attachment,
               atMs,
               `[cargo-hauler] released early: build finished under ${job.ticket}; --no-run has nothing left to do\n`,
@@ -672,7 +682,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
           .markBuildFinished(attachment.id, leader.buildFinishedAtMs)
           .pipe(Effect.ignoreCause);
       }
-      const won = yield* notifyAttachmentStarted(attachment, leader.startedAtMs);
+      const won = yield* notifyAttachmentStarted(leader, attachment, leader.startedAtMs);
       if (won) {
         yield* replayThenGoLive(leader, attachment);
       }
@@ -834,6 +844,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
                 batchFailureOwned(job.intent, composite, attachment.intent))));
         if (provenDespiteFailure) {
           return finishAttachmentWithNote(
+            job,
             attachment,
             atMs,
             `[cargo-hauler] ${job.ticket} failed elsewhere, but your requested packages compiled cleanly\n`,
@@ -842,7 +853,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
           );
         }
         if (mirrors) {
-          return notifyAttachmentStarted(attachment, atMs).pipe(
+          return notifyAttachmentStarted(job, attachment, atMs).pipe(
             Effect.andThen(
               finishAttachment(
                 attachment,

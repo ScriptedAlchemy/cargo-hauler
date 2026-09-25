@@ -44,6 +44,8 @@ export interface SubmitInput {
 export interface StartedInfo {
   readonly ticket: string;
   readonly waitMs: number;
+  /** The run's full output log (a rider's is its leader's); null when none is kept. */
+  readonly outputPath: string | null;
 }
 
 export interface OutputInfo {

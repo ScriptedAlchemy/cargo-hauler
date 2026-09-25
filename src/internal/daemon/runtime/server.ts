@@ -87,9 +87,15 @@ export class ConnectionOutputBuffer {
   #bufferedOutputBytes = 0;
   #droppedPayloadBytes = 0;
   #truncation: { readonly message: OutputMessage; readonly outputBytes: number } | null = null;
+  readonly #logPaths = new Map<string, string | null>();
 
   constructor(options: ConnectionOutputBufferOptions = defaultOutputBufferOptions) {
     this.#options = options;
+  }
+
+  /** The ticket's full output log, which a truncation notice names. */
+  recordLogPath(ticket: string, path: string | null): void {
+    this.#logPaths.set(ticket, path);
   }
 
   get bufferedOutputBytes(): number {
@@ -215,10 +221,12 @@ export class ConnectionOutputBuffer {
   }
 
   #renderNotice(message: OutputMessage): OutputMessage {
+    const path = this.#logPaths.get(message.ticket) ?? null;
+    const rest = path === null ? `stored result: hauler result ${message.ticket}` : `full log: ${path}`;
     return {
       ...message,
       data: Buffer.from(
-        `[cargo-hauler] output truncated: client fell behind; ${this.#droppedPayloadBytes} bytes dropped; full output: hauler result ${message.ticket} --full\n`,
+        `[cargo-hauler] output truncated: client fell behind; ${this.#droppedPayloadBytes} bytes dropped; ${rest}\n`,
       ).toString('base64'),
     };
   }
@@ -320,7 +328,9 @@ export const makeConnectionHandler =
               return true;
             }),
           onStarted: (info) =>
-            send({ type: 'started', id, ticket: info.ticket, waitMs: info.waitMs }),
+            Effect.sync(() => outbound.recordLogPath(info.ticket, info.outputPath)).pipe(
+              Effect.andThen(send({ type: 'started', id, ticket: info.ticket, waitMs: info.waitMs })),
+            ),
           onOutput: (info) =>
             send({
               type: 'output',
@@ -396,16 +406,20 @@ export const makeConnectionHandler =
               callbacks: streamCallbacks(message.id, false),
               fromByte: message.fromByte ?? 0,
               onActive: (info) =>
-                send({
-                  type: 'reattach-result',
-                  id: message.id,
-                  ticket: message.ticket,
-                  outcome: 'active',
-                  state: info.state,
-                  ...(info.attachedTo === undefined ? {} : { attachedTo: info.attachedTo }),
-                  missedBytes: info.missedBytes,
-                  outputPath: info.outputPath,
-                }),
+                Effect.sync(() => outbound.recordLogPath(message.ticket, info.outputPath)).pipe(
+                  Effect.andThen(
+                    send({
+                      type: 'reattach-result',
+                      id: message.id,
+                      ticket: message.ticket,
+                      outcome: 'active',
+                      state: info.state,
+                      ...(info.attachedTo === undefined ? {} : { attachedTo: info.attachedTo }),
+                      missedBytes: info.missedBytes,
+                      outputPath: info.outputPath,
+                    }),
+                  ),
+                ),
             });
             switch (outcome.kind) {
               case 'active':
