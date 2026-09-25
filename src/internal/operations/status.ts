@@ -21,7 +21,12 @@ import type {
   DaemonNewerError,
   DaemonNotReplacedError,
 } from '../client/shutdown.js';
-import { createLedgerApi, openLedgerDatabase, openLedgerDatabaseReadOnly } from '../storage/ledger.js';
+import {
+  createLedgerApi,
+  type LedgerApi,
+  openLedgerDatabase,
+  openLedgerDatabaseReadOnly,
+} from '../storage/ledger.js';
 import { isOrphanedByRestart, orphanedByRestartError, toStatusRow } from '../contracts/protocol.js';
 import type {
   AttachmentSavingsReport,
@@ -302,8 +307,8 @@ export const loadLedgerRequest = (
   }
   return Effect.scoped(
     Effect.gen(function* () {
-      const db = yield* acquireSnapshotDb(config.databasePath);
-      return yield* createLedgerApi(db).getRequestByTicket(ticket);
+      const ledger = yield* acquireSnapshotLedger(config.databasePath);
+      return yield* ledger.getRequestByTicket(ticket);
     }),
   );
 };
@@ -334,18 +339,29 @@ const emptyStopped = (config: DaemonConfigShape): HaulerSnapshot =>
     null,
   );
 
+const openSnapshotLedger = (open: (databasePath: string) => DatabaseSync, databasePath: string) => {
+  const db = open(databasePath);
+  try {
+    return { db, ledger: createLedgerApi(db) };
+  } catch (error) {
+    db.close();
+    throw error;
+  }
+};
+
 /**
- * Scoped ledger handle for stopped-daemon reads: read-only when possible,
+ * Scoped ledger for reads without a daemon report: read-only when possible,
  * falling back to the writable opener for WAL recovery after an unclean stop
- * or a ledger predating a column migration. Always closed by the scope.
+ * or a ledger predating a column migration (its statements fail to prepare).
+ * Always closed by the scope.
  */
-const acquireSnapshotDb = (databasePath: string): Effect.Effect<DatabaseSync, never, Scope.Scope> =>
+const acquireSnapshotLedger = (databasePath: string): Effect.Effect<LedgerApi, never, Scope.Scope> =>
   Effect.acquireRelease(
-    Effect.try(() => openLedgerDatabaseReadOnly(databasePath)).pipe(
-      Effect.catch(() => Effect.sync(() => openLedgerDatabase(databasePath))),
+    Effect.try(() => openSnapshotLedger(openLedgerDatabaseReadOnly, databasePath)).pipe(
+      Effect.catch(() => Effect.sync(() => openSnapshotLedger(openLedgerDatabase, databasePath))),
     ),
-    (db) => Effect.sync(() => db.close()),
-  );
+    ({ db }) => Effect.sync(() => db.close()),
+  ).pipe(Effect.map(({ ledger }) => ledger));
 
 const fromLedger = (
   config: DaemonConfigShape,
@@ -357,8 +373,7 @@ const fromLedger = (
   }
   return Effect.scoped(
     Effect.gen(function* () {
-      const db = yield* acquireSnapshotDb(config.databasePath);
-      const ledger = createLedgerApi(db);
+      const ledger = yield* acquireSnapshotLedger(config.databasePath);
       const recent = (yield* ledger.recentRequests(recentLimit)).map((record) =>
         ledgerStatusRow(record, daemon));
       const active =

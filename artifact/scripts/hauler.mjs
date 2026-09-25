@@ -20862,8 +20862,8 @@ const fromReport = (report, config)=>withReport({
         return Effect.succeed(null);
     }
     return Effect.scoped(Effect.gen(function*() {
-        const db = yield* acquireSnapshotDb(config.databasePath);
-        return yield* createLedgerApi(db).getRequestByTicket(ticket);
+        const ledger = yield* acquireSnapshotLedger(config.databasePath);
+        return yield* ledger.getRequestByTicket(ticket);
     }));
 };
 const loadLedgerTicket = (ticket, daemon, config)=>loadLedgerRequest(ticket, config).pipe(Effect.map((record)=>record === null ? null : ledgerRequestRecord(displayRequestRecord(record), daemon)));
@@ -20879,18 +20879,30 @@ const emptyStopped = (config)=>withReport({
         stateRoot: config.stateDir,
         summary: stoppedSummary(0)
     }, null);
+const openSnapshotLedger = (open, databasePath)=>{
+    const db = open(databasePath);
+    try {
+        return {
+            db,
+            ledger: (0,_storage_ledger_js__rspack_import_6/* .createLedgerApi */.Ax)(db)
+        };
+    } catch (error) {
+        db.close();
+        throw error;
+    }
+};
 /**
- * Scoped ledger handle for stopped-daemon reads: read-only when possible,
+ * Scoped ledger for reads without a daemon report: read-only when possible,
  * falling back to the writable opener for WAL recovery after an unclean stop
- * or a ledger predating a column migration. Always closed by the scope.
- */ const acquireSnapshotDb = (databasePath)=>effect_Effect__rspack_import_13/* .acquireRelease */.Q56(effect_Effect__rspack_import_13/* ["try"] */.SvU(()=>(0,_storage_ledger_js__rspack_import_6/* .openLedgerDatabaseReadOnly */.Xo)(databasePath)).pipe(effect_Effect__rspack_import_13/* ["catch"] */.MfU(()=>effect_Effect__rspack_import_13/* .sync */.OH5(()=>(0,_storage_ledger_js__rspack_import_6/* .openLedgerDatabase */.p)(databasePath)))), (db)=>effect_Effect__rspack_import_13/* .sync */.OH5(()=>db.close()));
+ * or a ledger predating a column migration (its statements fail to prepare).
+ * Always closed by the scope.
+ */ const acquireSnapshotLedger = (databasePath)=>effect_Effect__rspack_import_13/* .acquireRelease */.Q56(effect_Effect__rspack_import_13/* ["try"] */.SvU(()=>openSnapshotLedger(_storage_ledger_js__rspack_import_6/* .openLedgerDatabaseReadOnly */.Xo, databasePath)).pipe(effect_Effect__rspack_import_13/* ["catch"] */.MfU(()=>effect_Effect__rspack_import_13/* .sync */.OH5(()=>openSnapshotLedger(_storage_ledger_js__rspack_import_6/* .openLedgerDatabase */.p, databasePath)))), ({ db })=>effect_Effect__rspack_import_13/* .sync */.OH5(()=>db.close())).pipe(effect_Effect__rspack_import_13/* .map */.TjK(({ ledger })=>ledger));
 const fromLedger = (config, recentLimit, daemon = 'stopped')=>{
     if (!(0,node_fs__rspack_import_0.existsSync)(config.databasePath)) {
         return effect_Effect__rspack_import_13/* .succeed */.PyW(emptyStopped(config));
     }
     return effect_Effect__rspack_import_13/* .scoped */.P1j(effect_Effect__rspack_import_13/* .gen */.JkU(function*() {
-        const db = yield* acquireSnapshotDb(config.databasePath);
-        const ledger = (0,_storage_ledger_js__rspack_import_6/* .createLedgerApi */.Ax)(db);
+        const ledger = yield* acquireSnapshotLedger(config.databasePath);
         const recent = (yield* ledger.recentRequests(recentLimit)).map((record)=>ledgerStatusRow(record, daemon));
         const active = daemon === 'skewed' ? (yield* ledger.activeStatusRequests()).map((record)=>ledgerStatusRow(record, daemon)) : [];
         const savings = yield* ledger.attachmentSavings();
