@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.8
+
+### Patch Changes
+
+- 1c3691f: Build against agent-bundle main (`1d661b4`). The `hauler_*` MCP tools are `defineTool` definitions, which agent-bundle now requires. Tool names, inputs, results, and `hauler` CLI commands are unchanged. Built artifacts no longer embed the checkout path, so the same commit builds to the same bytes in any directory.
+- 1ba9a1d: The daemon scans the kache index in a worker thread, so a large index no longer stalls `hauler status`, ticket reads, or pings while it refreshes. A 4.5 GB index held the socket for about 590 ms per refresh; it now answers within a few milliseconds. The kache section names why the index could not be read (`not detected`, `index unreadable`, or `index read timed out` after 30 s) instead of reporting every failure as not detected.
+
 ## 0.9.7
 
 ### Patch Changes

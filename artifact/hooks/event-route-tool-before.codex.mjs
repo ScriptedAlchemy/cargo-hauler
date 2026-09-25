@@ -25301,7 +25301,7 @@ const prepareRouteInvocation = async (nativeInput, signal, observer, receipt)=>{
     return withEventState(signal, async (bindings)=>{
         const gate = await (0,_agent_bundle_runtime_request__rspack_import_6/* .runAgentRequest */.iC)({
             invocation: {
-                artifactEpoch: "00bd3869126aca320247cc70734c95abb834b8ebb676ead5d6d38b021b191fe9",
+                artifactEpoch: "fac68d93b1a790644a709fb3b5085ad43c7ad90e670982238228b5d03b713930",
                 hostContractRevision: capabilityRevision,
                 kind: "event",
                 operationId: `event:${canonicalEvent}`,
