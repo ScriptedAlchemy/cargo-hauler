@@ -398,8 +398,10 @@ export const statusDaemon = (
       result(config, 'status', {
         message: snapshot.summary,
         pid: snapshot.pid,
+        // Like a daemon of another version that was not replaced: serving, but not this release's.
+        ...(snapshot.daemon === 'skewed' && snapshot.pid !== null ? { previousPid: snapshot.pid } : {}),
         report: snapshot.report,
-        running: snapshot.daemon === 'running',
+        running: snapshot.daemon === 'running' || snapshot.daemon === 'skewed',
       }),
     ),
     Effect.catchTags({

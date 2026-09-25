@@ -137,7 +137,8 @@ the same `Broker.submit`.
    `daemon/reporting/*` (`broker-metrics.ts`, `savings.ts`,
    `wait-split.ts`, `disk-stats.ts`, `tail-preview.ts`), kache from
    `integrations/kache/status.ts`, metrics windows from the ledger.
-3. A daemon that is stopped or unresponsive is reported as exactly that
+3. A daemon that is stopped, unresponsive, or skewed (another release whose
+   report this client cannot decode) is reported as exactly that
    (`DaemonHealth`), and the recent rows come from
    `storage/ledger.ts` `openLedgerDatabaseReadOnly`; daemon-only sections
    are absent, never empty successes.

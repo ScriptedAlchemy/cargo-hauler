@@ -37,6 +37,8 @@ const daemonHeader = (daemon: DaemonStatus): string => {
       return 'cargo-hauler daemon is not running';
     case 'unresponsive':
       return 'cargo-hauler daemon is up but did not answer in time (showing ledger data)';
+    case 'skewed':
+      return 'cargo-hauler daemon is running but its status report is unreadable (showing ledger data)';
     default: {
       const exhaustive: never = daemon;
       return exhaustive;

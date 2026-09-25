@@ -4,6 +4,7 @@ import { fetchTicket } from '../client/tickets.js';
 import type { DaemonConfigShape } from '../daemon/config.js';
 import type { DisplayRequestRecord } from '../contracts/protocol.js';
 import {
+  type HaulerSnapshot,
   displayRequestRecord,
   displayStatusRows,
   loadHaulerSnapshot,
@@ -28,6 +29,10 @@ export interface InspectOptions {
 
 // Through the ticket boundary runner so MCP/CLI cancellation aborts the
 // socket wait and replacement failures become clear transport diagnostics.
+/** A skewed daemon's rows read as live, so its summary line (what it is, the fix) leads. */
+const withDaemonLine = (snapshot: HaulerSnapshot, summary: string): string =>
+  snapshot.daemon === 'skewed' ? `${snapshot.summary}\n${summary}` : summary;
+
 const loadSnapshot = (limit: number, options: InspectOptions) =>
   runTicketEffect(
     loadHaulerSnapshot({
@@ -59,12 +64,14 @@ export const loadLastResult = async (options: InspectOptions): Promise<LastResul
     daemon: snapshot.daemon,
     operation: 'last',
     request,
-    summary:
+    summary: withDaemonLine(
+      snapshot,
       request === null
         ? latest === null
           ? 'no hauler requests recorded'
           : `${latest.ticket} is no longer recorded`
         : `${request.ticket} ${request.status}`,
+    ),
   };
 };
 
@@ -77,10 +84,12 @@ export const loadLogResult = async (
     daemon: snapshot.daemon,
     operation: 'log',
     requests: displayStatusRows(snapshot.recent),
-    summary:
+    summary: withDaemonLine(
+      snapshot,
       snapshot.recent.length === 0
         ? 'no hauler requests recorded'
         : `${snapshot.recent.length} recent request${snapshot.recent.length === 1 ? '' : 's'}`,
+    ),
   };
 };
 
@@ -103,6 +112,6 @@ export const loadStatusResult = async (
     active: displayStatusRows(active),
     operation: 'status',
     recent: displayStatusRows(recent),
-    summary: statusSummary(snapshot.daemon, active, recent),
+    summary: withDaemonLine(snapshot, statusSummary(snapshot.daemon, active, recent)),
   };
 };
