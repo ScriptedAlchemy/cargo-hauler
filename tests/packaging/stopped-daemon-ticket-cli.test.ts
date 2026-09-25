@@ -166,7 +166,7 @@ describe.skipIf(!existsSync(haulerEntry))('ticket reads on a stopped daemon', ()
       stderr: `${JSON.stringify({
         error: {
           code: 'render-failed',
-          message: `hauler daemon unreachable at ${socketPath}; it starts on demand with any exec, or run: hauler daemon start`,
+          message: `hauler daemon socket at ${socketPath} could not be opened (EACCES); the daemon may still be running, check: hauler daemon status`,
         },
       })}\n`,
     });
