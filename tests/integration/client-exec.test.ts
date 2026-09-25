@@ -289,10 +289,11 @@ describe('runExecClient', () => {
       expect(notices).toHaveLength(1);
       // Output arriving after the stall is shed; the ticket log keeps it.
       expect(texts.some((text) => text.includes('late-last-line'))).toBe(false);
-      expect(notices[0]).toMatch(
-        /^\[cargo-hauler\] output truncated: client fell behind; \d+ bytes dropped; full output: hauler result cc-1 --full\n$/u,
+      const logPath = waited.request?.outputPath ?? '';
+      expect(notices[0]?.replace(/\d+ bytes dropped/u, 'N bytes dropped')).toBe(
+        `[cargo-hauler] output truncated: client fell behind; N bytes dropped; full log: ${logPath}\n`,
       );
-      const log = readFileSync(waited.request?.outputPath ?? '', 'utf8').split('\n');
+      const log = readFileSync(logPath, 'utf8').split('\n');
       expect(log.filter((line) => line.startsWith('fake-bulk:'))).toHaveLength(100_000);
       expect(log).toContain('late-last-line');
     }), 60_000);
@@ -678,7 +679,7 @@ describe('runExecClient', () => {
         const cargoOutput = Buffer.from('cargo-output\n');
         const laterOutput = Buffer.from('later-output\n');
         const notice = Buffer.from(
-          '[cargo-hauler] output truncated: client fell behind; 128 bytes dropped; full output: hauler result cc-1 --full\n',
+          '[cargo-hauler] output truncated: client fell behind; 128 bytes dropped; full log: /state/tickets/cc-1.log\n',
         );
         const { collected, result, sent } = yield* lostAfterAck(
           [
