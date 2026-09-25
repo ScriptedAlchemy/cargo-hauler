@@ -27,12 +27,12 @@ export interface InspectOptions {
   readonly signal: AbortSignal;
 }
 
-// Through the ticket boundary runner so MCP/CLI cancellation aborts the
-// socket wait and replacement failures become clear transport diagnostics.
 /** A skewed daemon's rows read as live, so its summary line (what it is, the fix) leads. */
 const withDaemonLine = (snapshot: HaulerSnapshot, summary: string): string =>
   snapshot.daemon === 'skewed' ? `${snapshot.summary}\n${summary}` : summary;
 
+// Through the ticket boundary runner so MCP/CLI cancellation aborts the
+// socket wait and replacement failures become clear transport diagnostics.
 const loadSnapshot = (limit: number, options: InspectOptions) =>
   runTicketEffect(
     loadHaulerSnapshot({

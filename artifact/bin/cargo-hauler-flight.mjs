@@ -19921,11 +19921,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 /** The daemon answered this request with an `error` line (malformed request, internal failure). */ class DaemonRejectedError extends effect_Data__rspack_import_7/* .TaggedError */.rN('DaemonRejected') {
 }
-/**
- * Infrastructure failures stay typed in this library: a daemon that is down
- * is not the same as a ticket that does not exist. Callers convert to
- * fail-open values only at deliberately fail-open boundaries (hooks).
- */ /** A daemon of another release or build sent a ticket record this client's schema does not describe. */ class DaemonRecordUnreadableError extends effect_Data__rspack_import_7/* .TaggedError */.rN('DaemonRecordUnreadable') {
+/** A daemon of another release or build sent a ticket record this client's schema does not describe. */ class DaemonRecordUnreadableError extends effect_Data__rspack_import_7/* .TaggedError */.rN('DaemonRecordUnreadable') {
     constructor(fields){
         super({
             ...fields,
@@ -22827,9 +22823,9 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 
+/** A skewed daemon's rows read as live, so its summary line (what it is, the fix) leads. */ const withDaemonLine = (snapshot, summary)=>snapshot.daemon === 'skewed' ? `${snapshot.summary}\n${summary}` : summary;
 // Through the ticket boundary runner so MCP/CLI cancellation aborts the
 // socket wait and replacement failures become clear transport diagnostics.
-/** A skewed daemon's rows read as live, so its summary line (what it is, the fix) leads. */ const withDaemonLine = (snapshot, summary)=>snapshot.daemon === 'skewed' ? `${snapshot.summary}\n${summary}` : summary;
 const loadSnapshot = (limit, options)=>(0,_ticket_errors_js__rspack_import_2/* .runTicketEffect */.n)((0,_status_js__rspack_import_1/* .loadHaulerSnapshot */.M3)({
         recentLimit: limit,
         ...options.config === undefined ? {} : {

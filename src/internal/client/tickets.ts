@@ -40,11 +40,6 @@ export class DaemonRejectedError extends Data.TaggedError('DaemonRejected')<{
   readonly message: string;
 }> {}
 
-/**
- * Infrastructure failures stay typed in this library: a daemon that is down
- * is not the same as a ticket that does not exist. Callers convert to
- * fail-open values only at deliberately fail-open boundaries (hooks).
- */
 /** A daemon of another release or build sent a ticket record this client's schema does not describe. */
 export class DaemonRecordUnreadableError extends Data.TaggedError('DaemonRecordUnreadable')<{
   readonly socketPath: string;
@@ -58,6 +53,11 @@ export class DaemonRecordUnreadableError extends Data.TaggedError('DaemonRecordU
   }
 }
 
+/**
+ * Infrastructure failures stay typed in this library: a daemon that is down
+ * is not the same as a ticket that does not exist. Callers convert to
+ * fail-open values only at deliberately fail-open boundaries (hooks).
+ */
 export type TicketSocketError =
   | ConnectionClosedError
   | ControlTimeoutError
