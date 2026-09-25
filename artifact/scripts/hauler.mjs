@@ -20601,16 +20601,18 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/operations/status.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var node_fs__rspack_import_0 = __webpack_require__("node:fs");
-/* import */ var effect_Effect__rspack_import_10 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
+/* import */ var effect_Effect__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
 /* import */ var _client_ensure_daemon_js__rspack_import_1 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
 /* import */ var _daemon_config_js__rspack_import_2 = __webpack_require__("./src/internal/daemon/config.ts");
 /* import */ var _client_control_js__rspack_import_3 = __webpack_require__("./src/internal/client/control.ts");
-/* import */ var _storage_ledger_js__rspack_import_4 = __webpack_require__("./src/internal/storage/ledger.ts");
-/* import */ var _contracts_protocol_js__rspack_import_5 = __webpack_require__("./src/internal/contracts/protocol.ts");
-/* import */ var _util_ansi_js__rspack_import_6 = __webpack_require__("./src/internal/util/ansi.ts");
-/* import */ var _util_id_js__rspack_import_7 = __webpack_require__("./src/internal/util/id.ts");
-/* import */ var _contracts_tool_schemas_js__rspack_import_8 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
-/* import */ var _util_text_js__rspack_import_9 = __webpack_require__("./src/internal/util/text.ts");
+/* import */ var _platform_socket_errors_js__rspack_import_4 = __webpack_require__("./src/internal/platform/socket-errors.ts");
+/* import */ var _storage_ledger_js__rspack_import_5 = __webpack_require__("./src/internal/storage/ledger.ts");
+/* import */ var _contracts_protocol_js__rspack_import_6 = __webpack_require__("./src/internal/contracts/protocol.ts");
+/* import */ var _util_ansi_js__rspack_import_7 = __webpack_require__("./src/internal/util/ansi.ts");
+/* import */ var _util_id_js__rspack_import_8 = __webpack_require__("./src/internal/util/id.ts");
+/* import */ var _contracts_tool_schemas_js__rspack_import_9 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
+/* import */ var _util_text_js__rspack_import_10 = __webpack_require__("./src/internal/util/text.ts");
+
 
 
 
@@ -20707,12 +20709,12 @@ const ledgerRequestRecord = (record, daemon)=>{
             }
     }
 };
-const ledgerStatusRow = (record, daemon)=>(0,_contracts_protocol_js__rspack_import_5/* .toStatusRow */.el)(ledgerRequestRecord(record, daemon));
+const ledgerStatusRow = (record, daemon)=>(0,_contracts_protocol_js__rspack_import_6/* .toStatusRow */.el)(ledgerRequestRecord(record, daemon));
 const stoppedSummary = (recentCount)=>{
     if (recentCount === 0) {
         return 'cargo-hauler daemon is not running';
     }
-    return `cargo-hauler daemon is not running; ${(0,_util_text_js__rspack_import_9/* .countWord */.M)(recentCount, 'recorded request')}`;
+    return `cargo-hauler daemon is not running; ${(0,_util_text_js__rspack_import_10/* .countWord */.M)(recentCount, 'recorded request')}`;
 };
 const runningSummary = (report)=>{
     const queued = report.lanes.reduce((sum, lane)=>sum + lane.queued, 0);
@@ -20743,7 +20745,7 @@ const fromReport = (report, config)=>withReport({
  * A live daemon's report, validated with the strict client schema. The read
  * gate accepts only the current wire protocol, including compatible older
  * releases, so a report that does not fit is a protocol defect.
- */ const fromLiveReport = (raw, config)=>effect_Effect__rspack_import_10/* .sync */.OH5(()=>_contracts_tool_schemas_js__rspack_import_8/* .statusReportSchema.parse */.qb.parse(raw)).pipe(effect_Effect__rspack_import_10/* .map */.TjK((report)=>fromReport(report, config)));
+ */ const fromLiveReport = (raw, config)=>effect_Effect__rspack_import_11/* .sync */.OH5(()=>_contracts_tool_schemas_js__rspack_import_9/* .statusReportSchema.parse */.qb.parse(raw)).pipe(effect_Effect__rspack_import_11/* .map */.TjK((report)=>fromReport(report, config)));
 /**
  * One ticket's detail record straight from the ledger, for the read-only
  * surfaces when no daemon answers: `hauler last` shows the settled tail the
@@ -20775,14 +20777,14 @@ const emptyStopped = (config)=>withReport({
  * Scoped ledger handle for stopped-daemon reads: read-only when possible,
  * falling back to the writable opener for WAL recovery after an unclean stop
  * or a ledger predating a column migration. Always closed by the scope.
- */ const acquireSnapshotDb = (databasePath)=>effect_Effect__rspack_import_10/* .acquireRelease */.Q56(effect_Effect__rspack_import_10/* ["try"] */.SvU(()=>(0,_storage_ledger_js__rspack_import_4/* .openLedgerDatabaseReadOnly */.Xo)(databasePath)).pipe(effect_Effect__rspack_import_10/* ["catch"] */.MfU(()=>effect_Effect__rspack_import_10/* .sync */.OH5(()=>(0,_storage_ledger_js__rspack_import_4/* .openLedgerDatabase */.p)(databasePath)))), (db)=>effect_Effect__rspack_import_10/* .sync */.OH5(()=>db.close()));
+ */ const acquireSnapshotDb = (databasePath)=>effect_Effect__rspack_import_11/* .acquireRelease */.Q56(effect_Effect__rspack_import_11/* ["try"] */.SvU(()=>(0,_storage_ledger_js__rspack_import_5/* .openLedgerDatabaseReadOnly */.Xo)(databasePath)).pipe(effect_Effect__rspack_import_11/* ["catch"] */.MfU(()=>effect_Effect__rspack_import_11/* .sync */.OH5(()=>(0,_storage_ledger_js__rspack_import_5/* .openLedgerDatabase */.p)(databasePath)))), (db)=>effect_Effect__rspack_import_11/* .sync */.OH5(()=>db.close()));
 const fromLedger = (config, recentLimit, daemon = 'stopped')=>{
     if (!(0,node_fs__rspack_import_0.existsSync)(config.databasePath)) {
-        return effect_Effect__rspack_import_10/* .succeed */.PyW(emptyStopped(config));
+        return effect_Effect__rspack_import_11/* .succeed */.PyW(emptyStopped(config));
     }
-    return effect_Effect__rspack_import_10/* .scoped */.P1j(effect_Effect__rspack_import_10/* .gen */.JkU(function*() {
+    return effect_Effect__rspack_import_11/* .scoped */.P1j(effect_Effect__rspack_import_11/* .gen */.JkU(function*() {
         const db = yield* acquireSnapshotDb(config.databasePath);
-        const ledger = (0,_storage_ledger_js__rspack_import_4/* .createLedgerApi */.Ax)(db);
+        const ledger = (0,_storage_ledger_js__rspack_import_5/* .createLedgerApi */.Ax)(db);
         const recent = (yield* ledger.recentRequests(recentLimit)).map((record)=>ledgerStatusRow(record, daemon));
         const savings = yield* ledger.attachmentSavings();
         return withReport({
@@ -20803,28 +20805,29 @@ const fromLedger = (config, recentLimit, daemon = 'stopped')=>{
 const loadHaulerSnapshot = (options = {})=>{
     const config = options.config ?? (0,_daemon_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)();
     const recentLimit = options.recentLimit ?? defaultRecentLimit;
-    return (0,_client_ensure_daemon_js__rspack_import_1/* .ensureDaemonVersion */.pk)(config, _client_ensure_daemon_js__rspack_import_1/* .defaultEnsureDependencies */.R2, statusTimeoutMs, 'read').pipe(effect_Effect__rspack_import_10/* .flatMap */.qIB((daemon)=>daemon === null ? fromLedger(config, recentLimit) : (0,_client_control_js__rspack_import_3/* .requestExpecting */.dG)({
+    const unreachable = (error)=>(0,_client_ensure_daemon_js__rspack_import_1/* .daemonIsAbsent */.Yj)(error.cause) ? fromLedger(config, recentLimit) : unresponsiveSnapshot(config, recentLimit, `socket could not be opened (${(0,_platform_socket_errors_js__rspack_import_4/* .socketErrorCode */.R)(error.cause) ?? 'no errno'})`);
+    return (0,_client_ensure_daemon_js__rspack_import_1/* .ensureDaemonVersion */.pk)(config, _client_ensure_daemon_js__rspack_import_1/* .defaultEnsureDependencies */.R2, statusTimeoutMs, 'read').pipe(effect_Effect__rspack_import_11/* .flatMap */.qIB((daemon)=>daemon === null ? fromLedger(config, recentLimit) : (0,_client_control_js__rspack_import_3/* .requestExpecting */.dG)({
             message: {
-                id: (0,_util_id_js__rspack_import_7/* .shortId */.m)(),
+                id: (0,_util_id_js__rspack_import_8/* .shortId */.m)(),
                 limit: recentLimit,
                 type: 'status'
             },
             socketPath: config.socketPath,
             timeoutMs: statusTimeoutMs
-        }, (message)=>message.type === 'status-result').pipe(effect_Effect__rspack_import_10/* .flatMap */.qIB((result)=>result === undefined ? fromLedger(config, recentLimit) : fromLiveReport(result.report, config)), // Once the version gate has succeeded, ordinary read failures keep
+        }, (message)=>message.type === 'status-result').pipe(effect_Effect__rspack_import_11/* .flatMap */.qIB((result)=>result === undefined ? fromLedger(config, recentLimit) : fromLiveReport(result.report, config)), // Once the version gate has succeeded, ordinary read failures keep
         // the historical ledger fallback.
-        effect_Effect__rspack_import_10/* .catchTags */.loE({
+        effect_Effect__rspack_import_11/* .catchTags */.loE({
             ControlTimeout: ()=>unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
             ConnectionClosed: ()=>unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
-            DaemonUnreachable: ()=>fromLedger(config, recentLimit)
+            DaemonUnreachable: unreachable
         }))), // A ping that never establishes a protocol identity is unresponsive.
-    effect_Effect__rspack_import_10/* .catchTags */.loE({
+    effect_Effect__rspack_import_11/* .catchTags */.loE({
         ControlTimeout: ()=>unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
         ConnectionClosed: ()=>unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
-        DaemonUnreachable: ()=>fromLedger(config, recentLimit)
+        DaemonUnreachable: unreachable
     }));
 };
-const unresponsiveSnapshot = (config, recentLimit, what)=>fromLedger(config, recentLimit, 'unresponsive').pipe(effect_Effect__rspack_import_10/* .map */.TjK((snapshot)=>withReport({
+const unresponsiveSnapshot = (config, recentLimit, what)=>fromLedger(config, recentLimit, 'unresponsive').pipe(effect_Effect__rspack_import_11/* .map */.TjK((snapshot)=>withReport({
             ...snapshot,
             daemon: 'unresponsive',
             summary: `cargo-hauler daemon ${what}; showing ledger data (${snapshot.recent.length} recorded)`
@@ -129960,12 +129963,12 @@ __webpack_require__.d(__webpack_exports__, {
 "./.agent-bundle-virtual/hauler-entry.mjs"(__webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
 __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_deps, __rspack_async_done) { try {
 /* import */ var agent_bundle_terminal_capability__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/terminal-capability.js");
-/* import */ var _tmp_poteto_savings_src_scripts_hauler_ts__rspack_import_1 = __webpack_require__("./src/scripts/hauler.ts");
+/* import */ var _tmp_poteto_280_src_scripts_hauler_ts__rspack_import_1 = __webpack_require__("./src/scripts/hauler.ts");
 
 
-const main = _tmp_poteto_savings_src_scripts_hauler_ts__rspack_import_1/* .main */.iW;
+const main = _tmp_poteto_280_src_scripts_hauler_ts__rspack_import_1/* .main */.iW;
 if (typeof main !== 'function') {
-    throw new TypeError('Executable entry must export a main function: ' + "/tmp/poteto-savings/src/scripts/hauler.ts");
+    throw new TypeError('Executable entry must export a main function: ' + "/tmp/poteto-280/src/scripts/hauler.ts");
 }
 const code = await main(process.argv.slice(2), Object.freeze({
     terminal: (0,agent_bundle_terminal_capability__rspack_import_0/* .detectProcessTerminal */.JH)("script")

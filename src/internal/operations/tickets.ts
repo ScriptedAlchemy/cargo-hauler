@@ -9,6 +9,7 @@ import {
   type BackgroundSubmitAck,
   type TicketSocketError,
 } from '../client/tickets.js';
+import { daemonIsAbsent } from '../client/ensure-daemon.js';
 import type { DaemonConfigShape } from '../daemon/config.js';
 import type { DisplayRequestRecord, RequestRecord } from '../contracts/protocol.js';
 import { describeRequestRecord, displayRequestRecord, loadLedgerTicket } from './status.js';
@@ -65,7 +66,11 @@ const fromLedgerWhenStopped = <A, B>(
   answer: (request: DisplayRequestRecord | null) => B,
 ): Effect.Effect<A | B, TicketSocketError> =>
   read.pipe(
-    Effect.catchTag('DaemonUnreachable', () => loadLedgerTicket(ticket, 'stopped', config).pipe(Effect.map(answer))),
+    Effect.catchTag('DaemonUnreachable', (error) =>
+      daemonIsAbsent(error.cause)
+        ? loadLedgerTicket(ticket, 'stopped', config).pipe(Effect.map(answer))
+        : Effect.fail(error),
+    ),
   );
 
 export const awaitTicketResult = async (
