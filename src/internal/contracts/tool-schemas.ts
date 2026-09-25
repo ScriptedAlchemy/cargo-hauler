@@ -310,7 +310,7 @@ const kacheStorePressureSchema = z.object({
 }) satisfies z.ZodType<KacheStorePressureReport>;
 
 const kacheStatusSchema = z.object({
-  available: z.boolean(),
+  indexState: z.enum(['read', 'missing', 'unreadable', 'timed-out']),
   distinctCrates: z.number().int().nonnegative(),
   entryCount: z.number().int().nonnegative(),
   eventsFreshMs: z.number().nonnegative().nullable(),

@@ -276,17 +276,17 @@ describe('kacheModel and lineageModel', () => {
     storeBytes: null,
   };
 
-  it('distinguishes an unreported kache field from a detected absence', () => {
+  it('distinguishes an unreported kache field from an index it could not read, and says why', () => {
+    const unread = { distinctCrates: 0, entryCount: 0, eventsFreshMs: null, indexSizeBytes: 0, pressure: absentIndexPressure, recentHeartbeatRoots: [], topCrates: [] };
     expect(kacheModel(undefined)).toEqual({ kind: 'unknown' });
-    expect(
-      kacheModel({ available: false, distinctCrates: 0, entryCount: 0, eventsFreshMs: null, indexSizeBytes: 0, pressure: absentIndexPressure, recentHeartbeatRoots: [], topCrates: [] }),
-    ).toEqual({ kind: 'unavailable' });
+    expect(kacheModel({ ...unread, indexState: 'missing' })).toEqual({ kind: 'unavailable', reason: 'not detected' });
+    expect(kacheModel({ ...unread, indexState: 'timed-out' })).toEqual({ kind: 'unavailable', reason: 'index read timed out' });
   });
 
   it('carries the store-pressure lines and warnings beside the index summary', () => {
     const model = kacheModel(
       {
-        available: true,
+        indexState: 'read',
         distinctCrates: 40,
         entryCount: 1_200,
         eventsFreshMs: 5_000,
@@ -335,7 +335,7 @@ describe('kacheModel and lineageModel', () => {
   it('says what is unknown about store pressure when the store has never been GCed', () => {
     const model = kacheModel(
       {
-        available: true,
+        indexState: 'read',
         distinctCrates: 1,
         entryCount: 1,
         eventsFreshMs: null,

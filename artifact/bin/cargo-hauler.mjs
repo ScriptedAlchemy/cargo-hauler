@@ -22502,7 +22502,12 @@ const kacheStorePressureSchema = zod__rspack_import_1/* .object */.Ikc({
     }).nullable()
 });
 const kacheStatusSchema = zod__rspack_import_1/* .object */.Ikc({
-    available: zod__rspack_import_1/* .boolean */.zMY(),
+    indexState: zod__rspack_import_1/* ["enum"] */.k5n([
+        'read',
+        'missing',
+        'unreadable',
+        'timed-out'
+    ]),
     distinctCrates: zod__rspack_import_1/* .number */.aig().int().nonnegative(),
     entryCount: zod__rspack_import_1/* .number */.aig().int().nonnegative(),
     eventsFreshMs: zod__rspack_import_1/* .number */.aig().nonnegative().nullable(),
@@ -30995,7 +31000,7 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var node_os__rspack_import_2 = __webpack_require__("node:os");
 /* import */ var node_path__rspack_import_3 = __webpack_require__("node:path");
 /* import */ var node_perf_hooks__rspack_import_4 = __webpack_require__("node:perf_hooks");
-/* import */ var node_sqlite__rspack_import_5 = __webpack_require__("node:sqlite");
+/* import */ var node_worker_threads__rspack_import_5 = __webpack_require__("node:worker_threads");
 /* import */ var effect_Context__rspack_import_9 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Context.js");
 /* import */ var effect_Effect__rspack_import_10 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
 /* import */ var effect_Layer__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Layer.js");
@@ -31022,6 +31027,7 @@ const defaultEventTailBytes = 8 * 1024 * 1024;
     'daemon.log'
 ];
 const defaultTtlMs = 60000;
+/** A 4.5 GB index scans in about 2 s under load; far past that, the read is stuck. */ const defaultIndexReadTimeoutMs = 30000;
 const heartbeatWindowMs = 5 * 60000;
 /**
  * Slowest crates are selected per profile: dev and release timings are not
@@ -31245,102 +31251,141 @@ const yieldToEventLoop = ()=>new Promise((resolve)=>{
     }
 };
 const readKacheEventPriors = (eventsPath, maxBytes = defaultEventTailBytes)=>readEventTailSync(eventsPath, Date.now(), maxBytes).priors;
-const unavailableIndex = {
-    available: false,
-    entryCount: 0,
-    distinctCrates: 0,
-    indexSizeBytes: 0,
-    storeBytes: null,
-    topCrates: [],
-    priors: emptyIndexPriors
-};
-/** Blob bytes recorded in the index; null when this kache predates the `blobs` table. */ const readStoreBytes = (database)=>{
-    try {
-        const row = database.prepare('SELECT SUM(size) AS total FROM blobs').get();
-        const total = Number(row?.total ?? 0);
-        return Number.isFinite(total) && total >= 0 ? total : null;
-    } catch  {
-        return null;
-    }
-};
+const unavailableIndex = (state)=>({
+        state,
+        entryCount: 0,
+        distinctCrates: 0,
+        indexSizeBytes: 0,
+        storeBytes: null,
+        topCrates: [],
+        priors: emptyIndexPriors
+    });
 /**
- * The `GROUP BY` over kache `entries` is synchronous (`node:sqlite`), so the
- * snapshot reader only runs it when the index file (or its WAL) changed.
- */ const readIndexAggregate = (indexPath)=>{
+ * Body of the index-scan worker, evaluated from its source text: agent-bundle
+ * keeps `new Worker(new URL(…))` verbatim, so a separate worker file would not
+ * ship. It must reference nothing outside itself.
+ */ const scanIndexInWorker = ()=>{
+    const { parentPort, workerData } = process.getBuiltinModule('node:worker_threads');
+    const { DatabaseSync } = process.getBuiltinModule('node:sqlite');
+    const { statSync } = process.getBuiltinModule('node:fs');
+    const indexPath = String(workerData);
     let database;
     try {
-        const indexSizeBytes = (0,node_fs__rspack_import_0.statSync)(indexPath).size;
-        database = new node_sqlite__rspack_import_5.DatabaseSync(indexPath, {
+        const indexSizeBytes = statSync(indexPath).size;
+        database = new DatabaseSync(indexPath, {
             readOnly: true
         });
-        const aggregate = database.prepare(`SELECT crate_name, profile, MAX(compile_time_ms) AS compile_time_ms,
-              COUNT(*) AS entry_count
-       FROM entries
-       GROUP BY crate_name, profile`);
-        const timings = new Map();
-        const maximumByCrate = new Map();
-        const crates = new Set();
-        const topCrates = [];
-        let entryCount = 0;
-        for (const row of aggregate.all()){
-            const crateName = String(row.crate_name);
-            const profile = String(row.profile);
-            const compileTimeMs = finitePositiveMs(Number(row.compile_time_ms));
-            entryCount += Number(row.entry_count);
-            crates.add(crateName);
-            if (compileTimeMs === null) {
-                continue;
-            }
-            timings.set(eventPriorKey(crateName, profile), compileTimeMs);
-            maximumByCrate.set(crateName, Math.max(maximumByCrate.get(crateName) ?? 0, compileTimeMs));
-            topCrates.push({
-                crate: crateName,
-                profile,
-                ms: compileTimeMs
-            });
-        }
-        topCrates.sort((left, right)=>right.ms - left.ms || left.crate.localeCompare(right.crate));
-        // Cap within each profile; the flat ms-descending order of the surviving
-        // rows is presentation-neutral (consumers group by profile).
-        const perProfileSeen = new Map();
-        const cappedTopCrates = topCrates.filter((row)=>{
-            const seen = perProfileSeen.get(row.profile) ?? 0;
-            perProfileSeen.set(row.profile, seen + 1);
-            return seen < topCratesPerProfile;
-        });
-        return {
-            available: true,
-            entryCount,
-            distinctCrates: crates.size,
-            indexSizeBytes,
-            storeBytes: readStoreBytes(database),
-            topCrates: cappedTopCrates,
-            priors: {
-                compileTimeMs: (crateName, profiles)=>{
-                    let exact = null;
-                    for (const profile of profiles){
-                        const timing = timings.get(eventPriorKey(crateName, profile));
-                        if (timing !== undefined) {
-                            exact = Math.max(exact ?? 0, timing);
-                        }
-                    }
-                    return exact ?? maximumByCrate.get(crateName) ?? null;
-                }
-            }
-        };
-    } catch  {
-        return unavailableIndex;
-    } finally{
+        const rows = database.prepare(`SELECT crate_name, profile, MAX(compile_time_ms) AS compile_time_ms,
+                COUNT(*) AS entry_count
+         FROM entries
+         GROUP BY crate_name, profile`).all();
+        let storeBytes = null;
         try {
-            database?.close();
+            const total = Number(database.prepare('SELECT SUM(size) AS total FROM blobs').get()?.total ?? 0);
+            storeBytes = Number.isFinite(total) && total >= 0 ? total : null;
         } catch  {
-        // A read-only status refresh must never affect daemon availability.
+        // Absent before kache added the `blobs` table.
         }
+        parentPort?.postMessage({
+            kind: 'read',
+            indexSizeBytes,
+            rows,
+            storeBytes
+        });
+    } catch  {
+        parentPort?.postMessage({
+            kind: 'unreadable'
+        });
+    } finally{
+        database?.close();
     }
+};
+const scanIndexSource = `(${scanIndexInWorker.toString()})()`;
+/**
+ * Scans the index in a worker thread: the `node:sqlite` scans are synchronous
+ * and take seconds on a large index, which would stall the daemon's socket.
+ */ const scanIndex = (indexPath, timeoutMs)=>new Promise((resolve)=>{
+        const worker = new node_worker_threads__rspack_import_5.Worker(scanIndexSource, {
+            eval: true,
+            workerData: indexPath
+        });
+        worker.unref();
+        const settle = (scan)=>{
+            clearTimeout(timer);
+            resolve(scan);
+            void worker.terminate();
+        };
+        const timer = setTimeout(()=>settle({
+                kind: 'timed-out'
+            }), timeoutMs);
+        timer.unref();
+        worker.once('message', (scan)=>settle(scan));
+        worker.once('error', ()=>settle({
+                kind: 'unreadable'
+            }));
+        worker.once('exit', ()=>settle({
+                kind: 'unreadable'
+            }));
+    });
+const aggregateIndexScan = (scan)=>{
+    if (scan.kind !== 'read') {
+        return unavailableIndex(scan.kind);
+    }
+    const timings = new Map();
+    const maximumByCrate = new Map();
+    const crates = new Set();
+    const topCrates = [];
+    let entryCount = 0;
+    for (const row of scan.rows){
+        const crateName = String(row.crate_name);
+        const profile = String(row.profile);
+        const compileTimeMs = finitePositiveMs(Number(row.compile_time_ms));
+        entryCount += Number(row.entry_count);
+        crates.add(crateName);
+        if (compileTimeMs === null) {
+            continue;
+        }
+        timings.set(eventPriorKey(crateName, profile), compileTimeMs);
+        maximumByCrate.set(crateName, Math.max(maximumByCrate.get(crateName) ?? 0, compileTimeMs));
+        topCrates.push({
+            crate: crateName,
+            profile,
+            ms: compileTimeMs
+        });
+    }
+    topCrates.sort((left, right)=>right.ms - left.ms || left.crate.localeCompare(right.crate));
+    // Cap within each profile; the flat ms-descending order of the surviving
+    // rows is presentation-neutral (consumers group by profile).
+    const perProfileSeen = new Map();
+    const cappedTopCrates = topCrates.filter((row)=>{
+        const seen = perProfileSeen.get(row.profile) ?? 0;
+        perProfileSeen.set(row.profile, seen + 1);
+        return seen < topCratesPerProfile;
+    });
+    return {
+        state: 'read',
+        entryCount,
+        distinctCrates: crates.size,
+        indexSizeBytes: scan.indexSizeBytes,
+        storeBytes: scan.storeBytes,
+        topCrates: cappedTopCrates,
+        priors: {
+            compileTimeMs: (crateName, profiles)=>{
+                let exact = null;
+                for (const profile of profiles){
+                    const timing = timings.get(eventPriorKey(crateName, profile));
+                    if (timing !== undefined) {
+                        exact = Math.max(exact ?? 0, timing);
+                    }
+                }
+                return exact ?? maximumByCrate.get(crateName) ?? null;
+            }
+        }
+    };
 };
 const combineSnapshot = (index, events, pressure)=>({
         status: {
-            available: index.available,
+            indexState: index.state,
             entryCount: index.entryCount,
             distinctCrates: index.distinctCrates,
             indexSizeBytes: index.indexSizeBytes,
@@ -31348,7 +31393,7 @@ const combineSnapshot = (index, events, pressure)=>({
             recentHeartbeatRoots: events.recentHeartbeatRoots,
             topCrates: index.topCrates,
             pressure: {
-                storeBytes: index.available ? index.storeBytes : null,
+                storeBytes: index.storeBytes,
                 limit: pressure.limit,
                 gc: pressure.gc,
                 keyTiming: events.keyTiming
@@ -31434,8 +31479,9 @@ const readTextOrNull = async (path)=>{
 /**
  * Stateful reader behind `KacheStatus`. The events sidecar is consumed
  * incrementally from a persisted byte offset with async reads and
- * `setImmediate`-sliced parsing; the index aggregate is recomputed only when
- * the file fingerprint changes. Every failure degrades to "unavailable".
+ * `setImmediate`-sliced parsing; the index aggregate is recomputed in a worker
+ * only when the file fingerprint changes. Every failure degrades to an index
+ * state that names it.
  */ const createKacheSnapshotReader = (indexPath, options = {})=>{
     const indexDir = (0,node_path__rspack_import_3.dirname)(indexPath);
     const eventsPath = (0,node_path__rspack_import_3.join)(indexDir, 'events.jsonl');
@@ -31443,6 +31489,7 @@ const readTextOrNull = async (path)=>{
     const home = options.home ?? (0,node_os__rspack_import_2.homedir)();
     const configPath = (0,_pressure_js__rspack_import_7/* .kacheConfigPathFor */.hv)(env, home);
     const maxEventBytes = options.maxEventBytes !== undefined && Number.isFinite(options.maxEventBytes) && options.maxEventBytes > 0 ? Math.floor(options.maxEventBytes) : defaultEventTailBytes;
+    const indexReadTimeoutMs = options.indexReadTimeoutMs ?? defaultIndexReadTimeoutMs;
     const aggregator = new EventTailAggregator();
     let cursor;
     let indexCache;
@@ -31535,12 +31582,12 @@ const readTextOrNull = async (path)=>{
         const fingerprint = await indexFingerprint(indexPath);
         if (fingerprint === null) {
             indexCache = undefined;
-            return unavailableIndex;
+            return unavailableIndex('missing');
         }
         if (indexCache !== undefined && indexCache.fingerprint === fingerprint) {
             return indexCache.result;
         }
-        const result = readIndexAggregate(indexPath);
+        const result = aggregateIndexScan(await scanIndex(indexPath, indexReadTimeoutMs));
         indexCache = {
             fingerprint,
             result
@@ -34932,7 +34979,7 @@ __webpack_require__.d(__webpack_exports__, {
         case 'unavailable':
             return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_states_js__rspack_import_3/* .UnavailableState */.yb, {
                 what: "kache",
-                children: "not detected; cost priors fall back to ledger history."
+                children: `${model.reason}; cost priors fall back to ledger history.`
             });
         case 'available':
             return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
@@ -35672,15 +35719,21 @@ const admissionModel = (status)=>{
         permits: status.maxConcurrent === null ? null : `${leaders} running of ${status.maxConcurrent} permits${heavy === null ? '' : ` (${heavy})`}${riders === 0 ? '' : `, ${riders} riding shared builds`}, ${queued} queued`
     };
 };
+const kacheIndexUnavailableReasons = {
+    missing: 'not detected',
+    'timed-out': 'index read timed out',
+    unreadable: 'index unreadable'
+};
 const kacheModel = (kache, slowestLimit = 5, nowMs = Date.now())=>{
     if (kache === undefined || kache === null) {
         return {
             kind: 'unknown'
         };
     }
-    if (!kache.available) {
+    if (kache.indexState !== 'read') {
         return {
-            kind: 'unavailable'
+            kind: 'unavailable',
+            reason: kacheIndexUnavailableReasons[kache.indexState]
         };
     }
     return {
@@ -176462,21 +176515,21 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 /* import */ var _agent_bundle_runtime__rspack_import_23 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/index.js");
 /* import */ var node_url__rspack_import_4 = __webpack_require__("node:url");
 /* import */ var node_worker_threads__rspack_import_5 = __webpack_require__("node:worker_threads");
-/* import */ var _tmp_poteto_286_src_cli_daemon_ts__rspack_import_6 = __webpack_require__("./src/cli/daemon.ts");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.cli.ts");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.cli.ts");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.cli.ts");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.cli.ts");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.cli.ts");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.cli.ts");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.cli.ts");
+/* import */ var _tmp_wt_287_src_cli_daemon_ts__rspack_import_6 = __webpack_require__("./src/cli/daemon.ts");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.cli.ts");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.cli.ts");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.cli.ts");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.cli.ts");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.cli.ts");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.cli.ts");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.cli.ts");
 
 
 
@@ -176485,21 +176538,21 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 
 
 
-const route0 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_cli_daemon_ts__rspack_import_6, 'default'), _tmp_poteto_286_src_cli_daemon_ts__rspack_import_6);
+const route0 = Object.assign({}, Reflect.get(_tmp_wt_287_src_cli_daemon_ts__rspack_import_6, 'default'), _tmp_wt_287_src_cli_daemon_ts__rspack_import_6);
 
-const route1 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7);
+const route1 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7);
 
-const route2 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
+const route2 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
 
-const route3 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
+const route3 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
 
-const route4 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
+const route4 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
 
-const route5 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
+const route5 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
 
-const route6 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
+const route6 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
 
-const route7 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
+const route7 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
 
 
 
@@ -176530,31 +176583,31 @@ const routes = Object.freeze({
     }),
     "tool:hauler/hauler_await": Object.freeze({
         module: route1,
-        projection: _tmp_poteto_286_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16
+        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16
     }),
     "tool:hauler/hauler_kill": Object.freeze({
         module: route2,
-        projection: _tmp_poteto_286_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17
+        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17
     }),
     "tool:hauler/hauler_last": Object.freeze({
         module: route3,
-        projection: _tmp_poteto_286_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18
+        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18
     }),
     "tool:hauler/hauler_log": Object.freeze({
         module: route4,
-        projection: _tmp_poteto_286_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19
+        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19
     }),
     "tool:hauler/hauler_request": Object.freeze({
         module: route5,
-        projection: _tmp_poteto_286_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14
+        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14
     }),
     "tool:hauler/hauler_result": Object.freeze({
         module: route6,
-        projection: _tmp_poteto_286_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20
+        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20
     }),
     "tool:hauler/hauler_status": Object.freeze({
         module: route7,
-        projection: _tmp_poteto_286_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21
+        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21
     })
 });
 const commands = Object.freeze([

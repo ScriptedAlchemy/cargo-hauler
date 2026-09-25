@@ -62,7 +62,7 @@ describe('createKacheSnapshotReader', () => {
       }).read(nowMs);
 
       expect(snapshot.status).toEqual({
-        available: true,
+        indexState: 'read',
         distinctCrates: 3,
         entryCount: 4,
         eventsFreshMs: 1_000,
@@ -130,7 +130,7 @@ describe('createKacheSnapshotReader', () => {
     const root = mkdtempSync(join(tmpdir(), 'cc-kache-status-missing-'));
     try {
       const snapshot = await createKacheSnapshotReader(join(root, 'missing.db')).read(1_000);
-      expect(snapshot.status.available).toBe(false);
+      expect(snapshot.status.indexState).toBe('missing');
       expect(snapshot.status.entryCount).toBe(0);
       expect(snapshot.status.topCrates).toEqual([]);
     } finally {
@@ -144,7 +144,21 @@ describe('createKacheSnapshotReader', () => {
     try {
       writeFileSync(indexPath, 'not a sqlite database at all');
       const snapshot = await createKacheSnapshotReader(indexPath).read(1_000);
-      expect(snapshot.status.available).toBe(false);
+      expect(snapshot.status.indexState).toBe('unreadable');
+      expect(snapshot.indexPriors.compileTimeMs('alpha', ['dev'])).toBeNull();
+    } finally {
+      removeTestPath(root);
+    }
+  });
+
+  it('reports a timed-out index scan instead of waiting on it', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'cc-kache-status-timeout-'));
+    const indexPath = join(root, 'index.db');
+    try {
+      createIndex(indexPath, [['alpha', 'dev', 100]]);
+      const snapshot = await createKacheSnapshotReader(indexPath, { indexReadTimeoutMs: 1 }).read(1_000);
+      expect(snapshot.status.indexState).toBe('timed-out');
+      expect(snapshot.status.entryCount).toBe(0);
       expect(snapshot.indexPriors.compileTimeMs('alpha', ['dev'])).toBeNull();
     } finally {
       removeTestPath(root);
@@ -169,7 +183,7 @@ describe('createKacheSnapshotReader', () => {
         })}\n`,
       );
       const snapshot = await createKacheSnapshotReader(indexPath).read(nowMs);
-      expect(snapshot.status.available).toBe(false);
+      expect(snapshot.status.indexState).toBe('unreadable');
       expect(snapshot.indexPriors.compileTimeMs('alpha', ['dev'])).toBeNull();
       // The events sidecar is independent of index health.
       expect(snapshot.eventPriors.compileTimeMs('alpha', ['dev'])).toBe(3_000);
@@ -347,7 +361,7 @@ describe('createKacheSnapshotReader', () => {
       const snapshot = await createKacheSnapshotReader(indexPath, { env: {}, home: root }).read(
         1_000,
       );
-      expect(snapshot.status.available).toBe(true);
+      expect(snapshot.status.indexState).toBe('read');
       expect(snapshot.status.pressure).toMatchObject({
         gc: { kind: 'unavailable', reason: 'unparsable' },
         keyTiming: null,
@@ -438,7 +452,7 @@ describe('createKacheSnapshotReader', () => {
       const startedAt = performance.now();
       try {
         const { status } = await reader.read(1_000);
-        expect(status).toMatchObject({ available: true, distinctCrates: 5_000, entryCount: 400_000 });
+        expect(status).toMatchObject({ distinctCrates: 5_000, entryCount: 400_000, indexState: 'read' });
       } finally {
         probing = false;
         await pump;
@@ -497,17 +511,17 @@ describe('createKacheStatus', () => {
       });
       yield* service.prewarm;
       const healthy = yield* service.current;
-      expect(healthy?.available).toBe(true);
+      expect(healthy?.indexState).toBe('read');
 
       removeTestPath(root);
       nowMs = 200;
       // The first stale read serves the cached snapshot and forks a refresh
       // that completes asynchronously.
       const stale = yield* service.current;
-      expect(stale?.available).toBe(true);
+      expect(stale?.indexState).toBe('read');
       const degraded = yield* Effect.gen(function* () {
         const status = yield* service.current;
-        if (status?.available === false) {
+        if (status?.indexState === 'missing') {
           return status;
         }
         return yield* Effect.fail('still available' as const);
@@ -515,7 +529,7 @@ describe('createKacheStatus', () => {
         Effect.retry(Schedule.spaced('5 millis').pipe(Schedule.upTo({ times: 400 }))),
         Effect.orDie,
       );
-      expect(degraded.available).toBe(false);
+      expect(degraded.indexState).toBe('missing');
       const priors = yield* service.priors;
       expect(priors.indexPriors.compileTimeMs('alpha', ['dev'])).toBeNull();
     }));
