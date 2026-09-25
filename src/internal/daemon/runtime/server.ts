@@ -195,7 +195,7 @@ export class ConnectionOutputBuffer {
       channel: 'stderr',
       cursorBytes: 0,
       data: Buffer.from(
-        `[cargo-hauler] output truncated: client stopped reading; ${this.#droppedPayloadBytes} bytes dropped; full output: hauler result ${message.ticket} --full\n`,
+        `[cargo-hauler] output truncated: client fell behind; ${this.#droppedPayloadBytes} bytes dropped; full output: hauler result ${message.ticket} --full\n`,
       ).toString('base64'),
     };
   }

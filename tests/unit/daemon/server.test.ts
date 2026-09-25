@@ -164,7 +164,7 @@ describe('daemon connection output buffering', () => {
       const notices = outputs.filter((message) => outputText(message).includes('output truncated'));
       expect(notices).toHaveLength(1);
       expect(notices[0]).toMatchObject({ channel: 'stderr', cursorBytes: 0 });
-      const notice = /^\[cargo-hauler\] output truncated: client stopped reading; (\d+) bytes dropped; full output: hauler result cc-1 --full\n$/u.exec(
+      const notice = /^\[cargo-hauler\] output truncated: client fell behind; (\d+) bytes dropped; full output: hauler result cc-1 --full\n$/u.exec(
         outputText(notices[0] as OutputMessage),
       );
       expect(notice).not.toBeNull();

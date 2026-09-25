@@ -313,7 +313,7 @@ describe('runExecClient', () => {
         .filter((text) => text.includes('output truncated'));
       expect(notices).toHaveLength(1);
       expect(notices[0]).toMatch(
-        /^\[cargo-hauler\] output truncated: client stopped reading; \d+ bytes dropped; full output: hauler result cc-1 --full\n$/u,
+        /^\[cargo-hauler\] output truncated: client fell behind; \d+ bytes dropped; full output: hauler result cc-1 --full\n$/u,
       );
       const log = readFileSync(waited.request?.outputPath ?? '', 'utf8').split('\n');
       expect(log.filter((line) => line.startsWith('fake-bulk:'))).toHaveLength(100_000);
@@ -701,7 +701,7 @@ describe('runExecClient', () => {
         const cargoOutput = Buffer.from('cargo-output\n');
         const laterOutput = Buffer.from('later-output\n');
         const notice = Buffer.from(
-          '[cargo-hauler] output truncated: client stopped reading; 128 bytes dropped; full output: hauler result cc-1 --full\n',
+          '[cargo-hauler] output truncated: client fell behind; 128 bytes dropped; full output: hauler result cc-1 --full\n',
         );
         const { collected, result, sent } = yield* lostAfterAck(
           [
