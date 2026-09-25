@@ -211,7 +211,9 @@ describe('display projection', () => {
 });
 
 const isolatedConfig = scopedTempDir('cargo-hauler-query-').pipe(
-  Effect.map((root) => resolveDaemonConfig({ CARGO_HAULER_STATE_DIR: join(root, 'state') })),
+  Effect.map((root) =>
+    resolveDaemonConfig({ CARGO_HAULER_KACHE_INDEX: '', CARGO_HAULER_STATE_DIR: join(root, 'state') }),
+  ),
 );
 
 describe('loadHaulerSnapshot', () => {

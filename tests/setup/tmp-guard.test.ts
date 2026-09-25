@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, realpathSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 
@@ -12,7 +12,9 @@ it('refuses to remove a path outside the temp dir', () => {
   expect(() => assertUnderTmpdir('/fast/cache/cargo-hauler')).toThrow(
     'refusing to remove /fast/cache/cargo-hauler outside the temp dir',
   );
-  expect(() => assertUnderTmpdir(tmpdir())).toThrow(`refusing to remove ${tmpdir()} outside the temp dir`);
+  expect(() => assertUnderTmpdir(tmpdir())).toThrow(
+    `refusing to remove ${realpathSync(tmpdir())} outside the temp dir`,
+  );
   expect(() => assertUnderTmpdir(join(tmpdir(), '..', 'etc'))).toThrow('outside the temp dir');
   expect(() => assertUnderTmpdir(join(tmpdir(), 'cargo-hauler-test-x'))).not.toThrow();
 });
