@@ -68,7 +68,7 @@ describe('LineBuffer bounds', () => {
     expect(line).toBe('x'.repeat(64 * chunks));
     // This thread's CPU time leaves out other processes' turns on the host,
     // and splitting as many chunks into short lines is the yardstick for host
-    // speed. Appending pieces measures 0.3 to 1.0 times that work, and
+    // speed. Appending pieces measures 0.3 to 1.3 times that work, and
     // re-concatenating the pending text per chunk 33 to 200 times.
     expect((appendCpu.user + appendCpu.system) / (splitCpu.user + splitCpu.system)).toBeLessThan(5);
   });
