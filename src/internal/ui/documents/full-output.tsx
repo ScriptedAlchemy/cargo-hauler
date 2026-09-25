@@ -2,7 +2,7 @@ import { Agent } from '@agent-bundle/runtime';
 import React from 'react';
 
 import { formatBytes } from '../shared/format.js';
-import { chunkOutput } from '../../operations/ticket-output.js';
+import { chunkOutput, maxRenderedOutputBytes } from '../../operations/ticket-output.js';
 import type { TicketOutputModel } from '../../operations/ticket-output.js';
 
 import { CodeBlock } from './primitives.js';
@@ -29,7 +29,11 @@ export const FullOutput = ({ names, output, ticket }: FullOutputProps) => {
     case 'available':
       return (
         <Agent.Text>
-          {`Full output: ${output.path} (${formatBytes(output.sizeBytes)}) — read it with ${names.resultFull(ticket)}`}
+          {`Full output: ${output.path} (${formatBytes(output.sizeBytes)}) — ${
+            output.sizeBytes > maxRenderedOutputBytes
+              ? `${names.resultFull(ticket)} shows its last ${formatBytes(maxRenderedOutputBytes)}`
+              : `read it with ${names.resultFull(ticket)}`
+          }`}
         </Agent.Text>
       );
     case 'missing':

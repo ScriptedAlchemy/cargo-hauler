@@ -962,7 +962,7 @@ belongs to the server and not the calling conversation.
 | `tool:hauler/hauler_log` (`hauler log`) | recent requests, as summary rows | `LogStream` → `LogDocument` |
 | `tool:hauler/hauler_last` (`hauler last`) | most recent request, as a detail record with its tail | `LastDocument` |
 | `tool:hauler/hauler_await` (`hauler await`) | long-poll a ticket (≤ 2 h) | `AwaitStream` → `AwaitDocument` |
-| `tool:hauler/hauler_result` (`hauler result`) | one ticket as a detail record: the settled tail, or the whole live tail while running; `full` renders the whole on-disk output log | `ResultDocument` (`<FullOutput>`) |
+| `tool:hauler/hauler_result` (`hauler result`) | one ticket as a detail record: the settled tail, or the whole live tail while running; `full` renders the on-disk output log, its last ~768 KiB when larger | `ResultDocument` (`<FullOutput>`) |
 | `tool:hauler/hauler_kill` (`hauler kill`) | stop a queued or running ticket | `KillDocument` |
 | `tool:hauler/hauler_request` (`hauler request`) | submit a background request | `RequestDocument` |
 | `cli:daemon` | `run` / `start` / `stop` / `status` / `restart` | plain JSON, exit code from the result |

@@ -22668,12 +22668,13 @@ const ticketInputSchema = zod__rspack_import_1/* .object */.Ikc({
     }).optional()
 }).strict();
 /**
- * `hauler_result` alone takes `full`: the whole on-disk output log as the
- * document body. `hauler_await` keeps `ticketInputSchema` — a wait that ends
- * in a full log would blow the rendered-route budget for nothing.
+ * `hauler_result` alone takes `full`: the on-disk output log (its last
+ * 768 KiB when larger) as the document body. `hauler_await` keeps
+ * `ticketInputSchema` — a wait that ends in a full log would blow the
+ * rendered-route budget for nothing.
  */ const resultInputSchema = zod__rspack_import_1/* .object */.Ikc({
     ticket: zod__rspack_import_1/* .string */.YjP().min(1),
-    full: zod__rspack_import_1/* .boolean */.zMY().optional().describe('Render the whole on-disk output log instead of the stored tail')
+    full: zod__rspack_import_1/* .boolean */.zMY().optional().describe('Render the on-disk output log, its last 768 KiB when larger, instead of the stored tail')
 }).strict();
 const awaitResultSchema = zod__rspack_import_1/* .object */.Ikc({
     daemon: daemonStatusSchema,
@@ -23009,7 +23010,7 @@ const makeAttachmentRuntime = (deps)=>{
    * caller won. The winner owns the follow-up (replay for running-leader
    * attachments, direct live flag for queued-leader ones), so replayed and
    * live chunks can never interleave.
-   */ const notifyAttachmentStarted = (attachment, atMs)=>effect_Effect__rspack_import_6/* .gen */.JkU(function*() {
+   */ const notifyAttachmentStarted = (leader, attachment, atMs)=>effect_Effect__rspack_import_6/* .gen */.JkU(function*() {
             const won = yield* effect_Effect__rspack_import_6/* .sync */.OH5(()=>{
                 if (attachment.startNotified) {
                     return false;
@@ -23021,7 +23022,8 @@ const makeAttachmentRuntime = (deps)=>{
             if (won) {
                 yield* (0,_job_state_js__rspack_import_4/* .guarded */.Nj)(attachment.callbacks.onStarted({
                     ticket: attachment.ticket,
-                    waitMs: Math.max(0, atMs - attachment.createdAtMs)
+                    waitMs: Math.max(0, atMs - attachment.createdAtMs),
+                    outputPath: leader.log?.path ?? null
                 }));
             }
             return won;
@@ -23060,8 +23062,8 @@ const makeAttachmentRuntime = (deps)=>{
                 error: exit.error
             }));
         });
-    /** Deliver the at-most-once start notice plus one hauler stderr note, then finish. */ const finishAttachmentWithNote = (attachment, atMs, note, exit, savings = null)=>effect_Effect__rspack_import_6/* .gen */.JkU(function*() {
-            yield* notifyAttachmentStarted(attachment, atMs);
+    /** Deliver the at-most-once start notice plus one hauler stderr note, then finish. */ const finishAttachmentWithNote = (leader, attachment, atMs, note, exit, savings = null)=>effect_Effect__rspack_import_6/* .gen */.JkU(function*() {
+            yield* notifyAttachmentStarted(leader, attachment, atMs);
             const noteData = Buffer.from(note);
             const encodedNote = noteData.toString('base64');
             yield* effect_Effect__rspack_import_6/* .sync */.OH5(()=>attachment.tail.push(noteData));
@@ -23237,7 +23239,7 @@ const makeAttachmentRuntime = (deps)=>{
             const atMs = Date.now();
             // Released from the stdout pump: a ledger or metric defect here must
             // not surface as a pump failure that terminates the leader's cargo.
-            yield* effect_Effect__rspack_import_6/* .forEach */.jJl(decided, ({ attachment, failed })=>(0,_job_state_js__rspack_import_4/* .settlementStep */.sb)(`early release (${attachment.ticket})`, finishAttachmentWithNote(attachment, atMs, failed === null ? `[cargo-hauler] released early: requested packages compiled cleanly under ${job.ticket}\n` : `[cargo-hauler] released early: ${failed} failed to compile under ${job.ticket}\n`, failed === null ? {
+            yield* effect_Effect__rspack_import_6/* .forEach */.jJl(decided, ({ attachment, failed })=>(0,_job_state_js__rspack_import_4/* .settlementStep */.sb)(`early release (${attachment.ticket})`, finishAttachmentWithNote(job, attachment, atMs, failed === null ? `[cargo-hauler] released early: requested packages compiled cleanly under ${job.ticket}\n` : `[cargo-hauler] released early: ${failed} failed to compile under ${job.ticket}\n`, failed === null ? {
                     status: 'done',
                     exitCode: 0,
                     signal: null,
@@ -23281,7 +23283,7 @@ const makeAttachmentRuntime = (deps)=>{
             const leaderBuildMs = leaderRunMsAt(job, atMs);
             // Released from the stdout pump, like the demux releases: a ledger or
             // metric defect must not surface as a pump failure.
-            yield* effect_Effect__rspack_import_6/* .forEach */.jJl(released, (attachment)=>(0,_job_state_js__rspack_import_4/* .settlementStep */.sb)(`build-finished release (${attachment.ticket})`, finishAttachmentWithNote(attachment, atMs, `[cargo-hauler] released early: build finished under ${job.ticket}; --no-run has nothing left to do\n`, {
+            yield* effect_Effect__rspack_import_6/* .forEach */.jJl(released, (attachment)=>(0,_job_state_js__rspack_import_4/* .settlementStep */.sb)(`build-finished release (${attachment.ticket})`, finishAttachmentWithNote(job, attachment, atMs, `[cargo-hauler] released early: build finished under ${job.ticket}; --no-run has nothing left to do\n`, {
                     status: 'done',
                     exitCode: 0,
                     signal: null,
@@ -23329,7 +23331,7 @@ const makeAttachmentRuntime = (deps)=>{
             if (leader.buildFinishedAtMs !== null) {
                 yield* ledger.markBuildFinished(attachment.id, leader.buildFinishedAtMs).pipe(effect_Effect__rspack_import_6/* .ignoreCause */.GrF);
             }
-            const won = yield* notifyAttachmentStarted(attachment, leader.startedAtMs);
+            const won = yield* notifyAttachmentStarted(leader, attachment, leader.startedAtMs);
             if (won) {
                 yield* replayThenGoLive(leader, attachment);
             }
@@ -23456,7 +23458,7 @@ const makeAttachmentRuntime = (deps)=>{
                 // Compile batches always requeue.
                 const mirrors = status === 'done' || status === 'failed' && (attachment.mode === 'identity' || attachment.mode === 'batch' && (0,_scheduling_batch_js__rspack_import_0/* .batchFailureOwned */.CO)(job.intent, composite, attachment.intent));
                 if (provenDespiteFailure) {
-                    return finishAttachmentWithNote(attachment, atMs, `[cargo-hauler] ${job.ticket} failed elsewhere, but your requested packages compiled cleanly\n`, {
+                    return finishAttachmentWithNote(job, attachment, atMs, `[cargo-hauler] ${job.ticket} failed elsewhere, but your requested packages compiled cleanly\n`, {
                         status: 'done',
                         exitCode: 0,
                         signal: null,
@@ -23464,7 +23466,7 @@ const makeAttachmentRuntime = (deps)=>{
                     }, servedSavings(attachment, atMs, leaderRunMs, job));
                 }
                 if (mirrors) {
-                    return notifyAttachmentStarted(attachment, atMs).pipe(effect_Effect__rspack_import_6/* .andThen */.hgn(finishAttachment(attachment, atMs, {
+                    return notifyAttachmentStarted(job, attachment, atMs).pipe(effect_Effect__rspack_import_6/* .andThen */.hgn(finishAttachment(attachment, atMs, {
                         status,
                         exitCode,
                         signal,
@@ -25483,11 +25485,12 @@ const makeLaneRuntime = (deps)=>effect_Effect__rspack_import_15/* .gen */.JkU(fu
                 yield* effect_Effect__rspack_import_15/* .annotateCurrentSpan */.ww9('waitMs', waitMs);
                 yield* (0,_job_state_js__rspack_import_9/* .guarded */.Nj)(job.callbacks.onStarted({
                     ticket: job.ticket,
-                    waitMs
+                    waitMs,
+                    outputPath
                 }));
                 yield* effect_Effect__rspack_import_15/* .forEach */.jJl(queuedAttachments, (attachment)=>effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
                         yield* ledger.markRunning(attachment.id, runStartedAtMs, undefined, outputPath);
-                        const won = yield* attachments.notifyAttachmentStarted(attachment, runStartedAtMs);
+                        const won = yield* attachments.notifyAttachmentStarted(job, attachment, runStartedAtMs);
                         if (won) {
                             // The winner attached while the leader was queued: no output
                             // exists yet, so it goes live directly (no replay needed).
@@ -28234,8 +28237,12 @@ const defaultOutputBufferOptions = {
     #bufferedOutputBytes = 0;
     #droppedPayloadBytes = 0;
     #truncation = null;
+    #logPaths = new Map();
     constructor(options = defaultOutputBufferOptions){
         this.#options = options;
+    }
+    /** The ticket's full output log, which a truncation notice names. */ recordLogPath(ticket, path) {
+        this.#logPaths.set(ticket, path);
     }
     get bufferedOutputBytes() {
         return this.#bufferedOutputBytes;
@@ -28357,9 +28364,11 @@ const defaultOutputBufferOptions = {
         this.#bufferedOutputBytes = kept;
     }
     #renderNotice(message) {
+        const path = this.#logPaths.get(message.ticket) ?? null;
+        const rest = path === null ? `stored result: hauler result ${message.ticket}` : `full log: ${path}`;
         return {
             ...message,
-            data: Buffer.from(`[cargo-hauler] output truncated: client fell behind; ${this.#droppedPayloadBytes} bytes dropped; full output: hauler result ${message.ticket} --full\n`).toString('base64')
+            data: Buffer.from(`[cargo-hauler] output truncated: client fell behind; ${this.#droppedPayloadBytes} bytes dropped; ${rest}\n`).toString('base64')
         };
     }
 }
@@ -28426,12 +28435,12 @@ const extractId = (value)=>{
                             ownTickets.add(ticket);
                             return true;
                         }),
-                    onStarted: (info)=>send({
+                    onStarted: (info)=>effect_Effect__rspack_import_3/* .sync */.OH5(()=>outbound.recordLogPath(info.ticket, info.outputPath)).pipe(effect_Effect__rspack_import_3/* .andThen */.hgn(send({
                             type: 'started',
                             id,
                             ticket: info.ticket,
                             waitMs: info.waitMs
-                        }),
+                        }))),
                     onOutput: (info)=>send({
                             type: 'output',
                             id,
@@ -28500,7 +28509,7 @@ const extractId = (value)=>{
                     const outcome = yield* options.broker.reattach(message.ticket, {
                         callbacks: streamCallbacks(message.id, false),
                         fromByte: message.fromByte ?? 0,
-                        onActive: (info)=>send({
+                        onActive: (info)=>effect_Effect__rspack_import_3/* .sync */.OH5(()=>outbound.recordLogPath(message.ticket, info.outputPath)).pipe(effect_Effect__rspack_import_3/* .andThen */.hgn(send({
                                 type: 'reattach-result',
                                 id: message.id,
                                 ticket: message.ticket,
@@ -28511,7 +28520,7 @@ const extractId = (value)=>{
                                 },
                                 missedBytes: info.missedBytes,
                                 outputPath: info.outputPath
-                            })
+                            })))
                     });
                     switch(outcome.kind){
                         case 'active':
@@ -34892,7 +34901,7 @@ __webpack_require__.d(__webpack_exports__, {
             return null;
         case 'available':
             return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Text */.g.Text, {
-                children: `Full output: ${output.path} (${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes)}) — read it with ${names.resultFull(ticket)}`
+                children: `Full output: ${output.path} (${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes)}) — ${output.sizeBytes > (/* inlined export .maxRenderedOutputBytes */786432) ? `${names.resultFull(ticket)} shows its last ${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)((/* inlined export .maxRenderedOutputBytes */786432))}` : `read it with ${names.resultFull(ticket)}`}`
             });
         case 'missing':
             return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_states_js__rspack_import_4/* .UnavailableState */.yb, {
@@ -36745,13 +36754,13 @@ const config = {
     command: [
         'result'
     ],
-    description: 'Read a stored ticket result (running tickets include a live output tail); --full prints the whole on-disk output log.',
+    description: 'Read a stored ticket result (running tickets include a live output tail); --full prints the on-disk output log, its last 768 KiB when larger.',
     flags: {
         ticket: {
             description: 'Ticket id, e.g. cc-123'
         },
         full: {
-            description: 'Print the whole on-disk output log (<stateDir>/tickets/<ticket>.log) instead of the tail'
+            description: 'Print the on-disk output log (<stateDir>/tickets/<ticket>.log), its last 768 KiB when larger, instead of the tail'
         }
     },
     positionals: [
@@ -36791,12 +36800,12 @@ const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .res
     annotations: {
         readOnlyHint: true
     },
-    description: 'Fetch one cargo-hauler ticket. Running tickets include a live output-tail snapshot; terminal tickets include the durable ledger result and the path of the full output log. Pass full: true to read that whole log (every test failure and panic section) instead of re-running the command.',
+    description: 'Fetch one cargo-hauler ticket. Running tickets include a live output-tail snapshot; terminal tickets include the durable ledger result and the path of the full output log. Pass full: true to read that log (its last 768 KiB when larger, where the test failures and panic sections are) instead of re-running the command.',
     inputJsonSchema: {
         additionalProperties: false,
         properties: {
             full: {
-                description: 'Render the whole on-disk output log instead of the stored tail',
+                description: 'Render the on-disk output log, its last 768 KiB when larger, instead of the stored tail',
                 type: 'boolean'
             },
             ticket: {
@@ -181894,7 +181903,7 @@ const commands = Object.freeze([
     },
     {
         "aliases": [],
-        "description": "Read a stored ticket result (running tickets include a live output tail); --full prints the whole on-disk output log.",
+        "description": "Read a stored ticket result (running tickets include a live output tail); --full prints the on-disk output log, its last 768 KiB when larger.",
         "exitCode": "zero",
         "mcp": {
             "confirm": false,
@@ -181903,7 +181912,7 @@ const commands = Object.freeze([
         },
         "options": [
             {
-                "description": "Print the whole on-disk output log (<stateDir>/tickets/<ticket>.log) instead of the tail",
+                "description": "Print the on-disk output log (<stateDir>/tickets/<ticket>.log), its last 768 KiB when larger, instead of the tail",
                 "key": "full",
                 "kind": "boolean",
                 "option": "full",

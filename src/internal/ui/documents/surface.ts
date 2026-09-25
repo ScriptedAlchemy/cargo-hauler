@@ -12,7 +12,7 @@ export interface SurfaceNames {
   readonly log: string;
   readonly request: string;
   readonly result: string;
-  /** The result call that renders a ticket's whole on-disk output log. */
+  /** The result call that renders a ticket's on-disk output log. */
   readonly resultFull: (ticket: string) => string;
   readonly status: string;
 }

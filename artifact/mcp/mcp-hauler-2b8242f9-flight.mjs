@@ -23056,12 +23056,13 @@ const ticketInputSchema = zod__rspack_import_1/* .object */.Ikc({
     }).optional()
 }).strict();
 /**
- * `hauler_result` alone takes `full`: the whole on-disk output log as the
- * document body. `hauler_await` keeps `ticketInputSchema` — a wait that ends
- * in a full log would blow the rendered-route budget for nothing.
+ * `hauler_result` alone takes `full`: the on-disk output log (its last
+ * 768 KiB when larger) as the document body. `hauler_await` keeps
+ * `ticketInputSchema` — a wait that ends in a full log would blow the
+ * rendered-route budget for nothing.
  */ const resultInputSchema = zod__rspack_import_1/* .object */.Ikc({
     ticket: zod__rspack_import_1/* .string */.YjP().min(1),
-    full: zod__rspack_import_1/* .boolean */.zMY().optional().describe('Render the whole on-disk output log instead of the stored tail')
+    full: zod__rspack_import_1/* .boolean */.zMY().optional().describe('Render the on-disk output log, its last 768 KiB when larger, instead of the stored tail')
 }).strict();
 const awaitResultSchema = zod__rspack_import_1/* .object */.Ikc({
     daemon: daemonStatusSchema,
@@ -29827,7 +29828,7 @@ __webpack_require__.d(__webpack_exports__, {
             return null;
         case 'available':
             return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Text */.g.Text, {
-                children: `Full output: ${output.path} (${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes)}) — read it with ${names.resultFull(ticket)}`
+                children: `Full output: ${output.path} (${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes)}) — ${output.sizeBytes > (/* inlined export .maxRenderedOutputBytes */786432) ? `${names.resultFull(ticket)} shows its last ${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)((/* inlined export .maxRenderedOutputBytes */786432))}` : `read it with ${names.resultFull(ticket)}`}`
             });
         case 'missing':
             return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_states_js__rspack_import_4/* .UnavailableState */.yb, {
@@ -31707,12 +31708,12 @@ const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .res
     annotations: {
         readOnlyHint: true
     },
-    description: 'Fetch one cargo-hauler ticket. Running tickets include a live output-tail snapshot; terminal tickets include the durable ledger result and the path of the full output log. Pass full: true to read that whole log (every test failure and panic section) instead of re-running the command.',
+    description: 'Fetch one cargo-hauler ticket. Running tickets include a live output-tail snapshot; terminal tickets include the durable ledger result and the path of the full output log. Pass full: true to read that log (its last 768 KiB when larger, where the test failures and panic sections are) instead of re-running the command.',
     inputJsonSchema: {
         additionalProperties: false,
         properties: {
             full: {
-                description: 'Render the whole on-disk output log instead of the stored tail',
+                description: 'Render the on-disk output log, its last 768 KiB when larger, instead of the stored tail',
                 type: 'boolean'
             },
             ticket: {
@@ -117690,12 +117691,12 @@ const routes = Object.freeze({
             "annotations": {
                 "readOnlyHint": true
             },
-            "description": "Fetch one cargo-hauler ticket. Running tickets include a live output-tail snapshot; terminal tickets include the durable ledger result and the path of the full output log. Pass full: true to read that whole log (every test failure and panic section) instead of re-running the command.",
+            "description": "Fetch one cargo-hauler ticket. Running tickets include a live output-tail snapshot; terminal tickets include the durable ledger result and the path of the full output log. Pass full: true to read that log (its last 768 KiB when larger, where the test failures and panic sections are) instead of re-running the command.",
             "inputJsonSchema": {
                 "additionalProperties": false,
                 "properties": {
                     "full": {
-                        "description": "Render the whole on-disk output log instead of the stored tail",
+                        "description": "Render the on-disk output log, its last 768 KiB when larger, instead of the stored tail",
                         "type": "boolean"
                     },
                     "ticket": {
