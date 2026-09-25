@@ -5,7 +5,14 @@ import { describe, expect, it } from 'effect-rstest';
 import * as Effect from 'effect/Effect';
 import * as Fiber from 'effect/Fiber';
 
-import { decodeOutput, execRequest, findExit, pollReport, scopedDaemon } from '../support/harness.js';
+import {
+  decodeOutput,
+  execRequest,
+  findExit,
+  pollReport,
+  scopedDaemon,
+  scopedGate,
+} from '../support/harness.js';
 
 describe('batch composer', () => {
   it.live('merges two queued scoped checks into one cargo invocation', () =>
@@ -47,6 +54,50 @@ describe('batch composer', () => {
       expect([rider?.attachMode, rider?.savedComputeMs]).toEqual(['batch', 0]);
       const leaderOutput = `${decodeOutput(alpha, 'stdout')}${decodeOutput(beta, 'stdout')}`;
       expect(leaderOutput.includes('-p') || attached).toBe(true);
+    }));
+
+  it.live('folds a request that joins the lane while its head waits for a permit', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(1);
+      const holderRelease = yield* scopedGate(fixture, 'holder.release');
+      // Another lane holds the only permit, so ws1's head parks on admission.
+      yield* execRequest(fixture, {
+        cwd: fixture.ws2,
+        extraEnv: { FAKE_RELEASE_FILE: holderRelease.path },
+        isTerminal: (message) => message.type === 'started',
+      });
+      const ws1Lane = (report: { readonly lanes: readonly { readonly workspaceRoot: string; readonly queued: number }[] }) =>
+        report.lanes.find((lane) => lane.workspaceRoot === fixture.ws1);
+      const alpha = yield* Effect.forkChild(
+        execRequest(fixture, { argv: ['cargo', 'check', '-p', 'alpha'], cwd: fixture.ws1, timeoutMs: 15_000 }),
+      );
+      // The lane took alpha as its head: it is queued but no longer pending.
+      yield* pollReport(
+        fixture,
+        (report) =>
+          ws1Lane(report)?.queued === 0 &&
+          report.active.some((record) => record.status === 'queued' && record.argv.includes('alpha')),
+      );
+      const beta = yield* Effect.forkChild(
+        execRequest(fixture, { argv: ['cargo', 'check', '-p', 'beta'], cwd: fixture.ws1, timeoutMs: 15_000 }),
+      );
+      yield* pollReport(fixture, (report) => ws1Lane(report)?.queued === 1);
+      yield* holderRelease.open;
+
+      const alphaExit = findExit(yield* Fiber.join(alpha));
+      const betaExit = findExit(yield* Fiber.join(beta));
+      expect([alphaExit.status, betaExit.status]).toEqual(['done', 'done']);
+      const report = yield* pollReport(fixture, (candidate) =>
+        [alphaExit.ticket, betaExit.ticket].every((ticket) =>
+          candidate.recent.some((record) => record.ticket === ticket && record.status === 'done'),
+        ),
+      );
+      const alphaRecord = report.recent.find((record) => record.ticket === alphaExit.ticket);
+      const betaRecord = report.recent.find((record) => record.ticket === betaExit.ticket);
+      expect([betaRecord?.attachedTo, betaRecord?.attachMode]).toEqual([alphaExit.ticket, 'batch']);
+      expect(alphaRecord?.execArgv).toEqual([
+        'cargo', 'check', '-p', 'alpha', '-p', 'beta', '--message-format=json-diagnostic-rendered-ansi',
+      ]);
     }));
 
   it.live('folds at most sixteen packages into one composite and runs the rest on their own', () =>

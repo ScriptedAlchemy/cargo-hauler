@@ -221,6 +221,8 @@ Within a lane, the daemon can reduce work in three ways:
    check.
 3. **Batch folding.** The daemon combines compatible queued compile or test
    requests into one invocation.
+   The lane head folds when it wins its admission permit, so requests that
+   join the lane while it waits for one still ride it.
 
 A leading `env NAME=value … cargo …` folds into the request environment, so
 the daemon schedules, estimates, attaches, and phase-tracks the cargo behind

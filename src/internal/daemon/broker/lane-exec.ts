@@ -353,6 +353,11 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
      * composite would run it before the work it declared it needs.
      * Folded followers keep their own `mergeStderr`; the composite's channels
      * are forwarded as the leader produced them.
+     *
+     * It runs once the leader holds its admission permit, not when the lane
+     * takes it: a head can park at the gate or on the permit for most of an
+     * hour, and every compatible request that joins the lane meanwhile must
+     * ride this run rather than wait out another permit of its own.
      */
     const foldBatch = (lane: Lane, leader: Job): Effect.Effect<void> =>
       Effect.gen(function* () {
@@ -957,6 +962,9 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
         Effect.flatMap((state) => (state === 'kill-requested' ? Effect.void : Effect.never)),
       );
 
+    const stillQueued = (job: Job): Effect.Effect<boolean> =>
+      Ref.get(job.state).pipe(Effect.map((state) => state === 'queued'));
+
     const processJob = (lane: Lane, job: Job): Effect.Effect<void> =>
       Effect.gen(function* () {
         const state = yield* Ref.get(job.state);
@@ -973,6 +981,17 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
           Effect.andThen(
             admission.withPermits(1)(
               Ref.update(admittedCount, (count) => count + 1).pipe(
+                // Uninterruptible so a racing kill settles a fully folded
+                // composite (requeueing its followers), never a half-folded one.
+                Effect.andThen(
+                  Effect.uninterruptible(
+                    Effect.gen(function* () {
+                      if (yield* stillQueued(job)) {
+                        yield* foldBatch(lane, job);
+                      }
+                    }),
+                  ),
+                ),
                 Effect.andThen(runAdmitted(lane, job)),
                 Effect.ensuring(Ref.update(admittedCount, (count) => count - 1)),
               ),
@@ -990,9 +1009,6 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
         );
       }).pipe(Effect.onInterrupt(() => settleInterruptedJob(job)));
 
-    const stillQueued = (job: Job): Effect.Effect<boolean> =>
-      Ref.get(job.state).pipe(Effect.map((state) => state === 'queued'));
-
     const processLaneJob = (lane: Lane, job: Job): Effect.Effect<void> =>
       Effect.gen(function* () {
         // A kill-requested head neither waits for nor leads a batch: it
@@ -1008,9 +1024,6 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
             Effect.sleep(`${config.batchWindowMs} millis`),
             Deferred.await(job.killSignal),
           );
-        }
-        if (yield* stillQueued(job)) {
-          yield* foldBatch(lane, job);
         }
         yield* processJob(lane, job);
       }).pipe(

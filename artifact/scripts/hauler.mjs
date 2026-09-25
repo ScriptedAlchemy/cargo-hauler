@@ -14157,6 +14157,11 @@ const makeLaneRuntime = (deps)=>effect_Effect__rspack_import_15/* .gen */.JkU(fu
      * composite would run it before the work it declared it needs.
      * Folded followers keep their own `mergeStderr`; the composite's channels
      * are forwarded as the leader produced them.
+     *
+     * It runs once the leader holds its admission permit, not when the lane
+     * takes it: a head can park at the gate or on the permit for most of an
+     * hour, and every compatible request that joins the lane meanwhile must
+     * ride this run rather than wait out another permit of its own.
      */ const foldBatch = (lane, leader)=>effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
                 const kind = config.batchEnabled ? (0,_scheduling_batch_js__rspack_import_2/* .batchKindFor */.Wk)(leader.intent) : null;
                 if (kind === null) {
@@ -14623,6 +14628,7 @@ const makeLaneRuntime = (deps)=>effect_Effect__rspack_import_15/* .gen */.JkU(fu
      * same signal — so this arm parks forever rather than interrupting an
      * admitted run.
      */ const killedBeforeStart = (job)=>effect_Deferred__rspack_import_19/* ["await"] */.Tx(job.killSignal).pipe(effect_Effect__rspack_import_15/* .andThen */.hgn(effect_Ref__rspack_import_17/* .get */.Jt(job.state)), effect_Effect__rspack_import_15/* .flatMap */.qIB((state)=>state === 'kill-requested' ? effect_Effect__rspack_import_15/* ["void"] */.rIH : effect_Effect__rspack_import_15/* .never */.ZmZ));
+        const stillQueued = (job)=>effect_Ref__rspack_import_17/* .get */.Jt(job.state).pipe(effect_Effect__rspack_import_15/* .map */.TjK((state)=>state === 'queued'));
         const processJob = (lane, job)=>effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
                 const state = yield* effect_Ref__rspack_import_17/* .get */.Jt(job.state);
                 if (state === 'kill-requested') {
@@ -14636,21 +14642,23 @@ const makeLaneRuntime = (deps)=>effect_Effect__rspack_import_15/* .gen */.JkU(fu
                 const claimed = {
                     value: false
                 };
-                const admitAndRun = waitForLoadHeadroom(job, heavy, claimed).pipe(effect_Effect__rspack_import_15/* .andThen */.hgn(admission.withPermits(1)(effect_Ref__rspack_import_17/* .update */.yo(admittedCount, (count)=>count + 1).pipe(effect_Effect__rspack_import_15/* .andThen */.hgn(runAdmitted(lane, job)), effect_Effect__rspack_import_15/* .ensuring */.yeE(effect_Ref__rspack_import_17/* .update */.yo(admittedCount, (count)=>count - 1))))));
+                const admitAndRun = waitForLoadHeadroom(job, heavy, claimed).pipe(effect_Effect__rspack_import_15/* .andThen */.hgn(admission.withPermits(1)(effect_Ref__rspack_import_17/* .update */.yo(admittedCount, (count)=>count + 1).pipe(// Uninterruptible so a racing kill settles a fully folded
+                // composite (requeueing its followers), never a half-folded one.
+                effect_Effect__rspack_import_15/* .andThen */.hgn(effect_Effect__rspack_import_15/* .uninterruptible */.rfi(effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
+                    if (yield* stillQueued(job)) {
+                        yield* foldBatch(lane, job);
+                    }
+                }))), effect_Effect__rspack_import_15/* .andThen */.hgn(runAdmitted(lane, job)), effect_Effect__rspack_import_15/* .ensuring */.yeE(effect_Ref__rspack_import_17/* .update */.yo(admittedCount, (count)=>count - 1))))));
                 // A job parked at the load gate or on the permit can wait minutes
                 // (and blocks its whole lane); a kill must settle it right away
                 // instead of waiting for a permit it will never use.
                 yield* effect_Effect__rspack_import_15/* .raceFirst */.KT6(admitAndRun, killedBeforeStart(job).pipe(effect_Effect__rspack_import_15/* .andThen */.hgn(finishKilledBeforeRun(lane, job)))).pipe(effect_Effect__rspack_import_15/* .ensuring */.yeE(effect_Effect__rspack_import_15/* .suspend */.DYE(()=>claimed.value ? releaseHeavy : effect_Effect__rspack_import_15/* ["void"] */.rIH)));
             }).pipe(effect_Effect__rspack_import_15/* .onInterrupt */.nAr(()=>settleInterruptedJob(job)));
-        const stillQueued = (job)=>effect_Ref__rspack_import_17/* .get */.Jt(job.state).pipe(effect_Effect__rspack_import_15/* .map */.TjK((state)=>state === 'queued'));
         const processLaneJob = (lane, job)=>effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
                 // A kill-requested head neither waits for nor leads a batch: it
                 // would fold followers only to requeue them one by one.
                 if (config.batchEnabled && config.batchWindowMs > 0 && !lane.pending.some(_dependencies_js__rspack_import_7/* .isSchedulable */.pg) && (0,_scheduling_batch_js__rspack_import_2/* .batchKindFor */.Wk)(job.intent) !== null && (yield* stillQueued(job))) {
                     yield* effect_Effect__rspack_import_15/* .raceFirst */.KT6(effect_Effect__rspack_import_15/* .sleep */.yy4(`${config.batchWindowMs} millis`), effect_Deferred__rspack_import_19/* ["await"] */.Tx(job.killSignal));
-                }
-                if (yield* stillQueued(job)) {
-                    yield* foldBatch(lane, job);
                 }
                 yield* processJob(lane, job);
             }).pipe(effect_Effect__rspack_import_15/* .catchCauseIf */.sJf((cause)=>!effect_Cause__rspack_import_18/* .hasInterruptsOnly */.nn(cause), (cause)=>{
