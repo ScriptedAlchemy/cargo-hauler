@@ -28207,21 +28207,25 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 /** Heap and framing one queued output message costs beyond its base64 payload. */ const outputMessageOverheadBytes = 256;
+/** Largest frame one write carries, so a pending write measures recent peer progress. */ const maxFrameBytes = 64 * 1024;
 const outputCost = (message)=>message.data.length + outputMessageOverheadBytes;
 const defaultOutputBufferOptions = {
-    maxOutputBytes: 1024 * 1024
+    maxOutputBytes: 64 * 1024 * 1024,
+    stalledOutputBytes: 1024 * 1024,
+    stallMs: 2000
 };
 /**
- * FIFO connection buffer with a bounded bulk-output portion. Output is shed
- * only while a flushed write is still waiting on the peer: a burst queued
- * between two writer turns on an idle socket is always kept, however many
- * messages it holds. Control and terminal messages are always retained;
- * overflow replaces output with one ordinary stderr output message, so the
- * truncation note needs no message type of its own.
+ * FIFO connection buffer with a bounded bulk-output portion. Output queued
+ * between two writer turns is always kept. While a write waits on the peer,
+ * output is kept up to `maxOutputBytes`; once that write has waited `stallMs`
+ * the peer counts as stalled and keeps only `stalledOutputBytes`. Control and
+ * terminal messages are always retained; overflow replaces output with one
+ * ordinary stderr output message, so the truncation note needs no message
+ * type of its own.
  */ class ConnectionOutputBuffer {
     #options;
     #pending = [];
-    #awaitingPeer = false;
+    #writeStartedAtMs = null;
     #bufferedOutputBytes = 0;
     #droppedPayloadBytes = 0;
     #truncation = null;
@@ -28244,7 +28248,8 @@ const defaultOutputBufferOptions = {
             return wasEmpty;
         }
         const outputBytes = outputCost(message);
-        if (!this.#awaitingPeer || this.#bufferedOutputBytes + outputBytes <= this.#options.maxOutputBytes) {
+        const limit = this.#outputLimit();
+        if (this.#bufferedOutputBytes + outputBytes <= limit) {
             this.#pending.push({
                 message,
                 outputBytes
@@ -28252,36 +28257,53 @@ const defaultOutputBufferOptions = {
             this.#bufferedOutputBytes += outputBytes;
             return wasEmpty;
         }
-        this.#recordDrop(message);
+        this.#recordDrop(message, limit);
         return wasEmpty;
     }
-    drain() {
-        const messages = this.#pending.map((envelope)=>envelope.message);
-        this.#pending.length = 0;
-        this.#bufferedOutputBytes = 0;
-        this.#droppedPayloadBytes = 0;
-        this.#truncation = null;
-        return messages;
-    }
-    /** Writes everything queued as one frame; output offered until `write` settles may be shed. */ flush(write) {
+    /** Writes the oldest queued messages as one frame of at most about `maxFrameBytes`. */ flush(write) {
         return effect_Effect__rspack_import_3/* .suspend */.DYE(()=>{
-            const frame = this.drain().map(_contracts_protocol_js__rspack_import_2/* .encodeServerMessage */.fI).join('');
+            const frame = this.#takeFrame();
             if (frame === '') {
                 return effect_Effect__rspack_import_3/* ["void"] */.rIH;
             }
-            this.#awaitingPeer = true;
+            this.#writeStartedAtMs = Date.now();
             return write(frame).pipe(effect_Effect__rspack_import_3/* .ensuring */.yeE(effect_Effect__rspack_import_3/* .sync */.OH5(()=>{
-                this.#awaitingPeer = false;
+                this.#writeStartedAtMs = null;
             })));
         });
     }
-    #recordDrop(message) {
+    #outputLimit() {
+        const startedAtMs = this.#writeStartedAtMs;
+        if (startedAtMs === null) {
+            return Number.POSITIVE_INFINITY;
+        }
+        return Date.now() - startedAtMs >= this.#options.stallMs ? this.#options.stalledOutputBytes : this.#options.maxOutputBytes;
+    }
+    #takeFrame() {
+        let frame = '';
+        let taken = 0;
+        for (const envelope of this.#pending){
+            if (frame.length >= maxFrameBytes) {
+                break;
+            }
+            frame += (0,_contracts_protocol_js__rspack_import_2/* .encodeServerMessage */.fI)(envelope.message);
+            this.#bufferedOutputBytes -= envelope.outputBytes;
+            if (envelope === this.#truncation) {
+                this.#truncation = null;
+                this.#droppedPayloadBytes = 0;
+            }
+            taken += 1;
+        }
+        this.#pending.splice(0, taken);
+        return frame;
+    }
+    #recordDrop(message, limit) {
         this.#droppedPayloadBytes += Buffer.byteLength(message.data, 'base64');
         if (this.#truncation !== null) {
-            this.#replaceTruncation(message);
+            this.#replaceTruncation(message, limit);
             return;
         }
-        while(this.#bufferedOutputBytes + outputCost(this.#makeNotice(message)) > this.#options.maxOutputBytes){
+        while(this.#bufferedOutputBytes + outputCost(this.#makeNotice(message)) > limit){
             if (!this.#evictLastOutput()) {
                 return;
             }
@@ -28295,7 +28317,7 @@ const defaultOutputBufferOptions = {
         this.#bufferedOutputBytes += envelope.outputBytes;
         this.#truncation = envelope;
     }
-    #replaceTruncation(message) {
+    #replaceTruncation(message, limit) {
         const truncation = this.#truncation;
         if (truncation === null) {
             return;
@@ -28305,10 +28327,10 @@ const defaultOutputBufferOptions = {
         truncation.message = notice;
         truncation.outputBytes = outputCost(notice);
         this.#bufferedOutputBytes += truncation.outputBytes;
-        // The dropped-byte counter grows the notice over time; shed buffered
-        // output (never the notice itself) so the swap cannot exceed the byte
-        // budget the initial insertion honored.
-        while(this.#bufferedOutputBytes > this.#options.maxOutputBytes){
+        // The dropped-byte counter grows the notice over time, and a stall
+        // lowers the limit; shed buffered output (never the notice itself) so
+        // the swap stays within the limit in force.
+        while(this.#bufferedOutputBytes > limit){
             if (!this.#evictLastOutput()) {
                 return;
             }

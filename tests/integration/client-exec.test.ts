@@ -256,7 +256,11 @@ describe('runExecClient', () => {
           id: 'stalled',
           argv: ['cargo', 'build'],
           cwd: fixture.ws1,
-          env: fakeCargoEnv(fixture, { FAKE_OUTPUT_BYTES: '5900000', FAKE_LATE_OUT: 'late-last-line' }),
+          env: fakeCargoEnv(fixture, {
+            FAKE_OUTPUT_BYTES: '5900000',
+            FAKE_SLEEP: '3',
+            FAKE_LATE_OUT: 'late-last-line',
+          }),
         })}\n`,
       );
       const waited = yield* awaitTicket('cc-1', 20_000, fixture.config);
@@ -278,11 +282,13 @@ describe('runExecClient', () => {
       });
 
       expect(received.at(-1)).toMatchObject({ type: 'exit', ticket: 'cc-1', exitCode: 0 });
-      const notices = received
+      const texts = received
         .filter((message): message is Extract<ServerMessage, { type: 'output' }> => message.type === 'output')
-        .map((message) => Buffer.from(message.data, 'base64').toString('utf8'))
-        .filter((text) => text.includes('output truncated'));
+        .map((message) => Buffer.from(message.data, 'base64').toString('utf8'));
+      const notices = texts.filter((text) => text.includes('output truncated'));
       expect(notices).toHaveLength(1);
+      // Output arriving after the stall is shed; the ticket log keeps it.
+      expect(texts.some((text) => text.includes('late-last-line'))).toBe(false);
       expect(notices[0]).toMatch(
         /^\[cargo-hauler\] output truncated: client fell behind; \d+ bytes dropped; full output: hauler result cc-1 --full\n$/u,
       );
