@@ -59,7 +59,7 @@
     "validate:artifact": "agent-bundle validate --artifact artifact"
   },
   "devDependencies": {
-    "@agent-bundle/runtime": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@477abe956bdb1a862d957733c9d936580d65b5a9",
+    "@agent-bundle/runtime": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@1d661b4d9a4ba87bd0da095e4af5094f07ccd956",
     "@changesets/cli": "3.0.3",
     "@effect/atom-react": "4.0.0-rc.112",
     "@effect/platform-node": "4.0.0-rc.112",
@@ -71,7 +71,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-    "agent-bundle": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@477abe956bdb1a862d957733c9d936580d65b5a9",
+    "agent-bundle": "https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@1d661b4d9a4ba87bd0da095e4af5094f07ccd956",
     "bashjsast": "github:woolkingx/bashjsast#131f4b677d1906774fc49cfceab0ccb7b370b2e6",
     "effect": "4.0.0-rc.112",
     "effect-rstest": "https://pkg.pr.new/ScriptedAlchemy/effect-rstest@e5f8d5f",
