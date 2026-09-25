@@ -27,7 +27,8 @@ export const commandMentionsHauler = (command: string | undefined): boolean =>
  * alias, or a shell variable — the one shape neither the rewrite nor the
  * PATH shim sees (the shim is skipped by an absolute toolchain path).
  */
-const cargoStatusLine = /^ {2,}(?:Compiling|Checking|Finished|Running|Doc-tests|Documenting|Blocking) \S/mu;
+const cargoStatusLine =
+  /^(?: {3}Compiling| {4}Checking| {4}Finished| {5}Running| {3}Doc-tests| Documenting| {4}Blocking) \S/mu;
 
 /**
  * Commands whose output is a file they were asked to show. A saved cargo log
