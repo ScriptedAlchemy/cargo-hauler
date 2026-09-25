@@ -1,4 +1,15 @@
-import { appendFileSync, mkdirSync, mkdtempSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import {
+  appendFileSync,
+  closeSync,
+  constants,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -155,12 +166,19 @@ describe('createKacheSnapshotReader', () => {
     const root = mkdtempSync(join(tmpdir(), 'cc-kache-status-timeout-'));
     const indexPath = join(root, 'index.db');
     try {
-      createIndex(indexPath, [['alpha', 'dev', 100]]);
+      // A FIFO with no writer: opening it blocks the scan until the test
+      // releases it below, so only the timeout can settle the read.
+      execFileSync('mkfifo', [indexPath]);
       const snapshot = await createKacheSnapshotReader(indexPath, { indexReadTimeoutMs: 1 }).read(1_000);
       expect(snapshot.status.indexState).toBe('timed-out');
       expect(snapshot.status.entryCount).toBe(0);
       expect(snapshot.indexPriors.compileTimeMs('alpha', ['dev'])).toBeNull();
     } finally {
+      try {
+        closeSync(openSync(indexPath, constants.O_WRONLY | constants.O_NONBLOCK));
+      } catch {
+        // ENXIO: the terminated worker never reached the open.
+      }
       removeTestPath(root);
     }
   });
