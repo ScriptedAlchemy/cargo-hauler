@@ -2043,7 +2043,7 @@ if (process.platform === 'linux') {
 
 },
 "./src/events/tool/after.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-/* import */ var agent_bundle_routes__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/routes.js");
+/* import */ var agent_bundle_routes__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/routes.js");
 /* import */ var _internal_host_hooks_hook_state_js__rspack_import_1 = __webpack_require__("./src/internal/host-hooks/hook-state.ts");
 /* import */ var _internal_host_hooks_session_ping_js__rspack_import_2 = __webpack_require__("./src/internal/host-hooks/session-ping.ts");
 /* import */ var _internal_host_hooks_tokens_js__rspack_import_3 = __webpack_require__("./src/internal/host-hooks/tokens.ts");
@@ -2412,7 +2412,7 @@ __webpack_require__.d(__webpack_exports__, {
 "./src/internal/daemon/config.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var node_os__rspack_import_0 = __webpack_require__("node:os");
 /* import */ var node_path__rspack_import_1 = __webpack_require__("node:path");
-/* import */ var effect_Context__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Context.js");
+/* import */ var effect_Context__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Context.js");
 /* import */ var _platform_state_paths_js__rspack_import_2 = __webpack_require__("./src/internal/platform/state-paths.ts");
 /* import */ var _runtime_jobserver_js__rspack_import_3 = __webpack_require__("./src/internal/daemon/runtime/jobserver.ts");
 /* import */ var _storage_ticket_log_js__rspack_import_4 = __webpack_require__("./src/internal/storage/ticket-log.ts");
@@ -4198,9 +4198,9 @@ module.exports = __rspack_createRequire_require("stream");
 module.exports = __rspack_createRequire_require("util");
 
 },
-"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/40.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/40.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_fs_promises__rspack_import_0 = __webpack_require__("node:fs/promises");
-/* import */ var _736_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/736.js");
+/* import */ var _736_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/736.js");
 
 
 const CODEX_ROLLOUT_HEAD_BYTES = 1048576;
@@ -4388,12 +4388,12 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/49.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/49.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
 /* import */ var node_fs__rspack_import_1 = __webpack_require__("node:fs");
 /* import */ var node_os__rspack_import_2 = __webpack_require__("node:os");
 /* import */ var node_path__rspack_import_3 = __webpack_require__("node:path");
-/* import */ var _736_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/736.js");
+/* import */ var _736_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/736.js");
 
 
 
@@ -4469,7 +4469,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/736.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/736.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_async_hooks__rspack_import_0 = __webpack_require__("node:async_hooks");
 
 const AGENT_REQUEST_STORE_VERSION = 6;
@@ -4759,8 +4759,8 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/request.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _736_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/736.js");
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/request.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _736_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/736.js");
 var request_AGENT_REQUEST_STORE_VERSION = 6;
 var request_PLUGIN_STATE_DIRECTORY = "state";
 
@@ -4773,7 +4773,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/242~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/242~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 function getEnumValues(entries) {
     const numericValues = Object.values(entries).filter((v)=>"number" == typeof v);
     const values = Object.entries(entries).filter(([k, _])=>-1 === numericValues.indexOf(+k)).map(([_, v])=>v);
@@ -10479,8 +10479,8 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/573~1.js"(__unused_rspack___webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
-/* import */ var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/917~1.js");
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/573~1.js"(__unused_rspack___webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
+/* import */ var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/917~1.js");
 
 const appResourceUri = (reference)=>reference;
 const MAX_ROUTE_RENDER_ELAPSED_MS = 86400000;
@@ -10488,7 +10488,7 @@ const MAX_ROUTE_RENDER_ELAPSED_MS = 86400000;
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/818~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/818~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 const isPlainObjectOrArray = (value)=>{
     if (Array.isArray(value)) return true;
     const proto = Object.getPrototypeOf(value);
@@ -10510,8 +10510,8 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/917~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _818_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/818~1.js");
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/917~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _818_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/818~1.js");
 
 const canonicalAgentEvents = Object.freeze([
     'session/start',
@@ -11078,7 +11078,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/991~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/991~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 const isJsonWhitespace = (code)=>0x09 === code || 0x0a === code || 0x0d === code || 0x20 === code;
 const isValueTerminator = (code)=>isJsonWhitespace(code) || 0x2c === code || 0x7d === code || 0x5d === code;
 const skipWhitespace = (bytes, index)=>{
@@ -11260,15 +11260,15 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/event-project.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/event-project.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
 /* import */ var node_fs_promises__rspack_import_1 = __webpack_require__("node:fs/promises");
 /* import */ var node_path__rspack_import_2 = __webpack_require__("node:path");
 /* import */ var node_url__rspack_import_3 = __webpack_require__("node:url");
-/* import */ var _917_1_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/917~1.js");
-/* import */ var _242_1_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/242~1.js");
-/* import */ var _818_1_js__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/818~1.js");
-/* import */ var _991_1_js__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/991~1.js");
+/* import */ var _917_1_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/917~1.js");
+/* import */ var _242_1_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/242~1.js");
+/* import */ var _818_1_js__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/818~1.js");
+/* import */ var _991_1_js__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/991~1.js");
 
 
 
@@ -12666,7 +12666,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/launch-env.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/launch-env.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_fs__rspack_import_0 = __webpack_require__("node:fs");
 /* import */ var node_path__rspack_import_1 = __webpack_require__("node:path");
 
@@ -12796,12 +12796,12 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/routes.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/917~1.js");
-/* import */ var _573_1_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/573~1.js");
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/routes.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/917~1.js");
+/* import */ var _573_1_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/573~1.js");
 
 const defineTool = (config, handler)=>Object.assign(async (props)=>{
-        const { agent } = await Promise.resolve(/* import() */).then(__webpack_require__.bind(__webpack_require__, "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/request.js"));
+        const { agent } = await Promise.resolve(/* import() */).then(__webpack_require__.bind(__webpack_require__, "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/request.js"));
         return handler(props.input, await agent());
     }, config);
 const definitions = {};
@@ -12833,13 +12833,13 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Context.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _Effectable_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effectable.js");
-/* import */ var _Equal_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Equal.js");
-/* import */ var _Function_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Function.js");
-/* import */ var _Hash_js__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Hash.js");
-/* import */ var _internal_core_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/internal/core.js");
-/* import */ var _Predicate_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Predicate.js");
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Context.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _Effectable_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effectable.js");
+/* import */ var _Equal_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Equal.js");
+/* import */ var _Function_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Function.js");
+/* import */ var _Hash_js__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Hash.js");
+/* import */ var _internal_core_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/internal/core.js");
+/* import */ var _Predicate_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Predicate.js");
 
 
 
@@ -12928,7 +12928,7 @@ const Service = function () {
 };
 const ServiceProto = {
   [ServiceTypeId]: ServiceTypeId,
-  ... /*#__PURE__*/_Effectable_js__rspack_import_0/* .Prototype */.b({
+  ... /*#__PURE__*/_Effectable_js__rspack_import_0/* .Prototype */.bp({
     label: "Service",
     evaluate(fiber) {
       return (0,_internal_core_js__rspack_import_1/* .exitSucceed */.xt)(get(fiber.context, this));
@@ -13684,8 +13684,8 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effectable.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _internal_core_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/internal/core.js");
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effectable.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _internal_core_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/internal/core.js");
 
 /**
  * Create a low-level `Effect` prototype.
@@ -13701,6 +13701,7 @@ __webpack_require__.d(__webpack_exports__, {
  * When the effect is evaluated, it calls `evaluate` with the current fiber.
  *
  * @see {@link Class} for a class-based approach to defining custom Effect values
+ * @see {@link Mixin} for wrapping an existing class constructor
  *
  * @category prototypes
  * @since 4.0.0
@@ -13709,14 +13710,15 @@ const Prototype = options => (0,_internal_core_js__rspack_import_0/* .makePrimit
   op: options.label,
   [_internal_core_js__rspack_import_0/* .evaluate */._3]: options.evaluate
 });
+const proto = /*#__PURE__*/(/* unused pure expression or super */ null && (Prototype({
+  label: "Effectable",
+  evaluate(_) {
+    return this.asEffect();
+  }
+})));
 const Base = /*#__PURE__*/(/* unused pure expression or super */ null && ((() => {
   const Base = function () {};
-  Base.prototype = /*#__PURE__*/Prototype({
-    label: "Effectable",
-    evaluate(_) {
-      return this;
-    }
-  });
+  Base.prototype = proto;
   return Base;
 })()));
 /**
@@ -13728,22 +13730,72 @@ const Base = /*#__PURE__*/(/* unused pure expression or super */ null && ((() =>
  * as `Effect` values.
  *
  * @see {@link Prototype} for a lower-level primitive approach to creating custom Effect-like values without a class
+ * @see {@link Mixin} for wrapping an existing class constructor
  * @category constructors
  * @since 2.0.0
  */
 class Class extends (/* unused pure expression or super */ null && (Base)) {}
+/**
+ * Returns a subclass of the provided class that inserts the Effect prototype
+ * into the inheritance chain.
+ *
+ * **When to use**
+ *
+ * Use to make instances of an existing class behave as `Effect` values without
+ * extending {@link Class} or modifying the original prototype.
+ *
+ * **Details**
+ *
+ * Pass the class to wrap, then implement `asEffect` on the final class. The
+ * returned class is abstract, and the success, error, and service types are
+ * inferred from the concrete `asEffect` return type. Concrete and abstract base
+ * classes are supported. Constructor parameters and instance members are
+ * preserved, except that Effect's prototype members shadow base prototype
+ * members with the same name: `pipe`, `toString`, `toJSON`, `[Symbol.iterator]`,
+ * and `[Symbol.for("nodejs.util.inspect.custom")]`.
+ *
+ * **Example** (Evaluating a mixed-in class)
+ *
+ * ```ts import.meta.vitest
+ * import { Effect, Effectable } from "effect"
+ *
+ * class Box {
+ *   constructor(readonly value: number) {}
+ * }
+ *
+ * class EffectBox extends Effectable.Mixin(Box) {
+ *   asEffect() {
+ *     return Effect.succeed(this.value)
+ *   }
+ * }
+ *
+ * const box = new EffectBox(2)
+ * Effect.isEffect(box) // => true
+ * await Effect.runPromise(box) // => 2
+ * ```
+ *
+ * @see {@link Prototype} for a lower-level primitive approach to creating custom Effect-like values without a class
+ * @see {@link Class} for a base constructor to extend
+ * @category constructors
+ * @since 4.0.0
+ */
+const Mixin = klass => {
+  class Mixed extends klass {}
+  Object.defineProperties(Mixed.prototype, Object.getOwnPropertyDescriptors(proto));
+  return Mixed;
+};
 //# sourceMappingURL=Effectable.js.map
 __webpack_require__.d(__webpack_exports__, {
 }, {
-  b: Prototype
+  bp: Prototype
 });
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Equal.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _Hash_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Hash.js");
-/* import */ var _internal_equal_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/internal/equal.js");
-/* import */ var _Predicate_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Predicate.js");
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Equal.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _Hash_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Hash.js");
+/* import */ var _internal_equal_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/internal/equal.js");
+/* import */ var _Predicate_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Predicate.js");
 
 
 
@@ -13785,7 +13837,7 @@ __webpack_require__.d(__webpack_exports__, {
  * @category symbols
  * @since 2.0.0
  */
-const symbol = "~effect/interfaces/Equal";
+const symbol = "~effect/Equal";
 function equals() {
   if (arguments.length === 1) {
     return self => compareBoth(self, arguments[0]);
@@ -14147,9 +14199,9 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Formatter.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _Predicate_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Predicate.js");
-/* import */ var _Redactable_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Redactable.js");
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Formatter.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _Predicate_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Predicate.js");
+/* import */ var _Redactable_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Redactable.js");
 /**
  * Formats JavaScript values into readable strings.
  *
@@ -14178,6 +14230,7 @@ __webpack_require__.d(__webpack_exports__, {
  * - Handles `BigInt`, `Symbol`, `Set`, `Map`, `Date`, `RegExp`, and class
  *   instances that `JSON.stringify` cannot represent.
  * - Circular references are shown as `"[Circular]"` instead of throwing.
+ * - Failures while inspecting a value are rendered as diagnostic placeholders instead of throwing.
  * - Primitives: stringified naturally (`null`, `undefined`, `123`, `true`).
  *   Strings are JSON-quoted.
  * - Objects with a custom `toString` (not `Object.prototype.toString`):
@@ -14242,6 +14295,14 @@ function format(input, options) {
     }
   };
   function recur(v, d = 0) {
+    try {
+      return recurUnsafe(v, d);
+    } catch {
+      if (typeof v === "object" && v !== null || typeof v === "function") ancestors.delete(v);
+      return "[inspection threw]";
+    }
+  }
+  function recurUnsafe(v, d = 0) {
     if (typeof v === "string") return JSON.stringify(v);
     if (typeof v === "number" || v == null || typeof v === "boolean" || typeof v === "symbol") return String(v);
     if (typeof v === "bigint") return String(v) + "n";
@@ -14257,16 +14318,16 @@ function format(input, options) {
         output = formatDate(v);
       } else if (!options?.ignoreToString && _Predicate_js__rspack_import_1/* .hasProperty */.i5(v, "toString") && typeof v["toString"] === "function" && v["toString"] !== Object.prototype.toString && v["toString"] !== Array.prototype.toString) {
         const s = safeToString(v);
-        output = v instanceof Error && v.cause ? `${s} (cause: ${recur(v.cause, d)})` : s;
+        output = v instanceof Error && v.cause !== undefined ? `${s} (cause: ${recur(v.cause, d)})` : s;
       } else if (Symbol.iterator in v) {
         output = `${v.constructor.name}(${recur(Array.from(v), d)})`;
       } else {
         const keys = ownKeys(v);
         if (!gap || keys.length <= 1) {
-          const body = `{${keys.map(k => `${formatPropertyKey(k)}:${recur(v[k], d)}`).join(",")}}`;
+          const body = `{${keys.map(k => `${formatPropertyKey(k)}:${recur(safeGet(v, k), d)}`).join(",")}}`;
           output = wrap(v, body);
         } else {
-          const body = `{\n${keys.map(k => `${ind(d + 1)}${formatPropertyKey(k)}: ${recur(v[k], d + 1)}`).join(",\n")}\n${ind(d)}}`;
+          const body = `{\n${keys.map(k => `${ind(d + 1)}${formatPropertyKey(k)}: ${recur(safeGet(v, k), d + 1)}`).join(",\n")}\n${ind(d)}}`;
           output = wrap(v, body);
         }
       }
@@ -14311,6 +14372,13 @@ function safeToString(input) {
     return typeof s === "string" ? s : String(s);
   } catch {
     return "[toString threw]";
+  }
+}
+function safeGet(input, key) {
+  try {
+    return input[key];
+  } catch {
+    return "[property access threw]";
   }
 }
 /**
@@ -14397,7 +14465,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Function.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Function.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 
 /**
  * Creates a function that can be called in data-first style or data-last
@@ -15009,10 +15077,10 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Hash.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _Function_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Function.js");
-/* import */ var _internal_equal_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/internal/equal.js");
-/* import */ var _Predicate_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Predicate.js");
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Hash.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _Function_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Function.js");
+/* import */ var _internal_equal_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/internal/equal.js");
+/* import */ var _Predicate_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Predicate.js");
 /**
  * Computes Effect hash values and defines the interface for objects that want
  * to provide their own hash implementation. Hashes are small numeric
@@ -15042,7 +15110,7 @@ __webpack_require__.d(__webpack_exports__, {
  * @category symbols
  * @since 2.0.0
  */
-const symbol = "~effect/interfaces/Hash";
+const symbol = "~effect/Hash";
 /**
  * Computes a hash value for any given value.
  *
@@ -15084,10 +15152,6 @@ const hash = self => {
       return number(self);
     case "bigint":
       return string(self.toString(10));
-    case "boolean":
-      return string(String(self));
-    case "symbol":
-      return string(String(self));
     case "string":
       return string(self);
     case "undefined":
@@ -15132,7 +15196,8 @@ const hash = self => {
         }
       }
     default:
-      throw new Error(`BUG: unhandled typeof ${typeof self} - please report an issue at https://github.com/Effect-TS/effect/issues`);
+      // The remaining primitive types are boolean and symbol.
+      return string(String(self));
   }
 };
 /**
@@ -15287,14 +15352,8 @@ const isHash = u => (0,_Predicate_js__rspack_import_2/* .hasProperty */.i5)(u, s
  * @since 2.0.0
  */
 const number = n => {
-  if (n !== n) {
-    return string("NaN");
-  }
-  if (n === Infinity) {
-    return string("Infinity");
-  }
-  if (n === -Infinity) {
-    return string("-Infinity");
+  if (n !== n || n === Infinity || n === -Infinity) {
+    return string(String(n));
   }
   let h = n | 0;
   if (h !== n) {
@@ -15487,7 +15546,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Inspectable.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Inspectable.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /**
  * Controls how values appear in logs and debugging output.
  *
@@ -15726,7 +15785,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Pipeable.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Pipeable.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /**
  * The `Pipeable` module defines the shared interface and implementation helpers
  * for values that support Effect-style method chaining with `.pipe(...)`.
@@ -15874,8 +15933,8 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Predicate.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _Function_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Function.js");
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Predicate.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _Function_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Function.js");
 /**
  * Defines runtime checks for values.
  *
@@ -17326,8 +17385,8 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Redactable.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _Pipeable_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Pipeable.js");
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Redactable.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _Pipeable_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Pipeable.js");
 
 
 /**
@@ -17456,7 +17515,8 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Utils.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Utils.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
 /**
  * Yields its wrapped value exactly once through an `IterableIterator`.
  *
@@ -17547,7 +17607,7 @@ const pickInternalCall = () => {
       }
     }
   };
-  const isNotOptimizedAway = standard[InternalTypeId](() => new Error().stack)?.includes(InternalTypeId) === true;
+  const isNotOptimizedAway = getStackTraceLimit() !== 0 && standard[InternalTypeId](() => new Error().stack)?.includes(InternalTypeId) === true;
   return isNotOptimizedAway ? standard[InternalTypeId] : forced[InternalTypeId];
 };
 /** @internal */
@@ -17559,16 +17619,16 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/internal/core.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _Equal_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Equal.js");
-/* import */ var _Formatter_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Formatter.js");
-/* import */ var _Function_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Function.js");
-/* import */ var _Hash_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Hash.js");
-/* import */ var _Inspectable_js__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Inspectable.js");
-/* import */ var _Pipeable_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Pipeable.js");
-/* import */ var _Predicate_js__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Predicate.js");
-/* import */ var _Utils_js__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Utils.js");
-/* import */ var _record_js__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/internal/record.js");
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/internal/core.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _Equal_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Equal.js");
+/* import */ var _Formatter_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Formatter.js");
+/* import */ var _Function_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Function.js");
+/* import */ var _Hash_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Hash.js");
+/* import */ var _Inspectable_js__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Inspectable.js");
+/* import */ var _Pipeable_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Pipeable.js");
+/* import */ var _Predicate_js__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Predicate.js");
+/* import */ var _Utils_js__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Utils.js");
+/* import */ var _record_js__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/internal/record.js");
 
 
 
@@ -17672,8 +17732,6 @@ const isCause = self => (0,_Predicate_js__rspack_import_7/* .hasProperty */.i5)(
 const isCauseReason = self => hasProperty(self, CauseReasonTypeId);
 /** @internal */
 class CauseImpl {
-  [CauseTypeId];
-  reasons;
   constructor(failures) {
     this[CauseTypeId] = CauseTypeId;
     this.reasons = failures;
@@ -17743,7 +17801,6 @@ class ReasonBase {
 const constEmptyAnnotations = /*#__PURE__*/new Map();
 /** @internal */
 class Fail extends ReasonBase {
-  error;
   constructor(error, annotations = constEmptyAnnotations) {
     super("Fail", annotations, error);
     this.error = error;
@@ -17772,7 +17829,6 @@ const causeEmpty = /*#__PURE__*/(/* unused pure expression or super */ null && (
 const causeFail = error => new CauseImpl([new Fail(error)]);
 /** @internal */
 class Die extends ReasonBase {
-  defect;
   constructor(defect, annotations = constEmptyAnnotations) {
     super("Die", annotations, defect);
     this.defect = defect;
@@ -17821,10 +17877,12 @@ const makePrimitiveProto = options => ({
 /** @internal */
 const makePrimitive = options => {
   const Proto = makePrimitiveProto(options);
-  return function () {
-    const self = Object.create(Proto);
-    self[args] = options.single === false ? arguments : arguments[0];
-    return self;
+  const PrimitiveImpl = function (value) {
+    this[args] = value;
+  };
+  PrimitiveImpl.prototype = Proto;
+  return function (value) {
+    return new PrimitiveImpl(value);
   };
 };
 /** @internal */
@@ -17853,10 +17911,12 @@ const makeExit = options => {
       return _Hash_js__rspack_import_4/* .combine */.kg(_Hash_js__rspack_import_4/* .string */.Yj(options.op), _Hash_js__rspack_import_4/* .hash */.tW(this[args]));
     }
   };
+  const ExitPrimitive = function (value) {
+    this[args] = value;
+  };
+  ExitPrimitive.prototype = Proto;
   return function (value) {
-    const self = Object.create(Proto);
-    self[args] = value;
-    return self;
+    return new ExitPrimitive(value);
   };
 };
 /** @internal */
@@ -17883,9 +17943,9 @@ const exitFailCause = /*#__PURE__*/makeExit({
   [evaluate](fiber) {
     let cause = this[args];
     let annotated = false;
-    if (fiber.currentStackFrame) {
+    if (fiber.cache.stackFrame) {
       cause = causeAnnotate(cause, {
-        mapUnsafe: new Map([[StackTraceKey.key, fiber.currentStackFrame]])
+        mapUnsafe: new Map([[StackTraceKey.key, fiber.cache.stackFrame]])
       });
       annotated = true;
     }
@@ -17907,6 +17967,20 @@ const withFiber = /*#__PURE__*/makePrimitive({
     return this[args](fiber);
   }
 });
+/**
+ * Accesses the current fiber to compute a value without a separate `succeed`
+ * operation.
+ *
+ * @internal
+ */
+const withFiberSucceed = /*#__PURE__*/(/* unused pure expression or super */ null && (makePrimitive({
+  op: "WithFiberSucceed",
+  [evaluate](fiber) {
+    const value = this[args](fiber);
+    const cont = fiber.getCont(contA);
+    return cont ? cont[contA](value, fiber) : fiber.yieldWith(exitSucceed(value));
+  }
+})));
 /** @internal */
 const YieldableError = /*#__PURE__*/function () {
   class YieldableError extends globalThis.Error {}
@@ -18003,7 +18077,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/internal/equal.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/internal/equal.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /** @internal */
 const getAllObjectKeys = obj => {
   const keys = new Set(Reflect.ownKeys(obj));
@@ -18036,7 +18110,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/internal/record.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/internal/record.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /** @internal */
 function assignProperty(self, key, value) {
   if (key === "__proto__") {
@@ -27980,7 +28054,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./.agent-bundle-virtual/hooks-event-route-tool-after.claude-0.mjs"(__unused_rspack___webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
 /* import */ var node_url__rspack_import_0 = __webpack_require__("node:url");
-/* import */ var agent_bundle_launch_env__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/launch-env.js");
+/* import */ var agent_bundle_launch_env__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/launch-env.js");
 
 
 (0,agent_bundle_launch_env__rspack_import_1/* .applyOperatorEnv */.OJ)({
@@ -27994,11 +28068,11 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 /* import */ var agent_bundle_launch_env_layer__rspack_import_0 = __webpack_require__("./.agent-bundle-virtual/hooks-event-route-tool-after.claude-0.mjs");
 /* import */ var node_child_process__rspack_import_1 = __webpack_require__("node:child_process");
 /* import */ var node_url__rspack_import_2 = __webpack_require__("node:url");
-/* import */ var agent_bundle_event_project__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/event-project.js");
+/* import */ var agent_bundle_event_project__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_22d0aa4b176dcbbc37f5aee27d92692e/node_modules/agent-bundle/dist/event-project.js");
 /* import */ var _src_events_tool_after_ts__rspack_import_4 = __webpack_require__("./src/events/tool/after.ts");
-/* import */ var _agent_bundle_runtime_request__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/49.js");
-/* import */ var _agent_bundle_runtime_request__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/736.js");
-/* import */ var _agent_bundle_runtime_lineage__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/40.js");
+/* import */ var _agent_bundle_runtime_request__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/49.js");
+/* import */ var _agent_bundle_runtime_request__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/736.js");
+/* import */ var _agent_bundle_runtime_lineage__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/40.js");
 
 
 
@@ -28074,7 +28148,7 @@ const prepareRouteInvocation = async (nativeInput, signal, observer, receipt)=>{
     return withEventState(signal, async (bindings)=>{
         const gate = await (0,_agent_bundle_runtime_request__rspack_import_6/* .runAgentRequest */.iC)({
             invocation: {
-                artifactEpoch: "5efb76b4c6f9688da953c9f4e6e9c7091eeea40c6ee7a7d526c40a539f31219a",
+                artifactEpoch: "e79d554cfb9079f3e388b76ee54d6454d0c4c0c1fc2069131a8fa918ef27d021",
                 hostContractRevision: capabilityRevision,
                 kind: "event",
                 operationId: `event:${canonicalEvent}`,

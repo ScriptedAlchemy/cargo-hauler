@@ -49,7 +49,7 @@ native features over new wrappers or fallback frameworks.
 
 ## Effect version
 
-This branch is **Effect v4** (`effect` 4.0.0-rc.112), not v3. v3 idioms
+This branch is **Effect v4** (`effect` 4.0.0-rc.117), not v3. v3 idioms
 (`Context.Tag`, `Data.TaggedError`, `@effect/platform` as a separate package)
 often do not apply; check the vendored v4 source before assuming an API exists.
 
@@ -65,7 +65,7 @@ unrelated edits.
 ## `repos/` — vendored reference source (read-only)
 
 `repos/effect` is the Effect monorepo vendored as a git subtree, pinned to the
-`effect@4.0.0-rc.112` tag — the exact version in `package.json`. It exists so
+`effect@4.0.0-rc.117` tag — the exact version in `package.json`. It exists so
 agents can read real source instead of guessing or searching the web.
 
 Rules:
@@ -78,7 +78,7 @@ Rules:
   build.
 - **Prefer the vendored source over web search.** Web results are dominated by
   Effect v3 and are frequently wrong for this branch. The tree in
-  `repos/effect` is the ground truth for 4.0.0-rc.112.
+  `repos/effect` is the ground truth for 4.0.0-rc.117.
 - **Read `repos/effect/LLMS.md` first** when writing Effect code. It is the
   agent-facing guide to v4 idioms (`Effect.gen`, `Effect.fn`,
   `Context.Service`, `Schema.TaggedError`, Layers, testing) and links into

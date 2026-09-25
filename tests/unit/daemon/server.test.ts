@@ -25,32 +25,62 @@ const brokerWith = (overrides: Partial<BrokerApi> = {}): BrokerApi => ({
   ...overrides,
 });
 
+/**
+ * A socket whose reader yields `chunks` one pull at a time, then runs
+ * `beforeClose` and closes cleanly. Each pull yields first, as a real read
+ * would, so the connection's writer fiber can flush between chunks.
+ */
+const fakeSocket = (options: {
+  readonly chunks: readonly Uint8Array[];
+  readonly replies: ServerMessage[];
+  readonly afterWrite?: Effect.Effect<void>;
+  readonly beforeClose?: Effect.Effect<void>;
+}): { readonly socket: Socket.Socket; readonly pulls: () => number } => {
+  let pulls = 0;
+  const write = (chunk: Uint8Array | string | Socket.CloseEvent): Effect.Effect<void> =>
+    Effect.sync(() => {
+      if (Socket.isCloseEvent(chunk)) {
+        return;
+      }
+      const text = typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
+      for (const line of text.split('\n')) {
+        if (line.length > 0) {
+          options.replies.push(JSON.parse(line) as ServerMessage);
+        }
+      }
+    }).pipe(Effect.andThen(options.afterWrite ?? Effect.void));
+  const pull = Effect.yieldNow.pipe(
+    Effect.andThen(
+      Effect.suspend(() => {
+        const chunk = options.chunks[pulls];
+        pulls += 1;
+        return chunk === undefined
+          ? (options.beforeClose ?? Effect.void).pipe(
+              Effect.andThen(
+                Effect.fail(new Socket.SocketError({ reason: new Socket.SocketCloseError({ code: 1000 }) })),
+              ),
+            )
+          : Effect.succeed([chunk] as const);
+      }),
+    ),
+  );
+  const socket = Socket.make({
+    reader: Effect.succeed({ pull, upgrade: () => Effect.die(new Error('unexpected upgrade')) }),
+    writer: Effect.succeed({ write, writeAll: (chunks) => Effect.forEach(chunks, write, { discard: true }) }),
+  });
+  return { socket, pulls: () => pulls };
+};
+
 const runMessages = (messages: readonly string[], broker: BrokerApi) =>
   Effect.gen(function* () {
     const written = yield* Deferred.make<void>();
     const replies: ServerMessage[] = [];
-    const socket = {
-      [Socket.TypeId]: Socket.TypeId,
-      writer: Effect.succeed((chunk: Uint8Array | string) =>
-        Effect.sync(() => {
-          const text = typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-          for (const line of text.split('\n')) {
-            if (line.length > 0) {
-              replies.push(JSON.parse(line) as ServerMessage);
-            }
-          }
-        }).pipe(Effect.andThen(Deferred.succeed(written, undefined)), Effect.asVoid),
-      ),
-      run: (handler: (chunk: Uint8Array) => Effect.Effect<unknown> | void) =>
-        Effect.gen(function* () {
-          const handled = handler(Buffer.from(messages.join('')));
-          if (Effect.isEffect(handled)) {
-            yield* handled;
-          }
-          yield* Deferred.await(written).pipe(Effect.timeout('500 millis'));
-        }),
-      runRaw: () => Effect.void,
-    } as unknown as Socket.Socket;
+    const { socket } = fakeSocket({
+      chunks: [Buffer.from(messages.join(''))],
+      replies,
+      afterWrite: Deferred.succeed(written, undefined).pipe(Effect.asVoid),
+      beforeClose: Deferred.await(written).pipe(Effect.timeout('500 millis'), Effect.ignore),
+    });
     const shutdownLatch = yield* Deferred.make<void>();
     yield* makeConnectionHandler({
       broker,
@@ -139,46 +169,15 @@ describe('daemon connection line cap', () => {
   it.live('replies bad-message and closes the connection when a line exceeds the cap', () =>
     Effect.gen(function* () {
       const replies: ServerMessage[] = [];
-      let readPumpFailed = false;
-      let chunksAfterOverflow = 0;
-      const chunks = [
-        Buffer.from(`${JSON.stringify({ type: 'ping', id: 'ping-1' })}\n`),
-        Buffer.from('{"type":"exec","env":{"HUGE":"'),
-        Buffer.from('x'.repeat(200)),
-        Buffer.from('"}}\n'),
-      ];
-      const socket = {
-        [Socket.TypeId]: Socket.TypeId,
-        writer: Effect.succeed((chunk: Uint8Array | string) =>
-          Effect.sync(() => {
-            const text = typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-            for (const line of text.split('\n')) {
-              if (line.length > 0) {
-                replies.push(JSON.parse(line) as ServerMessage);
-              }
-            }
-          }),
-        ),
-        run: (handler: (chunk: Uint8Array) => Effect.Effect<unknown, unknown> | void) =>
-          Effect.gen(function* () {
-            for (const chunk of chunks) {
-              if (readPumpFailed) {
-                chunksAfterOverflow += 1;
-                continue;
-              }
-              const handled = handler(chunk);
-              if (Effect.isEffect(handled)) {
-                const exit = yield* Effect.exit(handled);
-                if (exit._tag === 'Failure') {
-                  readPumpFailed = true;
-                }
-              }
-            }
-            // The real pump flushes queued replies before the scope closes.
-            yield* Effect.sleep('50 millis');
-          }),
-        runRaw: () => Effect.void,
-      } as unknown as Socket.Socket;
+      const { socket, pulls } = fakeSocket({
+        chunks: [
+          Buffer.from(`${JSON.stringify({ type: 'ping', id: 'ping-1' })}\n`),
+          Buffer.from('{"type":"exec","env":{"HUGE":"'),
+          Buffer.from('x'.repeat(200)),
+          Buffer.from('"}}\n'),
+        ],
+        replies,
+      });
       const shutdownLatch = yield* Deferred.make<void>();
       yield* makeConnectionHandler({
         broker: brokerWith(),
@@ -193,9 +192,8 @@ describe('daemon connection line cap', () => {
       const error = replies.find((reply) => reply.type === 'error');
       expect(error).toMatchObject({ type: 'error', id: null, code: 'bad-message' });
       expect(error?.type === 'error' ? error.message : '').toMatch(/exceeds 128 bytes/u);
-      expect(readPumpFailed).toBe(true);
-      // Nothing after the overflow is parsed: the connection is closed.
-      expect(chunksAfterOverflow).toBe(1);
+      // Nothing after the overflow is read: the connection is closed.
+      expect(pulls()).toBe(3);
     }));
 });
 
@@ -500,28 +498,12 @@ describe('directional shutdown', () => {
     Effect.gen(function* () {
       const written = yield* Deferred.make<void>();
       const replies: ServerMessage[] = [];
-      const socket = {
-        [Socket.TypeId]: Socket.TypeId,
-        writer: Effect.succeed((chunk: Uint8Array | string) =>
-          Effect.sync(() => {
-            const text = typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
-            for (const line of text.split('\n')) {
-              if (line.length > 0) {
-                replies.push(JSON.parse(line) as ServerMessage);
-              }
-            }
-          }).pipe(Effect.andThen(Deferred.succeed(written, undefined)), Effect.asVoid),
-        ),
-        run: (handler: (chunk: Uint8Array) => Effect.Effect<unknown> | void) =>
-          Effect.gen(function* () {
-            const handled = handler(Buffer.from(`${JSON.stringify({ type: 'shutdown', id: 's1', ...fields })}\n`));
-            if (Effect.isEffect(handled)) {
-              yield* handled;
-            }
-            yield* Deferred.await(written).pipe(Effect.timeout('500 millis'));
-          }),
-        runRaw: () => Effect.void,
-      } as unknown as Socket.Socket;
+      const { socket } = fakeSocket({
+        chunks: [Buffer.from(`${JSON.stringify({ type: 'shutdown', id: 's1', ...fields })}\n`)],
+        replies,
+        afterWrite: Deferred.succeed(written, undefined).pipe(Effect.asVoid),
+        beforeClose: Deferred.await(written).pipe(Effect.timeout('500 millis'), Effect.ignore),
+      });
       const shutdownLatch = yield* Deferred.make<void>();
       yield* makeConnectionHandler({
         broker,

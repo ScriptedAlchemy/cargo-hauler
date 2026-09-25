@@ -1063,7 +1063,7 @@ for `agent-bundle`, `@agent-bundle/runtime`, and their paired
 deferral); this plugin defines no agents.
 
 `repos/effect` is a read-only subtree containing the Effect v4 source pinned to
-`effect@4.0.0-rc.112`; see `AGENTS.md` before working with Effect code in this
+`effect@4.0.0-rc.117`; see `AGENTS.md` before working with Effect code in this
 repository.
 
 </details>

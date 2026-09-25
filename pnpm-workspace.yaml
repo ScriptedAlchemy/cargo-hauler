@@ -6,3 +6,5 @@ allowBuilds:
 blockExoticSubdeps: false
 # Do not block brand-new npm publishes; CI and Renovate bump deps the same day.
 minimumReleaseAge: 0
+patchedDependencies:
+  '@effect/platform-node-shared@4.0.0-rc.117': patches/@effect__platform-node-shared@4.0.0-rc.117.patch

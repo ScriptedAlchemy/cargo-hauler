@@ -413,6 +413,11 @@ export const executeCargo = (
                 return _exhaustive;
               }
             }
+            // The leader has exited. Scope release would still signal a
+            // referenced child's group and wait out the kill grace again.
+            // Unreferenced, the group is left to the survivors, as the drain
+            // below intends.
+            yield* Effect.ignore(child.unref);
 
             // Pipe EOF needs every writer gone. Once the child itself has
             // exited, a descendant that survived (an orphaned helper, a

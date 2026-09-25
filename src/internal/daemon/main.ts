@@ -47,7 +47,7 @@ const appLayer = (config: DaemonConfigShape) =>
   );
 
 const minimumLogLevelLayer = Layer.unwrap(
-  Config.logLevel('CARGO_HAULER_LOG_LEVEL').pipe(
+  Config.LogLevel('CARGO_HAULER_LOG_LEVEL').pipe(
     Effect.orElseSucceed(() => 'Info' as const),
     Effect.map((level) => Layer.succeed(References.MinimumLogLevel, level)),
   ),

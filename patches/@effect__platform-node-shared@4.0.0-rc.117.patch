@@ -1,0 +1,32 @@
+diff --git a/dist/NodeSocket.js b/dist/NodeSocket.js
+index da7435342bda02b2a8ea7ba038de351a3ed6e590..a31b286c2b8b00e4e6da3effe98596b7555b0ce9 100644
+--- a/dist/NodeSocket.js
++++ b/dist/NodeSocket.js
+@@ -335,6 +335,11 @@ export const fromDuplex = (open, options) => Effect.withFiber(fiber => {
+         })
+       })));
+     }
++    // A destroyed or ended stream emits none of these events again.
++    if (!conn.writable) {
++      onClose();
++      return;
++    }
+     conn.on("drain", onDrain);
+     conn.on("error", onError);
+     conn.on("close", onClose);
+diff --git a/src/NodeSocket.ts b/src/NodeSocket.ts
+index 3fed8cd252cf99b25e14b5466113284571a21346..3a51c0d18cebab06826396f49ec783b8cc779c74 100644
+--- a/src/NodeSocket.ts
++++ b/src/NodeSocket.ts
+@@ -406,6 +406,11 @@ export const fromDuplex = <RO>(
+             })
+           ))
+         }
++        // A destroyed or ended stream emits none of these events again.
++        if (!conn.writable) {
++          onClose()
++          return
++        }
+         conn.on("drain", onDrain)
+         conn.on("error", onError)
+         conn.on("close", onClose)
