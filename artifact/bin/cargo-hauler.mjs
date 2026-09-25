@@ -21735,14 +21735,15 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/client/tickets.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var node_path__rspack_import_0 = __webpack_require__("node:path");
-/* import */ var effect_Data__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Data.js");
-/* import */ var effect_Effect__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
-/* import */ var _daemon_config_js__rspack_import_1 = __webpack_require__("./src/internal/daemon/config.ts");
-/* import */ var _control_js__rspack_import_2 = __webpack_require__("./src/internal/client/control.ts");
-/* import */ var _util_id_js__rspack_import_3 = __webpack_require__("./src/internal/util/id.ts");
-/* import */ var _contracts_tool_schemas_js__rspack_import_4 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
-/* import */ var _ensure_daemon_js__rspack_import_5 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
-/* import */ var _progress_js__rspack_import_8 = __webpack_require__("./src/internal/client/progress.ts");
+/* import */ var agent_bundle_meta__rspack_import_1 = __webpack_require__("./.agent-bundle-virtual/meta.mjs");
+/* import */ var effect_Data__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Data.js");
+/* import */ var effect_Effect__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
+/* import */ var _daemon_config_js__rspack_import_2 = __webpack_require__("./src/internal/daemon/config.ts");
+/* import */ var _control_js__rspack_import_3 = __webpack_require__("./src/internal/client/control.ts");
+/* import */ var _util_id_js__rspack_import_4 = __webpack_require__("./src/internal/util/id.ts");
+/* import */ var _contracts_tool_schemas_js__rspack_import_5 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
+/* import */ var _ensure_daemon_js__rspack_import_6 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
+/* import */ var _progress_js__rspack_import_9 = __webpack_require__("./src/internal/client/progress.ts");
 
 
 
@@ -21752,59 +21753,74 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 
-/** The daemon answered this request with an `error` line (malformed request, internal failure). */ class DaemonRejectedError extends effect_Data__rspack_import_6/* .TaggedError */.rN('DaemonRejected') {
+
+/** The daemon answered this request with an `error` line (malformed request, internal failure). */ class DaemonRejectedError extends effect_Data__rspack_import_7/* .TaggedError */.rN('DaemonRejected') {
 }
-const nullableRecordSchema = _contracts_tool_schemas_js__rspack_import_4/* .requestRecordSchema.nullable */.qS.nullable();
+/** A daemon of another release or build sent a ticket record this client's schema does not describe. */ class DaemonRecordUnreadableError extends effect_Data__rspack_import_7/* .TaggedError */.rN('DaemonRecordUnreadable') {
+    constructor(fields){
+        super({
+            ...fields,
+            message: `cargo-hauler daemon at ${fields.socketPath} sent a ticket record this client (${(/* inlined export .version */"0.9.8")}) cannot read; it is another release or build, and \`hauler status\` names it with the command that replaces it`
+        });
+    }
+}
+const nullableRecordSchema = _contracts_tool_schemas_js__rspack_import_5/* .requestRecordSchema.nullable */.qS.nullable();
 /**
- * The record on a `result-result`/`await-result` reply. The daemon passed the
- * wire-protocol gate, so a row that does not fit the schema is a defect.
- */ const readRecord = (request)=>effect_Effect__rspack_import_7/* .sync */.OH5(()=>nullableRecordSchema.parse(request));
+ * The record on a `result-result`/`await-result` reply. The wire-protocol gate
+ * admits other releases, and a release can reshape the record, so a record
+ * that does not fit is a typed failure rather than a defect.
+ */ const readRecord = (request, socketPath)=>{
+    const decoded = nullableRecordSchema.safeParse(request);
+    return decoded.success ? effect_Effect__rspack_import_8/* .succeed */.PyW(decoded.data) : effect_Effect__rspack_import_8/* .fail */.fJG(new DaemonRecordUnreadableError({
+        socketPath
+    }));
+};
 /**
  * One request, one answer: resolves on the reply carrying this request's id,
  * and fails typed when that reply is the daemon's `error` — otherwise an
  * `await` with a rejected `maxWaitMs` would sit out its whole timeout waiting
  * for an `await-result` the daemon never sends.
- */ const requestReply = (config, message, timeoutMs, guard, ensure)=>(ensure ?? ((target)=>(0,_ensure_daemon_js__rspack_import_5/* .ensureDaemonVersion */.pk)(target, _ensure_daemon_js__rspack_import_5/* .defaultEnsureDependencies */.R2, Math.min(timeoutMs, 5000), 'read')))(config).pipe(effect_Effect__rspack_import_7/* .andThen */.hgn((0,_control_js__rspack_import_2/* .requestOverSocket */.Lb)({
+ */ const requestReply = (config, message, timeoutMs, guard, ensure)=>(ensure ?? ((target)=>(0,_ensure_daemon_js__rspack_import_6/* .ensureDaemonVersion */.pk)(target, _ensure_daemon_js__rspack_import_6/* .defaultEnsureDependencies */.R2, Math.min(timeoutMs, 5000), 'read')))(config).pipe(effect_Effect__rspack_import_8/* .andThen */.hgn((0,_control_js__rspack_import_3/* .requestOverSocket */.Lb)({
         isTerminal: (reply)=>reply.id === message.id && (guard(reply) || reply.type === 'error'),
         message,
         socketPath: config.socketPath,
         timeoutMs
-    })), effect_Effect__rspack_import_7/* .flatMap */.qIB((replies)=>{
+    })), effect_Effect__rspack_import_8/* .flatMap */.qIB((replies)=>{
         const rejected = replies.find((reply)=>reply.type === 'error' && reply.id === message.id);
         if (rejected !== undefined) {
-            return effect_Effect__rspack_import_7/* .fail */.fJG(new DaemonRejectedError({
+            return effect_Effect__rspack_import_8/* .fail */.fJG(new DaemonRejectedError({
                 code: rejected.code,
                 message: rejected.message,
                 socketPath: config.socketPath
             }));
         }
-        return effect_Effect__rspack_import_7/* .succeed */.PyW(replies.find((reply)=>guard(reply) && reply.id === message.id));
+        return effect_Effect__rspack_import_8/* .succeed */.PyW(replies.find((reply)=>guard(reply) && reply.id === message.id));
     }));
-const fetchTicket = (ticket, config = (0,_daemon_config_js__rspack_import_1/* .resolveDaemonConfig */.bF)())=>requestReply(config, {
-        id: (0,_util_id_js__rspack_import_3/* .shortId */.m)(),
+const fetchTicket = (ticket, config = (0,_daemon_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)())=>requestReply(config, {
+        id: (0,_util_id_js__rspack_import_4/* .shortId */.m)(),
         ticket,
         type: 'result'
-    }, 2000, (message)=>message.type === 'result-result').pipe(effect_Effect__rspack_import_7/* .flatMap */.qIB((result)=>readRecord(result?.request ?? null)));
+    }, 2000, (message)=>message.type === 'result-result').pipe(effect_Effect__rspack_import_8/* .flatMap */.qIB((result)=>readRecord(result?.request ?? null, config.socketPath)));
 /**
  * Ask the daemon to stop a ticket: a queued job is dropped, a running leader
  * gets SIGTERM (then SIGKILL after the grace period) on its process group.
  * `false` means there was nothing to kill — unknown or already finished.
- */ const killTicket = (ticket, config = (0,_daemon_config_js__rspack_import_1/* .resolveDaemonConfig */.bF)())=>requestReply(config, {
-        id: (0,_util_id_js__rspack_import_3/* .shortId */.m)(),
+ */ const killTicket = (ticket, config = (0,_daemon_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)())=>requestReply(config, {
+        id: (0,_util_id_js__rspack_import_4/* .shortId */.m)(),
         ticket,
         type: 'kill'
-    }, 5000, (message)=>message.type === 'kill-result', (target)=>(0,_ensure_daemon_js__rspack_import_5/* .ensureDaemonVersion */.pk)(target, _ensure_daemon_js__rspack_import_5/* .defaultEnsureDependencies */.R2, 5000)).pipe(effect_Effect__rspack_import_7/* .map */.TjK((result)=>result?.killed === true));
+    }, 5000, (message)=>message.type === 'kill-result', (target)=>(0,_ensure_daemon_js__rspack_import_6/* .ensureDaemonVersion */.pk)(target, _ensure_daemon_js__rspack_import_6/* .defaultEnsureDependencies */.R2, 5000)).pipe(effect_Effect__rspack_import_8/* .map */.TjK((result)=>result?.killed === true));
 const describeAwaitedRecord = (ticket, record)=>{
     if (record === null) {
         return `${ticket} is not known to the daemon (yet)`;
     }
     const command = record.argv.slice(1).join(' ');
-    const estimate = record.estimateMs === null ? '' : ` (est ~${(0,_progress_js__rspack_import_8/* .formatDuration */.a)(record.estimateMs)})`;
+    const estimate = record.estimateMs === null ? '' : ` (est ~${(0,_progress_js__rspack_import_9/* .formatDuration */.a)(record.estimateMs)})`;
     switch(record.status){
         case 'queued':
-            return `${ticket} queued ${(0,_progress_js__rspack_import_8/* .formatDuration */.a)(Date.now() - (record.queuedAtMs ?? record.createdAtMs))}${estimate} — ${command}`;
+            return `${ticket} queued ${(0,_progress_js__rspack_import_9/* .formatDuration */.a)(Date.now() - (record.queuedAtMs ?? record.createdAtMs))}${estimate} — ${command}`;
         case 'running':
-            return `${ticket} running ${(0,_progress_js__rspack_import_8/* .formatDuration */.a)(Date.now() - (record.startedAtMs ?? Date.now()))}${estimate} — ${command}`;
+            return `${ticket} running ${(0,_progress_js__rspack_import_9/* .formatDuration */.a)(Date.now() - (record.startedAtMs ?? Date.now()))}${estimate} — ${command}`;
         default:
             return `${ticket} ${record.status}${record.exitCode === null ? '' : ` exit=${record.exitCode}`} — ${command}`;
     }
@@ -21813,7 +21829,7 @@ const formatAwaitedRecord = (ticket, record)=>{
     const command = record.argv.slice(1).join(' ');
     switch(record.status){
         case 'queued':
-            return (0,_progress_js__rspack_import_8/* .formatProgressLine */.h)({
+            return (0,_progress_js__rspack_import_9/* .formatProgressLine */.h)({
                 command,
                 delayed: record.delayed,
                 elapsedMs: Date.now() - (record.queuedAtMs ?? record.createdAtMs),
@@ -21827,7 +21843,7 @@ const formatAwaitedRecord = (ticket, record)=>{
                 waitingFor: record.waitingFor
             });
         case 'running':
-            return (0,_progress_js__rspack_import_8/* .formatProgressLine */.h)({
+            return (0,_progress_js__rspack_import_9/* .formatProgressLine */.h)({
                 command,
                 elapsedMs: Date.now() - (record.startedAtMs ?? Date.now()),
                 estimateMs: record.estimateMs,
@@ -21851,11 +21867,11 @@ const formatAwaitedRecord = (ticket, record)=>{
  * terminal wait shows queue phase, elapsed time, and the cost estimate
  * instead of silence. Progress is best-effort — a failed poll never fails
  * the await.
- */ const awaitTicketWithProgress = (ticket, maxWaitMs, onProgress, config = (0,_daemon_config_js__rspack_import_1/* .resolveDaemonConfig */.bF)(), intervalMs = 5000, fetchStatus = fetchTicket)=>{
-    const beat = effect_Effect__rspack_import_7/* .gen */.JkU(function*() {
+ */ const awaitTicketWithProgress = (ticket, maxWaitMs, onProgress, config = (0,_daemon_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)(), intervalMs = 5000, fetchStatus = fetchTicket)=>{
+    const beat = effect_Effect__rspack_import_8/* .gen */.JkU(function*() {
         let observed = false;
         for(;;){
-            const poll = yield* fetchStatus(ticket, config).pipe(effect_Effect__rspack_import_7/* .match */.YWq({
+            const poll = yield* fetchStatus(ticket, config).pipe(effect_Effect__rspack_import_8/* .match */.YWq({
                 onFailure: ()=>({
                         _tag: 'Failed'
                     }),
@@ -21893,17 +21909,17 @@ const formatAwaitedRecord = (ticket, record)=>{
                         return exhaustive;
                     }
             }
-            yield* effect_Effect__rspack_import_7/* .sleep */.yy4(intervalMs);
+            yield* effect_Effect__rspack_import_8/* .sleep */.yy4(intervalMs);
         }
     });
-    return awaitTicket(ticket, maxWaitMs, config).pipe(effect_Effect__rspack_import_7/* .raceFirst */.KT6(beat));
+    return awaitTicket(ticket, maxWaitMs, config).pipe(effect_Effect__rspack_import_8/* .raceFirst */.KT6(beat));
 };
-const awaitTicket = (ticket, maxWaitMs, config = (0,_daemon_config_js__rspack_import_1/* .resolveDaemonConfig */.bF)())=>requestReply(config, {
-        id: (0,_util_id_js__rspack_import_3/* .shortId */.m)(),
+const awaitTicket = (ticket, maxWaitMs, config = (0,_daemon_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)())=>requestReply(config, {
+        id: (0,_util_id_js__rspack_import_4/* .shortId */.m)(),
         maxWaitMs,
         ticket,
         type: 'await'
-    }, maxWaitMs + 2000, (message)=>message.type === 'await-result').pipe(effect_Effect__rspack_import_7/* .flatMap */.qIB((result)=>readRecord(result?.request ?? null).pipe(effect_Effect__rspack_import_7/* .map */.TjK((request)=>({
+    }, maxWaitMs + 2000, (message)=>message.type === 'await-result').pipe(effect_Effect__rspack_import_8/* .flatMap */.qIB((result)=>readRecord(result?.request ?? null, config.socketPath).pipe(effect_Effect__rspack_import_8/* .map */.TjK((request)=>({
                 request,
                 timedOut: result?.timedOut ?? true
             })))));
@@ -21913,7 +21929,7 @@ const awaitTicket = (ticket, maxWaitMs, config = (0,_daemon_config_js__rspack_im
  * unparseable command, an unknown `--after` ticket) fails typed as
  * `DaemonRejected` so the caller can show the reason instead of a generic
  * "failed to submit".
- */ const submitBackgroundAck = (input, config = (0,_daemon_config_js__rspack_import_1/* .resolveDaemonConfig */.bF)(), ensure = _ensure_daemon_js__rspack_import_5/* .ensureDaemonRunning */.oE)=>// Cold daemon must not mean "failed to submit": start it like exec does.
+ */ const submitBackgroundAck = (input, config = (0,_daemon_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)(), ensure = _ensure_daemon_js__rspack_import_6/* .ensureDaemonRunning */.oE)=>// Cold daemon must not mean "failed to submit": start it like exec does.
     // Compatible busy daemons keep serving this submission; incompatible peers
     // still fail before the request crosses the socket.
     // No `holdStop`: the daemon's default for a background request is false,
@@ -21925,7 +21941,7 @@ const awaitTicket = (ticket, maxWaitMs, config = (0,_daemon_config_js__rspack_im
         ],
         background: true,
         cwd: input.cwd,
-        id: (0,_util_id_js__rspack_import_3/* .shortId */.m)(),
+        id: (0,_util_id_js__rspack_import_4/* .shortId */.m)(),
         type: 'exec',
         ...input.host === undefined ? {} : {
             host: input.host
@@ -21938,7 +21954,7 @@ const awaitTicket = (ticket, maxWaitMs, config = (0,_daemon_config_js__rspack_im
                 ...input.after
             ]
         }
-    }, 5000, (message)=>message.type === 'ack', ensure).pipe(effect_Effect__rspack_import_7/* .map */.TjK((message)=>message === undefined ? null : {
+    }, 5000, (message)=>message.type === 'ack', ensure).pipe(effect_Effect__rspack_import_8/* .map */.TjK((message)=>message === undefined ? null : {
             ticket: message.ticket,
             position: message.position,
             ...message.ahead === undefined ? {} : {
@@ -22215,10 +22231,15 @@ const savedComputeSourceSchema = zod__rspack_import_1/* ["enum"] */.k5n([
     'exact',
     'estimate'
 ]);
-/** `unresponsive`: the socket exists and a process holds it, but it did not answer in time. */ const daemonStatusSchema = zod__rspack_import_1/* ["enum"] */.k5n([
+/**
+ * `unresponsive`: the socket exists and a process holds it, but it did not answer in time.
+ * `skewed`: a live daemon of another release or build answered with a status report this
+ * client cannot decode; tickets come from the ledger with their recorded status.
+ */ const daemonStatusSchema = zod__rspack_import_1/* ["enum"] */.k5n([
     'running',
     'stopped',
-    'unresponsive'
+    'unresponsive',
+    'skewed'
 ]);
 const queueContextSchema = zod__rspack_import_1/* .object */.Ikc({
     aheadTickets: zod__rspack_import_1/* .array */.YOg(zod__rspack_import_1/* .string */.YjP()),
@@ -28000,8 +28021,12 @@ const statusDaemon = (config = (0,_config_js__rspack_import_2/* .resolveDaemonCo
     }).pipe(effect_Effect__rspack_import_6/* .map */.TjK((snapshot)=>result(config, 'status', {
             message: snapshot.summary,
             pid: snapshot.pid,
+            // Like a daemon of another version that was not replaced: serving, but not this release's.
+            ...snapshot.daemon === 'skewed' && snapshot.pid !== null ? {
+                previousPid: snapshot.pid
+            } : {},
             report: snapshot.report,
-            running: snapshot.daemon === 'running'
+            running: snapshot.daemon === 'running' || snapshot.daemon === 'skewed'
         })), effect_Effect__rspack_import_6/* .catchTags */.loE({
         DaemonIncompatible: (error)=>effect_Effect__rspack_import_6/* .succeed */.PyW(result(config, 'status', {
                 message: error.message,
@@ -31951,6 +31976,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 
+/** A skewed daemon's rows read as live, so its summary line (what it is, the fix) leads. */ const withDaemonLine = (snapshot, summary)=>snapshot.daemon === 'skewed' ? `${snapshot.summary}\n${summary}` : summary;
 // Through the ticket boundary runner so MCP/CLI cancellation aborts the
 // socket wait and replacement failures become clear transport diagnostics.
 const loadSnapshot = (limit, options)=>(0,_ticket_errors_js__rspack_import_2/* .runTicketEffect */.n)((0,_status_js__rspack_import_1/* .loadHaulerSnapshot */.M3)({
@@ -31974,7 +32000,7 @@ const loadSnapshot = (limit, options)=>(0,_ticket_errors_js__rspack_import_2/* .
         daemon: snapshot.daemon,
         operation: 'last',
         request,
-        summary: request === null ? latest === null ? 'no hauler requests recorded' : `${latest.ticket} is no longer recorded` : `${request.ticket} ${request.status}`
+        summary: withDaemonLine(snapshot, request === null ? latest === null ? 'no hauler requests recorded' : `${latest.ticket} is no longer recorded` : `${request.ticket} ${request.status}`)
     };
 };
 const loadLogResult = async (input, options)=>{
@@ -31983,7 +32009,7 @@ const loadLogResult = async (input, options)=>{
         daemon: snapshot.daemon,
         operation: 'log',
         requests: (0,_status_js__rspack_import_1/* .displayStatusRows */.sY)(snapshot.recent),
-        summary: snapshot.recent.length === 0 ? 'no hauler requests recorded' : `${snapshot.recent.length} recent request${snapshot.recent.length === 1 ? '' : 's'}`
+        summary: withDaemonLine(snapshot, snapshot.recent.length === 0 ? 'no hauler requests recorded' : `${snapshot.recent.length} recent request${snapshot.recent.length === 1 ? '' : 's'}`)
     };
 };
 /**
@@ -32001,7 +32027,7 @@ const loadLogResult = async (input, options)=>{
         active: (0,_status_js__rspack_import_1/* .displayStatusRows */.sY)(active),
         operation: 'status',
         recent: (0,_status_js__rspack_import_1/* .displayStatusRows */.sY)(recent),
-        summary: (0,_status_filter_js__rspack_import_4/* .statusSummary */.HN)(snapshot.daemon, active, recent)
+        summary: withDaemonLine(snapshot, (0,_status_filter_js__rspack_import_4/* .statusSummary */.HN)(snapshot.daemon, active, recent))
     };
 };
 
@@ -32064,6 +32090,8 @@ const daemonHeader = (daemon)=>{
             return 'cargo-hauler daemon is not running';
         case 'unresponsive':
             return 'cargo-hauler daemon is up but did not answer in time (showing ledger data)';
+        case 'skewed':
+            return 'cargo-hauler daemon is running but its status report is unreadable (showing ledger data)';
         default:
             {
                 const exhaustive = daemon;
@@ -32099,17 +32127,21 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/operations/status.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var node_fs__rspack_import_0 = __webpack_require__("node:fs");
-/* import */ var effect_Effect__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
-/* import */ var _client_ensure_daemon_js__rspack_import_1 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
-/* import */ var _daemon_config_js__rspack_import_2 = __webpack_require__("./src/internal/daemon/config.ts");
-/* import */ var _client_control_js__rspack_import_3 = __webpack_require__("./src/internal/client/control.ts");
-/* import */ var _platform_socket_errors_js__rspack_import_4 = __webpack_require__("./src/internal/platform/socket-errors.ts");
-/* import */ var _storage_ledger_js__rspack_import_5 = __webpack_require__("./src/internal/storage/ledger.ts");
-/* import */ var _contracts_protocol_js__rspack_import_6 = __webpack_require__("./src/internal/contracts/protocol.ts");
-/* import */ var _util_ansi_js__rspack_import_7 = __webpack_require__("./src/internal/util/ansi.ts");
-/* import */ var _util_id_js__rspack_import_8 = __webpack_require__("./src/internal/util/id.ts");
-/* import */ var _contracts_tool_schemas_js__rspack_import_9 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
-/* import */ var _util_text_js__rspack_import_10 = __webpack_require__("./src/internal/util/text.ts");
+/* import */ var agent_bundle_meta__rspack_import_1 = __webpack_require__("./.agent-bundle-virtual/meta.mjs");
+/* import */ var effect_Effect__rspack_import_13 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
+/* import */ var _client_ensure_daemon_js__rspack_import_2 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
+/* import */ var _daemon_config_js__rspack_import_3 = __webpack_require__("./src/internal/daemon/config.ts");
+/* import */ var _client_control_js__rspack_import_4 = __webpack_require__("./src/internal/client/control.ts");
+/* import */ var _platform_socket_errors_js__rspack_import_5 = __webpack_require__("./src/internal/platform/socket-errors.ts");
+/* import */ var _storage_ledger_js__rspack_import_6 = __webpack_require__("./src/internal/storage/ledger.ts");
+/* import */ var _contracts_protocol_js__rspack_import_7 = __webpack_require__("./src/internal/contracts/protocol.ts");
+/* import */ var _util_ansi_js__rspack_import_8 = __webpack_require__("./src/internal/util/ansi.ts");
+/* import */ var _util_id_js__rspack_import_9 = __webpack_require__("./src/internal/util/id.ts");
+/* import */ var _contracts_tool_schemas_js__rspack_import_10 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
+/* import */ var _util_text_js__rspack_import_11 = __webpack_require__("./src/internal/util/text.ts");
+/* import */ var _contracts_version_order_js__rspack_import_12 = __webpack_require__("./src/internal/contracts/version-order.ts");
+
+
 
 
 
@@ -32146,16 +32178,16 @@ const defaultRecentLimit = 50;
     if (request.status === 'orphaned') {
         return request.error;
     }
-    return (0,_contracts_protocol_js__rspack_import_6/* .isOrphanedByRestart */.oG)({
+    return (0,_contracts_protocol_js__rspack_import_7/* .isOrphanedByRestart */.oG)({
         error: request.error,
         status: request.status
-    }) ? `${_contracts_protocol_js__rspack_import_6/* .orphanedByRestartError */.Su}: the daemon stopped while it was in flight and does not hand runs over; resubmit if the work is still needed` : null;
+    }) ? `${_contracts_protocol_js__rspack_import_7/* .orphanedByRestartError */.Su}: the daemon stopped while it was in flight and does not hand runs over; resubmit if the work is still needed` : null;
 };
 const describeRequestRecord = (ticket, request)=>{
     if (request === null) {
         return `${ticket} not found`;
     }
-    const counts = request.errorCount === null || request.warningCount === null ? '' : ` (${(0,_util_text_js__rspack_import_10/* .countWord */.M)(request.errorCount, 'error')}, ${(0,_util_text_js__rspack_import_10/* .countWord */.M)(request.warningCount, 'warning')})`;
+    const counts = request.errorCount === null || request.warningCount === null ? '' : ` (${(0,_util_text_js__rspack_import_11/* .countWord */.M)(request.errorCount, 'error')}, ${(0,_util_text_js__rspack_import_11/* .countWord */.M)(request.warningCount, 'warning')})`;
     const note = stalledGuidance(request) ?? orphanedGuidance(request);
     return `${request.ticket} ${request.status}${counts}${note === null ? '' : ` — ${note}`}`;
 };
@@ -32171,13 +32203,13 @@ const describeRequestRecord = (ticket, request)=>{
  * (which never passes through here) keeps color for TTY consumers.
  */ const displayRequestRecord = (record)=>({
         ...record,
-        outputTail: record.outputTail === null ? null : (0,_util_ansi_js__rspack_import_7/* .stripAnsi */.a)(record.outputTail),
-        diagnostics: record.diagnostics === null ? null : record.diagnostics.map(_util_ansi_js__rspack_import_7/* .stripAnsi */.a)
+        outputTail: record.outputTail === null ? null : (0,_util_ansi_js__rspack_import_8/* .stripAnsi */.a)(record.outputTail),
+        diagnostics: record.diagnostics === null ? null : record.diagnostics.map(_util_ansi_js__rspack_import_8/* .stripAnsi */.a)
     });
 /** The status-row counterpart: the bounded preview and diagnostics, ANSI stripped. */ const displayStatusRow = (row)=>({
         ...row,
-        outputPreview: row.outputPreview === null ? null : (0,_util_ansi_js__rspack_import_7/* .stripAnsi */.a)(row.outputPreview),
-        diagnostics: row.diagnostics === null ? null : row.diagnostics.map(_util_ansi_js__rspack_import_7/* .stripAnsi */.a)
+        outputPreview: row.outputPreview === null ? null : (0,_util_ansi_js__rspack_import_8/* .stripAnsi */.a)(row.outputPreview),
+        diagnostics: row.diagnostics === null ? null : row.diagnostics.map(_util_ansi_js__rspack_import_8/* .stripAnsi */.a)
     });
 const displayStatusRows = (rows)=>rows.map(displayStatusRow);
 const strandedReasons = {
@@ -32185,6 +32217,10 @@ const strandedReasons = {
     unresponsive: 'daemon did not answer; ownership unconfirmed'
 };
 const ledgerRequestRecord = (record, daemon)=>{
+    // A skewed daemon answered, so it still owns and will finish its in-flight tickets.
+    if (daemon === 'skewed') {
+        return record;
+    }
     switch(record.status){
         case 'requested':
         case 'queued':
@@ -32207,12 +32243,12 @@ const ledgerRequestRecord = (record, daemon)=>{
             }
     }
 };
-const ledgerStatusRow = (record, daemon)=>(0,_contracts_protocol_js__rspack_import_6/* .toStatusRow */.el)(ledgerRequestRecord(record, daemon));
+const ledgerStatusRow = (record, daemon)=>(0,_contracts_protocol_js__rspack_import_7/* .toStatusRow */.el)(ledgerRequestRecord(record, daemon));
 const stoppedSummary = (recentCount)=>{
     if (recentCount === 0) {
         return 'cargo-hauler daemon is not running';
     }
-    return `cargo-hauler daemon is not running; ${(0,_util_text_js__rspack_import_10/* .countWord */.M)(recentCount, 'recorded request')}`;
+    return `cargo-hauler daemon is not running; ${(0,_util_text_js__rspack_import_11/* .countWord */.M)(recentCount, 'recorded request')}`;
 };
 const runningSummary = (report)=>{
     const queued = report.lanes.reduce((sum, lane)=>sum + lane.queued, 0);
@@ -32239,26 +32275,67 @@ const fromReport = (report, config)=>withReport({
         summary: runningSummary(report),
         system: report.system
     }, report);
+/** What a skewed daemon is relative to this client, and the one fix that applies to it. */ const skewSummary = (daemon)=>{
+    const order = (0,_contracts_version_order_js__rspack_import_12/* .compareVersions */.Z)(daemon.version, (/* inlined export .version */"0.9.8"));
+    const [release, fix] = (()=>{
+        switch(order){
+            case -1:
+                return [
+                    'an older release',
+                    'The next `hauler exec` or `hauler daemon start` replaces it once it is idle; `hauler daemon restart` replaces it now and ends its in-flight tickets.'
+                ];
+            case 0:
+                return [
+                    'another build of this release',
+                    '`hauler daemon restart` replaces it and ends its in-flight tickets.'
+                ];
+            case 1:
+                return [
+                    'a newer release',
+                    'Upgrade this install, or restart the session so its hooks and MCP server come from the current plugin.'
+                ];
+            default:
+                {
+                    const exhaustive = order;
+                    return exhaustive;
+                }
+        }
+    })();
+    return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${(/* inlined export .version */"0.9.8")}) cannot read; showing tickets as the ledger recorded them. ${fix}`;
+};
 /**
- * A live daemon's report, validated with the strict client schema. The read
- * gate accepts only the current wire protocol, including compatible older
- * releases, so a report that does not fit is a protocol defect.
- */ const fromLiveReport = (raw, config)=>effect_Effect__rspack_import_11/* .sync */.OH5(()=>_contracts_tool_schemas_js__rspack_import_9/* .statusReportSchema.parse */.qb.parse(raw)).pipe(effect_Effect__rspack_import_11/* .map */.TjK((report)=>fromReport(report, config)));
+ * A live daemon's report, decoded with this release's schema. The read gate
+ * admits other releases on the current wire protocol, and a release can
+ * reshape the report without a protocol bump, so a report that does not fit
+ * renders as a skewed daemon over the ledger until the daemon is replaced.
+ */ const fromLiveReport = (raw, daemon, config, recentLimit)=>{
+    const decoded = _contracts_tool_schemas_js__rspack_import_10/* .statusReportSchema.safeParse */.qb.safeParse(raw);
+    if (decoded.success) {
+        return effect_Effect__rspack_import_13/* .succeed */.PyW(fromReport(decoded.data, config));
+    }
+    return fromLedger(config, recentLimit, 'skewed').pipe(effect_Effect__rspack_import_13/* .map */.TjK((snapshot)=>withReport({
+            ...snapshot,
+            daemon: 'skewed',
+            pid: daemon.pid,
+            startedAtMs: daemon.startedAtMs,
+            summary: skewSummary(daemon)
+        }, null)));
+};
 /**
  * One ticket's detail record straight from the ledger, for the read-only
  * surfaces when no daemon answers: `hauler last` shows the settled tail the
  * status listing leaves out. Null when the ledger has no such ticket (or no
  * database yet).
- */ const loadLedgerRequest = (ticket, config = (0,_daemon_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)())=>{
+ */ const loadLedgerRequest = (ticket, config = (0,_daemon_config_js__rspack_import_3/* .resolveDaemonConfig */.bF)())=>{
     if (!(0,node_fs__rspack_import_0.existsSync)(config.databasePath)) {
-        return effect_Effect__rspack_import_11/* .succeed */.PyW(null);
+        return effect_Effect__rspack_import_13/* .succeed */.PyW(null);
     }
-    return effect_Effect__rspack_import_11/* .scoped */.P1j(effect_Effect__rspack_import_11/* .gen */.JkU(function*() {
-        const db = yield* acquireSnapshotDb(config.databasePath);
-        return yield* (0,_storage_ledger_js__rspack_import_5/* .createLedgerApi */.Ax)(db).getRequestByTicket(ticket);
+    return effect_Effect__rspack_import_13/* .scoped */.P1j(effect_Effect__rspack_import_13/* .gen */.JkU(function*() {
+        const ledger = yield* acquireSnapshotLedger(config.databasePath);
+        return yield* ledger.getRequestByTicket(ticket);
     }));
 };
-const loadLedgerTicket = (ticket, daemon, config)=>loadLedgerRequest(ticket, config).pipe(effect_Effect__rspack_import_11/* .map */.TjK((record)=>record === null ? null : ledgerRequestRecord(displayRequestRecord(record), daemon)));
+const loadLedgerTicket = (ticket, daemon, config)=>loadLedgerRequest(ticket, config).pipe(effect_Effect__rspack_import_13/* .map */.TjK((record)=>record === null ? null : ledgerRequestRecord(displayRequestRecord(record), daemon)));
 const emptyStopped = (config)=>withReport({
         active: [],
         daemon: 'stopped',
@@ -32271,22 +32348,35 @@ const emptyStopped = (config)=>withReport({
         stateRoot: config.stateDir,
         summary: stoppedSummary(0)
     }, null);
+const openSnapshotLedger = (open, databasePath)=>{
+    const db = open(databasePath);
+    try {
+        return {
+            db,
+            ledger: (0,_storage_ledger_js__rspack_import_6/* .createLedgerApi */.Ax)(db)
+        };
+    } catch (error) {
+        db.close();
+        throw error;
+    }
+};
 /**
- * Scoped ledger handle for stopped-daemon reads: read-only when possible,
+ * Scoped ledger for reads without a daemon report: read-only when possible,
  * falling back to the writable opener for WAL recovery after an unclean stop
- * or a ledger predating a column migration. Always closed by the scope.
- */ const acquireSnapshotDb = (databasePath)=>effect_Effect__rspack_import_11/* .acquireRelease */.Q56(effect_Effect__rspack_import_11/* ["try"] */.SvU(()=>(0,_storage_ledger_js__rspack_import_5/* .openLedgerDatabaseReadOnly */.Xo)(databasePath)).pipe(effect_Effect__rspack_import_11/* ["catch"] */.MfU(()=>effect_Effect__rspack_import_11/* .sync */.OH5(()=>(0,_storage_ledger_js__rspack_import_5/* .openLedgerDatabase */.p)(databasePath)))), (db)=>effect_Effect__rspack_import_11/* .sync */.OH5(()=>db.close()));
+ * or a ledger predating a column migration (its statements fail to prepare).
+ * Always closed by the scope.
+ */ const acquireSnapshotLedger = (databasePath)=>effect_Effect__rspack_import_13/* .acquireRelease */.Q56(effect_Effect__rspack_import_13/* ["try"] */.SvU(()=>openSnapshotLedger(_storage_ledger_js__rspack_import_6/* .openLedgerDatabaseReadOnly */.Xo, databasePath)).pipe(effect_Effect__rspack_import_13/* ["catch"] */.MfU(()=>effect_Effect__rspack_import_13/* .sync */.OH5(()=>openSnapshotLedger(_storage_ledger_js__rspack_import_6/* .openLedgerDatabase */.p, databasePath)))), ({ db })=>effect_Effect__rspack_import_13/* .sync */.OH5(()=>db.close())).pipe(effect_Effect__rspack_import_13/* .map */.TjK(({ ledger })=>ledger));
 const fromLedger = (config, recentLimit, daemon = 'stopped')=>{
     if (!(0,node_fs__rspack_import_0.existsSync)(config.databasePath)) {
-        return effect_Effect__rspack_import_11/* .succeed */.PyW(emptyStopped(config));
+        return effect_Effect__rspack_import_13/* .succeed */.PyW(emptyStopped(config));
     }
-    return effect_Effect__rspack_import_11/* .scoped */.P1j(effect_Effect__rspack_import_11/* .gen */.JkU(function*() {
-        const db = yield* acquireSnapshotDb(config.databasePath);
-        const ledger = (0,_storage_ledger_js__rspack_import_5/* .createLedgerApi */.Ax)(db);
+    return effect_Effect__rspack_import_13/* .scoped */.P1j(effect_Effect__rspack_import_13/* .gen */.JkU(function*() {
+        const ledger = yield* acquireSnapshotLedger(config.databasePath);
         const recent = (yield* ledger.recentRequests(recentLimit)).map((record)=>ledgerStatusRow(record, daemon));
+        const active = daemon === 'skewed' ? (yield* ledger.activeStatusRequests()).map((record)=>ledgerStatusRow(record, daemon)) : [];
         const savings = yield* ledger.attachmentSavings();
         return withReport({
-            active: [],
+            active,
             daemon: 'stopped',
             lanes: [],
             maxConcurrent: null,
@@ -32301,31 +32391,31 @@ const fromLedger = (config, recentLimit, daemon = 'stopped')=>{
     }));
 };
 const loadHaulerSnapshot = (options = {})=>{
-    const config = options.config ?? (0,_daemon_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)();
+    const config = options.config ?? (0,_daemon_config_js__rspack_import_3/* .resolveDaemonConfig */.bF)();
     const recentLimit = options.recentLimit ?? defaultRecentLimit;
-    const unreachable = (error)=>(0,_client_ensure_daemon_js__rspack_import_1/* .daemonIsAbsent */.Yj)(error.cause) ? fromLedger(config, recentLimit) : unresponsiveSnapshot(config, recentLimit, `socket could not be opened (${(0,_platform_socket_errors_js__rspack_import_4/* .socketErrorCode */.R)(error.cause) ?? 'no errno'})`);
-    return (0,_client_ensure_daemon_js__rspack_import_1/* .ensureDaemonVersion */.pk)(config, _client_ensure_daemon_js__rspack_import_1/* .defaultEnsureDependencies */.R2, statusTimeoutMs, 'read').pipe(effect_Effect__rspack_import_11/* .flatMap */.qIB((daemon)=>daemon === null ? fromLedger(config, recentLimit) : (0,_client_control_js__rspack_import_3/* .requestExpecting */.dG)({
+    const unreachable = (error)=>(0,_client_ensure_daemon_js__rspack_import_2/* .daemonIsAbsent */.Yj)(error.cause) ? fromLedger(config, recentLimit) : unresponsiveSnapshot(config, recentLimit, `socket could not be opened (${(0,_platform_socket_errors_js__rspack_import_5/* .socketErrorCode */.R)(error.cause) ?? 'no errno'})`);
+    return (0,_client_ensure_daemon_js__rspack_import_2/* .ensureDaemonVersion */.pk)(config, _client_ensure_daemon_js__rspack_import_2/* .defaultEnsureDependencies */.R2, statusTimeoutMs, 'read').pipe(effect_Effect__rspack_import_13/* .flatMap */.qIB((daemon)=>daemon === null ? fromLedger(config, recentLimit) : (0,_client_control_js__rspack_import_4/* .requestExpecting */.dG)({
             message: {
-                id: (0,_util_id_js__rspack_import_8/* .shortId */.m)(),
+                id: (0,_util_id_js__rspack_import_9/* .shortId */.m)(),
                 limit: recentLimit,
                 type: 'status'
             },
             socketPath: config.socketPath,
             timeoutMs: statusTimeoutMs
-        }, (message)=>message.type === 'status-result').pipe(effect_Effect__rspack_import_11/* .flatMap */.qIB((result)=>result === undefined ? fromLedger(config, recentLimit) : fromLiveReport(result.report, config)), // Once the version gate has succeeded, ordinary read failures keep
+        }, (message)=>message.type === 'status-result').pipe(effect_Effect__rspack_import_13/* .flatMap */.qIB((result)=>result === undefined ? fromLedger(config, recentLimit) : fromLiveReport(result.report, daemon, config, recentLimit)), // Once the version gate has succeeded, ordinary read failures keep
         // the historical ledger fallback.
-        effect_Effect__rspack_import_11/* .catchTags */.loE({
+        effect_Effect__rspack_import_13/* .catchTags */.loE({
             ControlTimeout: ()=>unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
             ConnectionClosed: ()=>unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
             DaemonUnreachable: unreachable
         }))), // A ping that never establishes a protocol identity is unresponsive.
-    effect_Effect__rspack_import_11/* .catchTags */.loE({
+    effect_Effect__rspack_import_13/* .catchTags */.loE({
         ControlTimeout: ()=>unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
         ConnectionClosed: ()=>unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
         DaemonUnreachable: unreachable
     }));
 };
-const unresponsiveSnapshot = (config, recentLimit, what)=>fromLedger(config, recentLimit, 'unresponsive').pipe(effect_Effect__rspack_import_11/* .map */.TjK((snapshot)=>withReport({
+const unresponsiveSnapshot = (config, recentLimit, what)=>fromLedger(config, recentLimit, 'unresponsive').pipe(effect_Effect__rspack_import_13/* .map */.TjK((snapshot)=>withReport({
             ...snapshot,
             daemon: 'unresponsive',
             summary: `cargo-hauler daemon ${what}; showing ledger data (${snapshot.recent.length} recorded)`
@@ -32369,6 +32459,7 @@ const infraFailure = (error)=>{
         case 'DaemonIncompatible':
         case 'DaemonNewer':
         case 'DaemonNotReplaced':
+        case 'DaemonRecordUnreadable':
             return new Error(error.message);
         case 'DaemonReplacementFailed':
             return new Error(`hauler replacement daemon failed its version handshake (${error.cause._tag}) at ${error.socketPath}`);

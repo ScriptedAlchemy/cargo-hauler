@@ -1296,6 +1296,8 @@ const DashboardContent = ({ structured }: { readonly structured: DashboardStatus
                   maxConcurrent={maxConcurrent}
                 />
               </div>
+            ) : daemonState === 'skewed' ? (
+              <p className="down-cue">{structured?.summary.split('\n', 1)[0]}</p>
             ) : daemonState === 'unresponsive' ? (
               <p className="down-cue">
                 Daemon is up but did not answer in time — the machine is saturated. Rows below

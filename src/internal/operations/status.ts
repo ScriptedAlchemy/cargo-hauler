@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import type { DatabaseSync } from 'node:sqlite';
 
+import { version } from 'agent-bundle/meta';
 import * as Effect from 'effect/Effect';
 import type * as Scope from 'effect/Scope';
 
@@ -20,13 +21,19 @@ import type {
   DaemonNewerError,
   DaemonNotReplacedError,
 } from '../client/shutdown.js';
-import { createLedgerApi, openLedgerDatabase, openLedgerDatabaseReadOnly } from '../storage/ledger.js';
+import {
+  createLedgerApi,
+  type LedgerApi,
+  openLedgerDatabase,
+  openLedgerDatabaseReadOnly,
+} from '../storage/ledger.js';
 import { isOrphanedByRestart, orphanedByRestartError, toStatusRow } from '../contracts/protocol.js';
 import type {
   AttachmentSavingsReport,
   DisplayRequestRecord,
   KacheStatusReport,
   LaneStatus,
+  PongMessage,
   RequestRecord,
   StatusMetrics,
   StatusReport,
@@ -39,6 +46,7 @@ import { stripAnsi } from '../util/ansi.js';
 import { shortId } from '../util/id.js';
 import { statusReportSchema, type DaemonStatus } from '../contracts/tool-schemas.js';
 import { countWord } from '../util/text.js';
+import { compareVersions } from '../contracts/version-order.js';
 
 export interface HaulerSnapshot {
   readonly active: readonly StatusRow[];
@@ -152,7 +160,7 @@ export const displayStatusRows = (rows: readonly StatusRow[]): readonly StatusRo
 
 type UnavailableDaemonStatus = Exclude<DaemonStatus, 'running'>;
 
-const strandedReasons: Record<UnavailableDaemonStatus, string> = {
+const strandedReasons: Record<Exclude<UnavailableDaemonStatus, 'skewed'>, string> = {
   stopped: 'stranded by a stopped daemon',
   unresponsive: 'daemon did not answer; ownership unconfirmed',
 };
@@ -161,6 +169,10 @@ export const ledgerRequestRecord = (
   record: RequestRecord,
   daemon: UnavailableDaemonStatus,
 ): DisplayRequestRecord => {
+  // A skewed daemon answered, so it still owns and will finish its in-flight tickets.
+  if (daemon === 'skewed') {
+    return record;
+  }
   switch (record.status) {
     case 'requested':
     case 'queued':
@@ -228,15 +240,57 @@ const fromReport = (report: StatusReport, config: DaemonConfigShape): HaulerSnap
     report,
   );
 
+/** What a skewed daemon is relative to this client, and the one fix that applies to it. */
+const skewSummary = (daemon: Pick<PongMessage, 'pid' | 'version'>): string => {
+  const order = compareVersions(daemon.version, version);
+  const [release, fix] = ((): readonly [string, string] => {
+    switch (order) {
+      case -1:
+        return [
+          'an older release',
+          'The next `hauler exec` or `hauler daemon start` replaces it once it is idle; `hauler daemon restart` replaces it now and ends its in-flight tickets.',
+        ];
+      case 0:
+        return ['another build of this release', '`hauler daemon restart` replaces it and ends its in-flight tickets.'];
+      case 1:
+        return [
+          'a newer release',
+          'Upgrade this install, or restart the session so its hooks and MCP server come from the current plugin.',
+        ];
+      default: {
+        const exhaustive: never = order;
+        return exhaustive;
+      }
+    }
+  })();
+  return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${version}) cannot read; showing tickets as the ledger recorded them. ${fix}`;
+};
+
 /**
- * A live daemon's report, validated with the strict client schema. The read
- * gate accepts only the current wire protocol, including compatible older
- * releases, so a report that does not fit is a protocol defect.
+ * A live daemon's report, decoded with this release's schema. The read gate
+ * admits other releases on the current wire protocol, and a release can
+ * reshape the report without a protocol bump, so a report that does not fit
+ * renders as a skewed daemon over the ledger until the daemon is replaced.
  */
-const fromLiveReport = (raw: unknown, config: DaemonConfigShape): Effect.Effect<HaulerSnapshot> =>
-  Effect.sync(() => statusReportSchema.parse(raw)).pipe(
-    Effect.map((report) => fromReport(report, config)),
+const fromLiveReport = (
+  raw: unknown,
+  daemon: PongMessage,
+  config: DaemonConfigShape,
+  recentLimit: number,
+): Effect.Effect<HaulerSnapshot> => {
+  const decoded = statusReportSchema.safeParse(raw);
+  if (decoded.success) {
+    return Effect.succeed(fromReport(decoded.data, config));
+  }
+  return fromLedger(config, recentLimit, 'skewed').pipe(
+    Effect.map((snapshot) =>
+      withReport(
+        { ...snapshot, daemon: 'skewed', pid: daemon.pid, startedAtMs: daemon.startedAtMs, summary: skewSummary(daemon) },
+        null,
+      ),
+    ),
   );
+};
 
 /**
  * One ticket's detail record straight from the ledger, for the read-only
@@ -253,8 +307,8 @@ export const loadLedgerRequest = (
   }
   return Effect.scoped(
     Effect.gen(function* () {
-      const db = yield* acquireSnapshotDb(config.databasePath);
-      return yield* createLedgerApi(db).getRequestByTicket(ticket);
+      const ledger = yield* acquireSnapshotLedger(config.databasePath);
+      return yield* ledger.getRequestByTicket(ticket);
     }),
   );
 };
@@ -285,18 +339,29 @@ const emptyStopped = (config: DaemonConfigShape): HaulerSnapshot =>
     null,
   );
 
+const openSnapshotLedger = (open: (databasePath: string) => DatabaseSync, databasePath: string) => {
+  const db = open(databasePath);
+  try {
+    return { db, ledger: createLedgerApi(db) };
+  } catch (error) {
+    db.close();
+    throw error;
+  }
+};
+
 /**
- * Scoped ledger handle for stopped-daemon reads: read-only when possible,
+ * Scoped ledger for reads without a daemon report: read-only when possible,
  * falling back to the writable opener for WAL recovery after an unclean stop
- * or a ledger predating a column migration. Always closed by the scope.
+ * or a ledger predating a column migration (its statements fail to prepare).
+ * Always closed by the scope.
  */
-const acquireSnapshotDb = (databasePath: string): Effect.Effect<DatabaseSync, never, Scope.Scope> =>
+const acquireSnapshotLedger = (databasePath: string): Effect.Effect<LedgerApi, never, Scope.Scope> =>
   Effect.acquireRelease(
-    Effect.try(() => openLedgerDatabaseReadOnly(databasePath)).pipe(
-      Effect.catch(() => Effect.sync(() => openLedgerDatabase(databasePath))),
+    Effect.try(() => openSnapshotLedger(openLedgerDatabaseReadOnly, databasePath)).pipe(
+      Effect.catch(() => Effect.sync(() => openSnapshotLedger(openLedgerDatabase, databasePath))),
     ),
-    (db) => Effect.sync(() => db.close()),
-  );
+    ({ db }) => Effect.sync(() => db.close()),
+  ).pipe(Effect.map(({ ledger }) => ledger));
 
 const fromLedger = (
   config: DaemonConfigShape,
@@ -308,14 +373,17 @@ const fromLedger = (
   }
   return Effect.scoped(
     Effect.gen(function* () {
-      const db = yield* acquireSnapshotDb(config.databasePath);
-      const ledger = createLedgerApi(db);
+      const ledger = yield* acquireSnapshotLedger(config.databasePath);
       const recent = (yield* ledger.recentRequests(recentLimit)).map((record) =>
         ledgerStatusRow(record, daemon));
+      const active =
+        daemon === 'skewed'
+          ? (yield* ledger.activeStatusRequests()).map((record) => ledgerStatusRow(record, daemon))
+          : [];
       const savings = yield* ledger.attachmentSavings();
       return withReport(
         {
-          active: [],
+          active,
           daemon: 'stopped' as const,
           lanes: [],
           maxConcurrent: null,
@@ -368,7 +436,7 @@ export const loadHaulerSnapshot = (
             Effect.flatMap((result) =>
               result === undefined
                 ? fromLedger(config, recentLimit)
-                : fromLiveReport(result.report, config),
+                : fromLiveReport(result.report, daemon, config, recentLimit),
             ),
             // Once the version gate has succeeded, ordinary read failures keep
             // the historical ledger fallback.
