@@ -52,8 +52,9 @@ export type DashboardSection =
 /**
  * Fixed section order regardless of content. Sections used to unmount when
  * empty, but on a live-polling page that made the layout jump every time work
- * started or finished; instead every section stays mounted and empty ones
- * render a slim one-line state.
+ * started or finished; instead every work section stays mounted and empty ones
+ * render a slim one-line state. The kache section renders only when kache is
+ * available, a machine fact that does not change as work comes and goes.
  */
 export const sectionOrder: readonly DashboardSection[] = [
   'contention',
