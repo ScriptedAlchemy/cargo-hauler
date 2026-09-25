@@ -1,5 +1,8 @@
 import type { AppRouteResult } from 'agent-bundle/app';
-import { Effect, Schedule, Stream, type Duration } from 'effect';
+import type * as Duration from 'effect/Duration';
+import * as Effect from 'effect/Effect';
+import * as Schedule from 'effect/Schedule';
+import * as Stream from 'effect/Stream';
 
 import { cargoJsonDemuxFlag, defaultCargoProfile, namedPackagesInArgv } from '../../cargo/argv.js';
 import { isRecord } from '../../util/guards.js';

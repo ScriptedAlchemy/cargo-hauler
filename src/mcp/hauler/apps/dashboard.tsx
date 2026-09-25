@@ -1,10 +1,15 @@
 /// <reference lib="dom" />
-import { RegistryProvider, useAtomRefresh, useAtomSet, useAtomValue } from '@effect/atom-react';
+import { useAtomRefresh, useAtomSet, useAtomValue } from '@effect/atom-react/Hooks';
+import { RegistryProvider } from '@effect/atom-react/RegistryContext';
 import type { AppRouteConfig } from 'agent-bundle';
 import { createAppClient, type AppRouteResult } from 'agent-bundle/app';
 import { version as dashboardVersion } from 'agent-bundle/meta';
-import { Cause, Data, Effect, Option } from 'effect';
-import { AsyncResult, Atom } from 'effect/unstable/reactivity';
+import * as Cause from 'effect/Cause';
+import * as Data from 'effect/Data';
+import * as Effect from 'effect/Effect';
+import * as Option from 'effect/Option';
+import * as AsyncResult from 'effect/unstable/reactivity/AsyncResult';
+import * as Atom from 'effect/unstable/reactivity/Atom';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 

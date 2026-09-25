@@ -26773,8 +26773,8 @@ __webpack_require__.d(__webpack_exports__, {
 "./src/internal/daemon/main.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var node_fs_promises__rspack_import_0 = __webpack_require__("node:fs/promises");
 /* import */ var node_path__rspack_import_1 = __webpack_require__("node:path");
-/* import */ var _effect_platform_node__rspack_import_16 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodeServices.js");
-/* import */ var _effect_platform_node__rspack_import_20 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeSocketServer.js");
+/* import */ var _effect_platform_node_NodeServices__rspack_import_16 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodeServices.js");
+/* import */ var _effect_platform_node_NodeSocketServer__rspack_import_20 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeSocketServer.js");
 /* import */ var agent_bundle_meta__rspack_import_2 = __webpack_require__("./.agent-bundle-virtual/meta.mjs");
 /* import */ var effect_Config__rspack_import_17 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Config.js");
 /* import */ var effect_Deferred__rspack_import_21 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Deferred.js");
@@ -26814,8 +26814,9 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 
+
 const daemonVersion = (/* inlined export .version */"0.9.13");
-const appLayer = (config)=>_broker_broker_js__rspack_import_5/* .BrokerLive.pipe */.Cn.pipe(effect_Layer__rspack_import_15/* .provideMerge */.S5(_scheduling_cost_js__rspack_import_7/* .CostModelLive */.jg), effect_Layer__rspack_import_15/* .provideMerge */.S5(_integrations_kache_status_js__rspack_import_8/* .KacheStatusLive */.pS), effect_Layer__rspack_import_15/* .provideMerge */.S5(_cargo_topology_js__rspack_import_14/* .TopologyLive */.QW), effect_Layer__rspack_import_15/* .provideMerge */.S5(_storage_ledger_js__rspack_import_9/* .LedgerLive */.mX), effect_Layer__rspack_import_15/* .provideMerge */.S5(effect_Layer__rspack_import_15/* .succeed */.Py(_config_js__rspack_import_6/* .DaemonConfig */.FP, config)), effect_Layer__rspack_import_15/* .provideMerge */.S5(_effect_platform_node__rspack_import_16/* .layer */.q));
+const appLayer = (config)=>_broker_broker_js__rspack_import_5/* .BrokerLive.pipe */.Cn.pipe(effect_Layer__rspack_import_15/* .provideMerge */.S5(_scheduling_cost_js__rspack_import_7/* .CostModelLive */.jg), effect_Layer__rspack_import_15/* .provideMerge */.S5(_integrations_kache_status_js__rspack_import_8/* .KacheStatusLive */.pS), effect_Layer__rspack_import_15/* .provideMerge */.S5(_cargo_topology_js__rspack_import_14/* .TopologyLive */.QW), effect_Layer__rspack_import_15/* .provideMerge */.S5(_storage_ledger_js__rspack_import_9/* .LedgerLive */.mX), effect_Layer__rspack_import_15/* .provideMerge */.S5(effect_Layer__rspack_import_15/* .succeed */.Py(_config_js__rspack_import_6/* .DaemonConfig */.FP, config)), effect_Layer__rspack_import_15/* .provideMerge */.S5(_effect_platform_node_NodeServices__rspack_import_16/* .layer */.q));
 const minimumLogLevelLayer = effect_Layer__rspack_import_15/* .unwrap */.oA(effect_Config__rspack_import_17/* .LogLevel */.$b('CARGO_HAULER_LOG_LEVEL').pipe(effect_Effect__rspack_import_18/* .orElseSucceed */.DM4(()=>'Info'), effect_Effect__rspack_import_18/* .map */.TjK((level)=>effect_Layer__rspack_import_15/* .succeed */.Py(effect_References__rspack_import_19/* .MinimumLogLevel */.zQ, level))));
 /**
  * Bind the daemon's control socket and publish it at `socketPath`.
@@ -26840,7 +26841,7 @@ const bindDaemonSocket = (socketPath)=>effect_Effect__rspack_import_18/* .gen */
         if ((0,_platform_state_paths_js__rspack_import_4/* .isNamedPipePath */.HR)(socketPath)) {
             // A Windows named pipe is not a filesystem entry: nothing to rename,
             // nothing for close() to unlink.
-            const server = yield* _effect_platform_node__rspack_import_20/* .make */.L8({
+            const server = yield* _effect_platform_node_NodeSocketServer__rspack_import_20/* .make */.L8({
                 path: socketPath
             });
             return {
@@ -26866,7 +26867,7 @@ const bindDaemonSocket = (socketPath)=>effect_Effect__rspack_import_18/* .gen */
                     socketPath: listenPath
                 })
         });
-        const server = yield* _effect_platform_node__rspack_import_20/* .make */.L8({
+        const server = yield* _effect_platform_node_NodeSocketServer__rspack_import_20/* .make */.L8({
             path: listenPath
         });
         // Stat before the rename: the inode is ours for certain, whereas the
