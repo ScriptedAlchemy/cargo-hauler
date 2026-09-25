@@ -106733,10 +106733,10 @@ var __webpack_exports__ = {};
 /* import */ var _agent_bundle_runtime__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
 /* import */ var _agent_bundle_runtime__rspack_import_9 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var node_url__rspack_import_2 = __webpack_require__("node:url");
-/* import */ var _tmp_poteto_hint_src_events_session_start_tsx__rspack_import_3 = __webpack_require__("./src/events/session/start.tsx");
-/* import */ var _tmp_poteto_hint_src_events_tool_before_view_tsx__rspack_import_4 = __webpack_require__("./src/events/tool/before.view.tsx");
-/* import */ var _tmp_poteto_hint_src_events_tool_after_view_tsx__rspack_import_5 = __webpack_require__("./src/events/tool/after.view.tsx");
-/* import */ var _tmp_poteto_hint_src_events_stop_tsx__rspack_import_6 = __webpack_require__("./src/events/stop.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_events_session_start_tsx__rspack_import_3 = __webpack_require__("./src/events/session/start.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_events_tool_before_view_tsx__rspack_import_4 = __webpack_require__("./src/events/tool/before.view.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_events_tool_after_view_tsx__rspack_import_5 = __webpack_require__("./src/events/tool/after.view.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_events_stop_tsx__rspack_import_6 = __webpack_require__("./src/events/stop.tsx");
 
 
 
@@ -106775,28 +106775,28 @@ const routes = Object.freeze({
         event: "session/start",
         id: "event:session/start",
         kind: 'event-route',
-        module: _tmp_poteto_hint_src_events_session_start_tsx__rspack_import_3,
+        module: _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_events_session_start_tsx__rspack_import_3,
         name: "session/start"
     }),
     "hook:event-route:tool-before": Object.freeze({
         event: "tool/before",
         id: "event:tool/before",
         kind: 'event-route',
-        module: _tmp_poteto_hint_src_events_tool_before_view_tsx__rspack_import_4,
+        module: _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_events_tool_before_view_tsx__rspack_import_4,
         name: "tool/before"
     }),
     "hook:event-route:tool-after": Object.freeze({
         event: "tool/after",
         id: "event:tool/after",
         kind: 'event-route',
-        module: _tmp_poteto_hint_src_events_tool_after_view_tsx__rspack_import_5,
+        module: _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_events_tool_after_view_tsx__rspack_import_5,
         name: "tool/after"
     }),
     "hook:event-route:stop": Object.freeze({
         event: "stop",
         id: "event:stop",
         kind: 'event-route',
-        module: _tmp_poteto_hint_src_events_stop_tsx__rspack_import_6,
+        module: _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_events_stop_tsx__rspack_import_6,
         name: "stop"
     })
 });

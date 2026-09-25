@@ -155791,14 +155791,14 @@ __webpack_require__.r(__webpack_exports__);
 /* import */ var agent_bundle_event_project__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/event-project.js");
 /* import */ var _agent_bundle_runtime_lineage__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/lineage.js");
 /* import */ var agent_bundle_mcp_apps__rspack_import_5 = __webpack_require__("./.agent-bundle-virtual/mcp-hauler-2b8242f9-0.mjs");
-/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_6 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
-/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_dashboard.tsx");
-/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
-/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
-/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
-/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
-/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
-/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_6 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_dashboard.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
+/* import */ var _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
 
 
 
@@ -155808,21 +155808,21 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const route0 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_6, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_6);
+const route0 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_6, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_6);
 
-const route1 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_7, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_7);
+const route1 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_7, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_7);
 
-const route2 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
+const route2 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
 
-const route3 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
+const route3 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
 
-const route4 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
+const route4 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
 
-const route5 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
+const route5 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
 
-const route6 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
+const route6 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
 
-const route7 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
+const route7 = Object.assign({}, Reflect.get(_fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _fast_projects_agent_plugins_cargo_conductor_worktrees_test_behavior_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
 const ARTIFACT_EPOCH = "cargo-hauler@0.9.6";
 const pluginRoot = (0,_agent_bundle_runtime__rspack_import_14/* .resolvePluginRoot */.E7)({
     fallback: (0,node_url__rspack_import_1.fileURLToPath)(new URL('..', import.meta.url)),
@@ -156090,7 +156090,7 @@ const routes = Object.freeze({
         name: "hauler_status"
     })
 });
-const EVENT_ARTIFACT_EPOCH = "531afe85121c36b8256f32bd6d69915be178f2dd03d672b6fc6d2b0f9e0b739a";
+const EVENT_ARTIFACT_EPOCH = "f7fd3edd34e538f1ea599df57ee94f42e1fcef11e2e5f183eb1e948f3836c84a";
 const EVENT_ALLOWED_TARGETS = Object.freeze([
     "claude",
     "codex",

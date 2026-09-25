@@ -129,11 +129,11 @@ describe('createSystemIoSampler', () => {
   it('omits devices without diskstats rows (virtual filesystems) instead of guessing', () => {
     const files = { disks: diskStats(0, 0), stat: statAt(0, 1_000) };
     const sampler = createSystemIoSampler(makeRead(files));
-    sampler.sample(['/virtual/checkout'], 1_000);
+    sampler.sample(['/virtual/checkout', '/scratch/app/target'], 1_000);
+    files.disks = diskStats(0, 3_000);
     files.stat = statAt(100, 1_500);
-    const sample = sampler.sample(['/virtual/checkout'], 6_000);
-    expect(sample?.disks).toEqual([]);
-    expect(sample?.ioWaitPercent).not.toBeNull();
+    const sample = sampler.sample(['/virtual/checkout', '/scratch/app/target'], 6_000);
+    expect(sample?.disks).toEqual([{ device: 'sdb', utilPercent: 60 }]);
   });
 
   it('returns null where /proc is unavailable (macOS, Windows)', () => {

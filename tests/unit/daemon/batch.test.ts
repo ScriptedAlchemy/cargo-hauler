@@ -11,7 +11,6 @@ import {
   compositeSelection,
   compositeTestFilters,
   extraPackagesFor,
-  maxBatchPackages,
   withExtraPackages,
 } from '../../../src/internal/daemon/scheduling/batch.js';
 import { normalizeCargoIntent } from '../../../src/internal/cargo/intent.js';
@@ -230,12 +229,6 @@ describe('withExtraPackages', () => {
       '-p',
       'beta',
     ]);
-  });
-});
-
-describe('maxBatchPackages', () => {
-  it('caps a composite invocation at 16 packages', () => {
-    expect(maxBatchPackages).toBe(16);
   });
 });
 

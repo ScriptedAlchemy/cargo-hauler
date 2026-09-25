@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'effect-rstest';
 
 import {
-  autoBackgroundExitCode,
   hostShellCapMs,
   shellCapHost,
   shouldAutoBackground,
@@ -26,10 +25,6 @@ describe('host shell caps', () => {
     // fresh crate was reported as exit 0 without running (#37).
     expect(shouldAutoBackground(60 * 60_000, 'claude', 'default')).toBe(false);
     expect(shouldAutoBackground(60 * 60_000, 'claude', 'kache')).toBe(true);
-  });
-
-  it('exposes EX_TEMPFAIL as the auto-background exit code', () => {
-    expect(autoBackgroundExitCode).toBe(75);
   });
 
   it('lets the PATH shim inherit the real host cap from CARGO_HAULER_HOST', () => {

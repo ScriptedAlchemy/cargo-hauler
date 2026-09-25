@@ -11,8 +11,6 @@ import type { DaemonConfigShape } from '../../src/internal/daemon/config.js';
 import { pingDaemon } from '../../src/internal/client/control.js';
 import { runDaemon } from '../../src/internal/daemon/main.js';
 import type { AckMessage } from '../../src/internal/contracts/protocol.js';
-import { ticketLogPath } from '../../src/internal/storage/ticket-log.js';
-
 import {
   decodeOutput,
   execRequest,
@@ -76,7 +74,7 @@ describe('per-ticket output logs (#68)', () => {
       const exit = findExit(messages);
       expect(exit.status).toBe('done');
 
-      const expectedPath = ticketLogPath(fixture.config.ticketLogDir, exit.ticket);
+      const expectedPath = join(fixture.config.ticketLogDir, 'cc-1.log');
       const report = yield* pollReport(fixture, (candidate) =>
         candidate.recent.some((record) => record.ticket === exit.ticket),
       );
@@ -117,18 +115,18 @@ describe('per-ticket output logs (#68)', () => {
       const followerAck = followerMessages.find(
         (message): message is AckMessage => message.type === 'ack',
       );
-      expect(followerAck?.attachedTo).toBeDefined();
+      expect(followerAck?.attachedTo).toBe('cc-1');
       const followerExit = findExit(followerMessages);
       const leaderExit = findExit(yield* Fiber.join(leaderFiber));
-      expect(followerExit.ticket).not.toBe(leaderExit.ticket);
+      expect([leaderExit.ticket, followerExit.ticket]).toEqual(['cc-1', 'cc-2']);
 
       const ledger = yield* scopedLedger(fixture.config);
-      const leader = yield* ledger.getRequestByTicket(leaderExit.ticket);
-      const follower = yield* ledger.getRequestByTicket(followerExit.ticket);
-      expect(leader?.outputPath).toBe(ticketLogPath(fixture.config.ticketLogDir, leaderExit.ticket));
-      expect(follower?.attachedTo).toBe(leaderExit.ticket);
-      expect(follower?.outputPath).toBe(leader?.outputPath);
-      expect(existsSync(ticketLogPath(fixture.config.ticketLogDir, followerExit.ticket))).toBe(false);
+      const leader = yield* ledger.getRequestByTicket('cc-1');
+      const follower = yield* ledger.getRequestByTicket('cc-2');
+      expect(leader?.outputPath).toBe(join(fixture.config.ticketLogDir, 'cc-1.log'));
+      expect(follower?.attachedTo).toBe('cc-1');
+      expect(follower?.outputPath).toBe(join(fixture.config.ticketLogDir, 'cc-1.log'));
+      expect(existsSync(join(fixture.config.ticketLogDir, 'cc-2.log'))).toBe(false);
     }));
 
   it.live('logs the rendered diagnostics of a demultiplexed run, not the raw JSON stream', () =>
@@ -154,7 +152,7 @@ describe('per-ticket output logs (#68)', () => {
       });
       const exit = findExit(messages);
       expect(exit.status).toBe('failed');
-      const log = readFileSync(ticketLogPath(fixture.config.ticketLogDir, exit.ticket), 'utf8');
+      const log = readFileSync(join(fixture.config.ticketLogDir, `${exit.ticket}.log`), 'utf8');
       expect(log).toContain('   Compiling aa v0.1.0');
       expect(log).toContain('error[E0999]: aa broke');
       expect(log).toContain('plain stdout line from a test binary');
@@ -171,7 +169,7 @@ describe('per-ticket output logs (#68)', () => {
         extraEnv: { FAKE_OUTPUT_COUNT: '20', FAKE_OUTPUT_INTERVAL: '0.005' },
       });
       const exit = findExit(messages);
-      const log = readFileSync(ticketLogPath(fixture.config.ticketLogDir, exit.ticket), 'utf8');
+      const log = readFileSync(join(fixture.config.ticketLogDir, `${exit.ticket}.log`), 'utf8');
       expect(log).toContain('fake-out:run');
       expect(log).not.toContain('fake-tick:19');
       expect(log.trimEnd().split('\n').at(-1)).toContain(
@@ -187,7 +185,7 @@ describe('per-ticket output logs (#68)', () => {
       expect(exit.status).toBe('done');
       const ledger = yield* scopedLedger(fixture.config);
       expect((yield* ledger.getRequestByTicket(exit.ticket))?.outputPath).toBeNull();
-      expect(existsSync(ticketLogPath(fixture.config.ticketLogDir, exit.ticket))).toBe(false);
+      expect(existsSync(join(fixture.config.ticketLogDir, `${exit.ticket}.log`))).toBe(false);
     }));
 
   it.live('removes logs without a ledger row at startup and keeps the ones with a row', () =>
@@ -208,8 +206,8 @@ describe('per-ticket output logs (#68)', () => {
       });
       yield* ledger.markFinished(kept.id, { atMs: Date.now(), exitCode: 0, status: 'done' });
       mkdirSync(fixture.config.ticketLogDir, { recursive: true });
-      const keptLog = ticketLogPath(fixture.config.ticketLogDir, kept.ticket);
-      const orphanLog = ticketLogPath(fixture.config.ticketLogDir, 'cc-4242');
+      const keptLog = join(fixture.config.ticketLogDir, `${kept.ticket}.log`);
+      const orphanLog = join(fixture.config.ticketLogDir, 'cc-4242.log');
       writeFileSync(keptLog, 'kept\n');
       writeFileSync(orphanLog, 'orphan\n');
 

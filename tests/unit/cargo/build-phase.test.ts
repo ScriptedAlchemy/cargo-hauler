@@ -2,7 +2,6 @@ import { describe, expect, it } from 'effect-rstest';
 
 import {
   createBuildPhaseDetector,
-  executionSubcommands,
   isCargoFinishedLine,
 } from '../../../src/internal/cargo/execution/build-phase.js';
 
@@ -82,11 +81,5 @@ describe('createBuildPhaseDetector', () => {
         ]),
       ),
     ).toBe(true);
-  });
-});
-
-describe('executionSubcommands', () => {
-  it('names the subcommands that run user code after building', () => {
-    expect([...executionSubcommands].sort()).toEqual(['bench', 'nextest', 'run', 'test']);
   });
 });

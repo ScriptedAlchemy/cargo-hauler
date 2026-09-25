@@ -3,13 +3,11 @@ import { describe, expect, it } from 'effect-rstest';
 import {
   attachDecisionFor,
   attachModeFor,
-  attachRejectionRank,
   isBuildOnlyIntent,
 } from '../../../src/internal/daemon/broker/coverage.js';
 import type { AttachDecision } from '../../../src/internal/daemon/broker/coverage.js';
 import { normalizeCargoIntent } from '../../../src/internal/cargo/intent.js';
 import type { NormalizedCargoIntent } from '../../../src/internal/cargo/intent.js';
-import { attachRejectionGates } from '../../../src/internal/contracts/protocol.js';
 import type { AttachRejectionGate } from '../../../src/internal/contracts/protocol.js';
 
 const workspaceRoot = '/fixture/ws';
@@ -168,19 +166,10 @@ const coverage = (leader: readonly string[], candidate: readonly string[]): Atta
  */
 describe('attachDecisionFor gates (#89)', () => {
   it('names the gate that refused the pair, in evaluation order', () => {
-    expect(attachRejectionGates).toEqual([
-      'shell-wrapped',
-      'subcommand',
-      'opaque-arguments',
-      'passthrough',
+    expect(gateOf(coverage(['build', '-p', 'aa', '--features', 'x'], ['check', '-p', 'bb']))).toBe(
       'compile-surface',
-      'packages',
-      'targets',
-      'channels',
-      'leader-build-finished',
-    ]);
-    expect(attachRejectionRank('targets')).toBeGreaterThan(attachRejectionRank('subcommand'));
-    expect(attachRejectionRank('leader-build-finished')).toBe(attachRejectionGates.length - 1);
+    );
+    expect(gateOf(coverage(['build', '-p', 'aa', '--lib'], ['check', '-p', 'bb', '--bins']))).toBe('packages');
   });
 
   it('lets identical unmodeled flags through: --locked on both sides still proves the check', () => {

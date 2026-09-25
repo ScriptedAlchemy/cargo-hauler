@@ -10,7 +10,7 @@ import {
   submitBackgroundAck,
 } from '../../src/internal/client/tickets.js';
 import { awaitCeilingMs } from '../../src/internal/contracts/protocol.js';
-import { DaemonNotReplacedError, notReplacedMessage } from '../../src/internal/client/shutdown.js';
+import { DaemonNotReplacedError } from '../../src/internal/client/shutdown.js';
 import { infraFailure } from '../../src/internal/operations/ticket-errors.js';
 
 import { fakeCargoEnv, fetchReport, scopedDaemon, scopedEnv } from '../support/harness.js';
@@ -126,7 +126,9 @@ describe('submitBackgroundAck', () => {
         ),
       );
       expect(error._tag).toBe('DaemonNotReplaced');
-      expect(infraFailure(error).message).toBe(notReplacedMessage(daemon, 5_000));
+      expect(infraFailure(error).message).toBe(
+        'cargo-hauler daemon pid 4242 (0.0.0-previous) is still running 5.0s after the shutdown request; not restarted — retry once it has exited, or stop it with `hauler daemon stop`',
+      );
       const report = yield* fetchReport(fixture);
       expect(report.active).toEqual([]);
       expect(report.recent).toEqual([]);

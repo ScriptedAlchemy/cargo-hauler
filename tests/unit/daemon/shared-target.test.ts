@@ -68,13 +68,10 @@ describe('sharedTargetWith', () => {
     expect(
       sharedTargetWith({ targetDir: '/cache/target', workspaceRoot: '/work/one' }, [
         { targetDir: '/cache/target', workspaceRoot: '/work/one' },
-      ]),
-    ).toEqual([]);
-    expect(
-      sharedTargetWith({ targetDir: '/cache/one', workspaceRoot: '/work/one' }, [
         { targetDir: '/cache/two', workspaceRoot: '/work/two' },
+        { targetDir: '/cache/target', workspaceRoot: '/work/three' },
       ]),
-    ).toEqual([]);
+    ).toEqual(['/work/three']);
   });
 
   it('treats a sibling directory with a shared prefix as outside the workspace', () => {

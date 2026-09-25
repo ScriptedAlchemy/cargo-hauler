@@ -30,7 +30,7 @@ describe('localQueryReason', () => {
   });
 
   it('classifies a bare cargo invocation, which prints usage locally', () => {
-    expect(localQueryReason(['cargo'])).not.toBeNull();
+    expect(localQueryReason(['cargo'])).toBe('cargo resolves this locally');
   });
 
   it('keeps compile-shaped work brokered', () => {

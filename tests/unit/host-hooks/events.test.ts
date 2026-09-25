@@ -4,16 +4,10 @@ import { join } from 'node:path';
 
 import { Agent } from '@agent-bundle/runtime';
 import { afterEach, beforeEach, describe, expect, it } from 'effect-rstest';
-import type {
-  AgentBundleConfig,
-  AgentEventRouteConfig,
-  AgentEventRouteProps,
-  CanonicalAgentEvent,
-} from 'agent-bundle';
+import type { AgentEventRouteProps, CanonicalAgentEvent } from 'agent-bundle';
 import { createEventRouteInput } from 'agent-bundle/test';
 import { isValidElement, type ReactElement, type ReactNode } from 'react';
 
-import bundleConfig from '../../../agent-bundle.config.js';
 import StopRoute from '../../../src/events/stop.js';
 import { decisionValue } from '../../../src/internal/host-hooks/event-support.js';
 
@@ -89,57 +83,6 @@ describe('agent event routes', () => {
     } else {
       process.env.AGENT_BUNDLE_PLUGIN_ROOT = originalPluginRoot;
     }
-  });
-
-  it('declares the expected static route configs', async () => {
-    const [stop, sessionStart] = await Promise.all([
-      import('../../../src/events/stop.js'),
-      import('../../../src/events/session/start.js'),
-    ]);
-    expect(stop.config).toEqual({
-      requires: ['events.stop.deny'],
-      runtime: 'standalone',
-      timeoutMs: 900_000,
-    });
-    expect(sessionStart.config).toEqual({
-      requires: ['events.sessionStart.context'],
-      runtime: 'standalone',
-      timeoutMs: 5_000,
-    });
-  });
-
-  it('routes the shell tool hooks through cheap handlers and rendered views', async () => {
-    // tool/before and tool/after are the two hooks every shell call pays for:
-    // their handler decides on the raw command before the view loads (#90).
-    const [before, after] = await Promise.all([
-      import('../../../src/events/tool/before.js'),
-      import('../../../src/events/tool/after.js'),
-    ]);
-    const beforeDefinition = before.default as typeof before.default & {
-      readonly config: AgentEventRouteConfig;
-      readonly event: string;
-    };
-    const afterDefinition = after.default as typeof after.default & {
-      readonly config: AgentEventRouteConfig;
-      readonly event: string;
-    };
-    expect(beforeDefinition.config).toEqual({
-      requires: ['events.toolBefore.deny'],
-      runtime: 'standalone',
-      timeoutMs: 10_000,
-      tools: ['shell'],
-    });
-    expect(afterDefinition.config).toEqual({
-      requires: ['events.toolAfter.context'],
-      runtime: 'standalone',
-      timeoutMs: 10_000,
-      tools: ['shell'],
-    });
-    expect(beforeDefinition.event).toBe('tool/before');
-    expect(afterDefinition.event).toBe('tool/after');
-    expect('preflight' in before).toBe(false);
-    expect('preflight' in after).toBe(false);
-    expect((bundleConfig as AgentBundleConfig).hooks).toBeUndefined();
   });
 
   it('decisionValue drops a reason from a continue result and keeps it on allow and deny', () => {

@@ -57,7 +57,7 @@ describe('buildTransportedEnv', () => {
   });
 
   it('skips undefined values', () => {
-    expect(buildTransportedEnv({ RUSTFLAGS: undefined })).toEqual({});
+    expect(buildTransportedEnv({ CFLAGS: '-O2', RUSTFLAGS: undefined })).toStrictEqual({ CFLAGS: '-O2' });
   });
 
   it('transports the caller color-decision variables to the daemon spawn', () => {
