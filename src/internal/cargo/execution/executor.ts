@@ -383,6 +383,10 @@ export const executeCargo = (
             switch (event.kind) {
               case 'exited':
                 waited = event.waited;
+                // Scope release signals a referenced child's group even after
+                // a clean exit and waits out the kill grace. Unreferenced, the
+                // group is left to the survivors, as the drain below intends.
+                yield* Effect.ignore(child.unref);
                 break;
               case 'kill-requested': {
                 const terminated = yield* terminate('kill requested');

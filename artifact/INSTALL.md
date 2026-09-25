@@ -62,8 +62,9 @@ would be removed and `agent-bundle uninstall claude --from ./` reverses the reco
 a scoped install), and `uninstall` consumes it, running the two commands above in order and retaining the
 marketplace while any other plugin, scope, or project still installs from it. Durable runtime state
 is kept by default; `--purge-data --confirm-purge` removes the receipt-owned state roots and
-`~/.claude/plugins/data/<id>/` immediately. A missing receipt or a cached copy that no longer matches it is refused unless `--force`; a
-second run is a `not-installed` no-op.
+`~/.claude/plugins/data/<id>/` immediately. A missing receipt or a cached copy that no longer matches it is refused unless `--force`;
+`--purge-data --confirm-purge` without a receipt is refused even with `--force` (`AB7009`); a second run is a
+`not-installed` no-op.
 
 ## Codex
 
@@ -115,7 +116,8 @@ would be removed and `agent-bundle uninstall codex --from ./` reverses the recor
 under `$CODEX_HOME`), and `uninstall` consumes it, running the two commands above in order. `--keep-data`
 keeps the framework state roots the receipt records outside the cached tree (`kept`); with nothing there the
 result says so (`unavailable`). A missing receipt or a cached
-copy that no longer matches it is refused unless `--force`; a second run is a `not-installed` no-op.
+copy that no longer matches it is refused unless `--force`; `--purge-data --confirm-purge` without a receipt is
+refused even with `--force` (`AB7009`); a second run is a `not-installed` no-op.
 
 ## Cursor
 

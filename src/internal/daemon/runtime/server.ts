@@ -6,7 +6,7 @@ import * as Effect from 'effect/Effect';
 import * as Queue from 'effect/Queue';
 import * as Result from 'effect/Result';
 import type * as Scope from 'effect/Scope';
-import type * as Socket from 'effect/unstable/socket/Socket';
+import * as Socket from 'effect/unstable/socket/Socket';
 
 import { isRecord } from '../../util/guards.js';
 import { LineBufferOverflowError } from '../../platform/ndjson.js';
@@ -232,7 +232,7 @@ export const makeConnectionHandler =
     Effect.scoped(
       Effect.gen(function* () {
         const ownerId = randomUUID();
-        const write = yield* socket.writer;
+        const { write } = yield* socket.writer;
         const outbound = new ConnectionOutputBuffer();
         const outboundWake = yield* Queue.dropping<void>(1);
         const connection = { closed: false };
@@ -666,10 +666,15 @@ export const makeConnectionHandler =
             }
             return Effect.forEach(lines, handleLine, { discard: true });
           });
-        yield* socket
-          .run(readChunk)
+        yield* Socket.readerBytes(socket)
           .pipe(
-            // Abrupt disconnects are routine (agent shells die mid-build).
+            Effect.flatMap((pull) =>
+              Effect.forever(
+                Effect.flatMap(pull, (chunks) => Effect.forEach(chunks, readChunk, { discard: true })),
+              ),
+            ),
+            // Every close fails the pull; abrupt disconnects are routine
+            // (agent shells die mid-build).
             Effect.ignore,
             Effect.ensuring(
               Effect.gen(function* () {

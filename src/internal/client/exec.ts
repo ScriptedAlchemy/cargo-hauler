@@ -12,6 +12,7 @@ import * as Fiber from 'effect/Fiber';
 import * as Ref from 'effect/Ref';
 import * as Schedule from 'effect/Schedule';
 import type { Scope } from 'effect/Scope';
+import * as Socket from 'effect/unstable/socket/Socket';
 
 import { executeCargo } from '../cargo/execution/executor.js';
 import { isEnabledFlag, resolveDaemonConfig } from '../daemon/config.js';
@@ -634,14 +635,12 @@ const streamBrokered = (
     const submittedAtMs = Date.now();
     const id = shortId();
 
-    // v4 sockets connect lazily: open failures surface through the pump's
-    // `socket.run`, which routes them via mapOpenError below.
     const socket = yield* NodeSocket.makeNet({
       openTimeout: openTimeoutMs,
       path: config.socketPath,
     });
 
-    const write = yield* socket.writer;
+    const { write } = yield* socket.writer;
 
     const state: StreamState = {
       cursor,
@@ -680,48 +679,50 @@ const streamBrokered = (
         ),
       );
 
-    const pump = socket
-      .run(
-        (data) =>
-          Effect.gen(function* () {
-            for (const line of lines.push(data)) {
-              const message = parseServerMessageLine(line);
-              // Output chunks are piped through, not retained: a long build
-              // would otherwise accumulate its whole log (base64-inflated)
-              // in this client. Disconnect recovery only needs control
-              // messages (exit, ack, errors), which are small and bounded.
-              if (message.type !== 'output') {
-                received.push(message);
-              }
-              yield* handleServerMessage(options, message, state);
+    // Acquiring the reader dials, so open failures surface here. Every close,
+    // clean or not, fails the pull; the reader's scope is the pump's.
+    const pump = Effect.gen(function* () {
+      const pull = yield* Socket.readerBytes(socket);
+      yield* Deferred.succeed(opened, undefined);
+      while (true) {
+        for (const data of yield* pull) {
+          for (const line of lines.push(data)) {
+            const message = parseServerMessageLine(line);
+            // Output chunks are piped through, not retained: a long build
+            // would otherwise accumulate its whole log (base64-inflated)
+            // in this client. Disconnect recovery only needs control
+            // messages (exit, ack, errors), which are small and bounded.
+            if (message.type !== 'output') {
+              received.push(message);
             }
-          }),
-        { onOpen: Deferred.succeed(opened, undefined).pipe(Effect.asVoid) },
-      )
-      .pipe(
-        Effect.matchEffect({
-          onFailure: (
-            error,
-          ): Effect.Effect<
-            RunExecResult,
-            DaemonUnreachableError | ControlTimeoutError | ConnectionClosedError
-          > => {
-            const mapped = mapOpenError(error, config.socketPath);
-            switch (mapped._tag) {
-              case 'DaemonUnreachable':
-              case 'ControlTimeout':
-                return Effect.fail(mapped);
-              case 'ConnectionClosed':
-                return afterDisconnect();
-              default: {
-                const exhaustive: never = mapped;
-                return exhaustive;
-              }
+            yield* handleServerMessage(options, message, state);
+          }
+        }
+      }
+    }).pipe(
+      Effect.scoped,
+      Effect.catch(
+        (
+          error,
+        ): Effect.Effect<
+          RunExecResult,
+          DaemonUnreachableError | ControlTimeoutError | ConnectionClosedError
+        > => {
+          const mapped = mapOpenError(error, config.socketPath);
+          switch (mapped._tag) {
+            case 'DaemonUnreachable':
+            case 'ControlTimeout':
+              return Effect.fail(mapped);
+            case 'ConnectionClosed':
+              return afterDisconnect();
+            default: {
+              const exhaustive: never = mapped;
+              return exhaustive;
             }
-          },
-          onSuccess: () => afterDisconnect(),
-        }),
-      );
+          }
+        },
+      ),
+    );
 
     const pumpFiber = yield* Effect.forkScoped(pump);
     const pumpDone = Fiber.join(pumpFiber).pipe(Effect.asVoid, Effect.ignore);

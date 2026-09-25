@@ -6,7 +6,7 @@ import from them (see the root `AGENTS.md`).
 
 ## Effect (`repos/effect/`)
 
-The Effect **v4** monorepo, pinned to the `effect@4.0.0-rc.112` tag — the same
+The Effect **v4** monorepo, pinned to the `effect@4.0.0-rc.117` tag — the same
 version as `package.json`. Unlike v3, most of the ecosystem lives inside the
 single `effect` package (platform, atom, and sql drivers are the main
 exceptions).

@@ -5,7 +5,7 @@ description: Write or review Effect (v4) code in this repo. Use when changing Ef
 
 # Learning more about Effect
 
-This repository uses the Effect Typescript library. `effect@4.0.0-rc.112` is
+This repository uses the Effect Typescript library. `effect@4.0.0-rc.117` is
 already installed as a dependency — do not reinstall or bump it — so the
 package source is available at `node_modules/effect/src`.
 
@@ -17,5 +17,5 @@ guide doesn't cover, search through the source code in `node_modules/effect/src`
 When the published package is not enough — you need runnable examples, the
 `LLMS.md` agent guide, migration docs, or other packages from the Effect
 monorepo — use the vendored subtree at `repos/effect`, pinned to the same
-`effect@4.0.0-rc.112` tag. It is read-only reference material: never edit it
+`effect@4.0.0-rc.117` tag. It is read-only reference material: never edit it
 and never import from it in application code.
