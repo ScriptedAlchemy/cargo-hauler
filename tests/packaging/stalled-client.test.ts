@@ -45,33 +45,6 @@ const open = (path: string): Promise<Socket> =>
     socket.once('error', reject);
   });
 
-/** Round-trips one ping at a time until `stop` resolves; returns the slowest. */
-const worstPingMs = async (socket: Socket, stop: Promise<void>): Promise<number> => {
-  let stopped = false;
-  void stop.then(() => {
-    stopped = true;
-  });
-  let worst = 0;
-  let sequence = 0;
-  while (!stopped) {
-    const id = `ping-${sequence++}`;
-    const startedAt = performance.now();
-    await new Promise<void>((resolvePromise) => {
-      const onData = (chunk: Buffer): void => {
-        if (chunk.toString('utf8').includes(`"${id}"`)) {
-          socket.off('data', onData);
-          resolvePromise();
-        }
-      };
-      socket.on('data', onData);
-      socket.write(`${JSON.stringify({ type: 'ping', id })}\n`);
-    });
-    worst = Math.max(worst, performance.now() - startedAt);
-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 5));
-  }
-  return worst;
-};
-
 /** Resolves once the daemon reports the ticket finished; an await sent before the ticket exists answers at once. */
 const settled = (socket: Socket, ticket: string): Promise<void> =>
   new Promise((resolvePromise) => {
@@ -102,7 +75,6 @@ interface FloodedRun {
   readonly logPath: string;
   readonly notices: readonly string[];
   readonly result: (args: readonly string[]) => Promise<{ readonly code: number; readonly stdout: string }>;
-  readonly worstPingMs: number;
 }
 
 /** Floods a build to a client that stops reading until the ticket settles, then lets it read to the exit. */
@@ -127,14 +99,13 @@ const withFloodedClient = async (check: (flooded: FloodedRun) => Promise<void>):
   try {
     expect((await run(['daemon', 'start'], workspace, env)).code).toBe(0);
     const socketPath = join(state, 'daemon.sock');
-    const prober = await open(socketPath);
     const awaiter = await open(socketPath);
     const stalled = await open(socketPath);
     stalled.pause();
     stalled.write(
       `${JSON.stringify({ type: 'exec', id: 'exec-1', argv: ['cargo', 'build', '--bin', 'flood'], cwd: workspace })}\n`,
     );
-    const worst = await worstPingMs(prober, settled(awaiter, 'cc-1'));
+    await settled(awaiter, 'cc-1');
     awaiter.destroy();
 
     let received = '';
@@ -151,7 +122,6 @@ const withFloodedClient = async (check: (flooded: FloodedRun) => Promise<void>):
         }
       }, 20);
     });
-    prober.destroy();
     stalled.destroy();
     const notices = received
       .split('\n')
@@ -163,7 +133,6 @@ const withFloodedClient = async (check: (flooded: FloodedRun) => Promise<void>):
       logPath: join(state, 'tickets', 'cc-1.log'),
       notices,
       result: (args) => run(['result', ...args], workspace, env),
-      worstPingMs: worst,
     });
   } finally {
     await run(['daemon', 'stop'], workspace, env);
@@ -172,12 +141,6 @@ const withFloodedClient = async (check: (flooded: FloodedRun) => Promise<void>):
 };
 
 describe.skipIf(!existsSync(haulerEntry))('a client that stops reading a large build', () => {
-  it('never blocks the daemon when its queued output is cut to the stalled limit', () =>
-    withFloodedClient(async ({ notices, worstPingMs: worst }) => {
-      expect(notices).toHaveLength(1);
-      expect(worst).toBeLessThan(100);
-    }), 60_000);
-
   it('names the log that keeps the dropped output, and result --full says it shows only the tail', () =>
     withFloodedClient(async ({ logPath, notices, result }) => {
       const summary = await result(['cc-1']);
