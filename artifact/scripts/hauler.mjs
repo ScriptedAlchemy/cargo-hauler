@@ -17241,7 +17241,7 @@ const defaultOutputBufferOptions = {
             if (frame === '') {
                 return effect_Effect__rspack_import_3/* ["void"] */.rIH;
             }
-            this.#writeStartedAtMs = Date.now();
+            this.#writeStartedAtMs = performance.now();
             return write(frame).pipe(effect_Effect__rspack_import_3/* .ensuring */.yeE(effect_Effect__rspack_import_3/* .sync */.OH5(()=>{
                 this.#writeStartedAtMs = null;
             })));
@@ -17252,7 +17252,7 @@ const defaultOutputBufferOptions = {
         if (startedAtMs === null) {
             return Number.POSITIVE_INFINITY;
         }
-        return Date.now() - startedAtMs >= this.#options.stallMs ? this.#options.stalledOutputBytes : this.#options.maxOutputBytes;
+        return performance.now() - startedAtMs >= this.#options.stallMs ? this.#options.stalledOutputBytes : this.#options.maxOutputBytes;
     }
     #takeFrame() {
         let frame = '';

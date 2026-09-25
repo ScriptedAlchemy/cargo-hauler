@@ -115,7 +115,7 @@ export class ConnectionOutputBuffer {
       if (frame === '') {
         return Effect.void;
       }
-      this.#writeStartedAtMs = Date.now();
+      this.#writeStartedAtMs = performance.now();
       return write(frame).pipe(
         Effect.ensuring(
           Effect.sync(() => {
@@ -131,7 +131,7 @@ export class ConnectionOutputBuffer {
     if (startedAtMs === null) {
       return Number.POSITIVE_INFINITY;
     }
-    return Date.now() - startedAtMs >= this.#options.stallMs
+    return performance.now() - startedAtMs >= this.#options.stallMs
       ? this.#options.stalledOutputBytes
       : this.#options.maxOutputBytes;
   }
