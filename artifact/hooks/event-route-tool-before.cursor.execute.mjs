@@ -79621,8 +79621,8 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 
 
 
-const artifactEpoch = "a4c89362bb9ba5bb4e108def4c3fce0dc5a4c0ebdd40fa163dcffb7f5a8509a8";
-const flightArtifactEpoch = "cargo-hauler@0.9.11";
+const artifactEpoch = "1a10ed5c2277984e500dc1541858f0f78e72b50485aaa22997e6f536867ae5a6";
+const flightArtifactEpoch = "cargo-hauler@0.9.12";
 const canonicalEvent = "tool/before";
 const capabilityRevision = "2026-08-28";
 const nativeEvent = "preToolUse";
