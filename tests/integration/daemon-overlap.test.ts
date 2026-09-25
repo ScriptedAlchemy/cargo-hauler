@@ -1,6 +1,3 @@
-import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { describe, expect, it } from 'effect-rstest';
 import * as Effect from 'effect/Effect';
 import * as Fiber from 'effect/Fiber';
@@ -13,7 +10,15 @@ import type {
   TicketSummary,
 } from '../../src/internal/contracts/protocol.js';
 
-import { decodeOutput, execRequest, findExit, pollReport, scopedDaemon, shortId } from '../support/harness.js';
+import {
+  decodeOutput,
+  execRequest,
+  findExit,
+  pollReport,
+  scopedDaemon,
+  scopedGate,
+  shortId,
+} from '../support/harness.js';
 
 const findAck = (messages: readonly { type: string }[]): AckMessage => {
   const ack = messages.find((message): message is AckMessage => message.type === 'ack');
@@ -35,6 +40,9 @@ const laneExecuting = (report: StatusReport, ticket: string): boolean =>
 const settled = (ticket: string) => (report: StatusReport) =>
   report.recent.some((record) => record.ticket === ticket && record.status !== 'running');
 
+const riderAttached = (leader: string) => (report: StatusReport) =>
+  report.active.some((record) => record.attachedTo === leader);
+
 const testLeader = ['cargo', 'test', '-p', 'alpha'];
 const nextCompile = ['cargo', 'check', '-p', 'beta'];
 
@@ -42,19 +50,26 @@ describe('execution-phase overlap', () => {
   it.live('hands the lane to the next compile once a test leader reports its build finished', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
+      const tests = yield* scopedGate(fixture, 'tests.gate');
+      const compile = yield* scopedGate(fixture, 'compile.gate');
       const leaderFiber = yield* Effect.forkChild(
         execRequest(fixture, {
           cwd: fixture.ws1,
           argv: testLeader,
-          finishedAfter: '0.2',
-          sleep: '1.5',
+          finishedAfter: '0',
+          extraEnv: { FAKE_EXECUTE_RELEASE_FILE: tests.path },
           timeoutMs: 12_000,
         }),
       );
       const started = yield* pollReport(fixture, (report) => runningLeader(report) !== undefined);
       const leaderTicket = runningLeader(started)?.ticket ?? '';
       const followerFiber = yield* Effect.forkChild(
-        execRequest(fixture, { cwd: fixture.ws1, argv: nextCompile, sleep: '0.6', timeoutMs: 12_000 }),
+        execRequest(fixture, {
+          cwd: fixture.ws1,
+          argv: nextCompile,
+          extraEnv: { FAKE_RELEASE_FILE: compile.path },
+          timeoutMs: 12_000,
+        }),
       );
       // While the follower compiles, the lane lists the leader as executing
       // and the follower as its running head.
@@ -72,8 +87,10 @@ describe('execution-phase overlap', () => {
       expect(lane?.queued).toBe(0);
       expect(overlapped.active.filter((record) => record.status === 'running')).toHaveLength(2);
 
+      yield* compile.open;
       const followerExit = findExit(yield* Fiber.join(followerFiber));
       expect(followerExit.status).toBe('done');
+      yield* tests.open;
       const leaderExit = findExit(yield* Fiber.join(leaderFiber));
       expect(leaderExit.status).toBe('done');
       expect(leaderExit.ticket).toBe(leaderTicket);
@@ -102,14 +119,13 @@ describe('execution-phase overlap', () => {
     it.live(`\`${argv.join(' ')}\` enters its execute phase at the finished line and frees the lane`, () =>
       Effect.gen(function* () {
         const fixture = yield* scopedDaemon(5);
-        const releaseFile = join(fixture.root, 'execute.release');
-        yield* Effect.addFinalizer(() => Effect.sync(() => writeFileSync(releaseFile, '')));
+        const release = yield* scopedGate(fixture, 'execute.release');
         const leaderFiber = yield* Effect.forkChild(
           execRequest(fixture, {
             cwd: fixture.ws1,
             argv,
             finishedAfter: '0',
-            extraEnv: { FAKE_EXECUTE_RELEASE_FILE: releaseFile },
+            extraEnv: { FAKE_EXECUTE_RELEASE_FILE: release.path },
             timeoutMs: 12_000,
           }),
         );
@@ -128,7 +144,7 @@ describe('execution-phase overlap', () => {
         const followerExit = findExit(
           yield* execRequest(fixture, { cwd: fixture.ws1, argv: nextCompile, timeoutMs: 12_000 }),
         );
-        writeFileSync(releaseFile, '');
+        yield* release.open;
         const leaderExit = findExit(yield* Fiber.join(leaderFiber));
         expect([followerExit.status, leaderExit.status]).toEqual(['done', 'done']);
         const report = yield* pollReport(fixture, settled(leaderTicket));
@@ -232,25 +248,25 @@ describe('execution-phase overlap', () => {
   it.live('an identity rider attaching during the execution phase mirrors the leader and its stamp', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
+      const tests = yield* scopedGate(fixture, 'tests.gate');
       const leaderFiber = yield* Effect.forkChild(
         execRequest(fixture, {
           cwd: fixture.ws1,
           argv: testLeader,
-          finishedAfter: '0.1',
-          sleep: '1.5',
+          finishedAfter: '0',
+          extraEnv: { FAKE_EXECUTE_RELEASE_FILE: tests.path },
           timeoutMs: 12_000,
         }),
       );
       const started = yield* pollReport(fixture, (report) => runningLeader(report) !== undefined);
       const leaderTicket = runningLeader(started)?.ticket ?? '';
       yield* pollReport(fixture, (report) => laneExecuting(report, leaderTicket));
-      const riderMessages = yield* execRequest(fixture, {
-        cwd: fixture.ws1,
-        argv: testLeader,
-        finishedAfter: '0.1',
-        sleep: '1.5',
-        timeoutMs: 12_000,
-      });
+      const riderFiber = yield* Effect.forkChild(
+        execRequest(fixture, { cwd: fixture.ws1, argv: testLeader, timeoutMs: 12_000 }),
+      );
+      yield* pollReport(fixture, riderAttached(leaderTicket));
+      yield* tests.open;
+      const riderMessages = yield* Fiber.join(riderFiber);
       const ack = findAck(riderMessages);
       expect(ack.attachedTo).toBe(leaderTicket);
       expect(ack.attachMode).toBe('identity');
@@ -273,12 +289,13 @@ describe('execution-phase overlap', () => {
   it.live('several execution phases may overlap while compiles stay serialized', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
+      const tests = yield* scopedGate(fixture, 'tests.gate');
       const first = yield* Effect.forkChild(
         execRequest(fixture, {
           cwd: fixture.ws1,
           argv: ['cargo', 'test', '-p', 'one'],
-          finishedAfter: '0.1',
-          sleep: '1.5',
+          finishedAfter: '0',
+          extraEnv: { FAKE_EXECUTE_RELEASE_FILE: tests.path },
           timeoutMs: 12_000,
         }),
       );
@@ -288,8 +305,8 @@ describe('execution-phase overlap', () => {
         execRequest(fixture, {
           cwd: fixture.ws1,
           argv: ['cargo', 'test', '-p', 'two'],
-          finishedAfter: '0.1',
-          sleep: '1.5',
+          finishedAfter: '0',
+          extraEnv: { FAKE_EXECUTE_RELEASE_FILE: tests.path },
           timeoutMs: 12_000,
         }),
       );
@@ -301,6 +318,7 @@ describe('execution-phase overlap', () => {
         yield* execRequest(fixture, { cwd: fixture.ws1, argv: nextCompile, timeoutMs: 12_000 }),
       );
       expect(followerExit.status).toBe('done');
+      yield* tests.open;
       const firstExit = findExit(yield* Fiber.join(first));
       const secondExit = findExit(yield* Fiber.join(second));
       expect(firstExit.status).toBe('done');
@@ -330,8 +348,14 @@ describe('execution-phase overlap', () => {
       const started = yield* pollReport(fixture, (report) => runningLeader(report) !== undefined);
       const leaderTicket = runningLeader(started)?.ticket ?? '';
       yield* pollReport(fixture, (report) => laneExecuting(report, leaderTicket));
+      const compile = yield* scopedGate(fixture, 'compile.gate');
       const followerFiber = yield* Effect.forkChild(
-        execRequest(fixture, { cwd: fixture.ws1, argv: nextCompile, sleep: '0.5', timeoutMs: 12_000 }),
+        execRequest(fixture, {
+          cwd: fixture.ws1,
+          argv: nextCompile,
+          extraEnv: { FAKE_RELEASE_FILE: compile.path },
+          timeoutMs: 12_000,
+        }),
       );
       yield* pollReport(fixture, (report) =>
         report.lanes.some(
@@ -349,6 +373,7 @@ describe('execution-phase overlap', () => {
       expect(killResult?.killed).toBe(true);
       const leaderExit = findExit(yield* Fiber.join(leaderFiber));
       expect(leaderExit.status).toBe('killed');
+      yield* compile.open;
       const followerExit = findExit(yield* Fiber.join(followerFiber));
       expect(followerExit.status).toBe('done');
       const report = yield* pollReport(fixture, settled(followerExit.ticket));
@@ -364,19 +389,25 @@ describe('execution-phase overlap', () => {
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
       const argv = ['env', 'FAKE_MARK=1', 'cargo', 'test', '-p', 'alpha'];
+      const tests = yield* scopedGate(fixture, 'tests.gate');
       const leaderFiber = yield* Effect.forkChild(
-        execRequest(fixture, { cwd: fixture.ws1, argv, finishedAfter: '0.1', sleep: '1.5', timeoutMs: 12_000 }),
+        execRequest(fixture, {
+          cwd: fixture.ws1,
+          argv,
+          finishedAfter: '0',
+          extraEnv: { FAKE_EXECUTE_RELEASE_FILE: tests.path },
+          timeoutMs: 12_000,
+        }),
       );
       const started = yield* pollReport(fixture, (report) => runningLeader(report) !== undefined);
       const leaderTicket = runningLeader(started)?.ticket ?? '';
       yield* pollReport(fixture, (report) => laneExecuting(report, leaderTicket));
-      const riderMessages = yield* execRequest(fixture, {
-        cwd: fixture.ws1,
-        argv,
-        finishedAfter: '0.1',
-        sleep: '1.5',
-        timeoutMs: 12_000,
-      });
+      const riderFiber = yield* Effect.forkChild(
+        execRequest(fixture, { cwd: fixture.ws1, argv, timeoutMs: 12_000 }),
+      );
+      yield* pollReport(fixture, riderAttached(leaderTicket));
+      yield* tests.open;
+      const riderMessages = yield* Fiber.join(riderFiber);
       expect(findAck(riderMessages).attachedTo).toBe(leaderTicket);
       expect(findExit(riderMessages).status).toBe('done');
       const leaderExit = findExit(yield* Fiber.join(leaderFiber));
@@ -390,14 +421,28 @@ describe('execution-phase overlap', () => {
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
       const argv = ['bash', '-c', 'cargo test -p alpha'];
+      const tests = yield* scopedGate(fixture, 'tests.gate');
+      const twinBuild = yield* scopedGate(fixture, 'twin-build.gate');
       const leaderFiber = yield* Effect.forkChild(
-        execRequest(fixture, { cwd: fixture.ws1, argv, finishedAfter: '0.1', sleep: '1.5', timeoutMs: 12_000 }),
+        execRequest(fixture, {
+          cwd: fixture.ws1,
+          argv,
+          finishedAfter: '0',
+          extraEnv: { FAKE_EXECUTE_RELEASE_FILE: tests.path },
+          timeoutMs: 12_000,
+        }),
       );
       const started = yield* pollReport(fixture, (report) => runningLeader(report) !== undefined);
       const leaderTicket = runningLeader(started)?.ticket ?? '';
       yield* pollReport(fixture, (report) => laneExecuting(report, leaderTicket));
       const twinFiber = yield* Effect.forkChild(
-        execRequest(fixture, { cwd: fixture.ws1, argv, finishedAfter: '0.1', sleep: '0.3', timeoutMs: 12_000 }),
+        execRequest(fixture, {
+          cwd: fixture.ws1,
+          argv,
+          finishedAfter: '0',
+          extraEnv: { FAKE_RELEASE_FILE: twinBuild.path },
+          timeoutMs: 12_000,
+        }),
       );
       // The twin is its own leader: it compiles in the lane while the first
       // one still executes, instead of riding it.
@@ -408,9 +453,11 @@ describe('execution-phase overlap', () => {
           report.lanes.some((lane) => lane.runningTicket !== null && lane.runningTicket !== leaderTicket),
       );
       expect(overlapped.active.filter((record) => record.status === 'running')).toHaveLength(2);
+      yield* twinBuild.open;
       const twinMessages = yield* Fiber.join(twinFiber);
       expect(findAck(twinMessages).attachedTo).toBeUndefined();
       expect(findExit(twinMessages).status).toBe('done');
+      yield* tests.open;
       const leaderExit = findExit(yield* Fiber.join(leaderFiber));
       const report = yield* pollReport(fixture, settled(leaderExit.ticket));
       expect(typeof recordFor(report, leaderTicket)?.buildFinishedAtMs).toBe('number');

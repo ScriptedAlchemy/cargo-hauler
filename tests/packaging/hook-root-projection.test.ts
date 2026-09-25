@@ -58,7 +58,14 @@ describe('relocated read-only semantic hook binding (#168)', () => {
         const bin = join(root, 'unrelated-bin');
         const marker = join(root, 'wrong-binary-ran');
         try {
-          cpSync(artifactRoot, moved, { dereference: true, recursive: true });
+          // The route loads only its own chunks and the shared hooks runtime;
+          // copying the whole 66 MB artifact per case stalls on disk under load.
+          mkdirSync(join(moved, 'hooks'), { recursive: true });
+          for (const name of readdirSync(join(artifactRoot, 'hooks'))) {
+            if (!name.startsWith('event-route-') || name.startsWith(`event-route-tool-before.${host}.`)) {
+              cpSync(join(artifactRoot, 'hooks', name), join(moved, 'hooks', name), { dereference: true });
+            }
+          }
           mkdirSync(cwd);
           mkdirSync(bin);
           mkdirSync(join(root, 'home'));
