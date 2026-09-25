@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { createServer, type Server, type Socket } from 'node:net';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 
 import { version } from 'agent-bundle/meta';
@@ -394,6 +395,34 @@ describe('loadHaulerSnapshot', () => {
       expect(statusResultSchema.parse(status).recent[0]).not.toHaveProperty('outputTail');
       const last = yield* Effect.promise((signal) => loadLastResult({ config, signal }));
       expect(last.request?.outputTail).toBe('Finished dev profile\n');
+    }));
+
+  it.live('reads a ledger that predates a column migration instead of crashing on the missing column', () =>
+    Effect.gen(function* () {
+      const config = yield* isolatedConfig;
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const ledger = yield* scopedLedger(config);
+          yield* ledger.createRequest({
+            argv: ['cargo', 'check'],
+            createdAtMs: 1_000,
+            cwd: '/repo',
+            host: 'cursor',
+            intentJson: null,
+            intentKey: 'k',
+            laneKey: '/repo::/repo/target',
+            session: 's',
+            targetDir: '/repo/target',
+            workspaceRoot: '/repo',
+          });
+        }),
+      );
+      const older = new DatabaseSync(config.databasePath);
+      older.exec('ALTER TABLE requests DROP COLUMN hold_stop');
+      older.close();
+      const snapshot = yield* loadHaulerSnapshot({ config });
+      expect(snapshot.daemon).toBe('stopped');
+      expect(snapshot.recent.map((row) => [row.ticket, row.status])).toEqual([['cc-1', 'orphaned']]);
     }));
 
   it.live('keeps ESC out of structured operation results even under inherited FORCE_COLOR', () =>
