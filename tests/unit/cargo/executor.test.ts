@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -31,16 +31,21 @@ if [ "$1" = knob ]; then
   exit 0
 fi
 if [ "$1" = orphan-holder ]; then
-  # A descendant that outlives the child and keeps the output pipe open.
+  # A descendant that outlives the child and keeps the output pipe open
+  # until the workspace is removed.
   echo "out:orphan"
-  ( trap '' TERM; sleep 4 ) &
+  : > hold
+  ( trap '' TERM; while [ -e hold ]; do sleep 0.05; done ) &
+  echo $! > orphan.pid
   exit 0
 fi
 if [ "$1" = sleeper ]; then
-  # Fork before the output that triggers the kill: macOS does not abort a
-  # fork that a group signal races, so a later fork could escape the signal.
-  sleep 5 &
-  echo "out:sleeper"
+  # The descendant traps TERM before the output that triggers the kill, so a
+  # group signal always reaches the trap.
+  : > hold
+  ( trap 'echo SIGTERM > descendant.signal; exit 0' TERM
+    echo "out:sleeper"
+    while [ -e hold ]; do sleep 0.05; done ) &
   wait
   exit 0
 fi
@@ -87,6 +92,15 @@ const runExecute = (options: ExecuteCargoOptions): Effect.Effect<ExecutionResult
   executeCargo(options).pipe(Effect.provide(NodeServices.layer));
 
 const concatUtf8 = (chunks: readonly Uint8Array[]): string => Buffer.concat(chunks).toString('utf8');
+
+const isAlive = (pid: number): boolean => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 describe('TailBuffer', () => {
   it('keeps the last bytes when capacity is exceeded across pushes', () => {
@@ -189,7 +203,6 @@ describe('executeCargo', () => {
   it.live('settles once the child exits even if a descendant keeps the output pipe open', () =>
     Effect.gen(function* () {
       const { dir, script } = yield* scopedWorkspace;
-      const started = Date.now();
 
       const result = yield* runExecute({
         argv: [script, 'orphan-holder'],
@@ -203,7 +216,7 @@ describe('executeCargo', () => {
       expect(result.outcome).toBe('done');
       expect(result.exitCode).toBe(0);
       expect(result.outputTail).toContain('out:orphan');
-      expect(Date.now() - started).toBeLessThan(3_000);
+      expect(isAlive(Number(readFileSync(join(dir, 'orphan.pid'), 'utf8')))).toBe(true);
     }));
 
   it.live('keeps the child’s own write order when stderr is merged into stdout', () =>
@@ -385,7 +398,6 @@ describe('executeCargo', () => {
     Effect.gen(function* () {
       const { dir, script } = yield* scopedWorkspace;
       const killSignal = unusedKill();
-      const started = Date.now();
 
       const result = yield* runExecute({
         argv: [script, 'sleeper'],
@@ -398,7 +410,7 @@ describe('executeCargo', () => {
       expect(result.outcome).toBe('killed');
       expect(result.signal).toBe('SIGTERM');
       expect(result.exitCode).toBeNull();
-      expect(Date.now() - started).toBeLessThan(2500);
+      expect(readFileSync(join(dir, 'descendant.signal'), 'utf8')).toBe('SIGTERM\n');
     }));
 
   it.live('classifies the observed natural exit when it races a kill request', () =>
@@ -449,7 +461,6 @@ describe('executeCargo', () => {
   it.live('surfaces a stream pump failure and terminates the child', () =>
     Effect.gen(function* () {
       const { dir, script } = yield* scopedWorkspace;
-      const started = Date.now();
 
       const result = yield* runExecute({
         argv: [script, 'ignore-term'],
@@ -462,9 +473,9 @@ describe('executeCargo', () => {
       });
 
       expect(result.outcome).toBe('failed');
+      expect(result.signal).toBe('SIGKILL');
       expect(result.error).toContain('stdout pump failed');
       expect(result.error).toContain('consumer exploded');
-      expect(Date.now() - started).toBeLessThan(2500);
     }));
 
   it.live('reports failed with an error when the executable is missing', () =>

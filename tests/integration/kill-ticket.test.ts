@@ -62,7 +62,8 @@ describe('killTicketResult', () => {
 
   it.live('settles a lane head killed during its batch window without running cargo', () =>
     Effect.gen(function* () {
-      const fixture = yield* scopedDaemon(1, { CARGO_HAULER_BATCH_WINDOW_MS: '20000' });
+      // A window no test run outlasts: only the kill can end it.
+      const fixture = yield* scopedDaemon(1, { CARGO_HAULER_BATCH_WINDOW_MS: '600000' });
       const signal = new AbortController().signal;
       const cargoStarted = join(fixture.root, 'cargo-started');
       const submitted = yield* runExecClient({
@@ -88,7 +89,6 @@ describe('killTicketResult', () => {
       }).pipe(Effect.retry(Schedule.spaced('20 millis').pipe(Schedule.upTo({ times: 100 }))));
       yield* awaitBatchWindowHead;
 
-      const killedAtMs = Date.now();
       const killed = yield* Effect.promise(() =>
         killTicketResult({ ticket }, { config: fixture.config, signal }),
       );
@@ -101,8 +101,7 @@ describe('killTicketResult', () => {
           return yield* Effect.fail(new NotYet({ status: current.request?.status }));
         }
         return current;
-      }).pipe(Effect.retry(Schedule.spaced('50 millis').pipe(Schedule.upTo({ times: 40 }))));
-      expect(Date.now() - killedAtMs).toBeLessThan(2_000);
+      }).pipe(Effect.retry(Schedule.spaced('50 millis').pipe(Schedule.upTo({ times: 200 }))));
       expect(settled.request).toMatchObject({
         error: 'killed while queued',
         startedAtMs: null,

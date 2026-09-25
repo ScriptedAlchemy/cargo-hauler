@@ -105,7 +105,7 @@ describe('kill while parked (#51)', () => {
           const holder = yield* submitTracked(broker, {
             argv: ['cargo', 'check', '-p', 'holder'],
             cwd: fixture.ws1,
-            env: cargoEnv(fixture, { FAKE_SLEEP: '10' }),
+            env: cargoEnv(fixture, { FAKE_RELEASE_FILE: join(fixture.root, 'holder.release') }),
           });
           yield* Deferred.await(holder.started);
 
@@ -121,7 +121,6 @@ describe('kill while parked (#51)', () => {
           );
           yield* Effect.sleep('150 millis');
 
-          const killedAtMs = Date.now();
           expect(yield* broker.kill(parked.submitted.ticket)).toBe(true);
           const awaited = yield* broker.awaitTicket(parked.submitted.ticket, 3_000);
           expect(awaited.timedOut).toBe(false);
@@ -130,7 +129,7 @@ describe('kill while parked (#51)', () => {
           expect(awaited.record?.error).toBe('killed while queued');
           const exit = yield* Deferred.await(parked.exit).pipe(Effect.timeout('1 second'));
           expect(exit.status).toBe('killed');
-          expect(Date.now() - killedAtMs).toBeLessThan(3_000);
+          expect(yield* Deferred.isDone(holder.exit)).toBe(false);
 
           yield* broker.kill(holder.submitted.ticket);
           yield* Deferred.await(holder.exit).pipe(Effect.timeout('10 seconds'));
