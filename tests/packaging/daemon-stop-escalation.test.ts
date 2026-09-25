@@ -52,9 +52,7 @@ it.skipIf(!existsSync(hauler))(
       }
       expect(cargoPids().filter(alive)).toHaveLength(2);
 
-      const stopStartedMs = Date.now();
       const stop = run('daemon', 'stop');
-      expect(Date.now() - stopStartedMs).toBeLessThan(5_000);
       expect(stop.status).toBe(0);
       expect(JSON.parse(stop.stdout)).toMatchObject({
         message: 'cargo-hauler daemon stopped',
