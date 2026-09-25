@@ -16,6 +16,7 @@ import { constant, constTrue, dual, identity } from "./Function.ts"
 import type { Inspectable } from "./Inspectable.ts"
 import * as core from "./internal/core.ts"
 import { PipeInspectableProto } from "./internal/core.ts"
+import * as Count from "./internal/count.ts"
 import * as internalEffect from "./internal/effect.ts"
 import * as MutableList from "./MutableList.ts"
 import * as Option from "./Option.ts"
@@ -1105,8 +1106,8 @@ export const interrupt = <A, E>(self: Enqueue<A, E>): Effect<boolean> =>
  *
  * **Details**
  *
- * The operation is idempotent and returns `true`, including when the queue has
- * already been shut down or completed.
+ * Returns `true` when the queue is shut down by this call, or `false` when it
+ * has already been shut down or completed.
  *
  * **Example** (Shutting down queues)
  *
@@ -1131,29 +1132,49 @@ export const interrupt = <A, E>(self: Enqueue<A, E>): Effect<boolean> =>
  * await Effect.runPromise(program) // => { wasShutdown: true, size: 0 }
  * ```
  *
+ * @see {@link shutdownUnsafe} for synchronous shutdown
  * @category completion
  * @since 2.0.0
  */
-export const shutdown = <A, E>(self: Enqueue<A, E>): Effect<boolean> =>
-  internalEffect.sync(() => {
-    if (self.state._tag === "Done") {
-      return true
+export const shutdown = <A, E>(self: Enqueue<A, E>): Effect<boolean> => internalEffect.sync(() => shutdownUnsafe(self))
+
+/**
+ * Shuts down the queue synchronously, discarding buffered messages and resuming
+ * pending operations.
+ *
+ * **When to use**
+ *
+ * Use when a synchronous callback must discard buffered messages and settle
+ * pending queue operations before returning.
+ *
+ * **Details**
+ *
+ * An open queue completes with an interruption. A queue already closing retains
+ * its completion cause. Call `failCauseUnsafe` first to shut down with a specific
+ * failure. Returns `true` when the queue is shut down by this call, or `false`
+ * when it has already been shut down or completed.
+ *
+ * @see {@link shutdown} for the effectful variant
+ * @see {@link failCauseUnsafe} to set a failure before discarding buffered messages
+ * @category completion
+ * @since 4.0.0
+ */
+export const shutdownUnsafe = <A, E>(self: Enqueue<A, E>): boolean => {
+  if (self.state._tag === "Done") {
+    return false
+  }
+  MutableList.clear(self.messages)
+  const offers = self.state.offers
+  finalize(self, self.state._tag === "Open" ? exitInterrupt : self.state.exit)
+  for (const entry of offers) {
+    if (entry._tag === "Single") {
+      entry.resume(exitFalse)
+    } else {
+      entry.resume(core.exitSucceed(entry.remaining.slice(entry.offset)))
     }
-    MutableList.clear(self.messages)
-    const offers = self.state.offers
-    finalize(self, self.state._tag === "Open" ? exitInterrupt : self.state.exit)
-    if (offers.size > 0) {
-      for (const entry of offers) {
-        if (entry._tag === "Single") {
-          entry.resume(exitFalse)
-        } else {
-          entry.resume(core.exitSucceed(entry.remaining.slice(entry.offset)))
-        }
-      }
-      offers.clear()
-    }
-    return true
-  })
+  }
+  return true
+}
 
 /**
  * Takes and returns all currently buffered messages without waiting for more.
@@ -1294,9 +1315,10 @@ export const collect = <A, E>(self: Dequeue<A, E | Done>): Effect<Array<A>, Pull
  * **Details**
  *
  * The operation may wait until enough messages are available to satisfy the
- * queue's batching rules. If `n` is less than or equal to zero, it succeeds
- * with an empty array. If the queue completes or fails before messages can be
- * taken, the effect fails with the queue's terminal error.
+ * queue's batching rules. Finite fractional values of `n` are rounded down.
+ * If `n` is `NaN` or non-positive, it succeeds with an empty array. If the
+ * queue completes or fails before messages can be taken, the effect fails with
+ * the queue's terminal error.
  *
  * **Example** (Taking a fixed number of values)
  *
@@ -1337,9 +1359,10 @@ export const takeN = <A, E>(
  * **Details**
  *
  * The operation waits when fewer than the required minimum messages are
- * available. It returns at most `max` messages. If the queue completes or fails
- * before the minimum can be satisfied, the effect fails with the queue's
- * terminal error.
+ * available. It returns at most `max` messages. Finite fractional bounds are
+ * rounded down, while `NaN` and non-positive bounds are treated as `0`. If the
+ * queue completes or fails before the minimum can be satisfied, the effect
+ * fails with the queue's terminal error.
  *
  * **Example** (Taking a bounded batch of values)
  *
@@ -1373,10 +1396,13 @@ export const takeBetween = <A, E>(
   self: Dequeue<A, E>,
   min: number,
   max: number
-): Effect<Array<A>, E> =>
-  internalEffect.suspend(() =>
+): Effect<Array<A>, E> => {
+  min = Count.normalize(min)
+  max = Count.normalize(max)
+  return internalEffect.suspend(() =>
     takeBetweenUnsafe(self, min, max) ?? internalEffect.andThen(awaitTake(self), takeBetween(self, 1, max))
   )
+}
 
 /**
  * Takes a single message from the queue, or wait for a message to be
@@ -1558,15 +1584,88 @@ export const takeUnsafe = <A, E>(self: Dequeue<A, E>): Exit<A, E> | undefined =>
     releaseCapacity(self)
     return core.exitSucceed(message)
   } else if (self.capacity <= 0 && self.state.offers.size > 0) {
-    self.capacity = 1
-    releaseCapacity(self)
-    self.capacity = 0
-    const message = MutableList.take(self.messages)!
+    const message = takeOfferUnsafe(self.state.offers)
     releaseCapacity(self)
     return core.exitSucceed(message)
   }
   return undefined
 }
+
+/**
+ * Manually releases current queue takers synchronously.
+ *
+ * **When to use**
+ *
+ * Use when synchronous offers should release waiting consumers immediately
+ * instead of waiting for the scheduled release task.
+ *
+ * **Details**
+ *
+ * This immediately runs the queue's taker-release pass instead of waiting for
+ * its scheduled task. It does not complete the queue or resume fibers waiting
+ * on `Queue.await`.
+ *
+ * **Example** (Releasing a waiting taker synchronously)
+ *
+ * ```ts import.meta.vitest
+ * import { Effect, Fiber, Queue } from "effect"
+ *
+ * const program = Effect.gen(function*() {
+ *   const queue = yield* Queue.unbounded<number>()
+ *   const taker = yield* Queue.take(queue).pipe(Effect.forkChild)
+ *   yield* Effect.yieldNow
+ *
+ *   Queue.offerUnsafe(queue, 1)
+ *   Queue.flushUnsafe(queue)
+ *
+ *   return yield* Fiber.join(taker)
+ * })
+ *
+ * await Effect.runPromise(program) // => 1
+ * ```
+ *
+ * @category offering
+ * @since 4.0.0
+ */
+export const flushUnsafe = <A, E>(self: Enqueue<A, E>): void => releaseTakers(self)
+
+/**
+ * Manually releases current queue takers.
+ *
+ * **When to use**
+ *
+ * Use when synchronous offers should release waiting consumers through an
+ * `Effect` instead of waiting for the scheduled release task.
+ *
+ * **Details**
+ *
+ * This immediately runs the queue's taker-release pass instead of waiting for
+ * its scheduled task. It does not complete the queue or resume fibers waiting
+ * on `Queue.await`.
+ *
+ * **Example** (Releasing a waiting taker)
+ *
+ * ```ts import.meta.vitest
+ * import { Effect, Fiber, Queue } from "effect"
+ *
+ * const program = Effect.gen(function*() {
+ *   const queue = yield* Queue.unbounded<number>()
+ *   const taker = yield* Queue.take(queue).pipe(Effect.forkChild)
+ *   yield* Effect.yieldNow
+ *
+ *   Queue.offerUnsafe(queue, 1)
+ *   yield* Queue.flush(queue)
+ *
+ *   return yield* Fiber.join(taker)
+ * })
+ *
+ * await Effect.runPromise(program) // => 1
+ * ```
+ *
+ * @category offering
+ * @since 4.0.0
+ */
+export const flush = <A, E>(self: Enqueue<A, E>): Effect<void> => internalEffect.sync(() => flushUnsafe(self))
 
 const await_ = <A, E>(self: Dequeue<A, E>): Effect<void, Exclude<E, Done>> =>
   internalEffect.callback<void, Exclude<E, Done>>((resume) => {
@@ -1836,7 +1935,6 @@ const exitFailDone = core.exitFail(core.Done()) as Failure<never, Done>
 const exitInterrupt = internalEffect.exitInterrupt() as Failure<never, never>
 
 const releaseTakers = <A, E>(self: Enqueue<A, E>) => {
-  self.scheduleRunning = false
   if (self.state._tag === "Done" || self.state.takers.size === 0) {
     return
   }
@@ -1854,7 +1952,10 @@ const scheduleReleaseTaker = <A, E>(self: Enqueue<A, E>) => {
     return
   }
   self.scheduleRunning = true
-  self.dispatcher.scheduleTask(() => releaseTakers(self), 0)
+  self.dispatcher.scheduleTask(() => {
+    self.scheduleRunning = false
+    releaseTakers(self)
+  }, 0)
 }
 
 const takeBetweenUnsafe = <A, E>(
@@ -1866,11 +1967,8 @@ const takeBetweenUnsafe = <A, E>(
     return self.state.exit
   } else if (max <= 0 || min <= 0) {
     return core.exitSucceed([])
-  } else if (self.capacity <= 0 && self.state.offers.size > 0) {
-    self.capacity = 1
-    releaseCapacity(self)
-    self.capacity = 0
-    const messages = [MutableList.take(self.messages)!]
+  } else if (self.capacity <= 0 && self.messages.length === 0 && self.state.offers.size > 0) {
+    const messages = [takeOfferUnsafe(self.state.offers)]
     releaseCapacity(self)
     return core.exitSucceed(messages)
   }
@@ -1917,6 +2015,22 @@ const offerRemainingArray = <A, E>(self: Enqueue<A, E>, remaining: Array<A>) => 
   })
 }
 
+// Reserve a pending message for the consumer before the producer can reenter.
+const takeOfferUnsafe = <A>(offers: Set<Queue.OfferEntry<A>>): A => {
+  const entry = offers.values().next().value!
+  if (entry._tag === "Single") {
+    offers.delete(entry)
+    entry.resume(exitTrue)
+    return entry.message
+  }
+  const message = entry.remaining[entry.offset++]
+  if (entry.offset === entry.remaining.length) {
+    offers.delete(entry)
+    entry.resume(core.exitSucceed([]))
+  }
+  return message
+}
+
 const releaseCapacity = <A, E>(self: Dequeue<A, E>): boolean => {
   if (self.state._tag === "Done") {
     return Pull.isDoneCause(self.state.exit.cause)
@@ -1930,22 +2044,22 @@ const releaseCapacity = <A, E>(self: Dequeue<A, E>): boolean => {
     }
     return false
   }
-  let n = self.capacity - self.messages.length
+  // Resuming a producer can synchronously take, offer, or shut down this queue.
   for (const entry of self.state.offers) {
-    if (n === 0) break
+    let n = self.capacity - self.messages.length
+    if (n <= 0) break
     else if (entry._tag === "Single") {
       MutableList.append(self.messages, entry.message)
-      n--
-      entry.resume(exitTrue)
       self.state.offers.delete(entry)
+      entry.resume(exitTrue)
     } else {
       for (; entry.offset < entry.remaining.length; entry.offset++) {
         if (n === 0) return false
         MutableList.append(self.messages, entry.remaining[entry.offset])
         n--
       }
-      entry.resume(core.exitSucceed([]))
       self.state.offers.delete(entry)
+      entry.resume(core.exitSucceed([]))
     }
   }
   return false
@@ -1970,10 +2084,7 @@ const takeAllUnsafe = <A, E>(self: Dequeue<A, E>) => {
     releaseCapacity(self)
     return messages
   } else if (self.state._tag !== "Done" && self.state.offers.size > 0) {
-    self.capacity = 1
-    releaseCapacity(self)
-    self.capacity = 0
-    const messages = [MutableList.take(self.messages)!]
+    const messages = [takeOfferUnsafe(self.state.offers)]
     releaseCapacity(self)
     return messages
   }
