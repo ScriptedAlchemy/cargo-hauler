@@ -1,5 +1,3 @@
-import { performance } from 'node:perf_hooks';
-
 import { describe, expect, it } from 'effect-rstest';
 
 import { LineBuffer, LineBufferOverflowError } from '../../../src/internal/platform/ndjson.js';
@@ -45,19 +43,33 @@ describe('LineBuffer bounds', () => {
     expect(buffer.push(encode('fé\n'))).toEqual(['café']);
   });
 
-  it('appends many small chunks of one long line in linear time', () => {
-    const buffer = new LineBuffer();
-    const chunk = encode('x'.repeat(64));
-    const chunks = 50_000;
-    const startedAt = performance.now();
+  it('appends many small chunks of one long line for about the work of splitting as many short lines', () => {
+    const chunks = 5_000;
+    const lines = new LineBuffer();
+    const terminated = encode(`${'x'.repeat(63)}\n`);
+    let split = 0;
+    const splitting = process.threadCpuUsage();
     for (let index = 0; index < chunks; index += 1) {
-      expect(buffer.push(chunk)).toEqual([]);
+      split += lines.push(terminated).length;
     }
-    const [line] = buffer.push(encode('\n'));
-    const elapsedMs = performance.now() - startedAt;
-    expect(line?.length).toBe(64 * chunks);
-    // Re-concatenating the pending text per chunk copies ~80 GB here; a
-    // linear append stays in the low hundreds of milliseconds at most.
-    expect(elapsedMs).toBeLessThan(2_000);
+    const splitCpu = process.threadCpuUsage(splitting);
+    const long = new LineBuffer();
+    const piece = encode('x'.repeat(64));
+    let early = 0;
+    const appending = process.threadCpuUsage();
+    for (let index = 0; index < chunks; index += 1) {
+      early += long.push(piece).length;
+    }
+    const [line] = long.push(encode('\n'));
+    const appendCpu = process.threadCpuUsage(appending);
+
+    expect(split).toBe(chunks);
+    expect(early).toBe(0);
+    expect(line).toBe('x'.repeat(64 * chunks));
+    // This thread's CPU time leaves out other processes' turns on the host,
+    // and splitting as many chunks into short lines is the yardstick for host
+    // speed. Appending pieces measures 0.3 to 1.0 times that work, and
+    // re-concatenating the pending text per chunk 33 to 200 times.
+    expect((appendCpu.user + appendCpu.system) / (splitCpu.user + splitCpu.system)).toBeLessThan(5);
   });
 });

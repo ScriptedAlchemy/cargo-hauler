@@ -9,6 +9,7 @@ import { fetchTicketResult } from '../../src/internal/operations/tickets.js';
 import {
   decodeOutput,
   execRequest,
+  fetchReport,
   findExit,
   pollReport,
   scopedDaemon,
@@ -19,13 +20,15 @@ import type { Fixture } from '../support/harness.js';
 
 /**
  * A staged fake cargo: executes FAKE_STAGE_FILE line by line — `sleep:N`,
- * `stderr:text`, `exit:N`, anything else is echoed to stdout verbatim.
+ * `wait:path` (until the file exists), `stderr:text`, `exit:N`, anything
+ * else is echoed to stdout verbatim.
  * Used to emit realistic `--message-format=json` streams on a schedule.
  */
 const stagedCargoScript = `#!/usr/bin/env bash
 while IFS= read -r line; do
   case "$line" in
     sleep:*) sleep "\${line#sleep:}" ;;
+    wait:*) until [ -e "\${line#wait:}" ]; do sleep 0.02; done ;;
     stderr:*) echo "\${line#stderr:}" >&2 ;;
     exit:*) exit "\${line#exit:}" ;;
     *) printf '%s\\n' "$line" ;;
@@ -137,10 +140,13 @@ describe('json demux early release', () => {
   it.live('releases a --lib coverage waiter as soon as its packages compile, before the leader finishes', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
+      const gate = join(fixture.root, 'leader.gate');
+      const openGate = Effect.sync(() => writeFileSync(gate, ''));
+      yield* Effect.addFinalizer(() => openGate);
       const staged = stagedCargo(fixture, [
         'sleep:0.4',
         artifactLine('aa'),
-        'sleep:1.2',
+        `wait:${gate}`,
         artifactLine('bb'),
         '{"reason":"build-finished","success":true}',
         'exit:0',
@@ -153,9 +159,10 @@ describe('json demux early release', () => {
           timeoutMs: 15_000,
         }),
       );
-      yield* pollReport(fixture, (report) =>
+      const running = yield* pollReport(fixture, (report) =>
         report.active.some((record) => record.status === 'running'),
       );
+      const leaderTicket = running.active.find((record) => record.status === 'running')?.ticket;
 
       const followerMessages = yield* execRequest(fixture, {
         cwd: fixture.ws1,
@@ -163,17 +170,16 @@ describe('json demux early release', () => {
         extraEnv: staged.extraEnv,
         timeoutMs: 15_000,
       });
-      const followerDoneAtMs = Date.now();
       const followerExit = findExit(followerMessages);
       expect(followerExit.status).toBe('done');
       expect(followerExit.exitCode).toBe(0);
       expect(decodeOutput(followerMessages, 'stderr')).toContain('released early');
+      const atRelease = yield* fetchReport(fixture);
+      expect(atRelease.active.find((record) => record.ticket === leaderTicket)?.status).toBe('running');
 
+      yield* openGate;
       const leaderMessages = yield* Fiber.join(leaderFiber);
-      const leaderDoneAtMs = Date.now();
       expect(findExit(leaderMessages).status).toBe('done');
-      // The waiter was released while the leader was still compiling bb.
-      expect(leaderDoneAtMs - followerDoneAtMs).toBeGreaterThanOrEqual(400);
     }));
 
   it.live('releases a proven waiter done even when the leader later fails elsewhere, filtering foreign diagnostics', () =>
@@ -221,10 +227,13 @@ describe('json demux early release', () => {
   it.live('fails a waiter early with scoped diagnostics when its own package breaks', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
+      const gate = join(fixture.root, 'leader.gate');
+      const openGate = Effect.sync(() => writeFileSync(gate, ''));
+      yield* Effect.addFinalizer(() => openGate);
       const staged = stagedCargo(fixture, [
         'sleep:0.5',
         errorLine('aa', 'error[E0308]: aa mismatched types'),
-        'sleep:1.0',
+        `wait:${gate}`,
         '{"reason":"build-finished","success":false}',
         'exit:101',
       ]);
@@ -236,9 +245,10 @@ describe('json demux early release', () => {
           timeoutMs: 15_000,
         }),
       );
-      yield* pollReport(fixture, (report) =>
+      const running = yield* pollReport(fixture, (report) =>
         report.active.some((record) => record.status === 'running'),
       );
+      const leaderTicket = running.active.find((record) => record.status === 'running')?.ticket;
 
       const followerMessages = yield* execRequest(fixture, {
         cwd: fixture.ws1,
@@ -246,17 +256,16 @@ describe('json demux early release', () => {
         extraEnv: staged.extraEnv,
         timeoutMs: 15_000,
       });
-      const followerDoneAtMs = Date.now();
       const followerExit = findExit(followerMessages);
       expect(followerExit.status).toBe('failed');
       expect(followerExit.exitCode).toBe(101);
       expect(decodeOutput(followerMessages, 'stderr')).toContain('aa mismatched types');
+      const atRelease = yield* fetchReport(fixture);
+      expect(atRelease.active.find((record) => record.ticket === leaderTicket)?.status).toBe('running');
 
+      yield* openGate;
       const leaderMessages = yield* Fiber.join(leaderFiber);
-      const leaderDoneAtMs = Date.now();
       expect(findExit(leaderMessages).status).toBe('failed');
-      // The waiter failed early, before the leader's trailing sleep ended.
-      expect(leaderDoneAtMs - followerDoneAtMs).toBeGreaterThanOrEqual(300);
     }));
 
   it.live('scope-filters replay and durable tails for late coverage attachments', () =>
