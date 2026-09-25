@@ -21859,6 +21859,7 @@ const ensureDaemonRunning = (config = (0,_daemon_config_js__rspack_import_5/* .r
 __webpack_require__.d(__webpack_exports__, {
 }, {
   R2: defaultEnsureDependencies,
+  Yj: daemonIsAbsent,
   oE: ensureDaemonRunning,
   pk: ensureDaemonVersion
 });
@@ -27042,16 +27043,18 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/operations/status.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var node_fs__rspack_import_0 = __webpack_require__("node:fs");
-/* import */ var effect_Effect__rspack_import_10 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
+/* import */ var effect_Effect__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
 /* import */ var _client_ensure_daemon_js__rspack_import_1 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
 /* import */ var _daemon_config_js__rspack_import_2 = __webpack_require__("./src/internal/daemon/config.ts");
 /* import */ var _client_control_js__rspack_import_3 = __webpack_require__("./src/internal/client/control.ts");
-/* import */ var _storage_ledger_js__rspack_import_4 = __webpack_require__("./src/internal/storage/ledger.ts");
-/* import */ var _contracts_protocol_js__rspack_import_5 = __webpack_require__("./src/internal/contracts/protocol.ts");
-/* import */ var _util_ansi_js__rspack_import_6 = __webpack_require__("./src/internal/util/ansi.ts");
-/* import */ var _util_id_js__rspack_import_7 = __webpack_require__("./src/internal/util/id.ts");
-/* import */ var _contracts_tool_schemas_js__rspack_import_8 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
-/* import */ var _util_text_js__rspack_import_9 = __webpack_require__("./src/internal/util/text.ts");
+/* import */ var _platform_socket_errors_js__rspack_import_4 = __webpack_require__("./src/internal/platform/socket-errors.ts");
+/* import */ var _storage_ledger_js__rspack_import_5 = __webpack_require__("./src/internal/storage/ledger.ts");
+/* import */ var _contracts_protocol_js__rspack_import_6 = __webpack_require__("./src/internal/contracts/protocol.ts");
+/* import */ var _util_ansi_js__rspack_import_7 = __webpack_require__("./src/internal/util/ansi.ts");
+/* import */ var _util_id_js__rspack_import_8 = __webpack_require__("./src/internal/util/id.ts");
+/* import */ var _contracts_tool_schemas_js__rspack_import_9 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
+/* import */ var _util_text_js__rspack_import_10 = __webpack_require__("./src/internal/util/text.ts");
+
 
 
 
@@ -27087,16 +27090,16 @@ const defaultRecentLimit = 50;
     if (request.status === 'orphaned') {
         return request.error;
     }
-    return (0,_contracts_protocol_js__rspack_import_5/* .isOrphanedByRestart */.oG)({
+    return (0,_contracts_protocol_js__rspack_import_6/* .isOrphanedByRestart */.oG)({
         error: request.error,
         status: request.status
-    }) ? `${_contracts_protocol_js__rspack_import_5/* .orphanedByRestartError */.Su}: the daemon stopped while it was in flight and does not hand runs over; resubmit if the work is still needed` : null;
+    }) ? `${_contracts_protocol_js__rspack_import_6/* .orphanedByRestartError */.Su}: the daemon stopped while it was in flight and does not hand runs over; resubmit if the work is still needed` : null;
 };
 const describeRequestRecord = (ticket, request)=>{
     if (request === null) {
         return `${ticket} not found`;
     }
-    const counts = request.errorCount === null || request.warningCount === null ? '' : ` (${(0,_util_text_js__rspack_import_9/* .countWord */.M)(request.errorCount, 'error')}, ${(0,_util_text_js__rspack_import_9/* .countWord */.M)(request.warningCount, 'warning')})`;
+    const counts = request.errorCount === null || request.warningCount === null ? '' : ` (${(0,_util_text_js__rspack_import_10/* .countWord */.M)(request.errorCount, 'error')}, ${(0,_util_text_js__rspack_import_10/* .countWord */.M)(request.warningCount, 'warning')})`;
     const note = stalledGuidance(request) ?? orphanedGuidance(request);
     return `${request.ticket} ${request.status}${counts}${note === null ? '' : ` — ${note}`}`;
 };
@@ -27112,13 +27115,13 @@ const describeRequestRecord = (ticket, request)=>{
  * (which never passes through here) keeps color for TTY consumers.
  */ const displayRequestRecord = (record)=>({
         ...record,
-        outputTail: record.outputTail === null ? null : (0,_util_ansi_js__rspack_import_6/* .stripAnsi */.a)(record.outputTail),
-        diagnostics: record.diagnostics === null ? null : record.diagnostics.map(_util_ansi_js__rspack_import_6/* .stripAnsi */.a)
+        outputTail: record.outputTail === null ? null : (0,_util_ansi_js__rspack_import_7/* .stripAnsi */.a)(record.outputTail),
+        diagnostics: record.diagnostics === null ? null : record.diagnostics.map(_util_ansi_js__rspack_import_7/* .stripAnsi */.a)
     });
 /** The status-row counterpart: the bounded preview and diagnostics, ANSI stripped. */ const displayStatusRow = (row)=>({
         ...row,
-        outputPreview: row.outputPreview === null ? null : (0,_util_ansi_js__rspack_import_6/* .stripAnsi */.a)(row.outputPreview),
-        diagnostics: row.diagnostics === null ? null : row.diagnostics.map(_util_ansi_js__rspack_import_6/* .stripAnsi */.a)
+        outputPreview: row.outputPreview === null ? null : (0,_util_ansi_js__rspack_import_7/* .stripAnsi */.a)(row.outputPreview),
+        diagnostics: row.diagnostics === null ? null : row.diagnostics.map(_util_ansi_js__rspack_import_7/* .stripAnsi */.a)
     });
 const displayStatusRows = (rows)=>rows.map(displayStatusRow);
 const strandedReasons = {
@@ -27148,12 +27151,12 @@ const ledgerRequestRecord = (record, daemon)=>{
             }
     }
 };
-const ledgerStatusRow = (record, daemon)=>(0,_contracts_protocol_js__rspack_import_5/* .toStatusRow */.el)(ledgerRequestRecord(record, daemon));
+const ledgerStatusRow = (record, daemon)=>(0,_contracts_protocol_js__rspack_import_6/* .toStatusRow */.el)(ledgerRequestRecord(record, daemon));
 const stoppedSummary = (recentCount)=>{
     if (recentCount === 0) {
         return 'cargo-hauler daemon is not running';
     }
-    return `cargo-hauler daemon is not running; ${(0,_util_text_js__rspack_import_9/* .countWord */.M)(recentCount, 'recorded request')}`;
+    return `cargo-hauler daemon is not running; ${(0,_util_text_js__rspack_import_10/* .countWord */.M)(recentCount, 'recorded request')}`;
 };
 const runningSummary = (report)=>{
     const queued = report.lanes.reduce((sum, lane)=>sum + lane.queued, 0);
@@ -27184,7 +27187,7 @@ const fromReport = (report, config)=>withReport({
  * A live daemon's report, validated with the strict client schema. The read
  * gate accepts only the current wire protocol, including compatible older
  * releases, so a report that does not fit is a protocol defect.
- */ const fromLiveReport = (raw, config)=>effect_Effect__rspack_import_10/* .sync */.OH5(()=>_contracts_tool_schemas_js__rspack_import_8/* .statusReportSchema.parse */.qb.parse(raw)).pipe(effect_Effect__rspack_import_10/* .map */.TjK((report)=>fromReport(report, config)));
+ */ const fromLiveReport = (raw, config)=>effect_Effect__rspack_import_11/* .sync */.OH5(()=>_contracts_tool_schemas_js__rspack_import_9/* .statusReportSchema.parse */.qb.parse(raw)).pipe(effect_Effect__rspack_import_11/* .map */.TjK((report)=>fromReport(report, config)));
 /**
  * One ticket's detail record straight from the ledger, for the read-only
  * surfaces when no daemon answers: `hauler last` shows the settled tail the
@@ -27192,14 +27195,14 @@ const fromReport = (report, config)=>withReport({
  * database yet).
  */ const loadLedgerRequest = (ticket, config = (0,_daemon_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)())=>{
     if (!(0,node_fs__rspack_import_0.existsSync)(config.databasePath)) {
-        return effect_Effect__rspack_import_10/* .succeed */.PyW(null);
+        return effect_Effect__rspack_import_11/* .succeed */.PyW(null);
     }
-    return effect_Effect__rspack_import_10/* .scoped */.P1j(effect_Effect__rspack_import_10/* .gen */.JkU(function*() {
+    return effect_Effect__rspack_import_11/* .scoped */.P1j(effect_Effect__rspack_import_11/* .gen */.JkU(function*() {
         const db = yield* acquireSnapshotDb(config.databasePath);
-        return yield* (0,_storage_ledger_js__rspack_import_4/* .createLedgerApi */.Ax)(db).getRequestByTicket(ticket);
+        return yield* (0,_storage_ledger_js__rspack_import_5/* .createLedgerApi */.Ax)(db).getRequestByTicket(ticket);
     }));
 };
-const loadLedgerTicket = (ticket, daemon, config)=>loadLedgerRequest(ticket, config).pipe(effect_Effect__rspack_import_10/* .map */.TjK((record)=>record === null ? null : ledgerRequestRecord(displayRequestRecord(record), daemon)));
+const loadLedgerTicket = (ticket, daemon, config)=>loadLedgerRequest(ticket, config).pipe(effect_Effect__rspack_import_11/* .map */.TjK((record)=>record === null ? null : ledgerRequestRecord(displayRequestRecord(record), daemon)));
 const emptyStopped = (config)=>withReport({
         active: [],
         daemon: 'stopped',
@@ -27216,14 +27219,14 @@ const emptyStopped = (config)=>withReport({
  * Scoped ledger handle for stopped-daemon reads: read-only when possible,
  * falling back to the writable opener for WAL recovery after an unclean stop
  * or a ledger predating a column migration. Always closed by the scope.
- */ const acquireSnapshotDb = (databasePath)=>effect_Effect__rspack_import_10/* .acquireRelease */.Q56(effect_Effect__rspack_import_10/* ["try"] */.SvU(()=>(0,_storage_ledger_js__rspack_import_4/* .openLedgerDatabaseReadOnly */.Xo)(databasePath)).pipe(effect_Effect__rspack_import_10/* ["catch"] */.MfU(()=>effect_Effect__rspack_import_10/* .sync */.OH5(()=>(0,_storage_ledger_js__rspack_import_4/* .openLedgerDatabase */.p)(databasePath)))), (db)=>effect_Effect__rspack_import_10/* .sync */.OH5(()=>db.close()));
+ */ const acquireSnapshotDb = (databasePath)=>effect_Effect__rspack_import_11/* .acquireRelease */.Q56(effect_Effect__rspack_import_11/* ["try"] */.SvU(()=>(0,_storage_ledger_js__rspack_import_5/* .openLedgerDatabaseReadOnly */.Xo)(databasePath)).pipe(effect_Effect__rspack_import_11/* ["catch"] */.MfU(()=>effect_Effect__rspack_import_11/* .sync */.OH5(()=>(0,_storage_ledger_js__rspack_import_5/* .openLedgerDatabase */.p)(databasePath)))), (db)=>effect_Effect__rspack_import_11/* .sync */.OH5(()=>db.close()));
 const fromLedger = (config, recentLimit, daemon = 'stopped')=>{
     if (!(0,node_fs__rspack_import_0.existsSync)(config.databasePath)) {
-        return effect_Effect__rspack_import_10/* .succeed */.PyW(emptyStopped(config));
+        return effect_Effect__rspack_import_11/* .succeed */.PyW(emptyStopped(config));
     }
-    return effect_Effect__rspack_import_10/* .scoped */.P1j(effect_Effect__rspack_import_10/* .gen */.JkU(function*() {
+    return effect_Effect__rspack_import_11/* .scoped */.P1j(effect_Effect__rspack_import_11/* .gen */.JkU(function*() {
         const db = yield* acquireSnapshotDb(config.databasePath);
-        const ledger = (0,_storage_ledger_js__rspack_import_4/* .createLedgerApi */.Ax)(db);
+        const ledger = (0,_storage_ledger_js__rspack_import_5/* .createLedgerApi */.Ax)(db);
         const recent = (yield* ledger.recentRequests(recentLimit)).map((record)=>ledgerStatusRow(record, daemon));
         const savings = yield* ledger.attachmentSavings();
         return withReport({
@@ -27244,28 +27247,29 @@ const fromLedger = (config, recentLimit, daemon = 'stopped')=>{
 const loadHaulerSnapshot = (options = {})=>{
     const config = options.config ?? (0,_daemon_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)();
     const recentLimit = options.recentLimit ?? defaultRecentLimit;
-    return (0,_client_ensure_daemon_js__rspack_import_1/* .ensureDaemonVersion */.pk)(config, _client_ensure_daemon_js__rspack_import_1/* .defaultEnsureDependencies */.R2, statusTimeoutMs, 'read').pipe(effect_Effect__rspack_import_10/* .flatMap */.qIB((daemon)=>daemon === null ? fromLedger(config, recentLimit) : (0,_client_control_js__rspack_import_3/* .requestExpecting */.dG)({
+    const unreachable = (error)=>(0,_client_ensure_daemon_js__rspack_import_1/* .daemonIsAbsent */.Yj)(error.cause) ? fromLedger(config, recentLimit) : unresponsiveSnapshot(config, recentLimit, `socket could not be opened (${(0,_platform_socket_errors_js__rspack_import_4/* .socketErrorCode */.R)(error.cause) ?? 'no errno'})`);
+    return (0,_client_ensure_daemon_js__rspack_import_1/* .ensureDaemonVersion */.pk)(config, _client_ensure_daemon_js__rspack_import_1/* .defaultEnsureDependencies */.R2, statusTimeoutMs, 'read').pipe(effect_Effect__rspack_import_11/* .flatMap */.qIB((daemon)=>daemon === null ? fromLedger(config, recentLimit) : (0,_client_control_js__rspack_import_3/* .requestExpecting */.dG)({
             message: {
-                id: (0,_util_id_js__rspack_import_7/* .shortId */.m)(),
+                id: (0,_util_id_js__rspack_import_8/* .shortId */.m)(),
                 limit: recentLimit,
                 type: 'status'
             },
             socketPath: config.socketPath,
             timeoutMs: statusTimeoutMs
-        }, (message)=>message.type === 'status-result').pipe(effect_Effect__rspack_import_10/* .flatMap */.qIB((result)=>result === undefined ? fromLedger(config, recentLimit) : fromLiveReport(result.report, config)), // Once the version gate has succeeded, ordinary read failures keep
+        }, (message)=>message.type === 'status-result').pipe(effect_Effect__rspack_import_11/* .flatMap */.qIB((result)=>result === undefined ? fromLedger(config, recentLimit) : fromLiveReport(result.report, config)), // Once the version gate has succeeded, ordinary read failures keep
         // the historical ledger fallback.
-        effect_Effect__rspack_import_10/* .catchTags */.loE({
+        effect_Effect__rspack_import_11/* .catchTags */.loE({
             ControlTimeout: ()=>unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
             ConnectionClosed: ()=>unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
-            DaemonUnreachable: ()=>fromLedger(config, recentLimit)
+            DaemonUnreachable: unreachable
         }))), // A ping that never establishes a protocol identity is unresponsive.
-    effect_Effect__rspack_import_10/* .catchTags */.loE({
+    effect_Effect__rspack_import_11/* .catchTags */.loE({
         ControlTimeout: ()=>unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
         ConnectionClosed: ()=>unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
-        DaemonUnreachable: ()=>fromLedger(config, recentLimit)
+        DaemonUnreachable: unreachable
     }));
 };
-const unresponsiveSnapshot = (config, recentLimit, what)=>fromLedger(config, recentLimit, 'unresponsive').pipe(effect_Effect__rspack_import_10/* .map */.TjK((snapshot)=>withReport({
+const unresponsiveSnapshot = (config, recentLimit, what)=>fromLedger(config, recentLimit, 'unresponsive').pipe(effect_Effect__rspack_import_11/* .map */.TjK((snapshot)=>withReport({
             ...snapshot,
             daemon: 'unresponsive',
             summary: `cargo-hauler daemon ${what}; showing ledger data (${snapshot.recent.length} recorded)`
@@ -27476,12 +27480,14 @@ __webpack_require__.d(__webpack_exports__, {
 
 },
 "./src/internal/operations/tickets.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-/* import */ var effect_Effect__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
+/* import */ var effect_Effect__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
 /* import */ var _client_tickets_js__rspack_import_0 = __webpack_require__("./src/internal/client/tickets.ts");
-/* import */ var _status_js__rspack_import_1 = __webpack_require__("./src/internal/operations/status.ts");
-/* import */ var _attribution_js__rspack_import_5 = __webpack_require__("./src/internal/operations/attribution.ts");
-/* import */ var _ticket_errors_js__rspack_import_4 = __webpack_require__("./src/internal/operations/ticket-errors.ts");
-/* import */ var _ticket_output_js__rspack_import_2 = __webpack_require__("./src/internal/operations/ticket-output.ts");
+/* import */ var _client_ensure_daemon_js__rspack_import_1 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
+/* import */ var _status_js__rspack_import_2 = __webpack_require__("./src/internal/operations/status.ts");
+/* import */ var _attribution_js__rspack_import_6 = __webpack_require__("./src/internal/operations/attribution.ts");
+/* import */ var _ticket_errors_js__rspack_import_5 = __webpack_require__("./src/internal/operations/ticket-errors.ts");
+/* import */ var _ticket_output_js__rspack_import_3 = __webpack_require__("./src/internal/operations/ticket-output.ts");
+
 
 
 
@@ -27496,13 +27502,13 @@ const defaultAwaitMs = 30000;
  * server ships it as structured content — so the projection always strips:
  * an inherited FORCE_COLOR/CLICOLOR_FORCE must not leave ESC bytes to become
  * literal `\u001b[…` in the JSON.
- */ const requestForConsumer = (request)=>request === null ? null : (0,_status_js__rspack_import_1/* .displayRequestRecord */.xn)(request);
+ */ const requestForConsumer = (request)=>request === null ? null : (0,_status_js__rspack_import_2/* .displayRequestRecord */.xn)(request);
 /**
  * A stopped daemon leaves the ledger as a ticket's only record, so a read
  * answers from it (a stranded run as orphaned) instead of failing.
- */ const fromLedgerWhenStopped = (read, ticket, config, answer)=>read.pipe(effect_Effect__rspack_import_3/* .catchTag */.KuX('DaemonUnreachable', ()=>(0,_status_js__rspack_import_1/* .loadLedgerTicket */.UP)(ticket, 'stopped', config).pipe(effect_Effect__rspack_import_3/* .map */.TjK(answer))));
+ */ const fromLedgerWhenStopped = (read, ticket, config, answer)=>read.pipe(effect_Effect__rspack_import_4/* .catchTag */.KuX('DaemonUnreachable', (error)=>(0,_client_ensure_daemon_js__rspack_import_1/* .daemonIsAbsent */.Yj)(error.cause) ? (0,_status_js__rspack_import_2/* .loadLedgerTicket */.UP)(ticket, 'stopped', config).pipe(effect_Effect__rspack_import_4/* .map */.TjK(answer)) : effect_Effect__rspack_import_4/* .fail */.fJG(error)));
 const awaitTicketResult = async (input, options)=>{
-    const waited = await (0,_ticket_errors_js__rspack_import_4/* .runTicketEffect */.n)(fromLedgerWhenStopped((0,_client_tickets_js__rspack_import_0/* .awaitTicketWithProgress */.Ik)(input.ticket, input.maxWaitMs ?? defaultAwaitMs, options.onProgress ?? (()=>undefined), options.config).pipe(effect_Effect__rspack_import_3/* .map */.TjK(({ request, timedOut })=>({
+    const waited = await (0,_ticket_errors_js__rspack_import_5/* .runTicketEffect */.n)(fromLedgerWhenStopped((0,_client_tickets_js__rspack_import_0/* .awaitTicketWithProgress */.Ik)(input.ticket, input.maxWaitMs ?? defaultAwaitMs, options.onProgress ?? (()=>undefined), options.config).pipe(effect_Effect__rspack_import_4/* .map */.TjK(({ request, timedOut })=>({
             daemon: 'running',
             request: requestForConsumer(request),
             timedOut
@@ -27515,13 +27521,13 @@ const awaitTicketResult = async (input, options)=>{
         daemon: waited.daemon,
         operation: 'await',
         request: waited.request,
-        summary: waited.timedOut ? `${input.ticket} still pending` : (0,_status_js__rspack_import_1/* .describeRequestRecord */.qu)(input.ticket, waited.request),
+        summary: waited.timedOut ? `${input.ticket} still pending` : (0,_status_js__rspack_import_2/* .describeRequestRecord */.qu)(input.ticket, waited.request),
         ticket: input.ticket,
         timedOut: waited.timedOut
     };
 };
 const fetchTicketResult = async (input, options)=>{
-    const { daemon, request } = await (0,_ticket_errors_js__rspack_import_4/* .runTicketEffect */.n)(fromLedgerWhenStopped((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config).pipe(effect_Effect__rspack_import_3/* .map */.TjK((record)=>({
+    const { daemon, request } = await (0,_ticket_errors_js__rspack_import_5/* .runTicketEffect */.n)(fromLedgerWhenStopped((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config).pipe(effect_Effect__rspack_import_4/* .map */.TjK((record)=>({
             daemon: 'running',
             request: requestForConsumer(record)
         }))), input.ticket, options.config, (found)=>({
@@ -27532,7 +27538,7 @@ const fetchTicketResult = async (input, options)=>{
         daemon,
         operation: 'result',
         request,
-        summary: (0,_status_js__rspack_import_1/* .describeRequestRecord */.qu)(input.ticket, request),
+        summary: (0,_status_js__rspack_import_2/* .describeRequestRecord */.qu)(input.ticket, request),
         ticket: input.ticket
     };
 };
@@ -27544,7 +27550,7 @@ const fetchTicketResult = async (input, options)=>{
  */ const fetchTicketResultView = async (input, options)=>{
     const result = await fetchTicketResult(input, options);
     return {
-        output: (0,_ticket_output_js__rspack_import_2/* .loadTicketOutput */.Oy)(result.request, input.full === true),
+        output: (0,_ticket_output_js__rspack_import_3/* .loadTicketOutput */.Oy)(result.request, input.full === true),
         result
     };
 };
@@ -27576,8 +27582,8 @@ const acceptedKillSummary = (ticket, request)=>{
     }
 };
 const killTicketResult = async (input, options)=>{
-    const killed = await (0,_ticket_errors_js__rspack_import_4/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .killTicket */.N6)(input.ticket, options.config), options.signal);
-    const request = await (0,_ticket_errors_js__rspack_import_4/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config), options.signal);
+    const killed = await (0,_ticket_errors_js__rspack_import_5/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .killTicket */.N6)(input.ticket, options.config), options.signal);
+    const request = await (0,_ticket_errors_js__rspack_import_5/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config), options.signal);
     return {
         killed,
         operation: 'kill',
@@ -27608,9 +27614,9 @@ const formatWait = (ms)=>{
     return null;
 };
 const submitTicketRequest = async (input, requestContext, options)=>{
-    const request = (0,_attribution_js__rspack_import_5/* .enrichTicketRequest */.TZ)(input, requestContext);
-    const attribution = (0,_attribution_js__rspack_import_5/* .ticketAttribution */.YW)(request, requestContext);
-    const ack = await (0,_ticket_errors_js__rspack_import_4/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .submitBackgroundAck */.gK)(request, options.config), options.signal);
+    const request = (0,_attribution_js__rspack_import_6/* .enrichTicketRequest */.TZ)(input, requestContext);
+    const attribution = (0,_attribution_js__rspack_import_6/* .ticketAttribution */.YW)(request, requestContext);
+    const ack = await (0,_ticket_errors_js__rspack_import_5/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .submitBackgroundAck */.gK)(request, options.config), options.signal);
     if (ack === null) {
         return {
             attribution,
@@ -113314,40 +113320,40 @@ var __webpack_exports__ = {};
 /* import */ var _agent_bundle_runtime__rspack_import_17 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
 /* import */ var _agent_bundle_runtime__rspack_import_18 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var node_url__rspack_import_2 = __webpack_require__("node:url");
-/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
-/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_4 = __webpack_require__("./src/mcp/hauler/tools/hauler_dashboard.tsx");
-/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_5 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
-/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_6 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
-/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
-/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
-/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
-/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
-/* import */ var _tmp_poteto_savings_src_events_session_start_tsx__rspack_import_11 = __webpack_require__("./src/events/session/start.tsx");
-/* import */ var _tmp_poteto_savings_src_events_tool_before_view_tsx__rspack_import_12 = __webpack_require__("./src/events/tool/before.view.tsx");
-/* import */ var _tmp_poteto_savings_src_events_tool_after_view_tsx__rspack_import_13 = __webpack_require__("./src/events/tool/after.view.tsx");
-/* import */ var _tmp_poteto_savings_src_events_stop_tsx__rspack_import_14 = __webpack_require__("./src/events/stop.tsx");
-/* import */ var _tmp_poteto_savings_src_layout_tsx__rspack_import_15 = __webpack_require__("./src/layout.tsx");
+/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
+/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_4 = __webpack_require__("./src/mcp/hauler/tools/hauler_dashboard.tsx");
+/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_5 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
+/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_6 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
+/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
+/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
+/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
+/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
+/* import */ var _tmp_poteto_280_src_events_session_start_tsx__rspack_import_11 = __webpack_require__("./src/events/session/start.tsx");
+/* import */ var _tmp_poteto_280_src_events_tool_before_view_tsx__rspack_import_12 = __webpack_require__("./src/events/tool/before.view.tsx");
+/* import */ var _tmp_poteto_280_src_events_tool_after_view_tsx__rspack_import_13 = __webpack_require__("./src/events/tool/after.view.tsx");
+/* import */ var _tmp_poteto_280_src_events_stop_tsx__rspack_import_14 = __webpack_require__("./src/events/stop.tsx");
+/* import */ var _tmp_poteto_280_src_layout_tsx__rspack_import_15 = __webpack_require__("./src/layout.tsx");
 
 
 
 
 
 
-const route0 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3);
+const route0 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3);
 
-const route1 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_4, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_4);
+const route1 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_4, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_4);
 
-const route2 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_5, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_5);
+const route2 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_5, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_5);
 
-const route3 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_6, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_6);
+const route3 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_6, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_6);
 
-const route4 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_7, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_7);
+const route4 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_7, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_7);
 
-const route5 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_8, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_8);
+const route5 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_8, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_8);
 
-const route6 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_9, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_9);
+const route6 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_9, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_9);
 
-const route7 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_10, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_10);
+const route7 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_10, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_10);
 
 
 
@@ -113379,7 +113385,7 @@ const providers = Object.freeze([
 const layouts = Object.freeze([
     Object.freeze({
         id: "layout:root",
-        module: _tmp_poteto_savings_src_layout_tsx__rspack_import_15,
+        module: _tmp_poteto_280_src_layout_tsx__rspack_import_15,
         source: "src/layout.tsx"
     })
 ]);
@@ -113704,28 +113710,28 @@ const routes = Object.freeze({
         event: "session/start",
         id: "event:session/start",
         kind: 'event-route',
-        module: _tmp_poteto_savings_src_events_session_start_tsx__rspack_import_11,
+        module: _tmp_poteto_280_src_events_session_start_tsx__rspack_import_11,
         name: "session/start"
     }),
     "hook:event-route:tool-before": Object.freeze({
         event: "tool/before",
         id: "event:tool/before",
         kind: 'event-route',
-        module: _tmp_poteto_savings_src_events_tool_before_view_tsx__rspack_import_12,
+        module: _tmp_poteto_280_src_events_tool_before_view_tsx__rspack_import_12,
         name: "tool/before"
     }),
     "hook:event-route:tool-after": Object.freeze({
         event: "tool/after",
         id: "event:tool/after",
         kind: 'event-route',
-        module: _tmp_poteto_savings_src_events_tool_after_view_tsx__rspack_import_13,
+        module: _tmp_poteto_280_src_events_tool_after_view_tsx__rspack_import_13,
         name: "tool/after"
     }),
     "hook:event-route:stop": Object.freeze({
         event: "stop",
         id: "event:stop",
         kind: 'event-route',
-        module: _tmp_poteto_savings_src_events_stop_tsx__rspack_import_14,
+        module: _tmp_poteto_280_src_events_stop_tsx__rspack_import_14,
         name: "stop"
     })
 });
