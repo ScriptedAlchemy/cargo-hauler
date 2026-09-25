@@ -762,8 +762,9 @@ there; state files keep the permissions the filesystem gives them.
   retries for up to 60 seconds, then runs Cargo directly without a start
   attempt or a second retry cycle.
 - The plugin's own documents never fail open: `hauler_result` and
-  `hauler_await` fail loudly when the daemon is unreachable instead of
-  reporting a ticket as not found; `hauler_status`, `hauler_log`, and
+  `hauler_await` read a stopped daemon's tickets from the ledger, and fail
+  loudly with the errno when a live daemon's socket cannot be opened instead
+  of reporting a ticket as not found; `hauler_status`, `hauler_log`, and
   `hauler_last` read the ledger with the daemon marked `stopped` or
   `unresponsive`. Reads never request daemon shutdown. They use an older
   or newer daemon when its wire-protocol identity is compatible; a truly

@@ -3,13 +3,17 @@ import * as Effect from 'effect/Effect';
 import * as Exit from 'effect/Exit';
 import * as Option from 'effect/Option';
 
+import { daemonIsAbsent } from '../client/ensure-daemon.js';
 import type { TicketSocketError } from '../client/tickets.js';
+import { socketErrorCode } from '../platform/socket-errors.js';
 
 export const infraFailure = (error: TicketSocketError): Error => {
   switch (error._tag) {
     case 'DaemonUnreachable':
       return new Error(
-        `hauler daemon unreachable at ${error.socketPath}; it starts on demand with any exec, or run: hauler daemon start`,
+        daemonIsAbsent(error.cause)
+          ? `hauler daemon unreachable at ${error.socketPath}; it starts on demand with any exec, or run: hauler daemon start`
+          : `hauler daemon socket at ${error.socketPath} could not be opened (${socketErrorCode(error.cause) ?? 'no errno'}); the daemon may still be running, check: hauler daemon status`,
       );
     case 'ControlTimeout':
       return new Error(
