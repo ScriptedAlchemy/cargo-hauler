@@ -81,8 +81,9 @@ jobs:
               }
             } catch {}
             console.log(`attempt ${attempt}: registry has not confirmed ${name}@${version}`);
-            if (Date.now() + wait > deadline) break;
-            await delay(wait);
+            const remaining = deadline - Date.now();
+            if (remaining <= 0) break;
+            await delay(Math.min(wait, remaining));
           }
           console.error(`::error::Registry did not confirm ${name}@${version} within 20 minutes.`);
           process.exit(1);

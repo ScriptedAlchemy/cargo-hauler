@@ -25256,7 +25256,7 @@ const truncationLine = (maxBytes)=>`\n[cargo-hauler] output log truncated at ${m
  * One open log. Writes go through a single append stream for the life of the
  * run (no per-chunk `appendFileSync`); the stream buffers in memory and
  * drains on the event loop, and `close` waits for the flush so a
- * `hauler result --full` issued right after the exit sees complete content.
+ * reader issued right after the exit sees complete content.
  * A stream error is remembered and silences the writer: the ticket's cargo
  * run must never fail because its log could not be written.
  */ class TicketLogWriter {

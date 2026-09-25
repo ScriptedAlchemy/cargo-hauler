@@ -610,7 +610,7 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
           const waitMs = Math.max(0, (startedAtMs ?? atMs) - job.queuedAtMs);
           const runMs = startedAtMs === null ? 0 : Math.max(0, atMs - startedAtMs);
           // Flush the on-disk log before the row turns terminal, so a
-          // `hauler result --full` issued on the exit sees the whole run.
+          // reader issued on the exit sees the whole run.
           const log = job.log;
           if (log !== null) {
             yield* step(

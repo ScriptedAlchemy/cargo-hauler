@@ -194,7 +194,7 @@ export const formatProgressLine = (event: ProgressEvent): string => {
         return `${prefix} ticket ${event.ticket} submitted in background${eta}\n${retrieve}`;
       }
       const redirected = event.auto.stdoutRedirected
-        ? `; your redirected stdout receives no output; read it with \`hauler result ${event.ticket} --full\``
+        ? `; your redirected stdout receives no output; once it runs, \`hauler result ${event.ticket}\` names its full log`
         : '';
       return `${prefix} ticket ${event.ticket} estimate${eta} exceeds the ${event.auto.host} shell cap (${formatDuration(event.auto.capMs)}); submitted in background, not run yet (exit 75)${redirected}\n${retrieve}`;
     }

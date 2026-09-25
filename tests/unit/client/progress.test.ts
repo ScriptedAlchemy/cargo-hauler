@@ -170,7 +170,7 @@ describe('formatProgressLine', () => {
         auto: { capMs: 540_000, host: 'claude', stdoutRedirected: true },
       }),
     ).toBe(
-      '[cargo-hauler] ticket cc-7 estimate (ETA 600s) exceeds the claude shell cap (9m); submitted in background, not run yet (exit 75); your redirected stdout receives no output; read it with `hauler result cc-7 --full`\nRetrieve with: hauler result cc-7\nAwait with: hauler await cc-7\n',
+      '[cargo-hauler] ticket cc-7 estimate (ETA 600s) exceeds the claude shell cap (9m); submitted in background, not run yet (exit 75); your redirected stdout receives no output; once it runs, `hauler result cc-7` names its full log\nRetrieve with: hauler result cc-7\nAwait with: hauler await cc-7\n',
     );
     expect(
       formatProgressLine({

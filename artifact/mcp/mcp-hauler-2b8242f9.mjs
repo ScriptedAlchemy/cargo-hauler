@@ -17268,7 +17268,7 @@ const formatProgressLine = (event)=>{
                 if (event.auto === undefined) {
                     return `${prefix} ticket ${event.ticket} submitted in background${eta}\n${retrieve}`;
                 }
-                const redirected = event.auto.stdoutRedirected ? `; your redirected stdout receives no output; read it with \`hauler result ${event.ticket} --full\`` : '';
+                const redirected = event.auto.stdoutRedirected ? `; your redirected stdout receives no output; once it runs, \`hauler result ${event.ticket}\` names its full log` : '';
                 return `${prefix} ticket ${event.ticket} estimate${eta} exceeds the ${event.auto.host} shell cap (${formatDuration(event.auto.capMs)}); submitted in background, not run yet (exit 75)${redirected}\n${retrieve}`;
             }
         default:
@@ -22697,7 +22697,7 @@ const truncationLine = (maxBytes)=>`\n[cargo-hauler] output log truncated at ${m
  * One open log. Writes go through a single append stream for the life of the
  * run (no per-chunk `appendFileSync`); the stream buffers in memory and
  * drains on the event loop, and `close` waits for the flush so a
- * `hauler result --full` issued right after the exit sees complete content.
+ * reader issued right after the exit sees complete content.
  * A stream error is remembered and silences the writer: the ticket's cargo
  * run must never fail because its log could not be written.
  */ class TicketLogWriter {
@@ -161001,7 +161001,7 @@ const routes = Object.freeze({
         name: "hauler_status"
     })
 });
-const EVENT_ARTIFACT_EPOCH = "1a10ed5c2277984e500dc1541858f0f78e72b50485aaa22997e6f536867ae5a6";
+const EVENT_ARTIFACT_EPOCH = "d381c4a3b91026f0d58944f95f3a698b919e2756a687a54b7e86c4e369d0c3af";
 const EVENT_ALLOWED_TARGETS = Object.freeze([
     "claude",
     "codex",
