@@ -112,4 +112,12 @@ describe('ownership boundaries', () => {
     });
     expect(closure.filter((edge) => /-> (react|effect|@effect\/|agent-bundle$|@agent-bundle\/runtime)/u.test(edge))).toEqual([]);
   });
+
+  // A package root re-exports every module, so an unbundled run (tests, and
+  // `runScript` spawning the TypeScript source) loads all of them; the
+  // `@effect/platform-node` root alone pulls in its Redis client.
+  it('imports Effect packages by module subpath, never through a package-root barrel', () => {
+    const barrel = /^(effect|effect\/unstable\/[^/]+|@effect\/[^/]+)$/u;
+    expect(offenders([...walk(src), ...walk(join(root, 'tests'))], (spec) => barrel.test(spec))).toEqual([]);
+  });
 });

@@ -16,9 +16,21 @@ describe('hauler process entry', () => {
     expect(run.exitCode).toBe(0);
     expect(run.provenance.proofLevel).toBe('script-dispatch');
     expect(run.provenance.execution).toBe('main-envelope');
-    for (const command of ['exec', 'daemon', 'install-shim', 'status', 'await', 'request']) {
-      expect(run.stdout).toContain(command);
-    }
+    expect(run.stdout).toBe(`Usage: hauler <command>
+
+Commands:
+  exec [--session ID] [--host HOST] [--cwd DIR] [--bg] [--after TICKET[,TICKET…]]
+       [--allow-shared-target] -- <cargo command>
+      Run cargo through the hauler daemon; --after queues it until those
+      tickets finish (it fails if one of them fails or is killed)
+  daemon <run|start|stop|status|restart>
+      Control the hauler daemon; restart replaces the running daemon
+      (in-flight tickets end killed: "daemon shutdown")
+  install-shim [--dir DIR] [--real-cargo PATH] [--force]
+      Install an optional PATH cargo shim
+  status | log | last | await <ticket> | result <ticket> | request [--after TICKET] -- <cargo command>
+      Routed commands; run \`cargo-hauler --help\` for options
+`);
   });
 
   it('exits 2 with usage when no command is given', async () => {
