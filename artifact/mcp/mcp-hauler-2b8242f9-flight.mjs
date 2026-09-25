@@ -21759,7 +21759,7 @@ const defaultEnsureDependencies = {
     pingDaemon: _control_js__rspack_import_6/* .pingDaemon */.LT,
     pollMs: 100,
     processAlive: _shutdown_js__rspack_import_8/* .processAlive */.FN,
-    requestShutdown: (socketPath)=>(0,_shutdown_js__rspack_import_8/* .requestShutdown */.iU)(socketPath, 5000, (/* inlined export .version */"0.9.6"), true),
+    requestShutdown: (socketPath)=>(0,_shutdown_js__rspack_import_8/* .requestShutdown */.iU)(socketPath, 5000, (/* inlined export .version */"0.9.7"), true),
     spawnDetachedDaemon,
     waitForDaemon
 };
@@ -21779,9 +21779,9 @@ const defaultEnsureDependencies = {
             startedAtMs: daemon.startedAtMs,
             version: daemon.version
         };
-        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(daemon.version, (/* inlined export .version */"0.9.6"))) {
+        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(daemon.version, (/* inlined export .version */"0.9.7"))) {
             return yield* new _shutdown_js__rspack_import_8/* .DaemonNewerError */.gD({
-                clientVersion: (/* inlined export .version */"0.9.6"),
+                clientVersion: (/* inlined export .version */"0.9.7"),
                 daemon: identity,
                 socketPath
             });
@@ -21810,19 +21810,19 @@ const defaultEnsureDependencies = {
             startedAtMs: already.startedAtMs,
             version: already.version
         };
-        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(already.version, (/* inlined export .version */"0.9.6"))) {
+        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(already.version, (/* inlined export .version */"0.9.7"))) {
             if (access === 'read' && (0,_contracts_wire_version_js__rspack_import_18/* .speaksCurrentWireProtocol */.W)(already)) {
                 return already;
             }
             return yield* new _shutdown_js__rspack_import_8/* .DaemonNewerError */.gD({
-                clientVersion: (/* inlined export .version */"0.9.6"),
+                clientVersion: (/* inlined export .version */"0.9.7"),
                 daemon: identity,
                 socketPath: config.socketPath
             });
         }
         if (!(0,_contracts_wire_version_js__rspack_import_18/* .speaksCurrentWireProtocol */.W)(already)) {
             return yield* new _shutdown_js__rspack_import_8/* .DaemonIncompatibleError */.K9({
-                clientVersion: (/* inlined export .version */"0.9.6"),
+                clientVersion: (/* inlined export .version */"0.9.7"),
                 daemon: identity,
                 socketPath: config.socketPath
             });
@@ -21838,11 +21838,11 @@ const ensureDaemonRunning = (config = (0,_daemon_config_js__rspack_import_5/* .r
                 return yield* dependencies.waitForDaemon(config.socketPath);
             });
         }
-        if (daemon.version === (/* inlined export .version */"0.9.6")) {
+        if (daemon.version === (/* inlined export .version */"0.9.7")) {
             return effect_Effect__rspack_import_15/* .succeed */.PyW(daemon);
         }
         const deferred = ()=>effect_Effect__rspack_import_15/* .sync */.OH5(()=>{
-                reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${(/* inlined export .version */"0.9.6")} when idle\n`);
+                reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${(/* inlined export .version */"0.9.7")} when idle\n`);
                 return daemon;
             });
         return dependencies.daemonIsIdle(config.socketPath).pipe(effect_Effect__rspack_import_15/* .flatMap */.qIB((idle)=>{
@@ -22022,7 +22022,7 @@ __webpack_require__.d(__webpack_exports__, {
         }
         return true;
     });
-const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlined export .version */"0.9.6"), ifIdle = false)=>effect_Effect__rspack_import_4/* .suspend */.DYE(()=>{
+const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlined export .version */"0.9.7"), ifIdle = false)=>effect_Effect__rspack_import_4/* .suspend */.DYE(()=>{
         const id = (0,_util_id_js__rspack_import_1/* .shortId */.m)();
         const isResponse = (message)=>message.id === id && (message.type === 'shutting-down' || message.type === 'error');
         return (0,_control_js__rspack_import_2/* .requestOverSocket */.Lb)({
@@ -25880,15 +25880,15 @@ const requestOnce = (message, socketPath, timeoutMs)=>new Promise((resolve)=>{
             kind: 'malformed'
         };
     }
-    if ((0,_contracts_version_order_js__rspack_import_5/* .isNewerVersion */.M)(ping.message.version, (/* inlined export .version */"0.9.6"))) {
+    if ((0,_contracts_version_order_js__rspack_import_5/* .isNewerVersion */.M)(ping.message.version, (/* inlined export .version */"0.9.7"))) {
         return {
-            detail: `cargo-hauler daemon ${ping.message.version} is newer than this client ${(/* inlined export .version */"0.9.6")}`,
+            detail: `cargo-hauler daemon ${ping.message.version} is newer than this client ${(/* inlined export .version */"0.9.7")}`,
             kind: 'replacement-failed'
         };
     }
     if (!(0,_contracts_wire_version_js__rspack_import_6/* .speaksCurrentWireProtocol */.W)(ping.message)) {
         return {
-            detail: `cargo-hauler daemon ${ping.message.version} is incompatible with this client ${(/* inlined export .version */"0.9.6")}`,
+            detail: `cargo-hauler daemon ${ping.message.version} is incompatible with this client ${(/* inlined export .version */"0.9.7")}`,
             kind: 'replacement-failed'
         };
     }
@@ -31164,7 +31164,7 @@ __webpack_require__.r(__webpack_exports__);
             route: route.id,
             server: route.serverId ?? null,
             surface: route.kind,
-            version: (/* inlined export .version */"0.9.6")
+            version: (/* inlined export .version */"0.9.7")
         }
     };
     return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_6/* .Agent.Result */.g6.Result, {
@@ -113232,8 +113232,8 @@ __webpack_require__.d(__webpack_exports__, {
 // Generated by agent-bundle. Do not edit.
 const name = "cargo-hauler";
 const packageName = "cargo-hauler";
-const packageVersion = "0.9.6";
-const version = "0.9.6";
+const packageVersion = "0.9.7";
+const version = "0.9.7";
 const meta = Object.freeze({
     name,
     packageName,
@@ -113324,40 +113324,40 @@ var __webpack_exports__ = {};
 /* import */ var _agent_bundle_runtime__rspack_import_17 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
 /* import */ var _agent_bundle_runtime__rspack_import_18 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var node_url__rspack_import_2 = __webpack_require__("node:url");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_4 = __webpack_require__("./src/mcp/hauler/tools/hauler_dashboard.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_5 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_6 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
-/* import */ var _tmp_poteto_sect_src_events_session_start_tsx__rspack_import_11 = __webpack_require__("./src/events/session/start.tsx");
-/* import */ var _tmp_poteto_sect_src_events_tool_before_view_tsx__rspack_import_12 = __webpack_require__("./src/events/tool/before.view.tsx");
-/* import */ var _tmp_poteto_sect_src_events_tool_after_view_tsx__rspack_import_13 = __webpack_require__("./src/events/tool/after.view.tsx");
-/* import */ var _tmp_poteto_sect_src_events_stop_tsx__rspack_import_14 = __webpack_require__("./src/events/stop.tsx");
-/* import */ var _tmp_poteto_sect_src_layout_tsx__rspack_import_15 = __webpack_require__("./src/layout.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_4 = __webpack_require__("./src/mcp/hauler/tools/hauler_dashboard.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_5 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_6 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_events_session_start_tsx__rspack_import_11 = __webpack_require__("./src/events/session/start.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_events_tool_before_view_tsx__rspack_import_12 = __webpack_require__("./src/events/tool/before.view.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_events_tool_after_view_tsx__rspack_import_13 = __webpack_require__("./src/events/tool/after.view.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_events_stop_tsx__rspack_import_14 = __webpack_require__("./src/events/stop.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_layout_tsx__rspack_import_15 = __webpack_require__("./src/layout.tsx");
 
 
 
 
 
 
-const route0 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3);
+const route0 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3);
 
-const route1 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_4, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_4);
+const route1 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_4, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_4);
 
-const route2 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_5, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_5);
+const route2 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_5, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_5);
 
-const route3 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_6, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_6);
+const route3 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_6, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_6);
 
-const route4 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_7, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_7);
+const route4 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_7, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_7);
 
-const route5 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_8, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_8);
+const route5 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_8, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_8);
 
-const route6 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_9, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_9);
+const route6 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_9, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_9);
 
-const route7 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_10, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_10);
+const route7 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_10, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_10);
 
 
 
@@ -113369,7 +113369,7 @@ globalThis.__rspack_rsc_manifest__ ??= Object.freeze({
 });
 if (node_worker_threads__rspack_import_0.parentPort === null) throw new Error('Generated Flight worker requires a parent port.');
 process.stdout.write = process.stderr.write.bind(process.stderr);
-const ARTIFACT_EPOCH = "cargo-hauler@0.9.6";
+const ARTIFACT_EPOCH = "cargo-hauler@0.9.7";
 const processLifetime = {
     hits: 0,
     instanceId: crypto.randomUUID(),
@@ -113389,7 +113389,7 @@ const providers = Object.freeze([
 const layouts = Object.freeze([
     Object.freeze({
         id: "layout:root",
-        module: _tmp_poteto_sect_src_layout_tsx__rspack_import_15,
+        module: _home_runner_work_cargo_hauler_cargo_hauler_src_layout_tsx__rspack_import_15,
         source: "src/layout.tsx"
     })
 ]);
@@ -113714,28 +113714,28 @@ const routes = Object.freeze({
         event: "session/start",
         id: "event:session/start",
         kind: 'event-route',
-        module: _tmp_poteto_sect_src_events_session_start_tsx__rspack_import_11,
+        module: _home_runner_work_cargo_hauler_cargo_hauler_src_events_session_start_tsx__rspack_import_11,
         name: "session/start"
     }),
     "hook:event-route:tool-before": Object.freeze({
         event: "tool/before",
         id: "event:tool/before",
         kind: 'event-route',
-        module: _tmp_poteto_sect_src_events_tool_before_view_tsx__rspack_import_12,
+        module: _home_runner_work_cargo_hauler_cargo_hauler_src_events_tool_before_view_tsx__rspack_import_12,
         name: "tool/before"
     }),
     "hook:event-route:tool-after": Object.freeze({
         event: "tool/after",
         id: "event:tool/after",
         kind: 'event-route',
-        module: _tmp_poteto_sect_src_events_tool_after_view_tsx__rspack_import_13,
+        module: _home_runner_work_cargo_hauler_cargo_hauler_src_events_tool_after_view_tsx__rspack_import_13,
         name: "tool/after"
     }),
     "hook:event-route:stop": Object.freeze({
         event: "stop",
         id: "event:stop",
         kind: 'event-route',
-        module: _tmp_poteto_sect_src_events_stop_tsx__rspack_import_14,
+        module: _home_runner_work_cargo_hauler_cargo_hauler_src_events_stop_tsx__rspack_import_14,
         name: "stop"
     })
 });
