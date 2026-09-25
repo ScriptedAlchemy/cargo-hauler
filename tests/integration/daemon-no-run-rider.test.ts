@@ -1,5 +1,3 @@
-import { join } from 'node:path';
-
 import { describe, expect, it } from 'effect-rstest';
 import * as Deferred from 'effect/Deferred';
 import * as Effect from 'effect/Effect';
@@ -25,6 +23,7 @@ import {
   findExit,
   pollReport,
   scopedDaemon,
+  scopedGate,
   scopedLedger,
 } from '../support/harness.js';
 import { fakeCargoEnv, type Fixture } from '../support/harness.js';
@@ -48,6 +47,9 @@ const laneExecuting = (report: BrokerStatusReport, ticket: string): boolean =>
 
 const settled = (ticket: string) => (report: BrokerStatusReport) =>
   report.recent.some((record) => record.ticket === ticket && record.status !== 'running');
+
+const riderAttached = (leader: string) => (report: BrokerStatusReport) =>
+  report.active.some((record) => record.attachedTo === leader);
 
 /**
  * Metrics live in the process-wide registry, so every daemon a test file
@@ -78,12 +80,14 @@ describe('test --no-run riding a running test (#88)', () => {
   it.live('releases the rider at the leader\'s build-finished line while the leader still runs its tests', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
+      const build = yield* scopedGate(fixture, 'build.gate');
+      const tests = yield* scopedGate(fixture, 'tests.gate');
       const leaderFiber = yield* Effect.forkChild(
         execRequest(fixture, {
           cwd: fixture.ws1,
           argv: filteredTest,
-          finishedAfter: '1.5',
-          sleep: '2',
+          finishedAfter: '0',
+          extraEnv: { FAKE_RELEASE_FILE: build.path, FAKE_EXECUTE_RELEASE_FILE: tests.path },
           timeoutMs: 15_000,
         }),
       );
@@ -91,11 +95,16 @@ describe('test --no-run riding a running test (#88)', () => {
       const leaderTicket = runningLeader(started)?.ticket ?? '';
       const coverageBefore = coverageAttaches(started);
 
-      const riderMessages = yield* execRequest(fixture, {
-        cwd: fixture.ws1,
-        argv: noRunCompile,
-        timeoutMs: 15_000,
-      });
+      const riderFiber = yield* Effect.forkChild(
+        execRequest(fixture, {
+          cwd: fixture.ws1,
+          argv: noRunCompile,
+          timeoutMs: 15_000,
+        }),
+      );
+      yield* pollReport(fixture, riderAttached(leaderTicket));
+      yield* build.open;
+      const riderMessages = yield* Fiber.join(riderFiber);
       const ack = findAck(riderMessages);
       expect(ack.attachedTo).toBe(leaderTicket);
       expect(ack.attachMode).toBe('coverage');
@@ -110,6 +119,7 @@ describe('test --no-run riding a running test (#88)', () => {
       expect(laneExecuting(during, leaderTicket)).toBe(true);
       expect(recordFor(during, leaderTicket)?.status).toBe('running');
 
+      yield* tests.open;
       const leaderExit = findExit(yield* Fiber.join(leaderFiber));
       expect(leaderExit.status).toBe('done');
       const report = yield* pollReport(fixture, settled(leaderTicket));
@@ -141,23 +151,29 @@ describe('test --no-run riding a running test (#88)', () => {
   it.live('requeues the rider when the leader\'s build fails before any finished line', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
+      const build = yield* scopedGate(fixture, 'build.gate');
       const leaderFiber = yield* Effect.forkChild(
         execRequest(fixture, {
           cwd: fixture.ws1,
           argv: filteredTest,
-          sleep: '0.8',
           exit: '101',
+          extraEnv: { FAKE_RELEASE_FILE: build.path },
           timeoutMs: 15_000,
         }),
       );
-      yield* pollReport(fixture, (report) => runningLeader(report) !== undefined);
+      const started = yield* pollReport(fixture, (report) => runningLeader(report) !== undefined);
 
       // The rider itself succeeds when run directly (no FAKE_EXIT).
-      const riderMessages = yield* execRequest(fixture, {
-        cwd: fixture.ws1,
-        argv: noRunCompile,
-        timeoutMs: 15_000,
-      });
+      const riderFiber = yield* Effect.forkChild(
+        execRequest(fixture, {
+          cwd: fixture.ws1,
+          argv: noRunCompile,
+          timeoutMs: 15_000,
+        }),
+      );
+      yield* pollReport(fixture, riderAttached(runningLeader(started)?.ticket ?? ''));
+      yield* build.open;
+      const riderMessages = yield* Fiber.join(riderFiber);
       expect(findAck(riderMessages).attachMode).toBe('coverage');
       const requeued = riderMessages.find(
         (message): message is RequeuedMessage => message.type === 'requeued',
@@ -195,12 +211,13 @@ describe('test --no-run riding a running test (#88)', () => {
   it.live('a rider arriving after the build finished runs its own cargo and counts as a leader-build-finished miss', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
+      const tests = yield* scopedGate(fixture, 'tests.gate');
       const leaderFiber = yield* Effect.forkChild(
         execRequest(fixture, {
           cwd: fixture.ws1,
           argv: filteredTest,
-          finishedAfter: '0.1',
-          sleep: '2',
+          finishedAfter: '0',
+          extraEnv: { FAKE_EXECUTE_RELEASE_FILE: tests.path },
           timeoutMs: 15_000,
         }),
       );
@@ -225,27 +242,36 @@ describe('test --no-run riding a running test (#88)', () => {
       const during = yield* fetchReport(fixture);
       expect(recordFor(during, leaderTicket)?.status).toBe('running');
       expect(rejections(during, 'leader-build-finished')).toBe(missesBefore + 1);
+      yield* tests.open;
       findExit(yield* Fiber.join(leaderFiber));
     }));
 
   it.live('does not attach across target selections and counts the miss under targets', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
+      const build = yield* scopedGate(fixture, 'build.gate');
       const leaderFiber = yield* Effect.forkChild(
         execRequest(fixture, {
           cwd: fixture.ws1,
           argv: ['cargo', 'test', '-p', 'alpha', '--test', 'mcp_suite'],
-          finishedAfter: '0.6',
-          sleep: '0.6',
+          extraEnv: { FAKE_RELEASE_FILE: build.path },
           timeoutMs: 15_000,
         }),
       );
       const started = yield* pollReport(fixture, (report) => runningLeader(report) !== undefined);
-      const riderMessages = yield* execRequest(fixture, {
-        cwd: fixture.ws1,
-        argv: noRunCompile,
-        timeoutMs: 15_000,
-      });
+      const riderFiber = yield* Effect.forkChild(
+        execRequest(fixture, {
+          cwd: fixture.ws1,
+          argv: noRunCompile,
+          timeoutMs: 15_000,
+        }),
+      );
+      yield* pollReport(
+        fixture,
+        (report) => rejections(report, 'targets') > rejections(started, 'targets'),
+      );
+      yield* build.open;
+      const riderMessages = yield* Fiber.join(riderFiber);
       expect(findAck(riderMessages).attachedTo).toBeUndefined();
       expect(findExit(riderMessages).status).toBe('done');
       findExit(yield* Fiber.join(leaderFiber));
@@ -259,20 +285,26 @@ describe('coverage gates over real argv shapes (#89)', () => {
   it.live('lets check --tests ride build --tests', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
+      const build = yield* scopedGate(fixture, 'build.gate');
       const leaderFiber = yield* Effect.forkChild(
         execRequest(fixture, {
           cwd: fixture.ws1,
           argv: ['cargo', 'build', '-p', 'aa', '-p', 'bb', '--tests'],
-          sleep: '1',
+          extraEnv: { FAKE_RELEASE_FILE: build.path },
           timeoutMs: 15_000,
         }),
       );
-      yield* pollReport(fixture, (report) => runningLeader(report) !== undefined);
-      const riderMessages = yield* execRequest(fixture, {
-        cwd: fixture.ws1,
-        argv: ['cargo', 'check', '-p', 'aa', '--tests'],
-        timeoutMs: 15_000,
-      });
+      const started = yield* pollReport(fixture, (report) => runningLeader(report) !== undefined);
+      const riderFiber = yield* Effect.forkChild(
+        execRequest(fixture, {
+          cwd: fixture.ws1,
+          argv: ['cargo', 'check', '-p', 'aa', '--tests'],
+          timeoutMs: 15_000,
+        }),
+      );
+      yield* pollReport(fixture, riderAttached(runningLeader(started)?.ticket ?? ''));
+      yield* build.open;
+      const riderMessages = yield* Fiber.join(riderFiber);
       const ack = findAck(riderMessages);
       expect(ack.attachMode).toBe('coverage');
       expect(findExit(riderMessages).status).toBe('done');
@@ -283,11 +315,12 @@ describe('coverage gates over real argv shapes (#89)', () => {
   it.live('shares identical unmodeled flags but refuses differing ones, counting the miss', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
+      const build = yield* scopedGate(fixture, 'build.gate');
       const leaderFiber = yield* Effect.forkChild(
         execRequest(fixture, {
           cwd: fixture.ws1,
           argv: ['cargo', 'build', '-p', 'aa', '--locked'],
-          sleep: '1.2',
+          extraEnv: { FAKE_RELEASE_FILE: build.path },
           timeoutMs: 15_000,
         }),
       );
@@ -306,6 +339,13 @@ describe('coverage gates over real argv shapes (#89)', () => {
           timeoutMs: 15_000,
         }),
       );
+      yield* pollReport(
+        fixture,
+        (report) =>
+          riderAttached(runningLeader(started)?.ticket ?? '')(report) &&
+          rejections(report, 'opaque-arguments') > rejections(started, 'opaque-arguments'),
+      );
+      yield* build.open;
       const sameMessages = yield* Fiber.join(sameFlags);
       const otherMessages = yield* Fiber.join(otherFlags);
       const leaderExit = findExit(yield* Fiber.join(leaderFiber));
@@ -357,12 +397,13 @@ describe('attach rejection diagnostics (#89)', () => {
       yield* Effect.scoped(
         Effect.gen(function* () {
           const broker = yield* Broker;
+          const build = yield* scopedGate(fixture, 'build.gate');
           // Two leaders in the lane: the rider is refused by both, for
           // different gates, and the request counts once under the nearer.
           const testLeader = yield* submitTracked(broker, {
             argv: ['cargo', 'test', '-p', 'alpha', '--test', 'mcp_suite'],
             cwd: fixture.ws1,
-            env: cargoEnv(fixture, { FAKE_SLEEP: '1.5' }),
+            env: cargoEnv(fixture, { FAKE_RELEASE_FILE: build.path }),
           });
           yield* Deferred.await(testLeader.started);
           const clippyLeader = yield* submitTracked(broker, {
@@ -397,6 +438,7 @@ describe('attach rejection diagnostics (#89)', () => {
           const after = yield* broker.report();
           expect(rejections(after, 'targets')).toBe(rejections(before, 'targets') + 1);
           expect(rejections(after, 'subcommand')).toBe(rejections(before, 'subcommand'));
+          yield* build.open;
           yield* Deferred.await(testLeader.exit);
           yield* Deferred.await(clippyLeader.exit);
           yield* Deferred.await(rider.exit);

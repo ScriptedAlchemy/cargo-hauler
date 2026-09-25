@@ -169,6 +169,18 @@ export const scopedTempDir = (
     (directory) => Effect.sync(() => removeTestPath(directory)),
   );
 
+/** A file the fake cargo waits on; the scope opens it so no cargo outlives the test. */
+export const scopedGate = (
+  fixture: Pick<Fixture, 'root'>,
+  name: string,
+): Effect.Effect<{ readonly path: string; readonly open: Effect.Effect<void> }, never, Scope.Scope> =>
+  Effect.gen(function* () {
+    const path = join(fixture.root, name);
+    const open = Effect.sync(() => writeFileSync(path, ''));
+    yield* Effect.addFinalizer(() => open);
+    return { path, open };
+  });
+
 export const scopedDatabase = <Database extends { close(): void }>(
   open: () => Database,
 ): Effect.Effect<Database, never, Scope.Scope> =>
