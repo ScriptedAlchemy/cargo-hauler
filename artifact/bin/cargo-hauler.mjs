@@ -20902,7 +20902,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 },
 "./src/internal/client/control.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-/* import */ var _effect_platform_node_NodeSocket__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeSocket.js");
+/* import */ var _effect_platform_node_NodeSocket__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeSocket.js");
 /* import */ var effect_Data__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Data.js");
 /* import */ var effect_Effect__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
 /* import */ var effect_unstable_socket_Socket__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/unstable/socket/Socket.js");
@@ -26771,7 +26771,7 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var node_fs_promises__rspack_import_0 = __webpack_require__("node:fs/promises");
 /* import */ var node_path__rspack_import_1 = __webpack_require__("node:path");
 /* import */ var _effect_platform_node__rspack_import_16 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodeServices.js");
-/* import */ var _effect_platform_node__rspack_import_20 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeSocketServer.js");
+/* import */ var _effect_platform_node__rspack_import_20 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeSocketServer.js");
 /* import */ var agent_bundle_meta__rspack_import_2 = __webpack_require__("./.agent-bundle-virtual/meta.mjs");
 /* import */ var effect_Config__rspack_import_17 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Config.js");
 /* import */ var effect_Deferred__rspack_import_21 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Deferred.js");
@@ -39317,7 +39317,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeChildProcessSpawner.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeChildProcessSpawner.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect_Deferred__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Deferred.js");
 /* import */ var effect_Duration__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Duration.js");
 /* import */ var effect_Effect__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
@@ -39332,10 +39332,10 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var effect_unstable_process_ChildProcessSpawner__rspack_import_16 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/unstable/process/ChildProcessSpawner.js");
 /* import */ var node_child_process__rspack_import_0 = __webpack_require__("node:child_process");
 /* import */ var node_stream__rspack_import_1 = __webpack_require__("node:stream");
-/* import */ var _internal_nodeChildProcessSpawner_js__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/internal/nodeChildProcessSpawner.js");
-/* import */ var _internal_utils_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/internal/utils.js");
-/* import */ var _NodeSink_js__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeSink.js");
-/* import */ var _NodeStream_js__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeStream.js");
+/* import */ var _internal_nodeChildProcessSpawner_js__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/internal/nodeChildProcessSpawner.js");
+/* import */ var _internal_utils_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/internal/utils.js");
+/* import */ var _NodeSink_js__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeSink.js");
+/* import */ var _NodeStream_js__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeStream.js");
 
 
 
@@ -39744,7 +39744,13 @@ const make = /*#__PURE__*/effect_Effect__rspack_import_4/* .gen */.JkU(function*
               return;
             }
             yield* effect_Effect__rspack_import_4/* .ignore */.XeO(terminateProcessGroup(cmd, childProcess, exitSignal, cmd.options));
-          }));
+          },
+          // A descendant that inherited the pipes must not pin the parent's handles once the leader exited.
+          (effect, [childProcess, exitSignal]) => effect_Effect__rspack_import_4/* .ensuring */.yeE(effect, effect_Effect__rspack_import_4/* .sync */.OH5(() => {
+            if (effect_Deferred__rspack_import_3/* .isDoneUnsafe */.NJ(exitSignal)) {
+              for (const stream of childProcess.stdio) stream?.destroy();
+            }
+          }))));
           const pid = (0,effect_unstable_process_ChildProcessSpawner__rspack_import_16/* .ProcessId */.xv)(childProcess.pid);
           childProcess.on("exit", code => {
             if (code !== 0 && effect_Predicate__rspack_import_7/* .isNotNull */.Pe(code)) {
@@ -39943,7 +39949,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeCrypto.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeCrypto.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect_Crypto__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Crypto.js");
 /* import */ var effect_Effect__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
 /* import */ var effect_Layer__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Layer.js");
@@ -40011,7 +40017,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeFileSystem.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeFileSystem.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect_BigInt__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/BigInt.js");
 /* import */ var effect_ByteSize__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/ByteSize.js");
 /* import */ var effect_Cause__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Cause.js");
@@ -40027,7 +40033,7 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var node_fs__rspack_import_1 = __webpack_require__("node:fs");
 /* import */ var node_os__rspack_import_2 = __webpack_require__("node:os");
 /* import */ var node_path__rspack_import_3 = __webpack_require__("node:path");
-/* import */ var _internal_utils_js__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/internal/utils.js");
+/* import */ var _internal_utils_js__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/internal/utils.js");
 /**
  * Shared Node-compatible implementation of Effect's `FileSystem` service.
  *
@@ -40503,7 +40509,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodePath.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodePath.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect_Effect__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
 /* import */ var effect_Layer__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Layer.js");
 /* import */ var effect_Path__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Path.js");
@@ -40594,7 +40600,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeSink.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeSink.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect_Cause__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Cause.js");
 /* import */ var effect_Channel__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Channel.js");
 /* import */ var effect_Effect__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
@@ -40704,7 +40710,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeSocket.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeSocket.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect_Array__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Array.js");
 /* import */ var effect_Context__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Context.js");
 /* import */ var effect_Effect__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
@@ -41203,7 +41209,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeSocketServer.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeSocketServer.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect_Context__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Context.js");
 /* import */ var effect_Deferred__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Deferred.js");
 /* import */ var effect_Effect__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
@@ -41218,7 +41224,7 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var effect_unstable_socket_SocketServer__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/unstable/socket/SocketServer.js");
 /* import */ var node_net__rspack_import_0 = __webpack_require__("node:net");
 /* import */ var node_tls__rspack_import_1 = __webpack_require__("node:tls");
-/* import */ var _NodeSocket_js__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeSocket.js");
+/* import */ var _NodeSocket_js__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeSocket.js");
 /* import */ var _NodeSocket_js__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/ws@8.21.3/node_modules/ws/wrapper.mjs");
 
 
@@ -41492,13 +41498,13 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeStdio.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeStdio.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect_Effect__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
 /* import */ var effect_Layer__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Layer.js");
 /* import */ var effect_PlatformError__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/PlatformError.js");
 /* import */ var effect_Stdio__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Stdio.js");
-/* import */ var _NodeSink_js__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeSink.js");
-/* import */ var _NodeStream_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeStream.js");
+/* import */ var _NodeSink_js__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeSink.js");
+/* import */ var _NodeStream_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeStream.js");
 /**
  * Shared Node.js implementation of the Effect `Stdio` service.
  *
@@ -41567,7 +41573,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeStream.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeStream.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect_Array__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Array.js");
 /* import */ var effect_Cause__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Cause.js");
 /* import */ var effect_Channel__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Channel.js");
@@ -41892,7 +41898,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeTerminal.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeTerminal.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect_Effect__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
 /* import */ var effect_Layer__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Layer.js");
 /* import */ var effect_Option__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Option.js");
@@ -42058,7 +42064,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/internal/nodeChildProcessSpawner.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/internal/nodeChildProcessSpawner.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 const buildSpawnOptions = (options, base, platform) => {
   const detached = options.detached ?? platform !== "win32";
   return {
@@ -42076,7 +42082,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/internal/utils.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/internal/utils.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect_PlatformError__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/PlatformError.js");
 
 /** @internal */
@@ -42123,7 +42129,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 },
 "./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodeCrypto.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _effect_platform_node_shared_NodeCrypto__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeCrypto.js");
+/* import */ var _effect_platform_node_shared_NodeCrypto__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeCrypto.js");
 /**
  * The `NodeCrypto` module provides the Node.js `Crypto` service layer for
  * Effect programs. Provide {@link layer} at the edge of a Node application,
@@ -42154,7 +42160,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 },
 "./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodeFileSystem.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _effect_platform_node_shared_NodeFileSystem__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeFileSystem.js");
+/* import */ var _effect_platform_node_shared_NodeFileSystem__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeFileSystem.js");
 /**
  * Node.js `FileSystem` layer for programs that perform real filesystem I/O.
  *
@@ -42182,7 +42188,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 },
 "./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodePath.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _effect_platform_node_shared_NodePath__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodePath.js");
+/* import */ var _effect_platform_node_shared_NodePath__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodePath.js");
 /**
  * Node.js layers for Effect's `Path` service.
  *
@@ -42228,7 +42234,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodeServices.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect_Layer__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Layer.js");
-/* import */ var _NodeChildProcessSpawner_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeChildProcessSpawner.js");
+/* import */ var _NodeChildProcessSpawner_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeChildProcessSpawner.js");
 /* import */ var _NodeCrypto_js__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodeCrypto.js");
 /* import */ var _NodeFileSystem_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodeFileSystem.js");
 /* import */ var _NodePath_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodePath.js");
@@ -42258,7 +42264,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 },
 "./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodeStdio.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _effect_platform_node_shared_NodeStdio__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeStdio.js");
+/* import */ var _effect_platform_node_shared_NodeStdio__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeStdio.js");
 /**
  * Node.js `Stdio` layer for the current process.
  *
@@ -42287,7 +42293,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 },
 "./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodeTerminal.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _effect_platform_node_shared_NodeTerminal__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeTerminal.js");
+/* import */ var _effect_platform_node_shared_NodeTerminal__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeTerminal.js");
 /**
  * Node.js implementation of the Effect `Terminal` service.
  *
