@@ -32297,10 +32297,14 @@ __webpack_require__.d(__webpack_exports__, {
 
 },
 "./src/internal/operations/ticket-errors.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-/* import */ var effect_Cause__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Cause.js");
-/* import */ var effect_Effect__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
-/* import */ var effect_Exit__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Exit.js");
-/* import */ var effect_Option__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Option.js");
+/* import */ var effect_Cause__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Cause.js");
+/* import */ var effect_Effect__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
+/* import */ var effect_Exit__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Exit.js");
+/* import */ var effect_Option__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Option.js");
+/* import */ var _client_ensure_daemon_js__rspack_import_0 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
+/* import */ var _platform_socket_errors_js__rspack_import_1 = __webpack_require__("./src/internal/platform/socket-errors.ts");
+
+
 
 
 
@@ -32308,7 +32312,7 @@ __webpack_require__.d(__webpack_exports__, {
 const infraFailure = (error)=>{
     switch(error._tag){
         case 'DaemonUnreachable':
-            return new Error(`hauler daemon unreachable at ${error.socketPath}; it starts on demand with any exec, or run: hauler daemon start`);
+            return new Error((0,_client_ensure_daemon_js__rspack_import_0/* .daemonIsAbsent */.Yj)(error.cause) ? `hauler daemon unreachable at ${error.socketPath}; it starts on demand with any exec, or run: hauler daemon start` : `hauler daemon socket at ${error.socketPath} could not be opened (${(0,_platform_socket_errors_js__rspack_import_1/* .socketErrorCode */.R)(error.cause) ?? 'no errno'}); the daemon may still be running, check: hauler daemon status`);
         case 'ControlTimeout':
             return new Error(`hauler daemon did not answer within ${error.timeoutMs}ms (socket ${error.socketPath})`);
         case 'ConnectionClosed':
@@ -32335,17 +32339,17 @@ const infraFailure = (error)=>{
  * infrastructure failures surface as clear tool errors instead of being
  * disguised as "not found" / "timed out".
  */ const runTicketEffect = async (effect, signal)=>{
-    const exit = await effect_Effect__rspack_import_0/* .runPromiseExit */.NpQ(effect, {
+    const exit = await effect_Effect__rspack_import_2/* .runPromiseExit */.NpQ(effect, {
         signal
     });
-    if (effect_Exit__rspack_import_1/* .isSuccess */.oJ(exit)) {
+    if (effect_Exit__rspack_import_3/* .isSuccess */.oJ(exit)) {
         return exit.value;
     }
-    const failure = effect_Cause__rspack_import_2/* .findErrorOption */.L$(exit.cause);
-    if (effect_Option__rspack_import_3.isSome(failure)) {
+    const failure = effect_Cause__rspack_import_4/* .findErrorOption */.L$(exit.cause);
+    if (effect_Option__rspack_import_5.isSome(failure)) {
         throw infraFailure(failure.value);
     }
-    throw effect_Cause__rspack_import_2/* .squash */.iw(exit.cause);
+    throw effect_Cause__rspack_import_4/* .squash */.iw(exit.cause);
 };
 
 __webpack_require__.d(__webpack_exports__, {
@@ -32489,13 +32493,13 @@ __webpack_require__.d(__webpack_exports__, {
 
 },
 "./src/internal/operations/tickets.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-/* import */ var effect_Effect__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
+/* import */ var effect_Effect__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
 /* import */ var _client_tickets_js__rspack_import_0 = __webpack_require__("./src/internal/client/tickets.ts");
 /* import */ var _client_ensure_daemon_js__rspack_import_1 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
 /* import */ var _status_js__rspack_import_2 = __webpack_require__("./src/internal/operations/status.ts");
 /* import */ var _attribution_js__rspack_import_6 = __webpack_require__("./src/internal/operations/attribution.ts");
-/* import */ var _ticket_errors_js__rspack_import_5 = __webpack_require__("./src/internal/operations/ticket-errors.ts");
-/* import */ var _ticket_output_js__rspack_import_3 = __webpack_require__("./src/internal/operations/ticket-output.ts");
+/* import */ var _ticket_errors_js__rspack_import_3 = __webpack_require__("./src/internal/operations/ticket-errors.ts");
+/* import */ var _ticket_output_js__rspack_import_4 = __webpack_require__("./src/internal/operations/ticket-output.ts");
 
 
 
@@ -32515,9 +32519,9 @@ const defaultAwaitMs = 30000;
 /**
  * A stopped daemon leaves the ledger as a ticket's only record, so a read
  * answers from it (a stranded run as orphaned) instead of failing.
- */ const fromLedgerWhenStopped = (read, ticket, config, answer)=>read.pipe(effect_Effect__rspack_import_4/* .catchTag */.KuX('DaemonUnreachable', (error)=>(0,_client_ensure_daemon_js__rspack_import_1/* .daemonIsAbsent */.Yj)(error.cause) ? (0,_status_js__rspack_import_2/* .loadLedgerTicket */.UP)(ticket, 'stopped', config).pipe(effect_Effect__rspack_import_4/* .map */.TjK(answer)) : effect_Effect__rspack_import_4/* .fail */.fJG(error)));
+ */ const fromLedgerWhenStopped = (read, ticket, config, answer)=>read.pipe(effect_Effect__rspack_import_5/* .catchTag */.KuX('DaemonUnreachable', (error)=>(0,_client_ensure_daemon_js__rspack_import_1/* .daemonIsAbsent */.Yj)(error.cause) ? (0,_status_js__rspack_import_2/* .loadLedgerTicket */.UP)(ticket, 'stopped', config).pipe(effect_Effect__rspack_import_5/* .map */.TjK(answer)) : effect_Effect__rspack_import_5/* .fail */.fJG(error)));
 const awaitTicketResult = async (input, options)=>{
-    const waited = await (0,_ticket_errors_js__rspack_import_5/* .runTicketEffect */.n)(fromLedgerWhenStopped((0,_client_tickets_js__rspack_import_0/* .awaitTicketWithProgress */.Ik)(input.ticket, input.maxWaitMs ?? defaultAwaitMs, options.onProgress ?? (()=>undefined), options.config).pipe(effect_Effect__rspack_import_4/* .map */.TjK(({ request, timedOut })=>({
+    const waited = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)(fromLedgerWhenStopped((0,_client_tickets_js__rspack_import_0/* .awaitTicketWithProgress */.Ik)(input.ticket, input.maxWaitMs ?? defaultAwaitMs, options.onProgress ?? (()=>undefined), options.config).pipe(effect_Effect__rspack_import_5/* .map */.TjK(({ request, timedOut })=>({
             daemon: 'running',
             request: requestForConsumer(request),
             timedOut
@@ -32536,7 +32540,7 @@ const awaitTicketResult = async (input, options)=>{
     };
 };
 const fetchTicketResult = async (input, options)=>{
-    const { daemon, request } = await (0,_ticket_errors_js__rspack_import_5/* .runTicketEffect */.n)(fromLedgerWhenStopped((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config).pipe(effect_Effect__rspack_import_4/* .map */.TjK((record)=>({
+    const { daemon, request } = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)(fromLedgerWhenStopped((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config).pipe(effect_Effect__rspack_import_5/* .map */.TjK((record)=>({
             daemon: 'running',
             request: requestForConsumer(record)
         }))), input.ticket, options.config, (found)=>({
@@ -32559,7 +32563,7 @@ const fetchTicketResult = async (input, options)=>{
  */ const fetchTicketResultView = async (input, options)=>{
     const result = await fetchTicketResult(input, options);
     return {
-        output: (0,_ticket_output_js__rspack_import_3/* .loadTicketOutput */.Oy)(result.request, input.full === true),
+        output: (0,_ticket_output_js__rspack_import_4/* .loadTicketOutput */.Oy)(result.request, input.full === true),
         result
     };
 };
@@ -32591,8 +32595,8 @@ const acceptedKillSummary = (ticket, request)=>{
     }
 };
 const killTicketResult = async (input, options)=>{
-    const killed = await (0,_ticket_errors_js__rspack_import_5/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .killTicket */.N6)(input.ticket, options.config), options.signal);
-    const request = await (0,_ticket_errors_js__rspack_import_5/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config), options.signal);
+    const killed = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .killTicket */.N6)(input.ticket, options.config), options.signal);
+    const request = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config), options.signal);
     return {
         killed,
         operation: 'kill',
@@ -32625,7 +32629,7 @@ const formatWait = (ms)=>{
 const submitTicketRequest = async (input, requestContext, options)=>{
     const request = (0,_attribution_js__rspack_import_6/* .enrichTicketRequest */.TZ)(input, requestContext);
     const attribution = (0,_attribution_js__rspack_import_6/* .ticketAttribution */.YW)(request, requestContext);
-    const ack = await (0,_ticket_errors_js__rspack_import_5/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .submitBackgroundAck */.gK)(request, options.config), options.signal);
+    const ack = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .submitBackgroundAck */.gK)(request, options.config), options.signal);
     if (ack === null) {
         return {
             attribution,
@@ -176458,21 +176462,21 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 /* import */ var _agent_bundle_runtime__rspack_import_23 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/index.js");
 /* import */ var node_url__rspack_import_4 = __webpack_require__("node:url");
 /* import */ var node_worker_threads__rspack_import_5 = __webpack_require__("node:worker_threads");
-/* import */ var _tmp_poteto_280_src_cli_daemon_ts__rspack_import_6 = __webpack_require__("./src/cli/daemon.ts");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.cli.ts");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.cli.ts");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.cli.ts");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.cli.ts");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.cli.ts");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.cli.ts");
-/* import */ var _tmp_poteto_280_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.cli.ts");
+/* import */ var _tmp_poteto_hint_src_cli_daemon_ts__rspack_import_6 = __webpack_require__("./src/cli/daemon.ts");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.cli.ts");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.cli.ts");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.cli.ts");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.cli.ts");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.cli.ts");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.cli.ts");
+/* import */ var _tmp_poteto_hint_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.cli.ts");
 
 
 
@@ -176481,21 +176485,21 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 
 
 
-const route0 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_cli_daemon_ts__rspack_import_6, 'default'), _tmp_poteto_280_src_cli_daemon_ts__rspack_import_6);
+const route0 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_cli_daemon_ts__rspack_import_6, 'default'), _tmp_poteto_hint_src_cli_daemon_ts__rspack_import_6);
 
-const route1 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7);
+const route1 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7);
 
-const route2 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
+const route2 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
 
-const route3 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
+const route3 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
 
-const route4 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
+const route4 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
 
-const route5 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
+const route5 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
 
-const route6 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
+const route6 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
 
-const route7 = Object.assign({}, Reflect.get(_tmp_poteto_280_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _tmp_poteto_280_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
+const route7 = Object.assign({}, Reflect.get(_tmp_poteto_hint_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _tmp_poteto_hint_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
 
 
 
@@ -176526,31 +176530,31 @@ const routes = Object.freeze({
     }),
     "tool:hauler/hauler_await": Object.freeze({
         module: route1,
-        projection: _tmp_poteto_280_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16
+        projection: _tmp_poteto_hint_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16
     }),
     "tool:hauler/hauler_kill": Object.freeze({
         module: route2,
-        projection: _tmp_poteto_280_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17
+        projection: _tmp_poteto_hint_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17
     }),
     "tool:hauler/hauler_last": Object.freeze({
         module: route3,
-        projection: _tmp_poteto_280_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18
+        projection: _tmp_poteto_hint_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18
     }),
     "tool:hauler/hauler_log": Object.freeze({
         module: route4,
-        projection: _tmp_poteto_280_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19
+        projection: _tmp_poteto_hint_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19
     }),
     "tool:hauler/hauler_request": Object.freeze({
         module: route5,
-        projection: _tmp_poteto_280_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14
+        projection: _tmp_poteto_hint_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14
     }),
     "tool:hauler/hauler_result": Object.freeze({
         module: route6,
-        projection: _tmp_poteto_280_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20
+        projection: _tmp_poteto_hint_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20
     }),
     "tool:hauler/hauler_status": Object.freeze({
         module: route7,
-        projection: _tmp_poteto_280_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21
+        projection: _tmp_poteto_hint_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21
     })
 });
 const commands = Object.freeze([
