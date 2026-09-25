@@ -79622,7 +79622,7 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 
 
 
-const artifactEpoch = "2e0a772739c6c7db1e45825bdbabd31652dd444fec3ef4f18c883a2518687199";
+const artifactEpoch = "fc357b72e9ccbcd5c815f04897829be806702b144718007fa4d9d1f20d4dac9e";
 const flightArtifactEpoch = "cargo-hauler@0.9.11";
 const canonicalEvent = "session/start";
 const capabilityRevision = "0.147.0";

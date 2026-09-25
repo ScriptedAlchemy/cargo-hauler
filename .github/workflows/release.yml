@@ -18,7 +18,7 @@ jobs:
   release:
     if: github.repository == 'ScriptedAlchemy/cargo-hauler'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,8 +62,9 @@ jobs:
 
           const { name, version } = JSON.parse(await readFile('package.json', 'utf8'));
           const endpoint = `https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`;
-          // npm finalized the previous release more than six minutes after upload.
-          for (let attempt = 1; attempt <= 40; attempt++) {
+          // npm has taken 13 to 15 minutes to show a published version.
+          const deadline = Date.now() + 20 * 60_000;
+          for (let attempt = 1, wait = 15_000; ; attempt++, wait = Math.min(wait * 1.5, 60_000)) {
             const url = new URL(endpoint);
             url.searchParams.set('release-verification', `${Date.now()}-${attempt}`);
             try {
@@ -80,8 +81,9 @@ jobs:
               }
             } catch {}
             console.log(`attempt ${attempt}: registry has not confirmed ${name}@${version}`);
-            if (attempt < 40) await delay(15_000);
+            if (Date.now() + wait > deadline) break;
+            await delay(wait);
           }
-          console.error(`::error::Registry did not confirm ${name}@${version} after bounded visibility retries.`);
+          console.error(`::error::Registry did not confirm ${name}@${version} within 20 minutes.`);
           process.exit(1);
           NODE
