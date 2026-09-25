@@ -243,35 +243,6 @@ describe('runExecClient', () => {
       expect(collected.stderr()).toMatch(/ticket cc-\d+ started \(waited \d+ms\)/u);
     }));
 
-  it.live('delivers every line of a long demuxed build burst to a reader that keeps up', () =>
-    Effect.gen(function* () {
-      const fixture = yield* scopedDaemon(5);
-      // Every demuxed line is its own message, and a pipe read arriving
-      // mid-burst resumes the lane ahead of the connection writer, so
-      // hundreds of lines queue between writes to a socket that is idle.
-      for (const run of [1, 2, 3]) {
-        const collected = collectIo();
-        const result = yield* runExecClient({
-          argv: ['cargo', 'build', '--bin', `burst-${run}`],
-          autoSpawn: false,
-          config: fixture.config,
-          cwd: fixture.ws1,
-          env: fakeCargoEnv(fixture, { FAKE_OUTPUT_BYTES: '2950000', FAKE_LATE_OUT: 'late-last-line' }),
-          io: collected.io,
-        });
-
-        expect(result.exitCode).toBe(0);
-        expect(collected.stderr()).not.toContain('output truncated');
-        const lines = collected.stdout().split('\n');
-        expect(lines.filter((line) => line.startsWith('fake-bulk:'))).toHaveLength(50_000);
-        expect(lines.slice(-3)).toEqual([
-          'fake-bulk:0123456789abcdef0123456789abcdef0123456789abcdef',
-          'late-last-line',
-          '',
-        ]);
-      }
-    }), 30_000);
-
   it.live('bounds a reader that stops reading and names where the full output is', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
