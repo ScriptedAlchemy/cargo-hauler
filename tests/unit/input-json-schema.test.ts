@@ -12,14 +12,15 @@ import * as haulerResult from '../../src/mcp/hauler/tools/hauler_result.js';
 import * as haulerStatus from '../../src/mcp/hauler/tools/hauler_status.js';
 
 /**
- * `config.inputJsonSchema` is the static, data-only copy of a route's zod
+ * `inputJsonSchema` is the static, data-only copy of a route's zod
  * `inputSchema` that the framework projects into CLI flags and host forms
  * (AB4814/AB4845). The compiler reads it as a literal and never evaluates the
  * zod schema, so the two can drift. This test derives the literal the
  * framework grammar admits (object, `additionalProperties: false`, scalar /
  * enum / array-of-scalar properties, `required`, `description`, `default`) from the zod
  * schema and pins each route's declared copy to it. When a schema changes,
- * paste the printed literal into the route's `config`.
+ * paste the printed literal into the route's `defineTool` config (or `config`
+ * for the daemon command).
  */
 type Scalar = boolean | number | string;
 type Metadata = { readonly default?: Scalar | readonly Scalar[]; readonly description?: string };
@@ -64,22 +65,22 @@ export const deriveInputJsonSchema = (schema: z.ZodType) => {
 };
 
 const routes = [
-  ['src/cli/daemon.ts', daemon],
-  ['src/mcp/hauler/tools/hauler_await.tsx', haulerAwait],
-  ['src/mcp/hauler/tools/hauler_dashboard.tsx', haulerDashboard],
-  ['src/mcp/hauler/tools/hauler_kill.tsx', haulerKill],
-  ['src/mcp/hauler/tools/hauler_last.tsx', haulerLast],
-  ['src/mcp/hauler/tools/hauler_log.tsx', haulerLog],
-  ['src/mcp/hauler/tools/hauler_request.tsx', haulerRequest],
-  ['src/mcp/hauler/tools/hauler_result.tsx', haulerResult],
-  ['src/mcp/hauler/tools/hauler_status.tsx', haulerStatus],
+  ['src/cli/daemon.ts', daemon.inputSchema, daemon.config.inputJsonSchema],
+  ['src/mcp/hauler/tools/hauler_await.tsx', haulerAwait.inputSchema, haulerAwait.default.inputJsonSchema],
+  ['src/mcp/hauler/tools/hauler_dashboard.tsx', haulerDashboard.inputSchema, haulerDashboard.default.inputJsonSchema],
+  ['src/mcp/hauler/tools/hauler_kill.tsx', haulerKill.inputSchema, haulerKill.default.inputJsonSchema],
+  ['src/mcp/hauler/tools/hauler_last.tsx', haulerLast.inputSchema, haulerLast.default.inputJsonSchema],
+  ['src/mcp/hauler/tools/hauler_log.tsx', haulerLog.inputSchema, haulerLog.default.inputJsonSchema],
+  ['src/mcp/hauler/tools/hauler_request.tsx', haulerRequest.inputSchema, haulerRequest.default.inputJsonSchema],
+  ['src/mcp/hauler/tools/hauler_result.tsx', haulerResult.inputSchema, haulerResult.default.inputJsonSchema],
+  ['src/mcp/hauler/tools/hauler_status.tsx', haulerStatus.inputSchema, haulerStatus.default.inputJsonSchema],
 ] as const;
 
 describe('inputJsonSchema mirrors the zod inputSchema', () => {
-  for (const [path, route] of routes) {
+  for (const [path, inputSchema, inputJsonSchema] of routes) {
     it(path, () => {
-      const expected = deriveInputJsonSchema(route.inputSchema);
-      expect(route.config.inputJsonSchema, `paste into ${path}: ${JSON.stringify(expected)}`).toEqual(expected);
+      const expected = deriveInputJsonSchema(inputSchema);
+      expect(inputJsonSchema, `paste into ${path}: ${JSON.stringify(expected)}`).toEqual(expected);
     });
   }
 

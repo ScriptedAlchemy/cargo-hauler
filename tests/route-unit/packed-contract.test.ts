@@ -122,8 +122,7 @@ const fixturesFor = (
   fixture: Fixture,
   tickets: { readonly finished: string; readonly running: string },
 ): Record<string, ContractRouteFixture> => ({
-  // The dashboard is a resource: no input, but the coverage check wants an entry.
-  'app:hauler/dashboard': {},
+  'app:hauler/dashboard': { kind: 'resource' },
   'tool:hauler/hauler_dashboard': { input: {}, inputs: [{ limit: 5 }], resultCompat: 'additive' },
   'tool:hauler/hauler_await': {
     // Cancellation must catch the call mid-wait, so it awaits the long job.

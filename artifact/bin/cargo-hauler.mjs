@@ -32724,7 +32724,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/platform/hauler-binding.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var node_path__rspack_import_0 = __webpack_require__("node:path");
-/* import */ var _agent_bundle_runtime_plugin__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/49.js");
+/* import */ var _agent_bundle_runtime_plugin__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/49.js");
 
 
 /** The product's declared script identity, relative to a framework code root. */ const haulerArgvForRoot = (root)=>[
@@ -34341,7 +34341,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/ui/documents/admission-state.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
+/* import */ var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 /* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
 /* import */ var _primitives_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/primitives.tsx");
@@ -34379,7 +34379,7 @@ __webpack_require__.d(__webpack_exports__, {
                     }
                 ]
             }),
-            model.paused ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Context */.g6.Context, {
+            model.paused ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Context */.g.Context, {
                 children: "Admission is paused by hard memory pressure. Queued tickets resume when MemAvailable recovers; do not kill cargo to free memory."
             }) : null
         ]
@@ -34395,7 +34395,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/ui/documents/batch-test-summary.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
+/* import */ var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 /* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
 /* import */ var _operations_batch_test_output_js__rspack_import_2 = __webpack_require__("./src/internal/operations/batch-test-output.ts");
@@ -34414,16 +34414,16 @@ __webpack_require__.d(__webpack_exports__, {
             /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_primitives_js__rspack_import_3/* .Heading */.DZ, {
                 children: "Shared test-run summaries (all observed binaries)"
             }),
-            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Context */.g6.Context, {
+            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Context */.g.Context, {
                 children: `This ticket used ${invocation}. Its output and exit are shared, not a separately executed per-package run. Folding may widen packages and apply the union of test filters across binaries; these counts are not counts for this ticket's original filter alone. The trailing output below can belong to another binary.`
             }),
-            output.summaries.length === 0 ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Text */.g6.Text, {
+            output.summaries.length === 0 ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Text */.g.Text, {
                 children: output.kind === 'unavailable' ? 'Binary summaries unavailable: the retained log is missing or unreadable. The tail alone cannot establish this package’s result.' : 'No complete binary summaries were observed in the retained log. This is not evidence that this package ran zero tests or passed.'
             }) : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_primitives_js__rspack_import_3/* .CodeBlock */.NG, {
                 lang: "text",
                 children: output.summaries.map((entry)=>`${entry.binary}\n${entry.result}`).join('\n\n')
             }),
-            output.incomplete || record.status === 'running' ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Context */.g6.Context, {
+            output.incomplete || record.status === 'running' ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Context */.g.Context, {
                 children: "The index is partial: the run may still be active, or log retention, a missing heading, or the bounded scan omitted output. No per-ticket test verdict is inferred."
             }) : null
         ]
@@ -34494,7 +34494,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/ui/documents/dashboard-link.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
+/* import */ var _agent_bundle_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 /* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
 /* import */ var _constants_js__rspack_import_3 = __webpack_require__("./src/constants.ts");
@@ -34507,7 +34507,7 @@ __webpack_require__.d(__webpack_exports__, {
  * `Agent.Resource` block: the App is attached to `hauler_dashboard` through
  * its `_meta.ui.resourceUri`, and hosts that cannot render MCP Apps must not
  * fail the whole document over a resource link they cannot show.
- */ const DashboardLink = ({ names })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Context */.g6.Context, {
+ */ const DashboardLink = ({ names })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Context */.g.Context, {
         children: `Dashboard: ${_constants_js__rspack_import_3/* .APP_RESOURCE_URI */.k} — ${names.dashboard} opens it on hosts that render MCP Apps; elsewhere run the browser preview (see the hauler-dashboard skill).`
     });
 
@@ -34520,7 +34520,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/ui/documents/documents.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
+/* import */ var _agent_bundle_runtime__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 /* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
 /* import */ var _contracts_protocol_js__rspack_import_2 = __webpack_require__("./src/internal/contracts/protocol.ts");
@@ -34563,14 +34563,14 @@ const OrphanedStatus = ({ result })=>{
         return null;
     }
     const tickets = (0,_util_text_js__rspack_import_13/* .countWord */.M)(count, 'orphaned ticket');
-    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g6.Context, {
+    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g.Context, {
         children: result.daemon === 'unresponsive' ? `${tickets} ${count === 1 ? 'has' : 'have'} unconfirmed ownership because the daemon did not answer; check daemon health before resubmitting.` : `${tickets} ${count === 1 ? 'was' : 'were'} stranded by the stopped daemon and will not finish; resubmit the ones still wanted.`
     });
 };
-const StatusDocument = ({ filtered, names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g6.Result, {
+const StatusDocument = ({ filtered, names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g.Result, {
         value: (0,_util_json_js__rspack_import_15/* .documentValue */.H)(result),
         children: [
-            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g6.Text, {
+            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g.Text, {
                 children: result.summary.split('\n', 1)[0] ?? result.summary
             }),
             /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_admission_state_js__rspack_import_3/* .AdmissionState */.P, {
@@ -34602,7 +34602,7 @@ const StatusDocument = ({ filtered, names, nowMs, result })=>/*#__PURE__*/ (0,re
             /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(OrphanedStatus, {
                 result: result
             }),
-            result.active.length > 0 ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g6.Context, {
+            result.active.length > 0 ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g.Context, {
                 children: `Do not start a duplicate cargo run for anything listed in flight: submit through ${names.request} or run cargo normally and the hauler attaches you to the existing run. Wait with ${names.await} <ticket>.`
             }) : null,
             /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_dashboard_link_js__rspack_import_4/* .DashboardLink */.j, {
@@ -34625,10 +34625,10 @@ const StatusDocument = ({ filtered, names, nowMs, result })=>/*#__PURE__*/ (0,re
             })
         ]
     });
-const LogDocument = ({ nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g6.Result, {
+const LogDocument = ({ nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g.Result, {
         value: (0,_util_json_js__rspack_import_15/* .documentValue */.H)(result),
         children: [
-            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g6.Text, {
+            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g.Text, {
                 children: result.summary
             }),
             /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_ticket_list_js__rspack_import_12/* .TicketList */.Z, {
@@ -34642,10 +34642,10 @@ const TicketNotKnown = ({ daemon, names, ticket })=>/*#__PURE__*/ (0,react_jsx_r
         what: ticket,
         children: `${daemon === 'running' ? 'not known to the daemon' : `not in the ledger, and the daemon is ${daemon}`}. Tickets look like cc-123; check ${names.log} for recent ids.`
     });
-const LastDocument = ({ names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g6.Result, {
+const LastDocument = ({ names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g.Result, {
         value: (0,_util_json_js__rspack_import_15/* .documentValue */.H)(result),
         children: [
-            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g6.Text, {
+            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g.Text, {
                 children: result.summary
             }),
             result.request === null ? null : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
@@ -34666,10 +34666,10 @@ const LastDocument = ({ names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runt
  * `hauler result`: the ticket card with the stored tail, then where the whole
  * output lives. Under `--full` the log replaces the tail as the document body
  * (the tail would only repeat its last lines).
- */ const ResultDocument = ({ names, nowMs, output, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g6.Result, {
+ */ const ResultDocument = ({ names, nowMs, output, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g.Result, {
         value: (0,_util_json_js__rspack_import_15/* .documentValue */.H)(result),
         children: [
-            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g6.Text, {
+            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g.Text, {
                 children: result.summary
             }),
             result.request === null ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(TicketNotKnown, {
@@ -34696,32 +34696,32 @@ const LastDocument = ({ names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runt
             })
         ]
     });
-const KillDocument = ({ names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g6.Result, {
+const KillDocument = ({ names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g.Result, {
         value: (0,_util_json_js__rspack_import_15/* .documentValue */.H)(result),
         children: [
-            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g6.Text, {
+            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g.Text, {
                 children: result.summary
             }),
             result.request === null ? null : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_ticket_card_js__rspack_import_10/* .TicketCard */.f, {
                 nowMs: nowMs,
                 record: result.request
             }),
-            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g6.Context, {
+            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g.Context, {
                 children: result.killed ? `Riders attached to ${result.ticket} return to their lane or fail with it. Confirm with ${names.result} ${result.ticket} (status becomes killed) and re-submit only if the work is still wanted.` : `Nothing changed. Use ${names.status} to find the ticket that is actually holding the lane.`
             })
         ]
     });
-const AwaitDocument = ({ maxWaitMs, names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g6.Result, {
+const AwaitDocument = ({ maxWaitMs, names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g.Result, {
         value: (0,_util_json_js__rspack_import_15/* .documentValue */.H)(result),
         children: [
-            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g6.Text, {
+            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g.Text, {
                 children: result.summary
             }),
             result.request === null ? null : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_ticket_card_js__rspack_import_10/* .TicketCard */.f, {
                 nowMs: nowMs,
                 record: result.request
             }),
-            result.timedOut ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g6.Context, {
+            result.timedOut ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g.Context, {
                 children: `The ${(0,_shared_format_js__rspack_import_16/* .formatMs */._V)(maxWaitMs)} wait expired before ${result.ticket} finished. Call ${names.await} again (each call waits up to ${(0,_shared_format_js__rspack_import_16/* .formatMs */._V)(_contracts_protocol_js__rspack_import_2/* .awaitCeilingMs */._K)}) rather than polling ${names.result} in a tight loop.`
             }) : result.request === null ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(TicketNotKnown, {
                 daemon: result.daemon,
@@ -34741,10 +34741,10 @@ const AwaitDocument = ({ maxWaitMs, names, nowMs, result })=>/*#__PURE__*/ (0,re
     const wait = queue.waitEtaMs === undefined ? '' : `, wait ~${(0,_shared_format_js__rspack_import_16/* .formatMs */._V)(queue.waitEtaMs)}`;
     return `behind ${queue.ahead.join(', ')} (${queue.position} ahead${wait})`;
 };
-const RequestDocument = ({ argv, lineage, names, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g6.Result, {
+const RequestDocument = ({ argv, lineage, names, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g.Result, {
         value: (0,_util_json_js__rspack_import_15/* .documentValue */.H)(result),
         children: [
-            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g6.Text, {
+            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Text */.g.Text, {
                 children: result.summary
             }),
             result.ticket === null ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_states_js__rspack_import_9/* .ErrorState */.W5, {
@@ -34776,7 +34776,7 @@ const RequestDocument = ({ argv, lineage, names, result })=>/*#__PURE__*/ (0,rea
                             }
                         ]
                     }),
-                    /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g6.Context, {
+                    /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g.Context, {
                         children: result.waitingFor === undefined || result.waitingFor.length === 0 ? `Ticket ${result.ticket} is running in the background. Continue other work; when the session has a hold-stop ticket the stop hook waits for it. Retrieve with ${names.result} ${result.ticket}, or block with ${names.await} ${result.ticket}.` : `Ticket ${result.ticket} is queued behind ${result.waitingFor.join(', ')} and starts once they finish; it fails with "prerequisite cc-N failed" if one of them fails or is killed. Retrieve with ${names.result} ${result.ticket}, or block with ${names.await} ${result.ticket}.`
                     })
                 ]
@@ -34799,7 +34799,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/ui/documents/full-output.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
+/* import */ var _agent_bundle_runtime__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 /* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
 /* import */ var _shared_format_js__rspack_import_6 = __webpack_require__("./src/internal/ui/shared/format.ts");
@@ -34824,7 +34824,7 @@ __webpack_require__.d(__webpack_exports__, {
         case 'none':
             return null;
         case 'available':
-            return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Text */.g6.Text, {
+            return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Text */.g.Text, {
                 children: `Full output: ${output.path} (${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes)}) — read it with ${names.resultFull(ticket)}`
             });
         case 'missing':
@@ -34837,13 +34837,13 @@ __webpack_require__.d(__webpack_exports__, {
                 const chunks = (0,_operations_ticket_output_js__rspack_import_2/* .chunkOutput */.vU)(output.text);
                 return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
                     children: [
-                        /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Text */.g6.Text, {
+                        /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Text */.g.Text, {
                             children: `Full output (${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes)}): ${output.path}`
                         }),
-                        output.omittedBytes > 0 ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Context */.g6.Context, {
+                        output.omittedBytes > 0 ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Context */.g.Context, {
                             children: `Showing the last ${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes - output.omittedBytes)} of ${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes)}; the first ${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.omittedBytes)} are omitted here to fit the document. The whole run is in ${output.path}.`
                         }) : null,
-                        chunks.length === 0 ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Text */.g6.Text, {
+                        chunks.length === 0 ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Text */.g.Text, {
                             children: "The log is empty: the run produced no output."
                         }) : chunks.map((chunk, index)=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_primitives_js__rspack_import_3/* .CodeBlock */.NG, {
                                 lang: "text",
@@ -34928,7 +34928,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/ui/documents/kache-stats.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
+/* import */ var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 /* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
 /* import */ var _primitives_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/primitives.tsx");
@@ -34962,7 +34962,7 @@ __webpack_require__.d(__webpack_exports__, {
                     }
                 ]
             }),
-            pressure.warnings.map((warning)=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Context */.g6.Context, {
+            pressure.warnings.map((warning)=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Context */.g.Context, {
                     children: `kache warning: ${warning.text}`
                 }, warning.kind))
         ]
@@ -35033,7 +35033,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/ui/documents/lane-board.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
+/* import */ var _agent_bundle_runtime__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 /* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
 /* import */ var _shared_shared_target_js__rspack_import_6 = __webpack_require__("./src/internal/ui/shared/shared-target.ts");
@@ -35059,7 +35059,7 @@ __webpack_require__.d(__webpack_exports__, {
     }
     return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
         children: [
-            model.sharedTargets.map((shared)=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Context */.g6.Context, {
+            model.sharedTargets.map((shared)=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Context */.g.Context, {
                     children: (0,_shared_shared_target_js__rspack_import_6/* .sharedTargetWarning */.fO)(shared)
                 }, shared.targetDir)),
             model.rows.length === 0 ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_states_js__rspack_import_3/* .EmptyState */.pp, {
@@ -35104,7 +35104,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/ui/documents/log-tail.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
+/* import */ var _agent_bundle_runtime__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 /* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
 /* import */ var _primitives_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/primitives.tsx");
@@ -35127,7 +35127,7 @@ const lastLines = (text, limit)=>{
     }
     return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
         children: [
-            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Text */.g6.Text, {
+            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Text */.g.Text, {
                 children: live ? 'Live output tail:' : 'Output tail:'
             }),
             /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_primitives_js__rspack_import_2/* .CodeBlock */.NG, {
@@ -35147,7 +35147,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/ui/documents/primitives.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
+/* import */ var _agent_bundle_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 /* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
 
@@ -35158,19 +35158,19 @@ const singleLine = (value)=>value.replaceAll(/\s*\n\s*/gu, ' ');
     const lines = fields.flatMap(({ label, value })=>value === null || value === undefined || value === '' ? [] : [
             `- **${label}:** ${singleLine(String(value))}`
         ]);
-    return lines.length === 0 ? null : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Markdown */.g6.Markdown, {
+    return lines.length === 0 ? null : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Markdown */.g.Markdown, {
         children: lines.join('\n')
     });
 };
 const cell = (value)=>singleLine(value).replaceAll('|', '\\|');
-const Table = ({ columns, rows })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Markdown */.g6.Markdown, {
+const Table = ({ columns, rows })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Markdown */.g.Markdown, {
         children: [
             `| ${columns.join(' | ')} |`,
             `| ${columns.map(()=>'---').join(' | ')} |`,
             ...rows.map((row)=>`| ${row.map(cell).join(' | ')} |`)
         ].join('\n')
     });
-const Heading = ({ children })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Markdown */.g6.Markdown, {
+const Heading = ({ children })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Markdown */.g.Markdown, {
         children: `### ${children}`
     });
 /** Fenced block; a fence longer than any backtick run inside keeps cargo output from escaping. */ const CodeBlock = ({ children, lang = '' })=>{
@@ -35178,7 +35178,7 @@ const Heading = ({ children })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_impor
         ...children.matchAll(/`+/gu)
     ].map((match)=>match[0].length));
     const fence = '`'.repeat(longestRun + 1);
-    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Markdown */.g6.Markdown, {
+    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Markdown */.g.Markdown, {
         children: `${fence}${lang}\n${children.replace(/\n$/u, '')}\n${fence}`
     });
 };
@@ -35195,7 +35195,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/ui/documents/states.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
+/* import */ var _agent_bundle_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 /* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
 
@@ -35204,13 +35204,13 @@ __webpack_require__.d(__webpack_exports__, {
 /**
  * The three non-happy shapes every document may take, named so a route
  * composes them instead of hand-writing "nothing here" strings.
- */ const EmptyState = ({ children })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Text */.g6.Text, {
+ */ const EmptyState = ({ children })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Text */.g.Text, {
         children: children
     });
-/** Something we looked for and honestly could not observe. */ const UnavailableState = ({ children, what })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Context */.g6.Context, {
+/** Something we looked for and honestly could not observe. */ const UnavailableState = ({ children, what })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Context */.g.Context, {
         children: `${what} unavailable: ${children}`
     });
-/** A represented failure: the document stays a document, the status flips to error. */ const ErrorState = ({ children, code })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Error */.g6.Error, {
+/** A represented failure: the document stays a document, the status flips to error. */ const ErrorState = ({ children, code })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Error */.g.Error, {
         code: code,
         children: children
     });
@@ -35226,7 +35226,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/ui/documents/streaming.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
+/* import */ var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 /* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
 /* import */ var _shared_format_js__rspack_import_5 = __webpack_require__("./src/internal/ui/shared/format.ts");
@@ -35240,7 +35240,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 const AwaitPending = ({ maxWaitMs, names, nowMs, snapshot, ticket })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
         children: [
-            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Text */.g6.Text, {
+            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Text */.g.Text, {
                 children: snapshot === null ? `Waiting up to ${(0,_shared_format_js__rspack_import_5/* .formatMs */._V)(maxWaitMs)} for ${ticket} (not known to the daemon yet).` : `Waiting up to ${(0,_shared_format_js__rspack_import_5/* .formatMs */._V)(maxWaitMs)} for ${ticket} (${snapshot.status}).`
             }),
             snapshot === null ? null : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_ticket_card_js__rspack_import_3/* .TicketCard */.f, {
@@ -35248,7 +35248,7 @@ const AwaitPending = ({ maxWaitMs, names, nowMs, snapshot, ticket })=>/*#__PURE_
                 record: snapshot,
                 tailLines: 20
             }),
-            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Progress */.g6.Progress, {
+            /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Progress */.g.Progress, {
                 completed: 0,
                 message: `${names.await} ${ticket}: waiting`,
                 total: maxWaitMs
@@ -35261,7 +35261,7 @@ const AwaitSettled = async ({ awaited, maxWaitMs, names })=>/*#__PURE__*/ (0,rea
         nowMs: Date.now(),
         result: await awaited
     });
-/** `hauler_await` / `hauler await`: the live ticket now, the settled ticket when the wait ends. */ const AwaitStream = ({ awaited, ...pending })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Result */.g6.Result, {
+/** `hauler_await` / `hauler await`: the live ticket now, the settled ticket when the wait ends. */ const AwaitStream = ({ awaited, ...pending })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Result */.g.Result, {
         children: /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(react__rspack_import_1.Suspense, {
             fallback: /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(AwaitPending, {
                 ...pending
@@ -35278,9 +35278,9 @@ const LogSettled = async ({ loading, names })=>/*#__PURE__*/ (0,react_jsx_runtim
         nowMs: Date.now(),
         result: await loading
     });
-/** `hauler_log` / `hauler log`: a progress frame while the ledger is read, then the listing. */ const LogStream = ({ loading, names })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Result */.g6.Result, {
+/** `hauler_log` / `hauler log`: a progress frame while the ledger is read, then the listing. */ const LogStream = ({ loading, names })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Result */.g.Result, {
         children: /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(react__rspack_import_1.Suspense, {
-            fallback: /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Progress */.g6.Progress, {
+            fallback: /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Progress */.g.Progress, {
                 completed: 0,
                 message: `${names.log}: reading the ledger`
             }),
@@ -35449,7 +35449,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/ui/documents/ticket-guidance.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
+/* import */ var _agent_bundle_runtime__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/506.js");
 /* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 /* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
 /* import */ var _contracts_protocol_js__rspack_import_2 = __webpack_require__("./src/internal/contracts/protocol.ts");
@@ -35465,28 +35465,28 @@ __webpack_require__.d(__webpack_exports__, {
  * One component per ticket status. The record keyed by `StatusRowStatus` is
  * exhaustive by construction — adding a status to the daemon protocol fails
  * this module's type-check until its guidance exists.
- */ const PendingGuidance = ({ names, record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g6.Context, {
+ */ const PendingGuidance = ({ names, record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g.Context, {
         children: `${record.ticket} is still ${record.status}. Do not re-run the same cargo command; call ${names.await} with ticket ${record.ticket} (each call waits up to ${(0,_shared_format_js__rspack_import_4/* .formatMs */._V)(_contracts_protocol_js__rspack_import_2/* .awaitCeilingMs */._K)}; call again to keep waiting) or check ${names.result} later.`
     });
-const DoneGuidance = ({ record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g6.Context, {
+const DoneGuidance = ({ record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g.Context, {
         children: `${record.ticket} succeeded; its output above is the result of that cargo run.`
     });
 const FailedGuidance = ({ record })=>{
     const prerequisite = (0,_headlines_js__rspack_import_5/* .failedPrerequisite */.O9)(record);
-    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g6.Context, {
+    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g.Context, {
         children: prerequisite === null ? `${record.ticket} failed (exit ${record.exitCode ?? 'unknown'}). Fix the diagnostics above before re-running; the hauler dedupes identical requests, so an unchanged retry attaches to the same result.` : `${record.ticket} never ran: ${record.error} — fix or rerun ${prerequisite}, then resubmit after the new ticket.`
     });
 };
-const KilledGuidance = ({ names, record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g6.Context, {
+const KilledGuidance = ({ names, record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g.Context, {
         children: (0,_contracts_protocol_js__rspack_import_2/* .isOrphanedByRestart */.oG)(record) ? `${record.ticket} did not finish: the daemon restarted while it was in flight, and running cargo processes are not handed over across a restart. Nothing else went wrong with the command; resubmit it through ${names.request} if the work is still needed.` : `${record.ticket} was killed before finishing; resubmit only if the work is still needed.`
     });
-const DeniedGuidance = ({ record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g6.Context, {
+const DeniedGuidance = ({ record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g.Context, {
         children: `${record.ticket} was denied before cargo ran: ${record.error ?? 'see error above'}.`
     });
-const PassthroughGuidance = ({ record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g6.Context, {
+const PassthroughGuidance = ({ record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g.Context, {
         children: `${record.ticket} ran directly without broker coordination.`
     });
-const OrphanedGuidance = ({ names, record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g6.Context, {
+const OrphanedGuidance = ({ names, record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g.Context, {
         children: `${record.ticket} is orphaned. Check ${names.status} for the daemon's state before resubmitting through ${names.request}.`
     });
 const guidanceByStatus = {
@@ -36190,14 +36190,14 @@ __webpack_require__.d(__webpack_exports__, {
 "./src/mcp/hauler/tools/hauler_await.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 __webpack_require__.r(__webpack_exports__);
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
-/* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
-/* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
-/* import */ var _internal_ui_documents_streaming_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/streaming.tsx");
+/* import */ var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/routes.js");
+/* import */ var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
+/* import */ var react__rspack_import_2_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_2);
+/* import */ var _internal_ui_documents_streaming_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/streaming.tsx");
 /* import */ var _internal_ui_documents_surface_js__rspack_import_7 = __webpack_require__("./src/internal/ui/documents/surface.ts");
-/* import */ var _internal_contracts_tool_schemas_js__rspack_import_3 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
-/* import */ var _internal_operations_request_config_js__rspack_import_4 = __webpack_require__("./src/internal/operations/request-config.ts");
-/* import */ var _internal_operations_tickets_js__rspack_import_5 = __webpack_require__("./src/internal/operations/tickets.ts");
+/* import */ var _internal_contracts_tool_schemas_js__rspack_import_4 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
+/* import */ var _internal_operations_request_config_js__rspack_import_5 = __webpack_require__("./src/internal/operations/request-config.ts");
+/* import */ var _internal_operations_tickets_js__rspack_import_6 = __webpack_require__("./src/internal/operations/tickets.ts");
 
 
 
@@ -36206,7 +36206,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const config = {
+const inputSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .ticketInputSchema */.e4;
+const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .awaitResultSchema */.Rh;
+/* export default */ const __rspack_default_export = ((0,agent_bundle_routes__rspack_import_1/* .defineTool */.uO)({
     annotations: {
         readOnlyHint: true
     },
@@ -36226,6 +36228,7 @@ const config = {
         ],
         type: 'object'
     },
+    inputSchema,
     // The daemon's 2 h await ceiling (`awaitCeilingMs`) plus a minute for the
     // snapshot fetch before the wait and the socket round trip after it — a
     // literal, as route config is read statically; `tests/unit/contracts/await-budget.test.ts`
@@ -36233,21 +36236,19 @@ const config = {
     render: {
         maxElapsedMs: 7260000
     },
+    resultSchema,
     title: 'Await hauler ticket'
-};
-const inputSchema = _internal_contracts_tool_schemas_js__rspack_import_3/* .ticketInputSchema */.e4;
-const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_3/* .awaitResultSchema */.Rh;
-async function HaulerAwait({ input, signal }) {
-    const context = await (0,_agent_bundle_runtime__rspack_import_6/* .agent */.MA)();
-    const daemonConfig = await (0,_internal_operations_request_config_js__rspack_import_4/* .requestDaemonConfig */.w)(context);
+}, async (input, context)=>{
+    const { signal } = context;
+    const daemonConfig = await (0,_internal_operations_request_config_js__rspack_import_5/* .requestDaemonConfig */.w)(context);
     const maxWaitMs = input.maxWaitMs ?? (/* inlined export .defaultAwaitMs */30000);
     const startedAt = Date.now();
     // The shell frame: the ticket as it is right now, before the wait blocks.
-    const snapshot = await (0,_internal_operations_tickets_js__rspack_import_5/* .fetchTicketResult */.Em)(input, {
+    const snapshot = await (0,_internal_operations_tickets_js__rspack_import_6/* .fetchTicketResult */.Em)(input, {
         config: daemonConfig,
         signal
     });
-    const awaited = (0,_internal_operations_tickets_js__rspack_import_5/* .awaitTicketResult */.qU)({
+    const awaited = (0,_internal_operations_tickets_js__rspack_import_6/* .awaitTicketResult */.qU)({
         ...input,
         maxWaitMs
     }, {
@@ -36257,7 +36258,7 @@ async function HaulerAwait({ input, signal }) {
         onProgress: ({ line })=>{
             void context.progress.report({
                 completed: Math.min(maxWaitMs, Date.now() - startedAt),
-                message: (0,_internal_operations_tickets_js__rspack_import_5/* .progressMessage */.LF)(line),
+                message: (0,_internal_operations_tickets_js__rspack_import_6/* .progressMessage */.LF)(line),
                 total: maxWaitMs
             }).catch(()=>undefined);
         },
@@ -36266,7 +36267,7 @@ async function HaulerAwait({ input, signal }) {
     // The settled component awaits this promise; the no-op handler only keeps a
     // rejection that lands before render attaches from surfacing as unhandled.
     awaited.catch(()=>undefined);
-    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_streaming_js__rspack_import_2/* .AwaitStream */.h, {
+    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_streaming_js__rspack_import_3/* .AwaitStream */.h, {
         awaited: awaited,
         maxWaitMs: maxWaitMs,
         names: (0,_internal_ui_documents_surface_js__rspack_import_7/* .surfaceNames */.SC)(context),
@@ -36274,12 +36275,11 @@ async function HaulerAwait({ input, signal }) {
         snapshot: snapshot.request,
         ticket: input.ticket
     });
-}
+}));
 
 __webpack_require__.d(__webpack_exports__, {
-  "default": () => (HaulerAwait)
 }, {
-  config: config,
+  "default": __rspack_default_export,
   inputSchema: inputSchema,
   resultSchema: resultSchema
 });
@@ -36314,15 +36314,15 @@ __webpack_require__.d(__webpack_exports__, {
 "./src/mcp/hauler/tools/hauler_kill.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 __webpack_require__.r(__webpack_exports__);
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
-/* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
-/* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
-/* import */ var zod__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/schemas.js");
-/* import */ var _internal_ui_documents_documents_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
+/* import */ var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/routes.js");
+/* import */ var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
+/* import */ var react__rspack_import_2_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_2);
+/* import */ var zod__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/schemas.js");
+/* import */ var _internal_ui_documents_documents_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
 /* import */ var _internal_ui_documents_surface_js__rspack_import_8 = __webpack_require__("./src/internal/ui/documents/surface.ts");
-/* import */ var _internal_contracts_tool_schemas_js__rspack_import_3 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
-/* import */ var _internal_operations_request_config_js__rspack_import_4 = __webpack_require__("./src/internal/operations/request-config.ts");
-/* import */ var _internal_operations_tickets_js__rspack_import_5 = __webpack_require__("./src/internal/operations/tickets.ts");
+/* import */ var _internal_contracts_tool_schemas_js__rspack_import_4 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
+/* import */ var _internal_operations_request_config_js__rspack_import_5 = __webpack_require__("./src/internal/operations/request-config.ts");
+/* import */ var _internal_operations_tickets_js__rspack_import_6 = __webpack_require__("./src/internal/operations/tickets.ts");
 
 
 
@@ -36332,7 +36332,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const config = {
+const inputSchema = zod__rspack_import_7/* .object */.Ikc({
+    ticket: zod__rspack_import_7/* .string */.YjP().min(1).describe('Ticket id, e.g. cc-123')
+});
+const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .killResultSchema */.tj;
+/* export default */ const __rspack_default_export = ((0,agent_bundle_routes__rspack_import_1/* .defineTool */.uO)({
     annotations: {
         destructiveHint: true,
         idempotentHint: true
@@ -36351,29 +36355,24 @@ const config = {
         ],
         type: 'object'
     },
+    inputSchema,
+    resultSchema,
     title: 'Kill hauler ticket'
-};
-const inputSchema = zod__rspack_import_6/* .object */.Ikc({
-    ticket: zod__rspack_import_6/* .string */.YjP().min(1).describe('Ticket id, e.g. cc-123')
-});
-const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_3/* .killResultSchema */.tj;
-async function HaulerKill({ input, signal }) {
-    const context = await (0,_agent_bundle_runtime__rspack_import_7/* .agent */.MA)();
-    const result = await (0,_internal_operations_tickets_js__rspack_import_5/* .killTicketResult */.aq)(input, {
-        config: await (0,_internal_operations_request_config_js__rspack_import_4/* .requestDaemonConfig */.w)(context),
-        signal
+}, async (input, context)=>{
+    const result = await (0,_internal_operations_tickets_js__rspack_import_6/* .killTicketResult */.aq)(input, {
+        config: await (0,_internal_operations_request_config_js__rspack_import_5/* .requestDaemonConfig */.w)(context),
+        signal: context.signal
     });
-    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_documents_js__rspack_import_2/* .KillDocument */.ER, {
+    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_documents_js__rspack_import_3/* .KillDocument */.ER, {
         names: (0,_internal_ui_documents_surface_js__rspack_import_8/* .surfaceNames */.SC)(context),
         nowMs: Date.now(),
         result: result
     });
-}
+}));
 
 __webpack_require__.d(__webpack_exports__, {
-  "default": () => (HaulerKill)
 }, {
-  config: config,
+  "default": __rspack_default_export,
   inputSchema: inputSchema,
   resultSchema: resultSchema
 });
@@ -36399,15 +36398,15 @@ __webpack_require__.d(__webpack_exports__, {
 "./src/mcp/hauler/tools/hauler_last.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 __webpack_require__.r(__webpack_exports__);
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
-/* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
-/* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
-/* import */ var zod__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/schemas.js");
-/* import */ var _internal_ui_documents_documents_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
+/* import */ var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/routes.js");
+/* import */ var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
+/* import */ var react__rspack_import_2_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_2);
+/* import */ var zod__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/schemas.js");
+/* import */ var _internal_ui_documents_documents_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
 /* import */ var _internal_ui_documents_surface_js__rspack_import_8 = __webpack_require__("./src/internal/ui/documents/surface.ts");
-/* import */ var _internal_operations_inspection_js__rspack_import_3 = __webpack_require__("./src/internal/operations/inspection.ts");
-/* import */ var _internal_contracts_tool_schemas_js__rspack_import_4 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
-/* import */ var _internal_operations_request_config_js__rspack_import_5 = __webpack_require__("./src/internal/operations/request-config.ts");
+/* import */ var _internal_operations_inspection_js__rspack_import_4 = __webpack_require__("./src/internal/operations/inspection.ts");
+/* import */ var _internal_contracts_tool_schemas_js__rspack_import_5 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
+/* import */ var _internal_operations_request_config_js__rspack_import_6 = __webpack_require__("./src/internal/operations/request-config.ts");
 
 
 
@@ -36417,7 +36416,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const config = {
+const inputSchema = zod__rspack_import_7/* .object */.Ikc({}).strict();
+const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_5/* .lastResultSchema */.RL;
+/* export default */ const __rspack_default_export = ((0,agent_bundle_routes__rspack_import_1/* .defineTool */.uO)({
     annotations: {
         readOnlyHint: true
     },
@@ -36429,27 +36430,24 @@ const config = {
         additionalProperties: false,
         properties: {}
     },
+    inputSchema,
+    resultSchema,
     title: 'Hauler last request'
-};
-const inputSchema = zod__rspack_import_6/* .object */.Ikc({}).strict();
-const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .lastResultSchema */.RL;
-async function HaulerLast({ signal }) {
-    const context = await (0,_agent_bundle_runtime__rspack_import_7/* .agent */.MA)();
-    const last = await (0,_internal_operations_inspection_js__rspack_import_3/* .loadLastResult */.KW)({
-        config: await (0,_internal_operations_request_config_js__rspack_import_5/* .requestDaemonConfig */.w)(context),
-        signal
+}, async (_input, context)=>{
+    const last = await (0,_internal_operations_inspection_js__rspack_import_4/* .loadLastResult */.KW)({
+        config: await (0,_internal_operations_request_config_js__rspack_import_6/* .requestDaemonConfig */.w)(context),
+        signal: context.signal
     });
-    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_documents_js__rspack_import_2/* .LastDocument */.Ut, {
+    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_documents_js__rspack_import_3/* .LastDocument */.Ut, {
         names: (0,_internal_ui_documents_surface_js__rspack_import_8/* .surfaceNames */.SC)(context),
         nowMs: Date.now(),
         result: last
     });
-}
+}));
 
 __webpack_require__.d(__webpack_exports__, {
-  "default": () => (HaulerLast)
 }, {
-  config: config,
+  "default": __rspack_default_export,
   inputSchema: inputSchema,
   resultSchema: resultSchema
 });
@@ -36480,14 +36478,14 @@ __webpack_require__.d(__webpack_exports__, {
 "./src/mcp/hauler/tools/hauler_log.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 __webpack_require__.r(__webpack_exports__);
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
-/* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
-/* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
-/* import */ var _internal_ui_documents_streaming_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/streaming.tsx");
+/* import */ var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/routes.js");
+/* import */ var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
+/* import */ var react__rspack_import_2_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_2);
+/* import */ var _internal_ui_documents_streaming_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/streaming.tsx");
 /* import */ var _internal_ui_documents_surface_js__rspack_import_7 = __webpack_require__("./src/internal/ui/documents/surface.ts");
-/* import */ var _internal_operations_inspection_js__rspack_import_3 = __webpack_require__("./src/internal/operations/inspection.ts");
-/* import */ var _internal_contracts_tool_schemas_js__rspack_import_4 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
-/* import */ var _internal_operations_request_config_js__rspack_import_5 = __webpack_require__("./src/internal/operations/request-config.ts");
+/* import */ var _internal_operations_inspection_js__rspack_import_4 = __webpack_require__("./src/internal/operations/inspection.ts");
+/* import */ var _internal_contracts_tool_schemas_js__rspack_import_5 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
+/* import */ var _internal_operations_request_config_js__rspack_import_6 = __webpack_require__("./src/internal/operations/request-config.ts");
 
 
 
@@ -36496,7 +36494,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const config = {
+const inputSchema = _internal_contracts_tool_schemas_js__rspack_import_5/* .limitInputSchema["default"] */.VV["default"]({});
+const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_5/* .logResultSchema */.xh;
+/* export default */ const __rspack_default_export = ((0,agent_bundle_routes__rspack_import_1/* .defineTool */.uO)({
     annotations: {
         readOnlyHint: true
     },
@@ -36510,25 +36510,20 @@ const config = {
         },
         type: 'object'
     },
+    inputSchema,
+    resultSchema,
     title: 'Hauler log'
-};
-const inputSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .limitInputSchema["default"] */.VV["default"]({});
-const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .logResultSchema */.xh;
-async function HaulerLog({ input, signal }) {
-    const context = await (0,_agent_bundle_runtime__rspack_import_6/* .agent */.MA)();
-    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_streaming_js__rspack_import_2/* .LogStream */.B, {
-        loading: (0,_internal_operations_inspection_js__rspack_import_3/* .loadLogResult */.CO)(input, {
-            config: await (0,_internal_operations_request_config_js__rspack_import_5/* .requestDaemonConfig */.w)(context),
-            signal
+}, async (input, context)=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_streaming_js__rspack_import_3/* .LogStream */.B, {
+        loading: (0,_internal_operations_inspection_js__rspack_import_4/* .loadLogResult */.CO)(input, {
+            config: await (0,_internal_operations_request_config_js__rspack_import_6/* .requestDaemonConfig */.w)(context),
+            signal: context.signal
         }),
         names: (0,_internal_ui_documents_surface_js__rspack_import_7/* .surfaceNames */.SC)(context)
-    });
-}
+    })));
 
 __webpack_require__.d(__webpack_exports__, {
-  "default": () => (HaulerLog)
 }, {
-  config: config,
+  "default": __rspack_default_export,
   inputSchema: inputSchema,
   resultSchema: resultSchema
 });
@@ -36596,15 +36591,15 @@ __webpack_require__.d(__webpack_exports__, {
 "./src/mcp/hauler/tools/hauler_request.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 __webpack_require__.r(__webpack_exports__);
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
-/* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
-/* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
-/* import */ var _internal_ui_documents_documents_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
+/* import */ var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/routes.js");
+/* import */ var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
+/* import */ var react__rspack_import_2_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_2);
+/* import */ var _internal_ui_documents_documents_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
 /* import */ var _internal_ui_documents_surface_js__rspack_import_8 = __webpack_require__("./src/internal/ui/documents/surface.ts");
 /* import */ var _internal_ui_documents_view_models_js__rspack_import_7 = __webpack_require__("./src/internal/ui/documents/view-models.ts");
-/* import */ var _internal_contracts_tool_schemas_js__rspack_import_3 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
-/* import */ var _internal_operations_request_config_js__rspack_import_4 = __webpack_require__("./src/internal/operations/request-config.ts");
-/* import */ var _internal_operations_tickets_js__rspack_import_5 = __webpack_require__("./src/internal/operations/tickets.ts");
+/* import */ var _internal_contracts_tool_schemas_js__rspack_import_4 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
+/* import */ var _internal_operations_request_config_js__rspack_import_5 = __webpack_require__("./src/internal/operations/request-config.ts");
+/* import */ var _internal_operations_tickets_js__rspack_import_6 = __webpack_require__("./src/internal/operations/tickets.ts");
 
 
 
@@ -36614,7 +36609,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const config = {
+const inputSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .requestInputSchema */.tW;
+const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .requestResultSchema */.ag;
+/* export default */ const __rspack_default_export = ((0,agent_bundle_routes__rspack_import_1/* .defineTool */.uO)({
     annotations: {
         readOnlyHint: false
     },
@@ -36650,28 +36647,25 @@ const config = {
         ],
         type: 'object'
     },
+    inputSchema,
+    resultSchema,
     title: 'Submit background cargo request'
-};
-const inputSchema = _internal_contracts_tool_schemas_js__rspack_import_3/* .requestInputSchema */.tW;
-const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_3/* .requestResultSchema */.ag;
-async function HaulerRequest({ input, signal }) {
-    const context = await (0,_agent_bundle_runtime__rspack_import_6/* .agent */.MA)();
-    const submitted = await (0,_internal_operations_tickets_js__rspack_import_5/* .submitTicketRequest */.Q6)(input, context, {
-        config: await (0,_internal_operations_request_config_js__rspack_import_4/* .requestDaemonConfig */.w)(context),
-        signal
+}, async (input, context)=>{
+    const submitted = await (0,_internal_operations_tickets_js__rspack_import_6/* .submitTicketRequest */.Q6)(input, context, {
+        config: await (0,_internal_operations_request_config_js__rspack_import_5/* .requestDaemonConfig */.w)(context),
+        signal: context.signal
     });
-    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_documents_js__rspack_import_2/* .RequestDocument */.dF, {
+    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_documents_js__rspack_import_3/* .RequestDocument */.dF, {
         argv: input.argv,
         lineage: (0,_internal_ui_documents_view_models_js__rspack_import_7/* .lineageModel */.lr)(context.lineage),
         names: (0,_internal_ui_documents_surface_js__rspack_import_8/* .surfaceNames */.SC)(context),
         result: submitted
     });
-}
+}));
 
 __webpack_require__.d(__webpack_exports__, {
-  "default": () => (HaulerRequest)
 }, {
-  config: config,
+  "default": __rspack_default_export,
   inputSchema: inputSchema,
   resultSchema: resultSchema
 });
@@ -36708,14 +36702,14 @@ __webpack_require__.d(__webpack_exports__, {
 "./src/mcp/hauler/tools/hauler_result.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 __webpack_require__.r(__webpack_exports__);
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
-/* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
-/* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
-/* import */ var _internal_ui_documents_documents_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
+/* import */ var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/routes.js");
+/* import */ var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
+/* import */ var react__rspack_import_2_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_2);
+/* import */ var _internal_ui_documents_documents_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
 /* import */ var _internal_ui_documents_surface_js__rspack_import_7 = __webpack_require__("./src/internal/ui/documents/surface.ts");
-/* import */ var _internal_contracts_tool_schemas_js__rspack_import_3 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
-/* import */ var _internal_operations_request_config_js__rspack_import_4 = __webpack_require__("./src/internal/operations/request-config.ts");
-/* import */ var _internal_operations_tickets_js__rspack_import_5 = __webpack_require__("./src/internal/operations/tickets.ts");
+/* import */ var _internal_contracts_tool_schemas_js__rspack_import_4 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
+/* import */ var _internal_operations_request_config_js__rspack_import_5 = __webpack_require__("./src/internal/operations/request-config.ts");
+/* import */ var _internal_operations_tickets_js__rspack_import_6 = __webpack_require__("./src/internal/operations/tickets.ts");
 
 
 
@@ -36724,7 +36718,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const config = {
+const inputSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .resultInputSchema */.hd;
+const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .resultFetchResultSchema */.UM;
+/* export default */ const __rspack_default_export = ((0,agent_bundle_routes__rspack_import_1/* .defineTool */.uO)({
     annotations: {
         readOnlyHint: true
     },
@@ -36745,28 +36741,25 @@ const config = {
         ],
         type: 'object'
     },
+    inputSchema,
+    resultSchema,
     title: 'Hauler ticket result'
-};
-const inputSchema = _internal_contracts_tool_schemas_js__rspack_import_3/* .resultInputSchema */.hd;
-const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_3/* .resultFetchResultSchema */.UM;
-async function HaulerResult({ input, signal }) {
-    const context = await (0,_agent_bundle_runtime__rspack_import_6/* .agent */.MA)();
-    const view = await (0,_internal_operations_tickets_js__rspack_import_5/* .fetchTicketResultView */.dL)(input, {
-        config: await (0,_internal_operations_request_config_js__rspack_import_4/* .requestDaemonConfig */.w)(context),
-        signal
+}, async (input, context)=>{
+    const view = await (0,_internal_operations_tickets_js__rspack_import_6/* .fetchTicketResultView */.dL)(input, {
+        config: await (0,_internal_operations_request_config_js__rspack_import_5/* .requestDaemonConfig */.w)(context),
+        signal: context.signal
     });
-    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_documents_js__rspack_import_2/* .ResultDocument */.fF, {
+    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_documents_js__rspack_import_3/* .ResultDocument */.fF, {
         names: (0,_internal_ui_documents_surface_js__rspack_import_7/* .surfaceNames */.SC)(context),
         nowMs: Date.now(),
         output: view.output,
         result: view.result
     });
-}
+}));
 
 __webpack_require__.d(__webpack_exports__, {
-  "default": () => (HaulerResult)
 }, {
-  config: config,
+  "default": __rspack_default_export,
   inputSchema: inputSchema,
   resultSchema: resultSchema
 });
@@ -36818,14 +36811,14 @@ __webpack_require__.d(__webpack_exports__, {
 "./src/mcp/hauler/tools/hauler_status.tsx"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 __webpack_require__.r(__webpack_exports__);
 /* import */ var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-/* import */ var _agent_bundle_runtime__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
-/* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
-/* import */ var react__rspack_import_1_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_1);
-/* import */ var _internal_ui_documents_documents_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
+/* import */ var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/routes.js");
+/* import */ var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
+/* import */ var react__rspack_import_2_default = /*#__PURE__*/__webpack_require__.n(react__rspack_import_2);
+/* import */ var _internal_ui_documents_documents_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
 /* import */ var _internal_ui_documents_surface_js__rspack_import_8 = __webpack_require__("./src/internal/ui/documents/surface.ts");
-/* import */ var _internal_operations_inspection_js__rspack_import_3 = __webpack_require__("./src/internal/operations/inspection.ts");
-/* import */ var _internal_contracts_tool_schemas_js__rspack_import_4 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
-/* import */ var _internal_operations_request_config_js__rspack_import_5 = __webpack_require__("./src/internal/operations/request-config.ts");
+/* import */ var _internal_operations_inspection_js__rspack_import_4 = __webpack_require__("./src/internal/operations/inspection.ts");
+/* import */ var _internal_contracts_tool_schemas_js__rspack_import_5 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
+/* import */ var _internal_operations_request_config_js__rspack_import_6 = __webpack_require__("./src/internal/operations/request-config.ts");
 /* import */ var _internal_operations_status_filter_js__rspack_import_7 = __webpack_require__("./src/internal/operations/status-filter.ts");
 
 
@@ -36836,7 +36829,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const config = {
+const inputSchema = _internal_contracts_tool_schemas_js__rspack_import_5/* .statusInputSchema */._j;
+const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_5/* .statusResultSchema */.H7;
+/* export default */ const __rspack_default_export = ((0,agent_bundle_routes__rspack_import_1/* .defineTool */.uO)({
     annotations: {
         readOnlyHint: true
     },
@@ -36886,28 +36881,25 @@ const config = {
         },
         type: 'object'
     },
+    inputSchema,
+    resultSchema,
     title: 'Hauler status'
-};
-const inputSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .statusInputSchema */._j;
-const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .statusResultSchema */.H7;
-async function HaulerStatus({ input, signal }) {
-    const context = await (0,_agent_bundle_runtime__rspack_import_6/* .agent */.MA)();
-    const status = await (0,_internal_operations_inspection_js__rspack_import_3/* .loadStatusResult */.U8)(input, {
-        config: await (0,_internal_operations_request_config_js__rspack_import_5/* .requestDaemonConfig */.w)(context),
-        signal
+}, async (input, context)=>{
+    const status = await (0,_internal_operations_inspection_js__rspack_import_4/* .loadStatusResult */.U8)(input, {
+        config: await (0,_internal_operations_request_config_js__rspack_import_6/* .requestDaemonConfig */.w)(context),
+        signal: context.signal
     });
-    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_documents_js__rspack_import_2/* .StatusDocument */.Me, {
+    return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_internal_ui_documents_documents_js__rspack_import_3/* .StatusDocument */.Me, {
         filtered: (0,_internal_operations_status_filter_js__rspack_import_7/* .hasStatusFilters */.Gw)(input),
         names: (0,_internal_ui_documents_surface_js__rspack_import_8/* .surfaceNames */.SC)(context),
         nowMs: Date.now(),
         result: status
     });
-}
+}));
 
 __webpack_require__.d(__webpack_exports__, {
-  "default": () => (HaulerStatus)
 }, {
-  config: config,
+  "default": __rspack_default_export,
   inputSchema: inputSchema,
   resultSchema: resultSchema
 });
@@ -37102,30 +37094,9 @@ module.exports = __rspack_createRequire_require("util");
 module.exports = __rspack_createRequire_require("zlib");
 
 },
-"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/302.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/302.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_buffer__rspack_import_0 = __webpack_require__("node:buffer");
-/* import */ var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 
-
-const isServerComponent = (value)=>'function' == typeof value;
-const asMcpElement = (node)=>{
-    let element = node;
-    while(isValidElement(element) && isServerComponent(element.type))element = element.type(element.props);
-    if (!isValidElement(element) || 'string' != typeof element.type || !element.type.startsWith('mcp-')) throw new Error('Expected an MCP result element');
-    return {
-        props: element.props,
-        type: element.type
-    };
-};
-const requiredString = (value, message)=>{
-    if ('string' != typeof value || '' === value.trim()) throw new Error(message);
-    return value;
-};
-const textChild = (children, message)=>{
-    const values = Children.toArray(children);
-    if (1 !== values.length || 'string' != typeof values[0]) throw new Error(message);
-    return values[0];
-};
 const jsonLeafBytes = (value)=>node_buffer__rspack_import_0.Buffer.byteLength(JSON.stringify(value), 'utf8');
 const isArrayIndex = (key, length)=>{
     if ('0' === key) return length > 0;
@@ -37187,16 +37158,6 @@ const cloneJsonValue = (value, ancestors, path, depth = 0, budget)=>{
         ancestors.delete(value);
     }
 };
-const jsonRecord = (value, message)=>{
-    try {
-        if (null === value || 'object' != typeof value || Array.isArray(value)) throw new Error('not a plain object');
-        return cloneJsonValue(value, new Set(), '');
-    } catch (error) {
-        throw new Error(`${message} (${error instanceof Error ? error.message : String(error)})`, {
-            cause: error
-        });
-    }
-};
 const deepFreezeJson = (value)=>{
     if ('object' == typeof value && null !== value) {
         for (const child of Object.values(value))deepFreezeJson(child);
@@ -37213,89 +37174,6 @@ const snapshotJsonValue = (value, message, budget)=>{
             cause: error
         });
     }
-};
-const lowerContent = (node)=>{
-    const element = asMcpElement(node);
-    const { props } = element;
-    switch(element.type){
-        case 'mcp-text':
-            return {
-                text: textChild(props.children, 'mcp-text requires one text child'),
-                type: 'text'
-            };
-        case 'mcp-image':
-            return {
-                data: requiredString(props.data, 'mcp-image requires non-empty data and mimeType'),
-                mimeType: requiredString(props.mimeType, 'mcp-image requires non-empty data and mimeType'),
-                type: 'image'
-            };
-        case 'mcp-audio':
-            return {
-                data: requiredString(props.data, 'mcp-audio requires non-empty data and mimeType'),
-                mimeType: requiredString(props.mimeType, 'mcp-audio requires non-empty data and mimeType'),
-                type: 'audio'
-            };
-        case 'mcp-resource-link':
-            {
-                const mimeType = props.mimeType;
-                if (void 0 !== mimeType && 'string' != typeof mimeType) throw new Error('mcp-resource-link mimeType must be a string');
-                return {
-                    ...void 0 === mimeType ? {} : {
-                        mimeType
-                    },
-                    name: requiredString(props.name, 'mcp-resource-link requires non-empty uri and name'),
-                    type: 'resource_link',
-                    uri: requiredString(props.uri, 'mcp-resource-link requires non-empty uri and name')
-                };
-            }
-        case 'mcp-embedded-resource':
-            {
-                const hasText = void 0 !== props.text;
-                const hasTextChild = void 0 !== props.children;
-                const hasBlob = void 0 !== props.blob;
-                if (Number(hasText) + Number(hasTextChild) + Number(hasBlob) !== 1) throw new Error('mcp-embedded-resource accepts exactly one text or blob value');
-                const mimeType = props.mimeType;
-                if (void 0 !== mimeType && 'string' != typeof mimeType) throw new Error('mcp-embedded-resource mimeType must be a string');
-                const resource = {
-                    ...void 0 === mimeType ? {} : {
-                        mimeType
-                    },
-                    uri: requiredString(props.uri, 'mcp-embedded-resource requires a non-empty uri'),
-                    ...hasBlob ? {
-                        blob: requiredString(props.blob, 'mcp-embedded-resource blob must be non-empty')
-                    } : {
-                        text: hasTextChild ? textChild(props.children, 'mcp-embedded-resource requires one text child') : requiredString(props.text, 'mcp-embedded-resource text must be non-empty')
-                    }
-                };
-                return {
-                    resource,
-                    type: 'resource'
-                };
-            }
-        case 'mcp-result':
-            throw new Error('mcp-result may not be nested');
-        default:
-            throw new Error(`Unsupported MCP result element: ${element.type}`);
-    }
-};
-const lowerMcpResult = (node)=>{
-    const root = asMcpElement(node);
-    if ('mcp-result' !== root.type) throw new Error('Expected mcp-result as the root element');
-    if (void 0 !== root.props.isError && 'boolean' != typeof root.props.isError) throw new Error('mcp-result isError must be a boolean');
-    const structuredContent = root.props.structuredContent;
-    const metadata = root.props._meta;
-    return {
-        content: Children.toArray(root.props.children).map(lowerContent),
-        ...void 0 === metadata ? {} : {
-            _meta: jsonRecord(metadata, 'mcp-result _meta must be JSON-serializable')
-        },
-        ...void 0 === structuredContent ? {} : {
-            structuredContent: jsonRecord(structuredContent, 'mcp-result structuredContent must be JSON-serializable')
-        },
-        ...void 0 === root.props.isError ? {} : {
-            isError: root.props.isError
-        }
-    };
 };
 const AGENT_DOCUMENT_VERSION = 1;
 const agentRenderAbortError = ()=>new DOMException('Agent render was aborted', 'AbortError');
@@ -37324,7 +37202,7 @@ const resolveAgentRenderLimits = (overrides = {})=>{
     for (const [name, value] of Object.entries(limits))if (!Number.isSafeInteger(value) || value <= 0) throw new AgentContractError('invalid-document', `${name} must be a positive safe integer`);
     return Object.freeze(limits);
 };
-const agent_document_requiredString = (value, field)=>{
+const requiredString = (value, field)=>{
     if ('string' != typeof value || '' === value.trim()) throw new AgentContractError('invalid-document', `${field} must be a non-empty string`);
     return value;
 };
@@ -37332,7 +37210,7 @@ const agent_document_text = (value, field)=>{
     if ('string' != typeof value) throw new AgentContractError('invalid-document', `${field} must be a string`);
     return value;
 };
-const optionalString = (value, field)=>void 0 === value ? void 0 : agent_document_requiredString(value, field);
+const optionalString = (value, field)=>void 0 === value ? void 0 : requiredString(value, field);
 const elapsedTimeExceeded = (maxElapsedMs)=>new AgentContractError('elapsed-time-exceeded', `Agent render elapsed time exceeds ${String(maxElapsedMs)}ms`);
 const expectDocumentDepth = (depth, limits)=>{
     if (depth > limits.maxDocumentDepth) throw new AgentContractError('document-depth-exceeded', `Agent Document depth exceeds ${String(limits.maxDocumentDepth)}`);
@@ -37430,15 +37308,15 @@ const snapshotNode = (node, depth, state)=>{
                 }
             case 'image':
                 return Object.freeze({
-                    data: agent_document_requiredString(node.data, 'Agent image data'),
+                    data: requiredString(node.data, 'Agent image data'),
                     kind: 'image',
-                    mimeType: agent_document_requiredString(node.mimeType, 'Agent image mimeType')
+                    mimeType: requiredString(node.mimeType, 'Agent image mimeType')
                 });
             case 'audio':
                 return Object.freeze({
-                    data: agent_document_requiredString(node.data, 'Agent audio data'),
+                    data: requiredString(node.data, 'Agent audio data'),
                     kind: 'audio',
-                    mimeType: agent_document_requiredString(node.mimeType, 'Agent audio mimeType')
+                    mimeType: requiredString(node.mimeType, 'Agent audio mimeType')
                 });
             case 'resource':
                 {
@@ -37448,13 +37326,13 @@ const snapshotNode = (node, depth, state)=>{
                         ...void 0 === mimeType ? {} : {
                             mimeType
                         },
-                        name: agent_document_requiredString(node.name, 'Agent resource name'),
-                        uri: agent_document_requiredString(node.uri, 'Agent resource uri')
+                        name: requiredString(node.name, 'Agent resource name'),
+                        uri: requiredString(node.uri, 'Agent resource uri')
                     });
                 }
             case 'error':
                 return Object.freeze({
-                    code: agent_document_requiredString(node.code, 'Agent error code'),
+                    code: requiredString(node.code, 'Agent error code'),
                     kind: 'error',
                     message: agent_document_text(node.message, 'Agent error message')
                 });
@@ -37512,7 +37390,7 @@ const snapshotRenderError = (error, limits)=>{
         nodes: 0
     });
     return Object.freeze({
-        code: agent_document_requiredString(error.code, 'Agent render error code'),
+        code: requiredString(error.code, 'Agent render error code'),
         ...void 0 === data ? {} : {
             data
         },
@@ -37547,7 +37425,7 @@ const snapshotEvent = (input, sequence, limits)=>{
             }
         case 'replace':
             return Object.freeze({
-                boundaryId: agent_document_requiredString(input.boundaryId, 'Agent render boundaryId'),
+                boundaryId: requiredString(input.boundaryId, 'Agent render boundaryId'),
                 document: createAgentDocument(input.document, limits),
                 sequence,
                 type: 'replace'
@@ -37631,15 +37509,15 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/315.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/315.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
 /* import */ var effect__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Cause.js");
 /* import */ var effect__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Exit.js");
 /* import */ var effect__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Latch.js");
 /* import */ var effect__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Stream.js");
 /* import */ var effect__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Fiber.js");
-/* import */ var _736_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
-/* import */ var _302_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/302.js");
+/* import */ var _736_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/736.js");
+/* import */ var _302_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/302.js");
 
 
 
@@ -37799,12 +37677,12 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/49.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/49.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
 /* import */ var node_fs__rspack_import_1 = __webpack_require__("node:fs");
 /* import */ var node_os__rspack_import_2 = __webpack_require__("node:os");
 /* import */ var node_path__rspack_import_3 = __webpack_require__("node:path");
-/* import */ var _736_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
+/* import */ var _736_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/736.js");
 
 
 
@@ -37881,7 +37759,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/506.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var react__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 
 const AgentResult = ({ children, metadata, value })=>(0,react__rspack_import_0.createElement)('agent-result', {
@@ -37927,56 +37805,16 @@ const Agent = Object.freeze({
     Result: AgentResult,
     Text: AgentText
 });
-const Result = ({ children })=>(0,react__rspack_import_0.createElement)('agent-hook-result', null, children);
-const AdditionalContext = ({ children })=>(0,react__rspack_import_0.createElement)('agent-hook-additional-context', null, children);
-const Hook = {
-    AdditionalContext: AdditionalContext,
-    Result: Result
-};
-const McpResult = ({ _meta, children, isError, structuredContent })=>createElement('mcp-result', {
-        _meta,
-        isError,
-        structuredContent
-    }, children);
-const McpText = ({ children })=>createElement('mcp-text', null, children);
-const McpImage = ({ data, mimeType })=>createElement('mcp-image', {
-        data,
-        mimeType
-    });
-const McpAudio = ({ data, mimeType })=>createElement('mcp-audio', {
-        data,
-        mimeType
-    });
-const McpResourceLink = ({ mimeType, name, uri })=>createElement('mcp-resource-link', {
-        mimeType,
-        name,
-        uri
-    });
-const McpEmbeddedResource = ({ blob, children, mimeType, text, uri })=>createElement('mcp-embedded-resource', {
-        blob,
-        mimeType,
-        text,
-        uri
-    }, children);
-const Mcp = (/* unused pure expression or super */ null && ({
-    Audio: McpAudio,
-    EmbeddedResource: McpEmbeddedResource,
-    Image: McpImage,
-    ResourceLink: McpResourceLink,
-    Result: McpResult,
-    Text: McpText
-}));
 
 
 __webpack_require__.d(__webpack_exports__, {
 }, {
-  g6: Agent,
-  qn: Hook
+  g: Agent
 });
 
 
 },
-"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/707.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/707.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 const EMPTY_FLIGHT_MANIFEST = Object.freeze({
     clientManifest: Object.freeze({}),
     moduleLoading: null,
@@ -37997,7 +37835,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/736.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_async_hooks__rspack_import_0 = __webpack_require__("node:async_hooks");
 
 const AGENT_REQUEST_STORE_VERSION = 6;
@@ -38287,24 +38125,21 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/index.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var effect__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Latch.js");
-/* import */ var effect__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
-/* import */ var effect__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Duration.js");
-/* import */ var effect__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Stream.js");
-/* import */ var effect__rspack_import_9 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Deferred.js");
-/* import */ var effect__rspack_import_10 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Queue.js");
-/* import */ var effect__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Option.js");
-/* import */ var effect__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Exit.js");
-/* import */ var effect__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Clock.js");
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/index.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var effect__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Latch.js");
+/* import */ var effect__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Effect.js");
+/* import */ var effect__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Duration.js");
+/* import */ var effect__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Stream.js");
+/* import */ var effect__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Deferred.js");
+/* import */ var effect__rspack_import_9 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Queue.js");
+/* import */ var effect__rspack_import_10 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Option.js");
+/* import */ var effect__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Exit.js");
+/* import */ var effect__rspack_import_13 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.112/node_modules/effect/dist/Clock.js");
 /* import */ var react__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
 /* import */ var react_server_dom_rspack_client_node__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react-server-dom-rspack@0.1.0_@rspack+core@2.2.7_@swc+helpers@0.5.23__react-dom@19.3.0_react@19.3.0__react@19.3.0/node_modules/react-server-dom-rspack/client.node.js");
-/* import */ var node_async_hooks__rspack_import_2 = __webpack_require__("node:async_hooks");
-/* import */ var _315_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/315.js");
-/* import */ var _302_js__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/302.js");
-/* import */ var _707_js__rspack_import_13 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/707.js");
-/* import */ var _506_js__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/506.js");
-
+/* import */ var _315_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/315.js");
+/* import */ var _302_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/302.js");
+/* import */ var _707_js__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/707.js");
 
 
 
@@ -38315,10 +38150,10 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 const createFlightDemand = ()=>{
-    const pulling = effect__rspack_import_3/* .makeUnsafe */.LZ(false);
+    const pulling = effect__rspack_import_2/* .makeUnsafe */.LZ(false);
     let shellEmitted = false;
     return {
-        markShell: effect__rspack_import_4/* .sync */.OH5(()=>{
+        markShell: effect__rspack_import_3/* .sync */.OH5(()=>{
             shellEmitted = true;
         }),
         notePull () {
@@ -38327,11 +38162,11 @@ const createFlightDemand = ()=>{
         notePullEnd () {
             pulling.closeUnsafe();
         },
-        wait: effect__rspack_import_4/* .suspend */.DYE(()=>shellEmitted ? pulling.await : effect__rspack_import_4/* ["void"] */.rIH)
+        wait: effect__rspack_import_3/* .suspend */.DYE(()=>shellEmitted ? pulling.await : effect__rspack_import_3/* ["void"] */.rIH)
     };
 };
-const emitBoundRenderEvent = (sequence, input)=>effect__rspack_import_4/* ["try"] */.SvU({
-        catch: (error)=>(0,_315_js__rspack_import_5/* .toRuntimeError */.qN)(error),
+const emitBoundRenderEvent = (sequence, input)=>effect__rspack_import_3/* ["try"] */.SvU({
+        catch: (error)=>(0,_315_js__rspack_import_4/* .toRuntimeError */.qN)(error),
         try: ()=>sequence.emit(input)
     });
 const agentElementTypes = Object.freeze([
@@ -38348,7 +38183,7 @@ const agentElementTypes = Object.freeze([
 ]);
 const isAgentElementType = (value)=>agentElementTypes.includes(value);
 const protocolElement = (node)=>{
-    if (!(0,react__rspack_import_0.isValidElement)(node) || 'string' != typeof node.type || !isAgentElementType(node.type)) throw new _302_js__rspack_import_6/* .AgentContractError */.I2('invalid-document', 'Flight output must contain only Agent protocol elements; function components and HTML are unsupported');
+    if (!(0,react__rspack_import_0.isValidElement)(node) || 'string' != typeof node.type || !isAgentElementType(node.type)) throw new _302_js__rspack_import_5/* .AgentContractError */.I2('invalid-document', 'Flight output must contain only Agent protocol elements; function components and HTML are unsupported');
     return {
         props: node.props,
         type: node.type
@@ -38356,31 +38191,31 @@ const protocolElement = (node)=>{
 };
 const textChild = (children, type)=>{
     const values = react__rspack_import_0.Children.toArray(children);
-    if (1 !== values.length || 'string' != typeof values[0]) throw new _302_js__rspack_import_6/* .AgentContractError */.I2('invalid-document', `${type} requires exactly one string child`);
+    if (1 !== values.length || 'string' != typeof values[0]) throw new _302_js__rspack_import_5/* .AgentContractError */.I2('invalid-document', `${type} requires exactly one string child`);
     return values[0];
 };
 const decodeBudget = (state)=>({
         addBytes (n) {
             state.bytes += n;
-            if (state.bytes > state.limits.maxDocumentBytes) throw new _302_js__rspack_import_6/* .AgentContractError */.I2('document-bytes-exceeded', `Agent Document bytes exceed ${String(state.limits.maxDocumentBytes)}`);
+            if (state.bytes > state.limits.maxDocumentBytes) throw new _302_js__rspack_import_5/* .AgentContractError */.I2('document-bytes-exceeded', `Agent Document bytes exceed ${String(state.limits.maxDocumentBytes)}`);
         },
         addNode () {
-            (0,_302_js__rspack_import_6/* .admitDocumentNode */.Dy)(state);
+            (0,_302_js__rspack_import_5/* .admitDocumentNode */.Dy)(state);
         },
         checkDepth (depth) {
-            (0,_302_js__rspack_import_6/* .expectDocumentDepth */.MI)(depth, state.limits);
+            (0,_302_js__rspack_import_5/* .expectDocumentDepth */.MI)(depth, state.limits);
         }
     });
 const isJsonObject = (value)=>null != value && 'object' == typeof value && !Array.isArray(value);
 const budgetedJson = (value, message, depth, state)=>{
     try {
-        return (0,_302_js__rspack_import_6/* .snapshotJsonValue */.mY)(value, message, {
+        return (0,_302_js__rspack_import_5/* .snapshotJsonValue */.mY)(value, message, {
             depth,
             limits: decodeBudget(state)
         });
     } catch (error) {
-        if (error instanceof _302_js__rspack_import_6/* .AgentContractError */.I2) throw error;
-        throw new _302_js__rspack_import_6/* .AgentContractError */.I2('invalid-document', error instanceof Error ? error.message : message, {
+        if (error instanceof _302_js__rspack_import_5/* .AgentContractError */.I2) throw error;
+        throw new _302_js__rspack_import_5/* .AgentContractError */.I2('invalid-document', error instanceof Error ? error.message : message, {
             cause: error
         });
     }
@@ -38439,8 +38274,8 @@ const decodeResult = (props, depth, state)=>{
     return node;
 };
 const decodeNode = (node, depth, state)=>{
-    (0,_302_js__rspack_import_6/* .expectDocumentDepth */.MI)(depth, state.limits);
-    (0,_302_js__rspack_import_6/* .admitDocumentNode */.Dy)(state);
+    (0,_302_js__rspack_import_5/* .expectDocumentDepth */.MI)(depth, state.limits);
+    (0,_302_js__rspack_import_5/* .admitDocumentNode */.Dy)(state);
     const element = protocolElement(node);
     const { props } = element;
     switch(element.type){
@@ -38508,14 +38343,14 @@ const decodeNode = (node, depth, state)=>{
         default:
             {
                 const exhaustive = element.type;
-                throw new _302_js__rspack_import_6/* .AgentContractError */.I2('invalid-document', `Unsupported Agent protocol element: ${String(exhaustive)}`);
+                throw new _302_js__rspack_import_5/* .AgentContractError */.I2('invalid-document', `Unsupported Agent protocol element: ${String(exhaustive)}`);
             }
     }
 };
 const decodeAgentDocument = (node, limits = {})=>{
-    const resolved = (0,_302_js__rspack_import_6/* .resolveAgentRenderLimits */.i0)(limits);
+    const resolved = (0,_302_js__rspack_import_5/* .resolveAgentRenderLimits */.i0)(limits);
     const root = protocolElement(node);
-    if ('agent-result' !== root.type) throw new _302_js__rspack_import_6/* .AgentContractError */.I2('invalid-document', 'Flight output must have Agent.Result as its root');
+    if ('agent-result' !== root.type) throw new _302_js__rspack_import_5/* .AgentContractError */.I2('invalid-document', 'Flight output must have Agent.Result as its root');
     const state = {
         bytes: 0,
         discardedBytes: 0,
@@ -38526,7 +38361,7 @@ const decodeAgentDocument = (node, limits = {})=>{
     };
     const documentRoot = decodeNode(node, 1, state);
     const value = state.resultValues.get(documentRoot)?.value;
-    const document = (0,_302_js__rspack_import_6/* .createAgentDocument */.ZX)({
+    const document = (0,_302_js__rspack_import_5/* .createAgentDocument */.ZX)({
         root: documentRoot,
         status: state.representedError ? 'represented-error' : 'success',
         ...void 0 === value ? {} : {
@@ -38534,13 +38369,13 @@ const decodeAgentDocument = (node, limits = {})=>{
         },
         version: 1
     }, resolved);
-    if (state.discardedBytes > 0 && state.discardedBytes + jsonBytes(document) > resolved.maxDocumentBytes) throw new _302_js__rspack_import_6/* .AgentContractError */.I2('document-bytes-exceeded', `Agent Document bytes exceed ${String(resolved.maxDocumentBytes)}`);
+    if (state.discardedBytes > 0 && state.discardedBytes + jsonBytes(document) > resolved.maxDocumentBytes) throw new _302_js__rspack_import_5/* .AgentContractError */.I2('document-bytes-exceeded', `Agent Document bytes exceed ${String(resolved.maxDocumentBytes)}`);
     return document;
 };
 const REACT_FRAGMENT = Symbol.for('react.fragment');
 const REACT_LAZY = Symbol.for('react.lazy');
 const REACT_SUSPENSE = Symbol.for('react.suspense');
-const abortError = _302_js__rspack_import_6/* .agentRenderAbortError */.k2;
+const abortError = _302_js__rspack_import_5/* .agentRenderAbortError */.k2;
 const isObject = (value)=>'object' == typeof value && null !== value;
 const isThenable = (value)=>isObject(value) && 'function' == typeof value.then;
 const isLazyElement = (value)=>isObject(value) && value.$$typeof === REACT_LAZY && isThenable(value._payload);
@@ -38571,7 +38406,7 @@ const classifyNode = (node)=>{
         kind: 'thenable',
         value: node
     };
-    if (!(0,react__rspack_import_0.isValidElement)(node)) throw new _302_js__rspack_import_6/* .AgentContractError */.I2('invalid-document', 'Flight output contained an unsupported node');
+    if (!(0,react__rspack_import_0.isValidElement)(node)) throw new _302_js__rspack_import_5/* .AgentContractError */.I2('invalid-document', 'Flight output contained an unsupported node');
     const type = node.type;
     if (type === REACT_SUSPENSE) return {
         kind: 'suspense',
@@ -38585,7 +38420,7 @@ const classifyNode = (node)=>{
         kind: 'protocol',
         value: node
     };
-    throw new _302_js__rspack_import_6/* .AgentContractError */.I2('invalid-document', "Flight output must contain only Agent protocol elements; function components and HTML are unsupported");
+    throw new _302_js__rspack_import_5/* .AgentContractError */.I2('invalid-document', "Flight output must contain only Agent protocol elements; function components and HTML are unsupported");
 };
 const thenableStatus = (thenable)=>{
     switch(thenable.status){
@@ -38760,8 +38595,8 @@ const snapshotTree = (root, ids)=>{
         tree: materializeNode(root, '', ctx)
     };
 };
-const hostError = (signal, error)=>signal.aborted || (0,_315_js__rspack_import_5/* .isAbortError */.zf)(error) ? abortError() : (0,_315_js__rspack_import_5/* .toRuntimeError */.qN)(error);
-const waitSettledBoundary = (pending)=>effect__rspack_import_4/* .raceAll */.Vdx(pending.map((boundary)=>effect__rspack_import_4/* .promise */.ivC(()=>Promise.resolve(boundary.thenable).then(()=>({
+const hostError = (signal, error)=>signal.aborted || (0,_315_js__rspack_import_4/* .isAbortError */.zf)(error) ? abortError() : (0,_315_js__rspack_import_4/* .toRuntimeError */.qN)(error);
+const waitSettledBoundary = (pending)=>effect__rspack_import_3/* .raceAll */.Vdx(pending.map((boundary)=>effect__rspack_import_3/* .promise */.ivC(()=>Promise.resolve(boundary.thenable).then(()=>({
                     boundary,
                     ok: true
                 }), (error)=>({
@@ -38771,8 +38606,8 @@ const waitSettledBoundary = (pending)=>effect__rspack_import_4/* .raceAll */.Vdx
                 })))));
 const waitOrDeadline = (wait, sequence)=>{
     const remaining = sequence.remainingMs;
-    if (remaining <= 0) return effect__rspack_import_4/* .fail */.fJG((0,_302_js__rspack_import_6/* .elapsedTimeExceeded */.zm)(sequence.maxElapsedMs));
-    return effect__rspack_import_4/* .raceFirst */.KT6(wait, effect__rspack_import_4/* .sleep */.yy4(effect__rspack_import_7/* .millis */.ne(remaining)).pipe(effect__rspack_import_4/* .flatMap */.qIB(()=>effect__rspack_import_4/* .fail */.fJG((0,_302_js__rspack_import_6/* .elapsedTimeExceeded */.zm)(sequence.maxElapsedMs)))));
+    if (remaining <= 0) return effect__rspack_import_3/* .fail */.fJG((0,_302_js__rspack_import_5/* .elapsedTimeExceeded */.zm)(sequence.maxElapsedMs));
+    return effect__rspack_import_3/* .raceFirst */.KT6(wait, effect__rspack_import_3/* .sleep */.yy4(effect__rspack_import_6/* .millis */.ne(remaining)).pipe(effect__rspack_import_3/* .flatMap */.qIB(()=>effect__rspack_import_3/* .fail */.fJG((0,_302_js__rspack_import_5/* .elapsedTimeExceeded */.zm)(sequence.maxElapsedMs)))));
 };
 const settledBoundaryInputs = (previous, next, winner, limits)=>{
     const stillPending = new Set(next.pending.map((boundary)=>boundary.id));
@@ -38805,9 +38640,9 @@ const settledBoundaryInputs = (previous, next, winner, limits)=>{
     for (const boundary of previous.pending)if (boundary.id !== winner.boundary.id) emitFor(boundary.id);
     return inputs;
 };
-const reconcileLoopStream = (root, ids, initial, limits, flightDone, progressInputs, sequence)=>effect__rspack_import_8/* .paginate */.EnV(initial, (snapshot)=>{
-        if (0 === snapshot.pending.length) return waitOrDeadline(effect__rspack_import_9/* ["await"] */.Tx(flightDone), sequence).pipe(effect__rspack_import_4/* .andThen */.hgn(effect__rspack_import_10/* .clear */.IU(progressInputs)), effect__rspack_import_4/* .flatMap */.qIB((queued)=>effect__rspack_import_4/* ["try"] */.SvU({
-                catch: (error)=>(0,_315_js__rspack_import_5/* .toRuntimeError */.qN)(error),
+const reconcileLoopStream = (root, ids, initial, limits, flightDone, progressInputs, sequence)=>effect__rspack_import_7/* .paginate */.EnV(initial, (snapshot)=>{
+        if (0 === snapshot.pending.length) return waitOrDeadline(effect__rspack_import_8/* ["await"] */.Tx(flightDone), sequence).pipe(effect__rspack_import_3/* .andThen */.hgn(effect__rspack_import_9/* .clear */.IU(progressInputs)), effect__rspack_import_3/* .flatMap */.qIB((queued)=>effect__rspack_import_3/* ["try"] */.SvU({
+                catch: (error)=>(0,_315_js__rspack_import_4/* .toRuntimeError */.qN)(error),
                 try: ()=>[
                         [
                             ...queued,
@@ -38816,32 +38651,32 @@ const reconcileLoopStream = (root, ids, initial, limits, flightDone, progressInp
                                 type: 'complete'
                             }
                         ],
-                        effect__rspack_import_11.none()
+                        effect__rspack_import_10.none()
                     ]
             })));
-        return effect__rspack_import_4/* .raceFirst */.KT6(waitOrDeadline(waitSettledBoundary(snapshot.pending), sequence).pipe(effect__rspack_import_4/* .map */.TjK((winner)=>({
+        return effect__rspack_import_3/* .raceFirst */.KT6(waitOrDeadline(waitSettledBoundary(snapshot.pending), sequence).pipe(effect__rspack_import_3/* .map */.TjK((winner)=>({
                 kind: 'boundary',
                 winner
-            }))), effect__rspack_import_10/* .take */.s(progressInputs).pipe(effect__rspack_import_4/* .map */.TjK((input)=>({
+            }))), effect__rspack_import_9/* .take */.s(progressInputs).pipe(effect__rspack_import_3/* .map */.TjK((input)=>({
                 kind: 'progress',
                 input
-            })))).pipe(effect__rspack_import_4/* .flatMap */.qIB((event)=>{
+            })))).pipe(effect__rspack_import_3/* .flatMap */.qIB((event)=>{
             switch(event.kind){
                 case 'progress':
-                    return effect__rspack_import_4/* .succeed */.PyW([
+                    return effect__rspack_import_3/* .succeed */.PyW([
                         [
                             event.input
                         ],
-                        effect__rspack_import_11.some(snapshot)
+                        effect__rspack_import_10.some(snapshot)
                     ]);
                 case 'boundary':
-                    return effect__rspack_import_4/* ["try"] */.SvU({
-                        catch: (error)=>(0,_315_js__rspack_import_5/* .toRuntimeError */.qN)(error),
+                    return effect__rspack_import_3/* ["try"] */.SvU({
+                        catch: (error)=>(0,_315_js__rspack_import_4/* .toRuntimeError */.qN)(error),
                         try: ()=>{
                             const next = snapshotTree(root, ids);
                             return [
                                 settledBoundaryInputs(snapshot, next, event.winner, limits),
-                                effect__rspack_import_11.some(next)
+                                effect__rspack_import_10.some(next)
                             ];
                         }
                     });
@@ -38853,38 +38688,38 @@ const reconcileLoopStream = (root, ids, initial, limits, flightDone, progressInp
             }
         }));
     });
-const gatedFlightStream = (flight, demand, flightDone)=>effect__rspack_import_8/* .unwrap */.oAg(effect__rspack_import_4/* .gen */.JkU(function*() {
-        const reader = yield* effect__rspack_import_4/* .acquireRelease */.Q56(effect__rspack_import_4/* .sync */.OH5(()=>flight.getReader()), (handle, exit)=>effect__rspack_import_4/* .gen */.JkU(function*() {
-                const cancelExit = yield* effect__rspack_import_4/* .exit */.NS5(effect__rspack_import_4/* .tryPromise */.$mh({
-                    catch: (error)=>(0,_315_js__rspack_import_5/* .toRuntimeError */.qN)(error),
+const gatedFlightStream = (flight, demand, flightDone)=>effect__rspack_import_7/* .unwrap */.oAg(effect__rspack_import_3/* .gen */.JkU(function*() {
+        const reader = yield* effect__rspack_import_3/* .acquireRelease */.Q56(effect__rspack_import_3/* .sync */.OH5(()=>flight.getReader()), (handle, exit)=>effect__rspack_import_3/* .gen */.JkU(function*() {
+                const cancelExit = yield* effect__rspack_import_3/* .exit */.NS5(effect__rspack_import_3/* .tryPromise */.$mh({
+                    catch: (error)=>(0,_315_js__rspack_import_4/* .toRuntimeError */.qN)(error),
                     try: ()=>handle.cancel()
                 }));
-                if (effect__rspack_import_12/* .isFailure */.N6(exit)) return void (yield* effect__rspack_import_9/* .fail */.fJ(flightDone, (0,_315_js__rspack_import_5/* .mapCause */.K0)(exit.cause)));
-                if (effect__rspack_import_12/* .isFailure */.N6(cancelExit)) {
-                    const error = (0,_315_js__rspack_import_5/* .mapCause */.K0)(cancelExit.cause);
-                    yield* effect__rspack_import_9/* .fail */.fJ(flightDone, error);
-                    return yield* effect__rspack_import_4/* .die */.F_Q(error);
+                if (effect__rspack_import_11/* .isFailure */.N6(exit)) return void (yield* effect__rspack_import_8/* .fail */.fJ(flightDone, (0,_315_js__rspack_import_4/* .mapCause */.K0)(exit.cause)));
+                if (effect__rspack_import_11/* .isFailure */.N6(cancelExit)) {
+                    const error = (0,_315_js__rspack_import_4/* .mapCause */.K0)(cancelExit.cause);
+                    yield* effect__rspack_import_8/* .fail */.fJ(flightDone, error);
+                    return yield* effect__rspack_import_3/* .die */.F_Q(error);
                 }
-                yield* effect__rspack_import_9/* .succeed */.Py(flightDone, void 0);
+                yield* effect__rspack_import_8/* .succeed */.Py(flightDone, void 0);
             }));
-        return effect__rspack_import_8/* .unfold */.t8s(void 0, ()=>demand.wait.pipe(effect__rspack_import_4/* .flatMap */.qIB(()=>effect__rspack_import_4/* .tryPromise */.$mh({
-                    catch: (error)=>(0,_315_js__rspack_import_5/* .toRuntimeError */.qN)(error),
+        return effect__rspack_import_7/* .unfold */.t8s(void 0, ()=>demand.wait.pipe(effect__rspack_import_3/* .flatMap */.qIB(()=>effect__rspack_import_3/* .tryPromise */.$mh({
+                    catch: (error)=>(0,_315_js__rspack_import_4/* .toRuntimeError */.qN)(error),
                     try: ()=>reader.read()
-                })), effect__rspack_import_4/* .map */.TjK((next)=>next.done ? void 0 : [
+                })), effect__rspack_import_3/* .map */.TjK((next)=>next.done ? void 0 : [
                     next.value,
                     void 0
                 ])));
     }));
-const decodeFlightRoot = (flight, demand, signal, flightDone)=>effect__rspack_import_4/* .gen */.JkU(function*() {
-        (0,_707_js__rspack_import_13/* .ensureAgentFlightManifest */.n)();
-        const flightAbort = yield* _315_js__rspack_import_5/* .scopedAbortSignal */.lQ;
-        const readable = (0,_315_js__rspack_import_5/* .streamToReadableStream */._I)(gatedFlightStream(flight, demand, flightDone), {
+const decodeFlightRoot = (flight, demand, signal, flightDone)=>effect__rspack_import_3/* .gen */.JkU(function*() {
+        (0,_707_js__rspack_import_12/* .ensureAgentFlightManifest */.n)();
+        const flightAbort = yield* _315_js__rspack_import_4/* .scopedAbortSignal */.lQ;
+        const readable = (0,_315_js__rspack_import_4/* .streamToReadableStream */._I)(gatedFlightStream(flight, demand, flightDone), {
             signal: flightAbort,
             strategy: {
                 highWaterMark: 1
             }
         });
-        return yield* effect__rspack_import_4/* .tryPromise */.$mh({
+        return yield* effect__rspack_import_3/* .tryPromise */.$mh({
             catch: (error)=>hostError(signal, error),
             try: ()=>(0,react_server_dom_rspack_client_node__rspack_import_1.createFromReadableStream)(readable, {
                     unstable_allowPartialStream: true
@@ -38901,11 +38736,11 @@ const progressInput = (update)=>({
         },
         type: 'progress'
     });
-const handoffRequired = ()=>new _302_js__rspack_import_6/* .AgentContractError */.I2('handoff-required', 'The render is complete; later work requires a new invocation handoff');
+const handoffRequired = ()=>new _302_js__rspack_import_5/* .AgentContractError */.I2('handoff-required', 'The render is complete; later work requires a new invocation handoff');
 const createAgentRenderEventSession = (options)=>{
     const clock = options.clock;
-    const sequence = (0,_302_js__rspack_import_6/* .createAgentRenderEventSequence */.n4)(options.limits, void 0 === clock ? void 0 : ()=>clock.currentTimeMillisUnsafe());
-    const maxBufferedProgress = (0,_302_js__rspack_import_6/* .resolveAgentRenderLimits */.i0)(options.limits).maxEvents;
+    const sequence = (0,_302_js__rspack_import_5/* .createAgentRenderEventSequence */.n4)(options.limits, void 0 === clock ? void 0 : ()=>clock.currentTimeMillisUnsafe());
+    const maxBufferedProgress = (0,_302_js__rspack_import_5/* .resolveAgentRenderLimits */.i0)(options.limits).maxEvents;
     let offerProgress;
     let progressFailure;
     const bufferedProgress = [];
@@ -38915,36 +38750,36 @@ const createAgentRenderEventSession = (options)=>{
             if (sequence.completed) throw handoffRequired();
             const input = progressInput(update);
             if (void 0 === offerProgress) {
-                if (bufferedProgress.length >= maxBufferedProgress) throw new _302_js__rspack_import_6/* .AgentContractError */.I2('event-count-exceeded', `Agent render event count exceeds ${String(maxBufferedProgress)}`);
+                if (bufferedProgress.length >= maxBufferedProgress) throw new _302_js__rspack_import_5/* .AgentContractError */.I2('event-count-exceeded', `Agent render event count exceeds ${String(maxBufferedProgress)}`);
                 bufferedProgress.push(input);
                 return;
             }
-            await (0,_315_js__rspack_import_5/* .runPromise */.pR)(offerProgress(input));
+            await (0,_315_js__rspack_import_4/* .runPromise */.pR)(offerProgress(input));
         }
     });
-    const events = effect__rspack_import_8/* .unwrap */.oAg(effect__rspack_import_4/* .gen */.JkU(function*() {
-        const progressInputs = yield* effect__rspack_import_10/* .bounded */.Mm(0);
-        const flightDone = yield* effect__rspack_import_9/* .make */.L8();
+    const events = effect__rspack_import_7/* .unwrap */.oAg(effect__rspack_import_3/* .gen */.JkU(function*() {
+        const progressInputs = yield* effect__rspack_import_9/* .bounded */.Mm(0);
+        const flightDone = yield* effect__rspack_import_8/* .make */.L8();
         const bindProgress = ()=>{
-            offerProgress = (input)=>effect__rspack_import_10/* .offer */.x(progressInputs, input).pipe(effect__rspack_import_4/* .flatMap */.qIB((accepted)=>{
-                    if (void 0 !== progressFailure) return effect__rspack_import_4/* .fail */.fJG(progressFailure);
-                    if (!accepted) return effect__rspack_import_4/* .fail */.fJG(handoffRequired());
-                    return effect__rspack_import_4/* ["void"] */.rIH;
+            offerProgress = (input)=>effect__rspack_import_9/* .offer */.x(progressInputs, input).pipe(effect__rspack_import_3/* .flatMap */.qIB((accepted)=>{
+                    if (void 0 !== progressFailure) return effect__rspack_import_3/* .fail */.fJG(progressFailure);
+                    if (!accepted) return effect__rspack_import_3/* .fail */.fJG(handoffRequired());
+                    return effect__rspack_import_3/* ["void"] */.rIH;
                 }));
         };
-        const finalizeProgress = (error)=>effect__rspack_import_4/* .sync */.OH5(()=>{
+        const finalizeProgress = (error)=>effect__rspack_import_3/* .sync */.OH5(()=>{
                 progressFailure = error;
-            }).pipe(effect__rspack_import_4/* .andThen */.hgn(effect__rspack_import_10/* .shutdown */.n_(progressInputs)));
-        const setup = effect__rspack_import_4/* .gen */.JkU(function*() {
-            const flight = yield* effect__rspack_import_4/* .tryPromise */.$mh({
+            }).pipe(effect__rspack_import_3/* .andThen */.hgn(effect__rspack_import_9/* .shutdown */.n_(progressInputs)));
+        const setup = effect__rspack_import_3/* .gen */.JkU(function*() {
+            const flight = yield* effect__rspack_import_3/* .tryPromise */.$mh({
                 catch: (error)=>hostError(options.signal, error),
                 try: ()=>options.flight
             });
-            if (options.signal.aborted) return yield* effect__rspack_import_4/* .fail */.fJG(abortError());
+            if (options.signal.aborted) return yield* effect__rspack_import_3/* .fail */.fJG(abortError());
             const root = yield* decodeFlightRoot(flight, options.demand, options.signal, flightDone);
-            if (options.signal.aborted) return yield* effect__rspack_import_4/* .fail */.fJG(abortError());
-            const prepared = yield* effect__rspack_import_4/* ["try"] */.SvU({
-                catch: (error)=>(0,_315_js__rspack_import_5/* .toRuntimeError */.qN)(error),
+            if (options.signal.aborted) return yield* effect__rspack_import_3/* .fail */.fJG(abortError());
+            const prepared = yield* effect__rspack_import_3/* ["try"] */.SvU({
+                catch: (error)=>(0,_315_js__rspack_import_4/* .toRuntimeError */.qN)(error),
                 try: ()=>{
                     const ids = new Map();
                     const initial = snapshotTree(root, ids);
@@ -38959,23 +38794,23 @@ const createAgentRenderEventSession = (options)=>{
                 }
             });
             bindProgress();
-            return effect__rspack_import_8/* .concat */.xWs(effect__rspack_import_8/* .fromArray */.ciY([
+            return effect__rspack_import_7/* .concat */.xWs(effect__rspack_import_7/* .fromArray */.ciY([
                 prepared.shellInput,
                 ...bufferedProgress
-            ]), reconcileLoopStream(root, prepared.ids, prepared.initial, options.limits, flightDone, progressInputs, sequence)).pipe(effect__rspack_import_8/* .mapEffect */.WK$((input)=>emitBoundRenderEvent(sequence, input)), effect__rspack_import_8/* .tap */.Mim((event)=>'shell' === event.type ? options.demand.markShell : effect__rspack_import_4/* ["void"] */.rIH), effect__rspack_import_8/* .takeUntil */.QKh((event)=>'complete' === event.type), effect__rspack_import_8/* .onExit */.cfM((exit)=>{
-                if (effect__rspack_import_12/* .isSuccess */.oJ(exit)) return finalizeProgress(handoffRequired());
-                const error = (0,_315_js__rspack_import_5/* .mapCause */.K0)(exit.cause);
-                return finalizeProgress(sequence.completed && (0,_315_js__rspack_import_5/* .isAbortError */.zf)(error) ? handoffRequired() : error);
+            ]), reconcileLoopStream(root, prepared.ids, prepared.initial, options.limits, flightDone, progressInputs, sequence)).pipe(effect__rspack_import_7/* .mapEffect */.WK$((input)=>emitBoundRenderEvent(sequence, input)), effect__rspack_import_7/* .tap */.Mim((event)=>'shell' === event.type ? options.demand.markShell : effect__rspack_import_3/* ["void"] */.rIH), effect__rspack_import_7/* .takeUntil */.QKh((event)=>'complete' === event.type), effect__rspack_import_7/* .onExit */.cfM((exit)=>{
+                if (effect__rspack_import_11/* .isSuccess */.oJ(exit)) return finalizeProgress(handoffRequired());
+                const error = (0,_315_js__rspack_import_4/* .mapCause */.K0)(exit.cause);
+                return finalizeProgress(sequence.completed && (0,_315_js__rspack_import_4/* .isAbortError */.zf)(error) ? handoffRequired() : error);
             }));
         });
-        return yield* setup.pipe(effect__rspack_import_4/* .onExit */.cfM((exit)=>effect__rspack_import_12/* .isFailure */.N6(exit) ? finalizeProgress((0,_315_js__rspack_import_5/* .mapCause */.K0)(exit.cause)) : effect__rspack_import_4/* ["void"] */.rIH));
+        return yield* setup.pipe(effect__rspack_import_3/* .onExit */.cfM((exit)=>effect__rspack_import_11/* .isFailure */.N6(exit) ? finalizeProgress((0,_315_js__rspack_import_4/* .mapCause */.K0)(exit.cause)) : effect__rspack_import_3/* ["void"] */.rIH));
     }));
     return {
-        events: void 0 === clock ? events : effect__rspack_import_8/* .provideService */.PfK(events, effect__rspack_import_14/* .Clock */.zD, clock),
+        events: void 0 === clock ? events : effect__rspack_import_7/* .provideService */.PfK(events, effect__rspack_import_13/* .Clock */.zD, clock),
         progress
     };
 };
-const toPublicEventStream = (events, demand, signal)=>(0,_315_js__rspack_import_5/* .streamToReadableStream */._I)(effect__rspack_import_8/* .interruptWhen */.S67(events, (0,_315_js__rspack_import_5/* .abortToInterrupt */.p7)(signal)), {
+const toPublicEventStream = (events, demand, signal)=>(0,_315_js__rspack_import_4/* .streamToReadableStream */._I)(effect__rspack_import_7/* .interruptWhen */.S67(events, (0,_315_js__rspack_import_4/* .abortToInterrupt */.p7)(signal)), {
         closeOn: (event)=>'complete' === event.type,
         onPull: demand.notePull,
         onPullDelivered: demand.notePullEnd,
@@ -38993,7 +38828,7 @@ const decodeAgentFlightStream = (flight, options = {})=>{
         signal
     }).events, demand, signal);
 };
-const dispatcher_abortError = _302_js__rspack_import_6/* .agentRenderAbortError */.k2;
+const dispatcher_abortError = _302_js__rspack_import_5/* .agentRenderAbortError */.k2;
 const abortedStream = ()=>new ReadableStream({
         start (controller) {
             controller.error(dispatcher_abortError());
@@ -39028,7 +38863,7 @@ const drainCompleteDocument = async (events, signal)=>{
     }
     if (void 0 !== complete) return complete;
     if (signal.aborted) throw dispatcher_abortError();
-    throw new _302_js__rspack_import_6/* .AgentContractError */.I2('invalid-document', 'Flight stream ended without a complete document');
+    throw new _302_js__rspack_import_5/* .AgentContractError */.I2('invalid-document', 'Flight stream ended without a complete document');
 };
 const createAgentRenderDispatcher = (host, options = {})=>{
     const stream = (request)=>{
@@ -39039,7 +38874,7 @@ const createAgentRenderDispatcher = (host, options = {})=>{
             demand,
             get flight () {
                 const current = pendingFlight.current;
-                if (void 0 === current) return Promise.reject(new _302_js__rspack_import_6/* .AgentContractError */.I2('invalid-document', 'Flight worker is not running'));
+                if (void 0 === current) return Promise.reject(new _302_js__rspack_import_5/* .AgentContractError */.I2('invalid-document', 'Flight worker is not running'));
                 return current;
             },
             limits: {
@@ -39170,21 +39005,21 @@ const appendNode = (node, content, capabilities, fallback)=>{
         default:
             {
                 const exhaustive = node;
-                throw new _302_js__rspack_import_6/* .AgentContractError */.I2('invalid-document', `Unsupported Agent Document node: ${String(exhaustive.kind)}`);
+                throw new _302_js__rspack_import_5/* .AgentContractError */.I2('invalid-document', `Unsupported Agent Document node: ${String(exhaustive.kind)}`);
             }
     }
 };
 const project_mcp_isJsonObject = (value)=>null !== value && 'object' == typeof value && !Array.isArray(value);
 const objectStructuredContent = (value)=>{
     if (void 0 === value) return;
-    const snapshot = (0,_302_js__rspack_import_6/* .snapshotJsonValue */.mY)(value, 'MCP structured content must be JSON-serializable');
+    const snapshot = (0,_302_js__rspack_import_5/* .snapshotJsonValue */.mY)(value, 'MCP structured content must be JSON-serializable');
     return project_mcp_isJsonObject(snapshot) ? snapshot : void 0;
 };
 const resultMetadata = (document)=>{
     if ('result' !== document.root.kind) return;
     const metadata = document.root.metadata;
     if (void 0 === metadata) return;
-    const snapshot = (0,_302_js__rspack_import_6/* .snapshotJsonValue */.mY)(metadata, 'MCP result _meta must be JSON-serializable');
+    const snapshot = (0,_302_js__rspack_import_5/* .snapshotJsonValue */.mY)(metadata, 'MCP result _meta must be JSON-serializable');
     if (!project_mcp_isJsonObject(snapshot)) throw new McpProjectionError('invalid-result-metadata', 'MCP result _meta must be a JSON object; Agent.Result metadata projects to CallToolResult._meta');
     return snapshot;
 };
@@ -39214,8 +39049,8 @@ const attachMcpStructuredContent = (result, value)=>{
         structuredContent: structured
     };
 };
-const notifyProgress = (source, token, sendProgress)=>effect__rspack_import_4/* .tryPromise */.$mh({
-        catch: (error)=>(0,_315_js__rspack_import_5/* .toRuntimeError */.qN)(error),
+const notifyProgress = (source, token, sendProgress)=>effect__rspack_import_3/* .tryPromise */.$mh({
+        catch: (error)=>(0,_315_js__rspack_import_4/* .toRuntimeError */.qN)(error),
         try: ()=>sendProgress({
                 progress: source.completed,
                 progressToken: token,
@@ -39256,18 +39091,18 @@ const documentProgressNodes = (document)=>{
     appendProgressNodes(document.root, nodes);
     return nodes;
 };
-const projectMcpEventStream = effect__rspack_import_4/* .fnUntraced */.D9k(function*(events, options = {}) {
+const projectMcpEventStream = effect__rspack_import_3/* .fnUntraced */.D9k(function*(events, options = {}) {
     let lastProgress = -1 / 0;
     let complete;
     const token = options.progressToken;
     const sendProgress = options.sendProgress;
     const notify = (source)=>{
-        if (void 0 === token || void 0 === sendProgress) return effect__rspack_import_4/* ["void"] */.rIH;
-        if (!(source.completed > lastProgress)) return effect__rspack_import_4/* ["void"] */.rIH;
+        if (void 0 === token || void 0 === sendProgress) return effect__rspack_import_3/* ["void"] */.rIH;
+        if (!(source.completed > lastProgress)) return effect__rspack_import_3/* ["void"] */.rIH;
         lastProgress = source.completed;
         return notifyProgress(source, token, sendProgress);
     };
-    yield* effect__rspack_import_8/* .runForEach */.o1d(events, (event)=>effect__rspack_import_4/* .gen */.JkU(function*() {
+    yield* effect__rspack_import_7/* .runForEach */.o1d(events, (event)=>effect__rspack_import_3/* .gen */.JkU(function*() {
             switch(event.type){
                 case 'progress':
                     yield* notify(event);
@@ -39288,7 +39123,7 @@ const projectMcpEventStream = effect__rspack_import_4/* .fnUntraced */.D9k(funct
                     }
             }
         }));
-    if (void 0 === complete) return yield* effect__rspack_import_4/* .fail */.fJG(new _302_js__rspack_import_6/* .AgentContractError */.I2('invalid-document', 'MCP projector requires a complete document; the stream ended without one'));
+    if (void 0 === complete) return yield* effect__rspack_import_3/* .fail */.fJG(new _302_js__rspack_import_5/* .AgentContractError */.I2('invalid-document', 'MCP projector requires a complete document; the stream ended without one'));
     return Object.freeze({
         document: complete,
         result: documentToCallToolResult(complete, options)
@@ -39371,53 +39206,6 @@ const MarkdownContent = async ({ children, components })=>{
     });
     return createElement(Agent.Markdown, null, markdown.replace(/\n+$/u, ''));
 };
-const hookComponents = new Set(Object.values(_506_js__rspack_import_15/* .Hook */.qn));
-const isHookComponent = (value)=>hookComponents.has(value);
-const resolveHookElement = (node)=>{
-    let element = node;
-    while(isValidElement(element) && isHookComponent(element.type))element = element.type(element.props);
-    return element;
-};
-const isAgentElement = (node, name)=>{
-    const resolved = resolveHookElement(node);
-    return isValidElement(resolved) && resolved.type === name;
-};
-const flattenText = (node)=>{
-    if ('string' == typeof node || 'number' == typeof node) return String(node);
-    if (Array.isArray(node)) return node.map(flattenText).join('');
-    if (isAgentElement(node, 'agent-hook-result')) throw new Error('Hook result contains duplicate roots');
-    throw new Error('Hook additional context may contain only string or number children');
-};
-const lowerHookResult = (node)=>{
-    const roots = Children.toArray(node).map(resolveHookElement);
-    if (1 !== roots.length || !isAgentElement(roots[0], 'agent-hook-result')) throw new Error('Expected exactly one agent-hook-result root');
-    const result = roots[0];
-    const contexts = Children.toArray(result.props.children).map(resolveHookElement).map((child)=>{
-        if (isAgentElement(child, 'agent-hook-result')) throw new Error('Hook result contains duplicate roots');
-        if (!isAgentElement(child, 'agent-hook-additional-context')) throw new Error('Hook result may contain only agent-hook-additional-context elements');
-        return flattenText(child.props.children);
-    });
-    if (0 === contexts.length) throw new Error('Hook result requires additional context');
-    return {
-        hookSpecificOutput: {
-            additionalContext: contexts.join(''),
-            hookEventName: 'PostToolUse'
-        }
-    };
-};
-const createRscRequestContext = (label)=>{
-    const storage = new AsyncLocalStorage();
-    return Object.freeze({
-        run (value, operation) {
-            return storage.run(value, operation);
-        },
-        use () {
-            const value = storage.getStore();
-            if (void 0 === value) throw new Error(`${label} used outside a render request`);
-            return value;
-        }
-    });
-};
 var src_AGENT_DOCUMENT_VERSION = 1;
 var src_AGENT_REQUEST_STORE_VERSION = 6;
 var src_PLUGIN_STATE_DIRECTORY = "state";
@@ -39431,6 +39219,20 @@ var src_PLUGIN_STATE_DIRECTORY = "state";
 __webpack_require__.d(__webpack_exports__, {
 }, {
   jK: createAgentRenderDispatcher
+});
+
+
+},
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/request.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _736_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/736.js");
+var request_AGENT_REQUEST_STORE_VERSION = 6;
+var request_PLUGIN_STATE_DIRECTORY = "state";
+
+
+
+
+__webpack_require__.d(__webpack_exports__, {
+  agent: () => (/* reexport safe */ _736_js__rspack_import_0.MA)
 });
 
 
@@ -64521,7 +64323,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/262~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/262~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 const MCP_APP_PROTOCOL_VERSION = '2026-01-26';
 const MCP_APP_ROUTE_ID_META_KEY = 'io.agent-bundle/route-id';
 
@@ -64534,10 +64336,19 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/667~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/573~1.js"(__unused_rspack___webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
+/* import */ var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/917~1.js");
+
+const appResourceUri = (reference)=>reference;
+const MAX_ROUTE_RENDER_ELAPSED_MS = 86400000;
+
+
+
+},
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/667~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
 /* import */ var node_fs_promises__rspack_import_1 = __webpack_require__("node:fs/promises");
-/* import */ var _991_1_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/991~1.js");
+/* import */ var _991_1_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/991~1.js");
 
 
 
@@ -64583,13 +64394,13 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/738~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/738~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_path__rspack_import_0 = __webpack_require__("node:path");
 /* import */ var node_fs_promises__rspack_import_1 = __webpack_require__("node:fs/promises");
 /* import */ var node_os__rspack_import_2 = __webpack_require__("node:os");
-/* import */ var _790_1_js__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/790~1.js");
-/* import */ var _991_1_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/991~1.js");
-/* import */ var _667_1_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/667~1.js");
+/* import */ var _790_1_js__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/790~1.js");
+/* import */ var _991_1_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/991~1.js");
+/* import */ var _667_1_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/667~1.js");
 
 
 
@@ -65012,7 +64823,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/790~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/790~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 const isErrno = (error, code)=>'object' == typeof error && null !== error && 'code' in error && error.code === code;
 const errorMessage = (error)=>error instanceof Error ? error.message : String(error);
 class CodedError extends Error {
@@ -65034,7 +64845,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/818~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/818~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 const isPlainObjectOrArray = (value)=>{
     if (Array.isArray(value)) return true;
     const proto = Object.getPrototypeOf(value);
@@ -65056,7 +64867,570 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/991~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/917~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _818_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/818~1.js");
+
+const canonicalAgentEvents = Object.freeze([
+    'session/start',
+    'tool/before',
+    'tool/after',
+    'stop',
+    'agent/start',
+    'agent/stop',
+    'workspace/open',
+    'session/end',
+    'prompt/submit',
+    'tool/failure',
+    'compact/before',
+    'compact/after',
+    'permission/request',
+    'permission/denied',
+    'stop/failure',
+    'file/change',
+    'config/change',
+    'task/create',
+    'task/complete',
+    'agent/idle',
+    'model-switch/before',
+    'model-switch/after'
+]);
+const eventContracts = (/* unused pure expression or super */ null && ({
+    'session/start': {
+        deny: false
+    },
+    'tool/before': {
+        deny: true
+    },
+    'tool/after': {
+        deny: false
+    },
+    stop: {
+        deny: true
+    },
+    'agent/start': {
+        deny: true
+    },
+    'agent/stop': {
+        deny: true
+    },
+    'workspace/open': {
+        deny: false
+    },
+    'session/end': {
+        deny: false
+    },
+    'prompt/submit': {
+        deny: true
+    },
+    'tool/failure': {
+        deny: false
+    },
+    'compact/before': {
+        deny: true
+    },
+    'compact/after': {
+        deny: false
+    },
+    'permission/request': {
+        deny: true
+    },
+    'permission/denied': {
+        deny: false
+    },
+    'stop/failure': {
+        deny: false
+    },
+    'file/change': {
+        deny: false
+    },
+    'config/change': {
+        deny: true
+    },
+    'task/create': {
+        deny: true
+    },
+    'task/complete': {
+        deny: false
+    },
+    'agent/idle': {
+        deny: true
+    },
+    'model-switch/before': {
+        deny: true
+    },
+    'model-switch/after': {
+        deny: false
+    }
+}));
+const agentEventPayloadFieldKinds = (0,_818_1_js__rspack_import_0/* .deepFreeze */.o)({
+    agentId: 'string',
+    agentTranscriptPath: 'nullable-string',
+    agentType: 'string',
+    cwd: 'string',
+    error: 'string',
+    filePath: 'string',
+    fromModel: 'string',
+    isInterrupt: 'boolean',
+    lastAssistantMessage: 'nullable-string',
+    model: 'string',
+    permissionMode: 'string',
+    prompt: 'string',
+    reason: 'string',
+    reentry: 'boolean',
+    requestedModel: 'nullable-string',
+    sessionId: 'string',
+    source: 'string',
+    taskDescription: 'string',
+    taskId: 'string',
+    taskSubject: 'string',
+    teamName: 'string',
+    teammateName: 'string',
+    toModel: 'string',
+    toolInput: 'json',
+    toolName: 'string',
+    toolResponse: 'json',
+    toolUseId: 'string',
+    transcriptPath: 'nullable-string',
+    trigger: 'trigger',
+    workspaceRoots: 'string-array'
+});
+const sessionFields = [
+    'sessionId',
+    'cwd',
+    "transcriptPath",
+    'permissionMode',
+    'agentId',
+    'agentType'
+];
+const threeHostFields = [
+    ...sessionFields,
+    'model'
+];
+const toolFields = [
+    ...threeHostFields,
+    'toolName',
+    'toolInput',
+    'toolUseId'
+];
+const taskFields = [
+    ...sessionFields,
+    'taskId',
+    'taskSubject',
+    "taskDescription",
+    'teammateName',
+    'teamName'
+];
+const modelSwitchFields = [
+    ...sessionFields,
+    'fromModel',
+    'toModel',
+    'requestedModel',
+    'source'
+];
+const agentEventPayloadFields = (0,_818_1_js__rspack_import_0/* .deepFreeze */.o)({
+    'agent/idle': [
+        ...sessionFields,
+        'teammateName',
+        'teamName'
+    ],
+    'agent/start': threeHostFields,
+    'agent/stop': [
+        ...threeHostFields,
+        "agentTranscriptPath",
+        'reentry',
+        'lastAssistantMessage'
+    ],
+    'compact/after': [
+        ...sessionFields,
+        'trigger'
+    ],
+    'compact/before': [
+        ...threeHostFields,
+        'trigger'
+    ],
+    'config/change': [
+        ...sessionFields,
+        'source',
+        'filePath'
+    ],
+    'file/change': [
+        ...sessionFields,
+        'filePath'
+    ],
+    'model-switch/after': modelSwitchFields,
+    'model-switch/before': modelSwitchFields,
+    'permission/denied': [
+        ...sessionFields,
+        'toolName',
+        'toolInput'
+    ],
+    'permission/request': [
+        ...sessionFields,
+        'toolName',
+        'toolInput'
+    ],
+    'prompt/submit': [
+        ...threeHostFields,
+        'prompt'
+    ],
+    'session/end': [
+        ...threeHostFields,
+        'reason'
+    ],
+    'session/start': [
+        ...threeHostFields,
+        'source'
+    ],
+    stop: [
+        ...threeHostFields,
+        'reentry',
+        'lastAssistantMessage'
+    ],
+    'stop/failure': [
+        ...sessionFields,
+        'error',
+        'reentry',
+        'lastAssistantMessage'
+    ],
+    'task/complete': taskFields,
+    'task/create': taskFields,
+    'tool/after': [
+        ...toolFields,
+        'toolResponse'
+    ],
+    'tool/before': toolFields,
+    'tool/failure': [
+        'sessionId',
+        'cwd',
+        "transcriptPath",
+        'toolName',
+        'toolInput',
+        'toolUseId',
+        'error',
+        'isInterrupt'
+    ],
+    'workspace/open': [
+        'workspaceRoots'
+    ]
+});
+const key = (nativeKey, decode)=>Object.freeze(void 0 === decode ? {
+        nativeKey
+    } : {
+        decode,
+        nativeKey
+    });
+const standardKeys = Object.freeze({
+    agentId: key('agent_id'),
+    agentTranscriptPath: key("agent_transcript_path"),
+    agentType: key('agent_type'),
+    cwd: key('cwd'),
+    error: key('error'),
+    filePath: key('file_path'),
+    fromModel: key('from_model'),
+    isInterrupt: key('is_interrupt'),
+    lastAssistantMessage: key('last_assistant_message'),
+    model: key('model'),
+    permissionMode: key('permission_mode'),
+    prompt: key('prompt'),
+    reason: key('reason'),
+    reentry: key('stop_hook_active'),
+    requestedModel: key('requested_model'),
+    sessionId: key('session_id'),
+    source: key('source'),
+    taskDescription: key("task_description"),
+    taskId: key('task_id'),
+    taskSubject: key('task_subject'),
+    teamName: key('team_name'),
+    teammateName: key('teammate_name'),
+    toModel: key('to_model'),
+    toolInput: key('tool_input'),
+    toolName: key('tool_name'),
+    toolResponse: key('tool_response'),
+    toolUseId: key('tool_use_id'),
+    transcriptPath: key("transcript_path"),
+    trigger: key('trigger')
+});
+const cursorKeys = Object.freeze({
+    ...standardKeys,
+    agentId: key('subagent_id'),
+    agentType: key('subagent_type'),
+    error: key('error_message'),
+    reentry: key('loop_count', 'positive-count'),
+    sessionId: key('conversation_id'),
+    toolResponse: key('tool_output', 'json-string'),
+    workspaceRoots: key('workspace_roots')
+});
+const pick = (keys, fields)=>Object.freeze(Object.fromEntries(fields.map((field)=>[
+            field,
+            keys[field]
+        ])));
+const claudeSession = [
+    'sessionId',
+    'cwd',
+    "transcriptPath",
+    'permissionMode',
+    'agentId',
+    'agentType'
+];
+const claudeTool = [
+    ...claudeSession,
+    'toolName',
+    'toolInput',
+    'toolUseId'
+];
+const claudeTask = [
+    ...claudeSession,
+    'taskId',
+    'taskSubject',
+    "taskDescription",
+    'teammateName',
+    'teamName'
+];
+const codexSession = [
+    'sessionId',
+    'cwd',
+    "transcriptPath",
+    'permissionMode',
+    'agentId',
+    'agentType'
+];
+const codexThreeHost = [
+    ...codexSession,
+    'model'
+];
+const codexTool = [
+    ...codexThreeHost,
+    'toolName',
+    'toolInput',
+    'toolUseId'
+];
+const cursorSession = [
+    'sessionId',
+    "transcriptPath",
+    'model'
+];
+const cursorTool = [
+    ...cursorSession,
+    'cwd',
+    'toolName',
+    'toolInput',
+    'toolUseId'
+];
+const agentEventPayloadNativeKeys = (0,_818_1_js__rspack_import_0/* .deepFreeze */.o)({
+    amp: Object.freeze({
+        'prompt/submit': pick(standardKeys, [
+            'sessionId',
+            'prompt'
+        ]),
+        'session/start': pick(standardKeys, [
+            'sessionId'
+        ]),
+        stop: pick(standardKeys, [
+            'sessionId'
+        ]),
+        'tool/after': pick(standardKeys, [
+            'sessionId',
+            'toolName',
+            'toolInput',
+            'toolUseId',
+            'toolResponse'
+        ]),
+        'tool/before': pick(standardKeys, [
+            'sessionId',
+            'toolName',
+            'toolInput',
+            'toolUseId'
+        ])
+    }),
+    claude: Object.freeze({
+        'agent/idle': pick(standardKeys, [
+            ...claudeSession,
+            'teammateName',
+            'teamName'
+        ]),
+        'agent/start': pick(standardKeys, claudeSession),
+        'agent/stop': pick(standardKeys, [
+            ...claudeSession,
+            "agentTranscriptPath",
+            'reentry',
+            'lastAssistantMessage'
+        ]),
+        'compact/after': pick(standardKeys, [
+            ...claudeSession,
+            'trigger'
+        ]),
+        'compact/before': pick(standardKeys, [
+            ...claudeSession,
+            'trigger'
+        ]),
+        'config/change': pick(standardKeys, [
+            ...claudeSession,
+            'source',
+            'filePath'
+        ]),
+        'file/change': pick(standardKeys, [
+            ...claudeSession,
+            'filePath'
+        ]),
+        'model-switch/after': pick(standardKeys, modelSwitchFields),
+        'model-switch/before': pick(standardKeys, modelSwitchFields),
+        'permission/denied': pick(standardKeys, [
+            ...claudeSession,
+            'toolName',
+            'toolInput'
+        ]),
+        'permission/request': pick(standardKeys, [
+            ...claudeSession,
+            'toolName',
+            'toolInput'
+        ]),
+        'prompt/submit': pick(standardKeys, [
+            ...claudeSession,
+            'prompt'
+        ]),
+        'session/end': pick(standardKeys, [
+            ...claudeSession,
+            'reason'
+        ]),
+        'session/start': pick(standardKeys, [
+            ...claudeSession,
+            'model',
+            'source'
+        ]),
+        stop: pick(standardKeys, [
+            ...claudeSession,
+            'reentry',
+            'lastAssistantMessage'
+        ]),
+        'stop/failure': pick(standardKeys, [
+            ...claudeSession,
+            'error',
+            'reentry',
+            'lastAssistantMessage'
+        ]),
+        'task/complete': pick(standardKeys, claudeTask),
+        'task/create': pick(standardKeys, claudeTask),
+        'tool/after': pick(standardKeys, [
+            ...claudeTool,
+            'toolResponse'
+        ]),
+        'tool/before': pick(standardKeys, claudeTool),
+        'tool/failure': pick(standardKeys, [
+            'sessionId',
+            'cwd',
+            "transcriptPath",
+            'toolName',
+            'toolInput',
+            'toolUseId',
+            'error',
+            'isInterrupt'
+        ])
+    }),
+    codex: Object.freeze({
+        'agent/start': pick(standardKeys, codexThreeHost),
+        'agent/stop': pick(standardKeys, [
+            ...codexThreeHost,
+            "agentTranscriptPath",
+            'reentry',
+            'lastAssistantMessage'
+        ]),
+        'compact/after': pick(standardKeys, [
+            ...codexSession,
+            'trigger'
+        ]),
+        'compact/before': pick(standardKeys, [
+            ...codexThreeHost,
+            'trigger'
+        ]),
+        'permission/request': pick(standardKeys, [
+            ...codexSession,
+            'toolName',
+            'toolInput'
+        ]),
+        'prompt/submit': pick(standardKeys, [
+            ...codexThreeHost,
+            'prompt'
+        ]),
+        'session/end': pick(standardKeys, [
+            ...codexThreeHost,
+            'reason'
+        ]),
+        'session/start': pick(standardKeys, [
+            ...codexThreeHost,
+            'source'
+        ]),
+        stop: pick(standardKeys, [
+            ...codexThreeHost,
+            'reentry',
+            'lastAssistantMessage'
+        ]),
+        'tool/after': pick(standardKeys, [
+            ...codexTool,
+            'toolResponse'
+        ]),
+        'tool/before': pick(standardKeys, codexTool)
+    }),
+    cursor: Object.freeze({
+        'agent/start': pick(cursorKeys, [
+            ...cursorSession,
+            'agentId',
+            'agentType'
+        ]),
+        'agent/stop': pick(cursorKeys, [
+            ...cursorSession,
+            'agentId',
+            'agentType',
+            "agentTranscriptPath",
+            'reentry'
+        ]),
+        'compact/before': pick(cursorKeys, [
+            ...cursorSession,
+            'trigger'
+        ]),
+        'prompt/submit': pick(cursorKeys, [
+            ...cursorSession,
+            'prompt'
+        ]),
+        'session/end': pick(cursorKeys, [
+            ...cursorSession,
+            'reason'
+        ]),
+        'session/start': pick(cursorKeys, cursorSession),
+        stop: pick(cursorKeys, [
+            ...cursorSession,
+            'reentry'
+        ]),
+        'tool/after': pick(cursorKeys, [
+            ...cursorTool,
+            'toolResponse'
+        ]),
+        'tool/before': pick(cursorKeys, cursorTool),
+        'tool/failure': pick(cursorKeys, [
+            'sessionId',
+            "transcriptPath",
+            'cwd',
+            'toolName',
+            'toolInput',
+            'toolUseId',
+            'error',
+            'isInterrupt'
+        ]),
+        'workspace/open': pick(cursorKeys, [
+            'workspaceRoots'
+        ])
+    })
+});
+const isAgentEventPayloadHost = (target)=>'amp' === target || 'claude' === target || 'codex' === target || 'cursor' === target;
+
+
+__webpack_require__.d(__webpack_exports__, {
+}, {
+  jy: canonicalAgentEvents
+});
+
+
+},
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/991~1.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 const isJsonWhitespace = (code)=>0x09 === code || 0x0a === code || 0x0d === code || 0x20 === code;
 const isValueTerminator = (code)=>isJsonWhitespace(code) || 0x2c === code || 0x7d === code || 0x5d === code;
 const skipWhitespace = (bytes, index)=>{
@@ -65243,10 +65617,10 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/cli-entry.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-/* import */ var _667_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/667~1.js");
-/* import */ var _790_1_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/790~1.js");
-/* import */ var _terminal_capability_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/terminal-capability.js");
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/cli-entry.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _667_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/667~1.js");
+/* import */ var _790_1_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/790~1.js");
+/* import */ var _terminal_capability_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/terminal-capability.js");
 
 
 
@@ -65366,19 +65740,7 @@ const cliInputError = (command, input, error)=>{
     });
     return new CliInputError(issues.map(cliInputIssueLine).join('\n'), issues);
 };
-const resolveTerminal = (hostSurface, options)=>{
-    if (void 0 !== options.terminal) return options.terminal;
-    if (void 0 === options.isTty) return (0,_terminal_capability_js__rspack_import_2/* .detectProcessTerminal */.JH)(hostSurface);
-    const stdout = {
-        columns: process.stdout.columns,
-        fd: 1,
-        isTTY: options.isTty(),
-        rows: process.stdout.rows
-    };
-    return (0,_terminal_capability_js__rspack_import_2/* .detectProcessTerminal */.JH)(hostSurface, {
-        stdout
-    });
-};
+const resolveTerminal = (hostSurface, options)=>options.terminal ?? (0,_terminal_capability_js__rspack_import_2/* .detectProcessTerminal */.JH)(hostSurface);
 const webCommandRow = [
     'web',
     "Open one of the plugin's MCP Apps in a browser."
@@ -66138,7 +66500,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/launch-env.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/launch-env.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_fs__rspack_import_0 = __webpack_require__("node:fs");
 /* import */ var node_path__rspack_import_1 = __webpack_require__("node:path");
 
@@ -66268,7 +66630,44 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/terminal-capability.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/routes.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+/* import */ var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/917~1.js");
+/* import */ var _573_1_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/573~1.js");
+
+const defineTool = (config, handler)=>Object.assign(async (props)=>{
+        const { agent } = await Promise.resolve(/* import() */).then(__webpack_require__.bind(__webpack_require__, "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/request.js"));
+        return handler(props.input, await agent());
+    }, config);
+const definitions = {};
+for (const event of _917_1_js__rspack_import_0/* .canonicalAgentEvents */.jy){
+    const [family, name] = event.split('/');
+    const key = family.replace(/-([a-z])/gu, (_match, letter)=>letter.toUpperCase());
+    const define = (config, handler)=>Object.assign(handler, {
+            config,
+            event
+        });
+    if (void 0 === name) definitions[key] = Object.assign(define, definitions[key]);
+    else {
+        const group = definitions[key] ?? {};
+        Object.assign(group, {
+            [name]: define
+        });
+        definitions[key] = group;
+    }
+}
+const events = (/* unused pure expression or super */ null && (definitions));
+
+
+
+
+__webpack_require__.d(__webpack_exports__, {
+}, {
+  uO: defineTool
+});
+
+
+},
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/terminal-capability.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_fs__rspack_import_0 = __webpack_require__("node:fs");
 
 const isSet = (value)=>void 0 !== value && '' !== value;
@@ -66380,7 +66779,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/web-host.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/web-host.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
 /* import */ var node_http__rspack_import_1 = __webpack_require__("node:http");
 /* import */ var node_buffer__rspack_import_2 = __webpack_require__("node:buffer");
@@ -66389,12 +66788,12 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var node_path__rspack_import_5 = __webpack_require__("node:path");
 /* import */ var node_net__rspack_import_6 = __webpack_require__("node:net");
 /* import */ var _modelcontextprotocol_client_stdio__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/@modelcontextprotocol+client@2.0.0/node_modules/@modelcontextprotocol/client/dist/stdio.mjs");
-/* import */ var _738_1_js__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/738~1.js");
-/* import */ var _262_1_js__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/262~1.js");
-/* import */ var _818_1_js__rspack_import_13 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/818~1.js");
-/* import */ var _991_1_js__rspack_import_9 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/991~1.js");
-/* import */ var _790_1_js__rspack_import_10 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/790~1.js");
-/* import */ var _667_1_js__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/667~1.js");
+/* import */ var _738_1_js__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/738~1.js");
+/* import */ var _262_1_js__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/262~1.js");
+/* import */ var _818_1_js__rspack_import_13 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/818~1.js");
+/* import */ var _991_1_js__rspack_import_9 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/991~1.js");
+/* import */ var _790_1_js__rspack_import_10 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/790~1.js");
+/* import */ var _667_1_js__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/667~1.js");
 
 
 
@@ -176484,7 +176883,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./.agent-bundle-virtual/bin-cargo-hauler-0.mjs"(__unused_rspack___webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
 /* import */ var node_url__rspack_import_0 = __webpack_require__("node:url");
-/* import */ var agent_bundle_launch_env__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/launch-env.js");
+/* import */ var agent_bundle_launch_env__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/launch-env.js");
 
 
 (0,agent_bundle_launch_env__rspack_import_1/* .applyOperatorEnv */.OJ)({
@@ -176507,29 +176906,29 @@ __webpack_require__.d(__webpack_exports__, {
 "./.agent-bundle-virtual/bin-cargo-hauler-entry.mjs"(__webpack_module__, __webpack_exports__, __webpack_require__) {
 __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_deps, __rspack_async_done) { try {
 /* import */ var agent_bundle_launch_env_layer__rspack_import_0 = __webpack_require__("./.agent-bundle-virtual/bin-cargo-hauler-0.mjs");
-/* import */ var agent_bundle_cli_entry__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/cli-entry.js");
-/* import */ var agent_bundle_web_host__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@477abe956bdb1_773f7447950680cdbc3c4d648d082cde/node_modules/agent-bundle/dist/web-host.js");
+/* import */ var agent_bundle_cli_entry__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/cli-entry.js");
+/* import */ var agent_bundle_web_host__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1d661b4d9a4ba_4d2ab1b8169f21b52bed230327c7f11e/node_modules/agent-bundle/dist/web-host.js");
 /* import */ var agent_bundle_web_host_page__rspack_import_3 = __webpack_require__("./.agent-bundle-virtual/bin-cargo-hauler-1.mjs");
-/* import */ var _agent_bundle_runtime__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/49.js");
-/* import */ var _agent_bundle_runtime__rspack_import_22 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
-/* import */ var _agent_bundle_runtime__rspack_import_23 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/index.js");
+/* import */ var _agent_bundle_runtime__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/49.js");
+/* import */ var _agent_bundle_runtime__rspack_import_22 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/736.js");
+/* import */ var _agent_bundle_runtime__rspack_import_23 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_01e579660b89b328f5203ed33a3319c2/node_modules/@agent-bundle/runtime/dist/index.js");
 /* import */ var node_url__rspack_import_4 = __webpack_require__("node:url");
 /* import */ var node_worker_threads__rspack_import_5 = __webpack_require__("node:worker_threads");
-/* import */ var _tmp_wt_287_src_cli_daemon_ts__rspack_import_6 = __webpack_require__("./src/cli/daemon.ts");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.cli.ts");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.cli.ts");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.cli.ts");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.cli.ts");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.cli.ts");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.cli.ts");
-/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.cli.ts");
+/* import */ var _src_cli_daemon_ts__rspack_import_6 = __webpack_require__("./src/cli/daemon.ts");
+/* import */ var _src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
+/* import */ var _src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
+/* import */ var _src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
+/* import */ var _src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
+/* import */ var _src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
+/* import */ var _src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
+/* import */ var _src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
+/* import */ var _src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.cli.ts");
+/* import */ var _src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.cli.ts");
+/* import */ var _src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.cli.ts");
+/* import */ var _src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.cli.ts");
+/* import */ var _src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.cli.ts");
+/* import */ var _src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.cli.ts");
+/* import */ var _src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.cli.ts");
 
 
 
@@ -176538,21 +176937,21 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 
 
 
-const route0 = Object.assign({}, Reflect.get(_tmp_wt_287_src_cli_daemon_ts__rspack_import_6, 'default'), _tmp_wt_287_src_cli_daemon_ts__rspack_import_6);
+const route0 = Object.assign({}, Reflect.get(_src_cli_daemon_ts__rspack_import_6, 'default'), _src_cli_daemon_ts__rspack_import_6);
 
-const route1 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7);
+const route1 = Object.assign({}, Reflect.get(_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7, 'default'), _src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7);
 
-const route2 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
+const route2 = Object.assign({}, Reflect.get(_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
 
-const route3 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
+const route3 = Object.assign({}, Reflect.get(_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
 
-const route4 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
+const route4 = Object.assign({}, Reflect.get(_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
 
-const route5 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
+const route5 = Object.assign({}, Reflect.get(_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
 
-const route6 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
+const route6 = Object.assign({}, Reflect.get(_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
 
-const route7 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
+const route7 = Object.assign({}, Reflect.get(_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
 
 
 
@@ -176583,31 +176982,31 @@ const routes = Object.freeze({
     }),
     "tool:hauler/hauler_await": Object.freeze({
         module: route1,
-        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16
+        projection: _src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16
     }),
     "tool:hauler/hauler_kill": Object.freeze({
         module: route2,
-        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17
+        projection: _src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17
     }),
     "tool:hauler/hauler_last": Object.freeze({
         module: route3,
-        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18
+        projection: _src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18
     }),
     "tool:hauler/hauler_log": Object.freeze({
         module: route4,
-        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19
+        projection: _src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19
     }),
     "tool:hauler/hauler_request": Object.freeze({
         module: route5,
-        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14
+        projection: _src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14
     }),
     "tool:hauler/hauler_result": Object.freeze({
         module: route6,
-        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20
+        projection: _src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20
     }),
     "tool:hauler/hauler_status": Object.freeze({
         module: route7,
-        projection: _tmp_wt_287_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21
+        projection: _src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21
     })
 });
 const commands = Object.freeze([
