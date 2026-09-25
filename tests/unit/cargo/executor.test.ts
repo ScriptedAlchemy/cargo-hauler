@@ -36,6 +36,14 @@ if [ "$1" = orphan-holder ]; then
   ( trap '' TERM; sleep 4 ) &
   exit 0
 fi
+if [ "$1" = sleeper ]; then
+  # Fork before the output that triggers the kill: macOS does not abort a
+  # fork that a group signal races, so a later fork could escape the signal.
+  sleep 5 &
+  echo "out:sleeper"
+  wait
+  exit 0
+fi
 if [ "$1" = interleave ]; then
   for i in 0 1 2 3 4; do
     echo "out$i"
@@ -53,7 +61,6 @@ echo "err:$1" >&2
 if [ "$1" = trap-term ] || [ "$1" = ignore-term ]; then
   while true; do sleep 0.1; done
 fi
-if [ -n "$FAKE_SLEEP" ]; then sleep "$FAKE_SLEEP"; fi
 exit "\${FAKE_EXIT:-0}"
 `;
 
@@ -381,9 +388,8 @@ describe('executeCargo', () => {
       const started = Date.now();
 
       const result = yield* runExecute({
-        argv: [script, 'slow'],
+        argv: [script, 'sleeper'],
         cwd: dir,
-        env: { FAKE_SLEEP: '5' },
         killSignal,
         tailBytes: 4096,
         onOutput: () => Deferred.succeed(killSignal, undefined).pipe(Effect.asVoid),
