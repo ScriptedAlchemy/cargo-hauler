@@ -28185,11 +28185,11 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
 /* import */ var effect_Cause__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Cause.js");
 /* import */ var effect_Deferred__rspack_import_9 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Deferred.js");
-/* import */ var effect_Effect__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
+/* import */ var effect_Effect__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
 /* import */ var effect_Queue__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Queue.js");
 /* import */ var effect_Result__rspack_import_10 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Result.js");
 /* import */ var effect_unstable_socket_Socket__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/unstable/socket/Socket.js");
-/* import */ var _util_guards_js__rspack_import_3 = __webpack_require__("./src/internal/util/guards.ts");
+/* import */ var _util_guards_js__rspack_import_4 = __webpack_require__("./src/internal/util/guards.ts");
 /* import */ var _platform_ndjson_js__rspack_import_1 = __webpack_require__("./src/internal/platform/ndjson.ts");
 /* import */ var _contracts_version_order_js__rspack_import_8 = __webpack_require__("./src/internal/contracts/version-order.ts");
 /* import */ var _contracts_protocol_js__rspack_import_2 = __webpack_require__("./src/internal/contracts/protocol.ts");
@@ -28206,20 +28206,23 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 
+/** Heap and framing one queued output message costs beyond its base64 payload. */ const outputMessageOverheadBytes = 256;
+const outputCost = (message)=>message.data.length + outputMessageOverheadBytes;
 const defaultOutputBufferOptions = {
-    maxOutputBytes: 1024 * 1024,
-    maxOutputMessages: 128
+    maxOutputBytes: 1024 * 1024
 };
 /**
- * FIFO connection buffer with a bounded bulk-output portion. Control and
- * terminal messages are always retained; overflow replaces output with one
- * ordinary stderr output message, so the truncation note needs no message
- * type of its own.
+ * FIFO connection buffer with a bounded bulk-output portion. Output is shed
+ * only while a flushed write is still waiting on the peer: a burst queued
+ * between two writer turns on an idle socket is always kept, however many
+ * messages it holds. Control and terminal messages are always retained;
+ * overflow replaces output with one ordinary stderr output message, so the
+ * truncation note needs no message type of its own.
  */ class ConnectionOutputBuffer {
     #options;
     #pending = [];
+    #awaitingPeer = false;
     #bufferedOutputBytes = 0;
-    #bufferedOutputMessages = 0;
     #droppedPayloadBytes = 0;
     #truncation = null;
     constructor(options = defaultOutputBufferOptions){
@@ -28227,9 +28230,6 @@ const defaultOutputBufferOptions = {
     }
     get bufferedOutputBytes() {
         return this.#bufferedOutputBytes;
-    }
-    get bufferedOutputMessages() {
-        return this.#bufferedOutputMessages;
     }
     get size() {
         return this.#pending.length;
@@ -28243,40 +28243,37 @@ const defaultOutputBufferOptions = {
             });
             return wasEmpty;
         }
-        const outputBytes = message.data.length;
-        if (this.#bufferedOutputMessages < this.#options.maxOutputMessages && this.#bufferedOutputBytes + outputBytes <= this.#options.maxOutputBytes) {
+        const outputBytes = outputCost(message);
+        if (!this.#awaitingPeer || this.#bufferedOutputBytes + outputBytes <= this.#options.maxOutputBytes) {
             this.#pending.push({
                 message,
                 outputBytes
             });
-            this.#bufferedOutputMessages += 1;
             this.#bufferedOutputBytes += outputBytes;
             return wasEmpty;
         }
         this.#recordDrop(message);
         return wasEmpty;
     }
-    take() {
-        const envelope = this.#pending.shift();
-        if (envelope === undefined) {
-            return null;
-        }
-        if (envelope.message.type === 'output') {
-            this.#bufferedOutputMessages -= 1;
-            this.#bufferedOutputBytes -= envelope.outputBytes;
-            if (envelope === this.#truncation) {
-                this.#truncation = null;
-                this.#droppedPayloadBytes = 0;
-            }
-        }
-        return envelope.message;
-    }
     drain() {
-        const messages = [];
-        for(let message = this.take(); message !== null; message = this.take()){
-            messages.push(message);
-        }
+        const messages = this.#pending.map((envelope)=>envelope.message);
+        this.#pending.length = 0;
+        this.#bufferedOutputBytes = 0;
+        this.#droppedPayloadBytes = 0;
+        this.#truncation = null;
         return messages;
+    }
+    /** Writes everything queued as one frame; output offered until `write` settles may be shed. */ flush(write) {
+        return effect_Effect__rspack_import_3/* .suspend */.DYE(()=>{
+            const frame = this.drain().map(_contracts_protocol_js__rspack_import_2/* .encodeServerMessage */.fI).join('');
+            if (frame === '') {
+                return effect_Effect__rspack_import_3/* ["void"] */.rIH;
+            }
+            this.#awaitingPeer = true;
+            return write(frame).pipe(effect_Effect__rspack_import_3/* .ensuring */.yeE(effect_Effect__rspack_import_3/* .sync */.OH5(()=>{
+                this.#awaitingPeer = false;
+            })));
+        });
     }
     #recordDrop(message) {
         this.#droppedPayloadBytes += Buffer.byteLength(message.data, 'base64');
@@ -28284,7 +28281,7 @@ const defaultOutputBufferOptions = {
             this.#replaceTruncation(message);
             return;
         }
-        while(this.#bufferedOutputMessages >= this.#options.maxOutputMessages || this.#bufferedOutputBytes + this.#noticeBytes(message) > this.#options.maxOutputBytes){
+        while(this.#bufferedOutputBytes + outputCost(this.#makeNotice(message)) > this.#options.maxOutputBytes){
             if (!this.#evictLastOutput()) {
                 return;
             }
@@ -28292,10 +28289,9 @@ const defaultOutputBufferOptions = {
         const notice = this.#makeNotice(message);
         const envelope = {
             message: notice,
-            outputBytes: notice.data.length
+            outputBytes: outputCost(notice)
         };
         this.#pending.push(envelope);
-        this.#bufferedOutputMessages += 1;
         this.#bufferedOutputBytes += envelope.outputBytes;
         this.#truncation = envelope;
     }
@@ -28307,7 +28303,7 @@ const defaultOutputBufferOptions = {
         const notice = this.#makeNotice(message);
         this.#bufferedOutputBytes -= truncation.outputBytes;
         truncation.message = notice;
-        truncation.outputBytes = notice.data.length;
+        truncation.outputBytes = outputCost(notice);
         this.#bufferedOutputBytes += truncation.outputBytes;
         // The dropped-byte counter grows the notice over time; shed buffered
         // output (never the notice itself) so the swap cannot exceed the byte
@@ -28329,12 +28325,8 @@ const defaultOutputBufferOptions = {
         }
         this.#droppedPayloadBytes += removed.message.type === 'output' ? Buffer.byteLength(removed.message.data, 'base64') : 0;
         this.#pending.splice(index, 1);
-        this.#bufferedOutputMessages -= 1;
         this.#bufferedOutputBytes -= removed.outputBytes;
         return true;
-    }
-    #noticeBytes(message) {
-        return this.#makeNotice(message).data.length;
     }
     #makeNotice(message) {
         return {
@@ -28343,7 +28335,7 @@ const defaultOutputBufferOptions = {
             ticket: message.ticket,
             channel: 'stderr',
             cursorBytes: 0,
-            data: Buffer.from(`[cargo-hauler] output truncated for slow client: ${this.#droppedPayloadBytes} bytes dropped\n`).toString('base64')
+            data: Buffer.from(`[cargo-hauler] output truncated: client stopped reading; ${this.#droppedPayloadBytes} bytes dropped; full output: hauler result ${message.ticket} --full\n`).toString('base64')
         };
     }
     #lastOutputIndex() {
@@ -28357,7 +28349,7 @@ const defaultOutputBufferOptions = {
     }
 }
 const extractId = (value)=>{
-    if (!(0,_util_guards_js__rspack_import_3/* .isRecord */.u)(value)) {
+    if (!(0,_util_guards_js__rspack_import_4/* .isRecord */.u)(value)) {
         return null;
     }
     return typeof value.id === 'string' ? value.id : null;
@@ -28368,7 +28360,7 @@ const extractId = (value)=>{
  * kill/status messages arriving on the same socket. Outbound messages flow
  * through a queue with a single writer fiber, keeping NDJSON lines whole under
  * concurrency.
- */ const makeConnectionHandler = (options)=>(socket)=>effect_Effect__rspack_import_4/* .scoped */.P1j(effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
+ */ const makeConnectionHandler = (options)=>(socket)=>effect_Effect__rspack_import_3/* .scoped */.P1j(effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
             const ownerId = (0,node_crypto__rspack_import_0.randomUUID)();
             const { write } = yield* socket.writer;
             const outbound = new ConnectionOutputBuffer();
@@ -28381,8 +28373,8 @@ const extractId = (value)=>{
             // the ledger), so sends become no-ops once the peer is gone. The
             // wake queue is never shut down and has dropping capacity one:
             // offers never block or interrupt a lane worker delivering output.
-            const send = (message)=>effect_Effect__rspack_import_4/* .uninterruptible */.rfi(effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
-                    const shouldWake = yield* effect_Effect__rspack_import_4/* .sync */.OH5(()=>{
+            const send = (message)=>effect_Effect__rspack_import_3/* .uninterruptible */.rfi(effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
+                    const shouldWake = yield* effect_Effect__rspack_import_3/* .sync */.OH5(()=>{
                         if (connection.closed) {
                             return false;
                         }
@@ -28392,27 +28384,13 @@ const extractId = (value)=>{
                         yield* effect_Queue__rspack_import_5/* .offer */.x(outboundWake, undefined);
                     }
                 }));
-            const recoverHandlerDefect = (id, handler)=>(cause)=>effect_Cause__rspack_import_6/* .hasInterruptsOnly */.nn(cause) ? effect_Effect__rspack_import_4/* .interrupt */.GaK : effect_Effect__rspack_import_4/* .logError */.vVN(`daemon ${handler} failed`, cause).pipe(effect_Effect__rspack_import_4/* .andThen */.hgn(id === null ? effect_Effect__rspack_import_4/* ["void"] */.rIH : send({
+            const recoverHandlerDefect = (id, handler)=>(cause)=>effect_Cause__rspack_import_6/* .hasInterruptsOnly */.nn(cause) ? effect_Effect__rspack_import_3/* .interrupt */.GaK : effect_Effect__rspack_import_3/* .logError */.vVN(`daemon ${handler} failed`, cause).pipe(effect_Effect__rspack_import_3/* .andThen */.hgn(id === null ? effect_Effect__rspack_import_3/* ["void"] */.rIH : send({
                         type: 'error',
                         id,
                         code: 'internal',
                         message: 'internal daemon error'
                     })));
-            const takeOutbound = ()=>effect_Effect__rspack_import_4/* .suspend */.DYE(()=>{
-                    const message = outbound.take();
-                    if (message !== null) {
-                        return effect_Effect__rspack_import_4/* .succeed */.PyW(message);
-                    }
-                    return effect_Queue__rspack_import_5/* .take */.s(outboundWake).pipe(effect_Effect__rspack_import_4/* .andThen */.hgn(takeOutbound()));
-                });
-            yield* effect_Effect__rspack_import_4/* .forkChild */.zhn(effect_Effect__rspack_import_4/* .forever */.i4r(effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
-                const message = yield* takeOutbound();
-                const batch = [
-                    message,
-                    ...outbound.drain()
-                ];
-                yield* write(batch.map(_contracts_protocol_js__rspack_import_2/* .encodeServerMessage */.fI).join(''));
-            })).pipe(effect_Effect__rspack_import_4/* .catchCause */.Tyx(()=>effect_Effect__rspack_import_4/* .sync */.OH5(()=>{
+            yield* effect_Effect__rspack_import_3/* .forkChild */.zhn(effect_Effect__rspack_import_3/* .forever */.i4r(effect_Effect__rspack_import_3/* .suspend */.DYE(()=>outbound.size === 0 ? effect_Queue__rspack_import_5/* .take */.s(outboundWake) : outbound.flush(write))).pipe(effect_Effect__rspack_import_3/* .catchCause */.Tyx(()=>effect_Effect__rspack_import_3/* .sync */.OH5(()=>{
                     connection.closed = true;
                 }))));
             /**
@@ -28423,7 +28401,7 @@ const extractId = (value)=>{
                     ...background ? {} : {
                         ownerId
                     },
-                    onRegistered: (ticket)=>effect_Effect__rspack_import_4/* .sync */.OH5(()=>{
+                    onRegistered: (ticket)=>effect_Effect__rspack_import_3/* .sync */.OH5(()=>{
                             if (background) {
                                 return true;
                             }
@@ -28449,8 +28427,8 @@ const extractId = (value)=>{
                                 cursorBytes: info.cursorBytes
                             }
                         }),
-                    onExit: (info)=>effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
-                            yield* effect_Effect__rspack_import_4/* .sync */.OH5(()=>ownTickets.delete(info.ticket));
+                    onExit: (info)=>effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
+                            yield* effect_Effect__rspack_import_3/* .sync */.OH5(()=>ownTickets.delete(info.ticket));
                             yield* send({
                                 type: 'exit',
                                 id,
@@ -28470,8 +28448,8 @@ const extractId = (value)=>{
                             reason: info.reason
                         })
                 });
-            const handleExec = (message)=>effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
-                    const submitted = yield* effect_Effect__rspack_import_4/* .result */.Ket(options.broker.submit({
+            const handleExec = (message)=>effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
+                    const submitted = yield* effect_Effect__rspack_import_3/* .result */.Ket(options.broker.submit({
                         argv: message.argv,
                         cwd: message.cwd,
                         workspaceRoot: message.workspaceRoot,
@@ -28503,7 +28481,7 @@ const extractId = (value)=>{
                 });
             // Forked like exec: the replay of a large buffer must not hold up a
             // kill arriving on the same socket.
-            const handleReattach = (message)=>effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
+            const handleReattach = (message)=>effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
                     const outcome = yield* options.broker.reattach(message.ticket, {
                         callbacks: streamCallbacks(message.id, false),
                         fromByte: message.fromByte ?? 0,
@@ -28550,9 +28528,9 @@ const extractId = (value)=>{
             const handleMessage = (message)=>{
                 switch(message.type){
                     case 'exec':
-                        return effect_Effect__rspack_import_4/* .asVoid */.NLW(effect_Effect__rspack_import_4/* .forkScoped */.x6Z(handleExec(message).pipe(effect_Effect__rspack_import_4/* .catchCause */.Tyx(recoverHandlerDefect(message.id, 'exec handler')))));
+                        return effect_Effect__rspack_import_3/* .asVoid */.NLW(effect_Effect__rspack_import_3/* .forkScoped */.x6Z(handleExec(message).pipe(effect_Effect__rspack_import_3/* .catchCause */.Tyx(recoverHandlerDefect(message.id, 'exec handler')))));
                     case 'attempt':
-                        return effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
+                        return effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
                             const recorded = yield* options.broker.recordAttempt({
                                 argv: message.argv,
                                 cwd: message.cwd,
@@ -28567,7 +28545,7 @@ const extractId = (value)=>{
                             });
                         });
                     case 'kill':
-                        return effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
+                        return effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
                             const killed = yield* options.broker.kill(message.ticket);
                             yield* send({
                                 type: 'kill-result',
@@ -28577,7 +28555,7 @@ const extractId = (value)=>{
                             });
                         });
                     case 'status':
-                        return effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
+                        return effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
                             const report = yield* options.broker.report(message.limit);
                             yield* send({
                                 type: 'status-result',
@@ -28598,7 +28576,7 @@ const extractId = (value)=>{
                             version: options.version
                         });
                     case 'detach':
-                        return effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
+                        return effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
                             const detached = ownTickets.delete(message.ticket);
                             // Recorded even when this connection never owned the ticket:
                             // the client is telling us nobody will stream its exit.
@@ -28611,7 +28589,7 @@ const extractId = (value)=>{
                             });
                         });
                     case 'await':
-                        return effect_Effect__rspack_import_4/* .asVoid */.NLW(effect_Effect__rspack_import_4/* .forkScoped */.x6Z(effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
+                        return effect_Effect__rspack_import_3/* .asVoid */.NLW(effect_Effect__rspack_import_3/* .forkScoped */.x6Z(effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
                             const waited = yield* options.broker.awaitTicket(message.ticket, message.maxWaitMs ?? 30000);
                             yield* send({
                                 type: 'await-result',
@@ -28619,9 +28597,9 @@ const extractId = (value)=>{
                                 request: waited.record,
                                 timedOut: waited.timedOut
                             });
-                        }).pipe(effect_Effect__rspack_import_4/* .catchCause */.Tyx(recoverHandlerDefect(message.id, 'await handler')))));
+                        }).pipe(effect_Effect__rspack_import_3/* .catchCause */.Tyx(recoverHandlerDefect(message.id, 'await handler')))));
                     case 'result':
-                        return effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
+                        return effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
                             const request = yield* options.broker.getTicket(message.ticket);
                             yield* send({
                                 type: 'result-result',
@@ -28630,9 +28608,9 @@ const extractId = (value)=>{
                             });
                         });
                     case 'reattach':
-                        return effect_Effect__rspack_import_4/* .asVoid */.NLW(effect_Effect__rspack_import_4/* .forkScoped */.x6Z(handleReattach(message).pipe(effect_Effect__rspack_import_4/* .catchCause */.Tyx(recoverHandlerDefect(message.id, 'reattach handler')))));
+                        return effect_Effect__rspack_import_3/* .asVoid */.NLW(effect_Effect__rspack_import_3/* .forkScoped */.x6Z(handleReattach(message).pipe(effect_Effect__rspack_import_3/* .catchCause */.Tyx(recoverHandlerDefect(message.id, 'reattach handler')))));
                     case 'session-pending':
-                        return effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
+                        return effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
                             const requests = yield* options.broker.sessionPending(message.session);
                             yield* send({
                                 type: 'session-pending-result',
@@ -28641,7 +28619,7 @@ const extractId = (value)=>{
                             });
                         });
                     case 'session-completed':
-                        return effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
+                        return effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
                             const requests = yield* options.broker.sessionCompleted(message.session, message.sinceMs);
                             yield* send({
                                 type: 'session-completed-result',
@@ -28651,7 +28629,7 @@ const extractId = (value)=>{
                         });
                     case 'shutdown':
                         {
-                            return effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
+                            return effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
                                 // Replacement is directional: a client older than this daemon,
                                 // or one that sends no version (every build before the field),
                                 // is a long-lived session on a previous plugin. It must not
@@ -28670,7 +28648,7 @@ const extractId = (value)=>{
                                     const mayRetire = yield* options.broker.prepareRetirement(write((0,_contracts_protocol_js__rspack_import_2/* .encodeServerMessage */.fI)({
                                         type: 'shutting-down',
                                         id: message.id
-                                    })).pipe(effect_Effect__rspack_import_4/* .ignore */.XeO, effect_Effect__rspack_import_4/* .andThen */.hgn(effect_Deferred__rspack_import_9/* .succeed */.Py(options.shutdownLatch, undefined)), effect_Effect__rspack_import_4/* .asVoid */.NLW));
+                                    })).pipe(effect_Effect__rspack_import_3/* .ignore */.XeO, effect_Effect__rspack_import_3/* .andThen */.hgn(effect_Deferred__rspack_import_9/* .succeed */.Py(options.shutdownLatch, undefined)), effect_Effect__rspack_import_3/* .asVoid */.NLW));
                                     if (!mayRetire) {
                                         return yield* send({
                                             type: 'error',
@@ -28686,21 +28664,21 @@ const extractId = (value)=>{
                                 yield* write((0,_contracts_protocol_js__rspack_import_2/* .encodeServerMessage */.fI)({
                                     type: 'shutting-down',
                                     id: message.id
-                                })).pipe(effect_Effect__rspack_import_4/* .ignore */.XeO);
+                                })).pipe(effect_Effect__rspack_import_3/* .ignore */.XeO);
                                 yield* effect_Deferred__rspack_import_9/* .succeed */.Py(options.shutdownLatch, undefined);
                             });
                         }
                     default:
                         {
                             const exhaustive = message;
-                            return effect_Effect__rspack_import_4/* .die */.F_Q(new Error(`Unhandled client message: ${String(exhaustive)}`));
+                            return effect_Effect__rspack_import_3/* .die */.F_Q(new Error(`Unhandled client message: ${String(exhaustive)}`));
                         }
                 }
             };
             const handleLine = (line)=>{
                 let requestId = null;
-                return effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
-                    const parsedJson = yield* effect_Effect__rspack_import_4/* .result */.Ket(effect_Effect__rspack_import_4/* ["try"] */.SvU({
+                return effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
+                    const parsedJson = yield* effect_Effect__rspack_import_3/* .result */.Ket(effect_Effect__rspack_import_3/* ["try"] */.SvU({
                         try: ()=>JSON.parse(line),
                         catch: (cause)=>cause instanceof Error ? cause.message : String(cause)
                     }));
@@ -28727,7 +28705,7 @@ const extractId = (value)=>{
                     }
                     requestId = parsed.data.id;
                     yield* handleMessage(parsed.data);
-                }).pipe(effect_Effect__rspack_import_4/* .catchCause */.Tyx((cause)=>recoverHandlerDefect(requestId, 'connection message handler')(cause)));
+                }).pipe(effect_Effect__rspack_import_3/* .catchCause */.Tyx((cause)=>recoverHandlerDefect(requestId, 'connection message handler')(cause)));
             };
             const lineBuffer = new _platform_ndjson_js__rspack_import_1/* .LineBuffer */.F0({
                 maxLineBytes: options.maxLineBytes
@@ -28740,24 +28718,24 @@ const extractId = (value)=>{
                     id: null,
                     code: 'bad-message',
                     message: `${overflow.message}; closing connection`
-                })).pipe(effect_Effect__rspack_import_4/* .ignore */.XeO, effect_Effect__rspack_import_4/* .andThen */.hgn(effect_Effect__rspack_import_4/* .fail */.fJG(overflow)));
-            const readChunk = (chunk)=>effect_Effect__rspack_import_4/* .suspend */.DYE(()=>{
+                })).pipe(effect_Effect__rspack_import_3/* .ignore */.XeO, effect_Effect__rspack_import_3/* .andThen */.hgn(effect_Effect__rspack_import_3/* .fail */.fJG(overflow)));
+            const readChunk = (chunk)=>effect_Effect__rspack_import_3/* .suspend */.DYE(()=>{
                     let lines;
                     try {
                         lines = lineBuffer.push(chunk);
                     } catch (cause) {
-                        return cause instanceof _platform_ndjson_js__rspack_import_1/* .LineBufferOverflowError */.Ls ? rejectOversizeLine(cause) : effect_Effect__rspack_import_4/* .die */.F_Q(cause);
+                        return cause instanceof _platform_ndjson_js__rspack_import_1/* .LineBufferOverflowError */.Ls ? rejectOversizeLine(cause) : effect_Effect__rspack_import_3/* .die */.F_Q(cause);
                     }
-                    return effect_Effect__rspack_import_4/* .forEach */.jJl(lines, handleLine, {
+                    return effect_Effect__rspack_import_3/* .forEach */.jJl(lines, handleLine, {
                         discard: true
                     });
                 });
-            yield* effect_unstable_socket_Socket__rspack_import_11/* .readerBytes */.vt(socket).pipe(effect_Effect__rspack_import_4/* .flatMap */.qIB((pull)=>effect_Effect__rspack_import_4/* .forever */.i4r(effect_Effect__rspack_import_4/* .flatMap */.qIB(pull, (chunks)=>effect_Effect__rspack_import_4/* .forEach */.jJl(chunks, readChunk, {
+            yield* effect_unstable_socket_Socket__rspack_import_11/* .readerBytes */.vt(socket).pipe(effect_Effect__rspack_import_3/* .flatMap */.qIB((pull)=>effect_Effect__rspack_import_3/* .forever */.i4r(effect_Effect__rspack_import_3/* .flatMap */.qIB(pull, (chunks)=>effect_Effect__rspack_import_3/* .forEach */.jJl(chunks, readChunk, {
                         discard: true
                     })))), // Every close fails the pull; abrupt disconnects are routine
             // (agent shells die mid-build).
-            effect_Effect__rspack_import_4/* .ignore */.XeO, effect_Effect__rspack_import_4/* .ensuring */.yeE(effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
-                const tickets = yield* effect_Effect__rspack_import_4/* .sync */.OH5(()=>{
+            effect_Effect__rspack_import_3/* .ignore */.XeO, effect_Effect__rspack_import_3/* .ensuring */.yeE(effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
+                const tickets = yield* effect_Effect__rspack_import_3/* .sync */.OH5(()=>{
                     connection.closed = true;
                     return [
                         ...ownTickets
@@ -28769,11 +28747,11 @@ const extractId = (value)=>{
                 // result lands in the ledger, marked orphaned so a later
                 // stall may end it (#46). A `reattach` on a new connection
                 // takes either back.
-                yield* effect_Effect__rspack_import_4/* .forEach */.jJl(tickets, (ticket)=>options.broker.ownerDisconnected(ticket, ownerId), {
+                yield* effect_Effect__rspack_import_3/* .forEach */.jJl(tickets, (ticket)=>options.broker.ownerDisconnected(ticket, ownerId), {
                     discard: true
                 });
             })));
-        })).pipe(effect_Effect__rspack_import_4/* .annotateLogs */.swY({
+        })).pipe(effect_Effect__rspack_import_3/* .annotateLogs */.swY({
             connectionId: (0,node_crypto__rspack_import_0.randomUUID)()
         }));
 

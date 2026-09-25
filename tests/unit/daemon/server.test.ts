@@ -99,69 +99,94 @@ const output = (sequence: number): OutputMessage => ({
   data: Buffer.from(`chunk-${sequence}-${'x'.repeat(32)}`).toString('base64'),
 });
 
+const exitMessage: ServerMessage = {
+  type: 'exit',
+  id: 'exec-1',
+  ticket: 'cc-1',
+  status: 'done',
+  exitCode: 0,
+  signal: null,
+  waitMs: 0,
+  runMs: 1,
+  error: null,
+};
+
+const outputText = (message: OutputMessage): string =>
+  Buffer.from(message.data, 'base64').toString('utf8');
+
+const parseFrames = (frames: readonly string[]): ServerMessage[] =>
+  frames
+    .join('')
+    .split('\n')
+    .filter((line) => line !== '')
+    .map((line) => JSON.parse(line) as ServerMessage);
+
 describe('daemon connection output buffering', () => {
-  it('bounds a slow reader while retaining control messages and a truncation notice', () => {
-    const buffer = new ConnectionOutputBuffer({
-      maxOutputBytes: 256,
-      maxOutputMessages: 4,
-    });
-    buffer.offer({ type: 'started', id: 'exec-1', ticket: 'cc-1', waitMs: 0 });
-    for (let sequence = 0; sequence < 100; sequence += 1) {
+  it('keeps a burst of any length queued while no write is waiting on the peer', () => {
+    const buffer = new ConnectionOutputBuffer({ maxOutputBytes: 1024 });
+    for (let sequence = 0; sequence < 5000; sequence += 1) {
       buffer.offer(output(sequence));
     }
-    buffer.offer({
-      type: 'exit',
-      id: 'exec-1',
-      ticket: 'cc-1',
-      status: 'done',
-      exitCode: 0,
-      signal: null,
-      waitMs: 0,
-      runMs: 1,
-      error: null,
-    });
 
-    expect(buffer.bufferedOutputMessages).toBeLessThanOrEqual(4);
-    expect(buffer.bufferedOutputBytes).toBeLessThanOrEqual(256);
-
-    const drained: ServerMessage[] = [];
-    for (let message = buffer.take(); message !== null; message = buffer.take()) {
-      drained.push(message);
-    }
-    expect(drained[0]?.type).toBe('started');
-    expect(drained.at(-1)?.type).toBe('exit');
-    const notices = drained.filter(
-      (message): message is OutputMessage =>
-        message.type === 'output' &&
-        Buffer.from(message.data, 'base64').toString('utf8').includes('output truncated'),
-    );
-    expect(notices).toHaveLength(1);
-    expect(notices[0]).toMatchObject({ cursorBytes: 0 });
-    expect(Buffer.from(notices[0]?.data ?? '', 'base64').toString('utf8')).toContain(
-      'slow client',
-    );
+    const texts = buffer
+      .drain()
+      .filter((message): message is OutputMessage => message.type === 'output')
+      .map(outputText);
+    expect(texts).toHaveLength(5000);
+    expect(texts.at(-1)).toBe(`chunk-4999-${'x'.repeat(32)}`);
+    expect(texts.filter((text) => text.includes('output truncated'))).toEqual([]);
   });
+
+  it.live('bounds output behind a write the peer never accepts and names the full output', () =>
+    Effect.gen(function* () {
+      const buffer = new ConnectionOutputBuffer({ maxOutputBytes: 1024 });
+      const frames: string[] = [];
+      let bufferedWhileStalled = -1;
+      buffer.offer({ type: 'started', id: 'exec-1', ticket: 'cc-1', waitMs: 0 });
+      yield* buffer.flush((frame) =>
+        Effect.sync(() => {
+          frames.push(frame);
+          for (let sequence = 0; sequence < 100; sequence += 1) {
+            buffer.offer(output(sequence));
+          }
+          buffer.offer(exitMessage);
+          bufferedWhileStalled = buffer.bufferedOutputBytes;
+        }),
+      );
+      buffer.offer(output(100));
+      yield* buffer.flush((frame) => Effect.sync(() => frames.push(frame)));
+
+      expect(bufferedWhileStalled).toBeGreaterThan(0);
+      expect(bufferedWhileStalled).toBeLessThanOrEqual(1024);
+      const delivered = parseFrames(frames);
+      expect(delivered[0]?.type).toBe('started');
+      const outputs = delivered.filter((message): message is OutputMessage => message.type === 'output');
+      const notices = outputs.filter((message) => outputText(message).includes('output truncated'));
+      expect(notices).toHaveLength(1);
+      expect(notices[0]).toMatchObject({ channel: 'stderr', cursorBytes: 0 });
+      const notice = /^\[cargo-hauler\] output truncated: client stopped reading; (\d+) bytes dropped; full output: hauler result cc-1 --full\n$/u.exec(
+        outputText(notices[0] as OutputMessage),
+      );
+      expect(notice).not.toBeNull();
+      const kept = outputs.filter((message) => message !== notices[0]).map(outputText);
+      const sent = Array.from({ length: 100 }, (_, sequence) => `chunk-${sequence}-${'x'.repeat(32)}`);
+      // The stalled window keeps a prefix, the notice accounts for the rest,
+      // and output flows again once the peer accepts the write.
+      expect(kept.slice(0, -1)).toEqual(sent.slice(0, kept.length - 1));
+      expect(kept.at(-1)).toBe(`chunk-100-${'x'.repeat(32)}`);
+      expect(Number(notice?.[1])).toBe(sent.slice(kept.length - 1).join('').length);
+      expect(delivered.map((message) => message.type).slice(-2)).toEqual(['exit', 'output']);
+    }));
 
   it('drains every currently queued message in FIFO order', () => {
     const buffer = new ConnectionOutputBuffer();
     buffer.offer({ type: 'started', id: 'exec-1', ticket: 'cc-1', waitMs: 0 });
     buffer.offer(output(1));
-    buffer.offer({
-      type: 'exit',
-      id: 'exec-1',
-      ticket: 'cc-1',
-      status: 'done',
-      exitCode: 0,
-      signal: null,
-      waitMs: 0,
-      runMs: 1,
-      error: null,
-    });
+    buffer.offer(exitMessage);
 
     expect(buffer.drain().map((message) => message.type)).toEqual(['started', 'output', 'exit']);
     expect(buffer.size).toBe(0);
     expect(buffer.bufferedOutputBytes).toBe(0);
-    expect(buffer.bufferedOutputMessages).toBe(0);
   });
 });
 
