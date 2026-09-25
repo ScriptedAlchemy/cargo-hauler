@@ -2,15 +2,15 @@ import { performance } from 'node:perf_hooks';
 
 import { describe, expect, it } from 'effect-rstest';
 
-import { LineBuffer, LineBufferOverflowError, defaultMaxLineBytes } from '../../../src/internal/platform/ndjson.js';
+import { LineBuffer, LineBufferOverflowError } from '../../../src/internal/platform/ndjson.js';
 
 const encode = (text: string): Uint8Array => new TextEncoder().encode(text);
 
 describe('LineBuffer bounds', () => {
   it('defaults to a 16 MiB cap on the pending line', () => {
     const buffer = new LineBuffer();
-    expect(buffer.maxLineBytes).toBe(16 * 1024 * 1024);
-    expect(defaultMaxLineBytes).toBe(16 * 1024 * 1024);
+    expect(buffer.push(new Uint8Array(16 * 1024 * 1024).fill(0x78))).toEqual([]);
+    expect(() => buffer.push(encode('x'))).toThrow(LineBufferOverflowError);
   });
 
   it('throws once the unterminated line exceeds the cap and drops the pending bytes', () => {

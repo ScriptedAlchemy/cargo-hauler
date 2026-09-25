@@ -646,7 +646,7 @@ describe('program prefixes', () => {
     expect(retargeted.key).not.toBe(plain.key);
 
     const flagged = normalize(['env', 'RUSTFLAGS=-Dwarnings', 'cargo', 'build', '-p', 'alpha']);
-    expect(flagged.envDigest).toBe(digestCargoEnvironment({ RUSTFLAGS: '-Dwarnings' }));
+    expect(flagged.envDigest).toBe(normalize(['cargo', 'build', '-p', 'alpha'], { RUSTFLAGS: '-Dwarnings' }).envDigest);
     expect(flagged.envDigest).not.toBe(plain.envDigest);
 
     const unset = normalize(['env', '-u', 'RUSTFLAGS', 'cargo', 'build', '-p', 'alpha'], {

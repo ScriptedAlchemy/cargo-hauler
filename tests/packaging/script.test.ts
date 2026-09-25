@@ -213,13 +213,18 @@ describe('hauler script', () => {
 
   it('interrupts exec when the abort signal fires', async () => {
     const controller = new AbortController();
+    let interrupted = false;
     const pending = run(['exec', '--', 'cargo', 'check'], {
       runExec: () =>
-        Effect.sleep('200 millis').pipe(Effect.as({ exitCode: 0, mode: 'passthrough' as const })),
+        Effect.sleep('200 millis').pipe(
+          Effect.as({ exitCode: 0, mode: 'passthrough' as const }),
+          Effect.onInterrupt(() => Effect.sync(() => (interrupted = true))),
+        ),
       signal: controller.signal,
     });
     controller.abort();
-    await expect(pending).rejects.toBeDefined();
+    await pending.catch(() => undefined);
+    expect(interrupted).toBe(true);
   });
 
   it('answers daemon status natively as one JSON line', async () => {

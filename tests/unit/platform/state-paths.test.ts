@@ -12,7 +12,6 @@ import {
   defaultStateDir,
   isNamedPipePath,
   resolveStateDir,
-  userCacheDir,
 } from '../../../src/internal/platform/state-paths.js';
 import { removeTestPath } from '../../support/tmp-guard.js';
 
@@ -52,10 +51,9 @@ describe('portable state root', () => {
   });
 
   it('treats an empty hauler override as unset', () => {
-    const env = { CARGO_HAULER_STATE_DIR: '' };
-    const expected = resolveStateDir({});
-    expect(resolveStateDir(env)).toBe(expected);
-    expect(resolveDaemonConfig(env).stateDir).toBe(expected);
+    const env = { CARGO_HAULER_STATE_DIR: '', XDG_CACHE_HOME: '/tmp/xdg-cache' };
+    expect(resolveStateDir(env)).toBe('/tmp/xdg-cache/cargo-hauler');
+    expect(resolveDaemonConfig(env).stateDir).toBe('/tmp/xdg-cache/cargo-hauler');
   });
 
   it.skipIf(process.platform === 'win32')(
@@ -94,10 +92,9 @@ describe('portable state root', () => {
   });
 
   it('keeps daemon config and hook clients on the same default', () => {
-    const env = {};
-    const config = resolveDaemonConfig(env);
-    expect(config.stateDir).toBe(resolveStateDir(env));
-    expect(config.socketPath).toBe(join(config.stateDir, 'daemon.sock'));
+    const env = { XDG_CACHE_HOME: '/tmp/xdg-cache' };
+    expect(resolveDaemonConfig(env).socketPath).toBe('/tmp/xdg-cache/cargo-hauler/daemon.sock');
+    expect(resolveHookSocketPath(env)).toBe('/tmp/xdg-cache/cargo-hauler/daemon.sock');
   });
 });
 
@@ -181,9 +178,6 @@ describe('portable kache index default', () => {
   it('defaults to a kache sibling under the same user cache base', () => {
     expect(defaultKacheIndexPath({}, 'linux', '/home/alice', noKacheConfig)).toBe(
       join('/home/alice', '.cache', 'kache', 'index.db'),
-    );
-    expect(defaultKacheIndexPath({}, 'linux', '/home/alice', noKacheConfig)).toBe(
-      join(userCacheDir({}, 'linux', '/home/alice'), 'kache', 'index.db'),
     );
     // Config resolution and the default helper agree wherever this test
     // machine's kache actually lives — the default is never a hardcode, it

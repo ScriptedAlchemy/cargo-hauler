@@ -23,9 +23,11 @@ const bufferOf = (text: string, capacity = 16 * 1024): TailBuffer => {
  */
 describe('tailPreview', () => {
   it('bounds the default preview at 512 bytes and 8 lines', () => {
-    expect(statusTailPreviewLimits).toEqual({ maxBytes: 512, maxLines: 8 });
-    expect(statusOutputPreviewBytes).toBe(512);
-    expect(statusOutputPreviewLines).toBe(8);
+    const text = Array.from({ length: 20 }, (_, index) => `line ${index}`).join('\n');
+    expect(tailPreview(bufferOf(`${text}\n`), statusTailPreviewLimits)).toBe(
+      'line 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\n',
+    );
+    expect(tailPreview(bufferOf(`${'x'.repeat(2_000)}\n`), statusTailPreviewLimits)).toBe(`${'x'.repeat(511)}\n`);
   });
 
   it('returns null for an empty tail and the whole text when it fits', () => {

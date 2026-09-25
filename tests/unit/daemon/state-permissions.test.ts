@@ -8,6 +8,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -355,10 +356,8 @@ describe.skipIf(skipOnNonPosix)('relocated control socket', () => {
   });
 
   it('carries a user discriminator so two accounts on one temp root never collide', () => {
-    const mine = daemonSocketPath(deepStateDir, 'linux', { TMPDIR: '/tmp' }, 1000);
-    const theirs = daemonSocketPath(deepStateDir, 'linux', { TMPDIR: '/tmp' }, 1001);
-    expect(mine).not.toBe(theirs);
-    expect(dirname(mine)).not.toBe(dirname(theirs));
+    expect(dirname(daemonSocketPath(deepStateDir, 'linux', { TMPDIR: '/tmp' }, 1000))).toBe('/tmp/cargo-hauler-1000');
+    expect(dirname(daemonSocketPath(deepStateDir, 'linux', { TMPDIR: '/tmp' }, 1001))).toBe('/tmp/cargo-hauler-1001');
   });
 
   it('keeps case-distinct unix state dirs on distinct endpoints', () => {
@@ -428,9 +427,18 @@ describe.skipIf(skipOnNonPosix)('socket publication and stale cleanup', () => {
     });
   });
 
-  it('treats an absent socket path as nothing to clean up', async () => {
-    await withScratchAsync('socket-absent', async (root) => {
-      await expect(removeStaleSocketEntry(join(root, 'daemon.sock'))).resolves.toBeUndefined();
+  it('removes an owned socket entry and treats an absent path as nothing to clean up', async () => {
+    await withScratchAsync('socket-owned', async (root) => {
+      const socketPath = join(root, 'daemon.sock');
+      const server = createServer();
+      await new Promise<void>((resolve) => server.listen(socketPath, resolve));
+      try {
+        await removeStaleSocketEntry(socketPath);
+        expect(existsSync(socketPath)).toBe(false);
+        await expect(removeStaleSocketEntry(socketPath)).resolves.toBeUndefined();
+      } finally {
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
     });
   });
 

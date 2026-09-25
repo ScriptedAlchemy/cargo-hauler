@@ -25,7 +25,7 @@ describe('stripAnsi', () => {
 
   it('never leaves an ESC byte behind', () => {
     const noisy = `a${ESC}b${ESC}[12c${ESC}${ESC}[0md`;
-    expect(stripAnsi(noisy)).not.toContain(ESC);
+    expect(stripAnsi(noisy)).toBe('abd');
   });
 });
 

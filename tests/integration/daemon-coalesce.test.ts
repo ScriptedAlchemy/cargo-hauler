@@ -331,6 +331,13 @@ describe('coverage subsumption', () => {
       yield* pollReport(fixture, (report) =>
         report.active.some((record) => record.status === 'running'),
       );
+      const sameLaneFiber = yield* Effect.forkChild(
+        execRequest(fixture, {
+          cwd: fixture.ws1,
+          argv: ['cargo', 'check', '-p', 'aa'],
+          timeoutMs: 12_000,
+        }),
+      );
 
       // Different workspace: no attach.
       const otherLane = yield* execRequest(fixture, {
@@ -348,6 +355,7 @@ describe('coverage subsumption', () => {
       });
       expect(findAck(otherProfile).attachedTo).toBeUndefined();
 
+      expect(findAck(yield* Fiber.join(sameLaneFiber)).attachedTo).toBe('cc-1');
       findExit(yield* Fiber.join(leaderFiber));
     }));
 });

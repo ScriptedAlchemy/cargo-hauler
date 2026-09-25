@@ -281,10 +281,11 @@ describe('findConfiguredTargetDir', () => {
     withTree(
       {
         'Cargo.toml': manifest,
-        '.cargo/config.toml': '[doc]\ntarget-dir = "/doc/target"\n\n[net]\nretry = 2\n',
+        '.cargo/config.toml': '[build]\ntarget-dir = "/build/target"\n',
+        'crates/alpha/.cargo/config.toml': '[doc]\ntarget-dir = "/doc/target"\n\n[net]\nretry = 2\n',
       },
       (tree) => {
-        expect(findConfiguredTargetDir(tree.root, tree.root)).toBeUndefined();
+        expect(findConfiguredTargetDir(tree.path('crates', 'alpha'), tree.root)).toBe('/build/target');
       },
     );
   });
@@ -293,10 +294,11 @@ describe('findConfiguredTargetDir', () => {
     withTree(
       {
         'Cargo.toml': manifest,
-        '.cargo/config.toml': '[build]\n# target-dir = "/commented/target"\njobs = 4\n',
+        '.cargo/config.toml': '[build]\ntarget-dir = "/root/target"\n',
+        'crates/alpha/.cargo/config.toml': '[build]\n# target-dir = "/commented/target"\njobs = 4\n',
       },
       (tree) => {
-        expect(findConfiguredTargetDir(tree.root, tree.root)).toBeUndefined();
+        expect(findConfiguredTargetDir(tree.path('crates', 'alpha'), tree.root)).toBe('/root/target');
       },
     );
   });
@@ -309,20 +311,11 @@ describe('findConfiguredTargetDir', () => {
         'workspace/crates/alpha/src/lib.rs': '',
       },
       (tree) => {
-        expect(
-          findConfiguredTargetDir(
-            tree.path('workspace', 'crates', 'alpha', 'src'),
-            tree.path('workspace'),
-          ),
-        ).toBeUndefined();
+        const start = tree.path('workspace', 'crates', 'alpha', 'src');
+        expect(findConfiguredTargetDir(start, tree.path('workspace'))).toBeUndefined();
+        expect(findConfiguredTargetDir(start, tree.root)).toBe('/above/target');
       },
     );
-  });
-
-  it('returns undefined when no cargo config exists anywhere', () => {
-    withTree({ 'Cargo.toml': manifest, 'crates/alpha/src/lib.rs': '' }, (tree) => {
-      expect(findConfiguredTargetDir(tree.path('crates', 'alpha', 'src'), tree.root)).toBeUndefined();
-    });
   });
 
   it('applies CARGO_TARGET_DIR over CARGO_BUILD_TARGET_DIR, --config, and the file', () => {

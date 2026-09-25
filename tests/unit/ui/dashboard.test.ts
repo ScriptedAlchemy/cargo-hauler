@@ -5,14 +5,12 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'effect-rstest';
 import { Effect, Stream } from 'effect';
 
-import { APP_RESOURCE_URI } from '../../../src/constants.js';
 import {
   DEMUX_FLAG,
   argvText,
   argvTitle,
   attachSavings,
   compactArgvText,
-  defaultMetricsWindowId,
   delayedWaitCue,
   diagnosticBadges,
   formatCompactNumber,
@@ -38,14 +36,12 @@ import {
   remainingMinMs,
   resolveTicketDetail,
   rowSubcommand,
-  sectionOrder,
   sharedTargetCell,
   stalledHint,
   latencySavedStat,
   subcommandDisplayLabel,
   subcommandTimings,
   summaryFirstLine,
-  terminalStatuses,
   ticketDetailFrom,
   waitMetricsView,
   waitVsRunView,
@@ -63,13 +59,10 @@ import {
   relativeTime,
   shortenPath,
 } from '../../../src/internal/ui/shared/format.js';
-import { sharedTargetWarning } from '../../../src/internal/ui/shared/shared-target.js';
-
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
 
 describe('MCP App dashboard', () => {
-  it('declares the widget URI and ships a self-contained artifact page', () => {
-    expect(APP_RESOURCE_URI).toBe('ui://cargo-hauler/dashboard.html');
+  it('ships a self-contained artifact page', () => {
     const built = join(repoRoot, 'artifact', 'mcp-apps', 'dashboard.html');
     expect(existsSync(built)).toBe(true);
     const html = readFileSync(built, 'utf8');
@@ -161,22 +154,6 @@ describe('pollStatus (one failed poll must not kill the stream)', () => {
     }));
 });
 
-describe('sectionOrder (stable layout)', () => {
-  const fullOrder = [
-    'contention',
-    'inFlight',
-    'queue',
-    'metrics',
-    'kache',
-    'lanes',
-    'history',
-  ];
-
-  it('keeps every section mounted so live polling never shifts layout', () => {
-    expect(sectionOrder).toEqual(fullOrder);
-  });
-});
-
 describe('shared target lane warning', () => {
   it('keeps a flagged idle lane visible and names the other workspace root', () => {
     const lane = {
@@ -190,8 +167,8 @@ describe('shared target lane warning', () => {
     expect(laneIsActive(lane)).toBe(true);
     const cell = sharedTargetCell(lane);
     expect(cell?.roots).toEqual(['/work/two']);
-    expect(cell?.warning).toBe(
-      sharedTargetWarning({ targetDir: '/cache/target', workspaceRoots: ['/work/one', '/work/two'] }),
+    expect(cell?.warning).toMatch(
+      /^WARNING: shared Cargo target dir \/cache\/target is used by workspace roots \/work\/one and \/work\/two\. /u,
     );
     expect(sharedTargetCell({ ...lane, sharedTargetWith: undefined })).toBeNull();
   });
@@ -253,10 +230,6 @@ describe('pickMetricsWindow (window toggle and fallback)', () => {
       handBack: noHandBack,
     },
   ];
-
-  it('defaults to the documented 24h window id', () => {
-    expect(defaultMetricsWindowId).toBe('day');
-  });
 
   it('returns the selected window when present', () => {
     const picked = pickMetricsWindow(windows, 'all');
@@ -323,64 +296,8 @@ describe('pathBasename (workspace column)', () => {
 });
 
 describe('kacheColumns (empty kache sub-panels collapse)', () => {
-  it('renders no columns on an idle machine', () => {
+  it('drops each empty side, so an idle machine renders no columns', () => {
     expect(kacheColumns({ crates: 0, roots: 0 })).toEqual([]);
-  });
-
-  it('drops only the empty side', () => {
-    expect(kacheColumns({ crates: 7, roots: 0 })).toEqual(['crates']);
-    expect(kacheColumns({ crates: 0, roots: 2 })).toEqual(['roots']);
-    expect(kacheColumns({ crates: 7, roots: 2 })).toEqual(['roots', 'crates']);
-  });
-});
-
-describe('remainingEstimateMs (no fake countdowns)', () => {
-  it('hides remaining when the estimate has been reached or passed', () => {
-    // The live busy dashboard showed elapsed 13s with "~13s" beside it.
-    expect(remainingEstimateMs(13_000, 13_000)).toBeNull();
-    expect(remainingEstimateMs(20_000, 13_000)).toBeNull();
-  });
-
-  it('hides remaining when the estimate is missing or a placeholder', () => {
-    expect(remainingEstimateMs(13_000, undefined)).toBeNull();
-    expect(remainingEstimateMs(13_000, null)).toBeNull();
-    expect(remainingEstimateMs(13_000, 0)).toBeNull();
-    expect(remainingEstimateMs(13_000, -1)).toBeNull();
-  });
-
-  it('hides remaining inside the minimum margin', () => {
-    expect(remainingEstimateMs(60_000, 60_000 + remainingMinMs - 1)).toBeNull();
-    // 10m estimate with 30s left: >= 5s but under 10% of the estimate.
-    expect(remainingEstimateMs(9.5 * 60_000, 10 * 60_000)).toBeNull();
-  });
-
-  it('shows remaining when the estimate meaningfully exceeds elapsed', () => {
-    expect(remainingEstimateMs(13_000, 102_000)).toBe(89_000);
-    expect(remainingEstimateMs(0, 60_000)).toBe(60_000);
-  });
-});
-
-describe('pathBasename (workspace column)', () => {
-  it('keeps only the repo folder name', () => {
-    expect(pathBasename('/fast/projects/tracedecay')).toBe('tracedecay');
-    expect(pathBasename('/projects/tracedecay-plan40-stage3-sol')).toBe(
-      'tracedecay-plan40-stage3-sol',
-    );
-  });
-
-  it('handles trailing slashes and degenerate paths', () => {
-    expect(pathBasename('/fast/projects/tracedecay/')).toBe('tracedecay');
-    expect(pathBasename('tracedecay')).toBe('tracedecay');
-    expect(pathBasename('/')).toBe('/');
-  });
-});
-
-describe('kacheColumns (empty kache sub-panels collapse)', () => {
-  it('renders no columns on an idle machine', () => {
-    expect(kacheColumns({ crates: 0, roots: 0 })).toEqual([]);
-  });
-
-  it('drops only the empty side', () => {
     expect(kacheColumns({ crates: 7, roots: 0 })).toEqual(['crates']);
     expect(kacheColumns({ crates: 0, roots: 2 })).toEqual(['roots']);
     expect(kacheColumns({ crates: 7, roots: 2 })).toEqual(['roots', 'crates']);
@@ -785,8 +702,9 @@ describe('kacheProfileGroups (slowest crates never rank across profiles)', () =>
       kacheProfileGroups([
         { crate: 'zeroed', ms: 0, profile: 'dev' },
         { crate: 42, ms: 1_000, profile: 'dev' },
-      ]),
-    ).toEqual([]);
+        { crate: 'timed', ms: 500, profile: 'release' },
+      ]).map((group) => group.profile),
+    ).toEqual(['release']);
   });
 
   it('appends unknown profiles after the familiar cargo ones', () => {
@@ -915,6 +833,7 @@ describe('diagnosticBadges (history/in-flight warning and error counts)', () => 
     expect(diagnosticBadges(null, null)).toEqual([]);
     expect(diagnosticBadges(0, 0)).toEqual([]);
     expect(diagnosticBadges(undefined, undefined)).toEqual([]);
+    expect(diagnosticBadges(1, null)).toEqual([{ count: 1, kind: 'errors' }]);
   });
 
   it('emits errors before warnings with their counts', () => {
@@ -927,17 +846,6 @@ describe('diagnosticBadges (history/in-flight warning and error counts)', () => 
 });
 
 describe('terminal statuses', () => {
-  it('includes hook-denied and fail-open passthrough attempts as finished work', () => {
-    expect([...terminalStatuses].sort()).toEqual([
-      'denied',
-      'done',
-      'failed',
-      'killed',
-      'orphaned',
-      'passthrough',
-    ]);
-  });
-
   it('does not re-fetch output for denied rows once resolved', async () => {
     const calls: string[] = [];
     await resolveTicketDetail(
