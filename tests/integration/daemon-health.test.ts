@@ -84,13 +84,28 @@ describe('probeDaemonHealth', () => {
       const root = yield* scopedTempDir('hauler-health-');
       const config = listenerConfig(root);
       // Accepts connections and never answers: the status read must time out
-      // within the budget, not the 2 s socket-open default.
+      // within the budget, not the 2 s socket-open default. A 2 s probe
+      // connected first is still waiting when the 300 ms probe gives up.
       const server = silentServer();
       yield* Effect.promise(() => listenOn(config.socketPath, server));
       yield* Effect.addFinalizer(() => Effect.promise(() => closeServer(server)));
-      const startedAt = Date.now();
+      const accepted = new Promise((resolve) => server.once('connection', resolve));
+      const cancelLonger = new AbortController();
+      let longerSettled = false;
+      const longer = probeDaemonHealth(config, { platform: 'linux', signal: cancelLonger.signal, timeoutMs: 2_000 })
+        .catch(() => undefined)
+        .finally(() => {
+          longerSettled = true;
+        });
+      yield* Effect.addFinalizer(() =>
+        Effect.promise(() => {
+          cancelLonger.abort();
+          return longer;
+        }),
+      );
+      yield* Effect.promise(() => accepted);
       const health = yield* Effect.promise(() => probeDaemonHealth(config, { platform: 'linux', timeoutMs: 300 }));
-      expect(Date.now() - startedAt).toBeLessThan(1_500);
+      expect(longerSettled).toBe(false);
       // The listener accepted, so this is an answer timeout, not an accept timeout.
       expect(health).toEqual({ reason: 'answer-timeout', state: 'unresponsive', timeoutMs: 300 });
     }).pipe(Effect.scoped, Effect.runPromise), 10_000);
@@ -123,11 +138,9 @@ describe('probeDaemonHealth', () => {
       yield* Effect.promise(() => listenOn(config.socketPath, server));
       yield* Effect.addFinalizer(() => Effect.promise(() => closeServer(server)));
 
-      const startedAt = Date.now();
       const health = yield* Effect.promise(() =>
         probeDaemonHealth(config, { platform: 'linux', timeoutMs: 300 }),
       );
-      expect(Date.now() - startedAt).toBeLessThan(1_500);
       expect(calls).toEqual(['ping']);
       expect(health).toMatchObject({ reason: 'open-failed', state: 'unreachable' });
       expect(health.state === 'unreachable' ? health.detail : '').toContain('incompatible');

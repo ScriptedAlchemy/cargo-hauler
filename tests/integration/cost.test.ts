@@ -420,24 +420,33 @@ describe('createCostModel', () => {
       expect(refreshed).toEqual({ estimateMs: 3_000, source: 'kache' });
     }));
 
-  it.live('keeps whole-intent EWMA estimates below one millisecond on the warm path', () =>
+  it.live('keeps a warm whole-intent estimate as cheap with a full EWMA cache as with one entry', () =>
     Effect.gen(function* () {
-      const model = createCostModel({
-        kacheReader: null,
-        seedDurations: () => Effect.succeed([]),
-      });
-      const scoped = intent(['cargo', 'check', '-p', 'alpha']);
-      yield* model.recordOutcome(scoped.estimateKey, 20_000);
-      yield* model.estimate(scoped);
+      const warmEstimateCpu = (otherIntents: number) =>
+        Effect.gen(function* () {
+          const model = createCostModel({
+            kacheReader: null,
+            seedDurations: () => Effect.succeed([]),
+          });
+          for (let index = 0; index < otherIntents; index += 1) {
+            yield* model.recordOutcome(`other-${index}`, 10_000);
+          }
+          const scoped = intent(['cargo', 'check', '-p', 'alpha']);
+          yield* model.recordOutcome(scoped.estimateKey, 20_000);
+          expect(yield* model.estimate(scoped)).toEqual({ estimateMs: 20_000, source: 'ewma' });
+          const before = process.threadCpuUsage();
+          for (let index = 0; index < 2_000; index += 1) {
+            yield* model.estimate(scoped);
+          }
+          const used = process.threadCpuUsage(before);
+          return used.user + used.system;
+        });
+      yield* warmEstimateCpu(0);
+      const oneEntry = yield* warmEstimateCpu(0);
+      const fullCache = yield* warmEstimateCpu(4_096);
 
-      const iterations = 1_000;
-      const startedAt = performance.now();
-      for (let index = 0; index < iterations; index += 1) {
-        yield* model.estimate(scoped);
-      }
-      const averageMs = (performance.now() - startedAt) / iterations;
-
-      expect(averageMs).toBeLessThan(1);
+      // Copying the cache on every LRU touch makes a warm estimate O(cache size).
+      expect(fullCache).toBeLessThan(oneEntry * 5);
     }));
 
   it.effect('blends event timings with the index prior when both are available', () =>
