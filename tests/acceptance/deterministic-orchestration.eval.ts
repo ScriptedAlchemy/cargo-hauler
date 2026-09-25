@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,6 +20,7 @@ import { realCargoBin } from '../../src/internal/cargo/execution/real-cargo.js';
 import {
   decodeOutput,
   execRequest,
+  fetchReport,
   findExit,
   pollReport,
   scopedDaemon,
@@ -78,6 +80,9 @@ const realCargoEnv = (
   CARGO_HAULER_CARGO_BIN: realCargo,
   CARGO_NET_OFFLINE: 'true',
   CARGO_TARGET_DIR: join(fixture.root, 'cargo-targets', targetName),
+  // A host wrapper such as kache replays cached build-script runs, which
+  // skips the sleeps and gates the fixtures use to hold a leader running.
+  RUSTC_WRAPPER: '',
   ...extra,
 });
 
@@ -464,9 +469,12 @@ describe('deterministic cargo-hauler acceptance evals', () => {
     () =>
       Effect.gen(function* () {
         const fixture = yield* scopedDaemon(2);
+        const slowGate = join(fixture.root, 'slow-b.gate');
+        const openSlowGate = Effect.sync(() => writeFileSync(slowGate, ''));
+        yield* Effect.addFinalizer(() => openSlowGate);
         const env = realCargoEnv(fixture, 'demux', {
           CC_EVAL_FAST_SLEEP_MS: '1000',
-          CC_EVAL_SLOW_SLEEP_MS: '5000',
+          CC_EVAL_SLOW_GATE: slowGate,
         });
         const leaderFiber = yield* Effect.forkChild(
           execRequest(fixture, {
@@ -502,7 +510,10 @@ describe('deterministic cargo-hauler acceptance evals', () => {
         expect(followerExit.exitCode).toBe(0);
         expect(findAck(followerMessages).attachMode).toBe('coverage');
         expect(decodeOutput(followerMessages, 'stderr')).toContain('released early');
+        const atRelease = yield* fetchReport(fixture);
+        expect(requireRecord(atRelease, leaderTicket ?? '').status).toBe('running');
 
+        yield* openSlowGate;
         const leaderMessages = yield* Fiber.join(leaderFiber);
         const leaderExit = findExit(leaderMessages);
         expect(leaderExit.status).toBe('done');
@@ -510,14 +521,7 @@ describe('deterministic cargo-hauler acceptance evals', () => {
           followerExit.ticket,
           leaderExit.ticket,
         ]);
-        const followerRecord = requireRecord(report, followerExit.ticket);
-        const leaderRecord = requireRecord(report, leaderExit.ticket);
-        expect(followerRecord.attachedTo).toBe(leaderTicket);
-        expect(followerRecord.finishedAtMs).not.toBeNull();
-        expect(leaderRecord.finishedAtMs).not.toBeNull();
-        expect(
-          (leaderRecord.finishedAtMs ?? 0) - (followerRecord.finishedAtMs ?? 0),
-        ).toBeGreaterThanOrEqual(500);
+        expect(requireRecord(report, followerExit.ticket).attachedTo).toBe(leaderTicket);
       }),
     180_000,
   );
