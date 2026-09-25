@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import {
   appendFileSync,
   closeSync,
@@ -439,31 +439,41 @@ describe('createKacheSnapshotReader', () => {
     }
   });
 
-  it('scans a large index off the event-loop thread', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'cc-kache-status-large-index-'));
+  it('scans the index off the event-loop thread', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'cc-kache-status-scan-thread-'));
     const indexPath = join(root, 'index.db');
+    execFileSync('mkfifo', [indexPath]);
+    // A scan on the loop thread would block this test in open(); the late
+    // writer bounds that hang so the regression fails instead of wedging.
+    const fallbackWriter = spawn('sh', ['-c', 'sleep 10; exec 3>"$0"', indexPath], { stdio: 'ignore' });
     try {
-      const database = new DatabaseSync(indexPath);
-      database.exec(`
-        CREATE TABLE entries (crate_name TEXT, profile TEXT, compile_time_ms INTEGER);
-        WITH RECURSIVE n(i) AS (SELECT 0 UNION ALL SELECT i + 1 FROM n WHERE i < 199999)
-        INSERT INTO entries
-        SELECT 'crate-' || (i % 500), CASE i % 2 WHEN 0 THEN 'dev' ELSE 'release' END, 100 + i % 977
-        FROM n;
-      `);
-      database.close();
-      const reader = createKacheSnapshotReader(indexPath);
-
-      const loopThread = process.threadCpuUsage();
-      const wholeProcess = process.cpuUsage();
-      const { status } = await reader.read(1_000);
-      const loopCpu = process.threadCpuUsage(loopThread);
-      const processCpu = process.cpuUsage(wholeProcess);
-
-      expect(status).toMatchObject({ distinctCrates: 500, entryCount: 200_000, indexState: 'read' });
-      // The scan is most of the read's CPU; on the loop thread it would be nearly all of it.
-      expect(loopCpu.user + loopCpu.system).toBeLessThan((processCpu.user + processCpu.system) / 2);
+      let settled = false;
+      const read = createKacheSnapshotReader(indexPath)
+        .read(1_000)
+        .finally(() => {
+          settled = true;
+        });
+      // A non-blocking write open succeeds only once a reader is blocked in open().
+      let writer: number | undefined;
+      while (writer === undefined && !settled) {
+        try {
+          writer = openSync(indexPath, constants.O_WRONLY | constants.O_NONBLOCK);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENXIO') {
+            throw error;
+          }
+          await new Promise<void>((resolve) => {
+            setImmediate(resolve);
+          });
+        }
+      }
+      expect(settled).toBe(false);
+      if (writer !== undefined) {
+        closeSync(writer);
+      }
+      expect((await read).status.indexState).toBe('unreadable');
     } finally {
+      fallbackWriter.kill();
       removeTestPath(root);
     }
   });
