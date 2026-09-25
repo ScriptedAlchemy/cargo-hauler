@@ -100,6 +100,42 @@ describe('batch composer', () => {
       ]);
     }));
 
+  it.live('folds queued checks that pass the same --locked assertion', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(1);
+      const holderRelease = yield* scopedGate(fixture, 'holder.release');
+      yield* execRequest(fixture, {
+        cwd: fixture.ws1,
+        extraEnv: { FAKE_RELEASE_FILE: holderRelease.path },
+        isTerminal: (message) => message.type === 'started',
+      });
+      const [alpha, beta] = yield* Effect.all(
+        [
+          Effect.forkChild(
+            execRequest(fixture, { argv: ['cargo', 'check', '-p', 'alpha', '--locked'], cwd: fixture.ws1 }),
+          ),
+          Effect.forkChild(
+            execRequest(fixture, { argv: ['cargo', 'check', '-p', 'beta', '--locked'], cwd: fixture.ws1 }),
+          ),
+        ],
+      );
+      yield* pollReport(fixture, (report) => report.lanes.some((lane) => lane.queued === 2));
+      yield* holderRelease.open;
+      const exits = [findExit(yield* Fiber.join(alpha)), findExit(yield* Fiber.join(beta))];
+      expect(exits.map((exit) => exit.status)).toEqual(['done', 'done']);
+      const report = yield* pollReport(fixture, (candidate) =>
+        exits.every((exit) =>
+          candidate.recent.some((record) => record.ticket === exit.ticket && record.status === 'done'),
+        ),
+      );
+      const records = exits.map((exit) => report.recent.find((record) => record.ticket === exit.ticket));
+      const composite = records.find((record) => record?.attachedTo === null);
+      const rider = records.find((record) => record?.attachedTo !== null);
+      expect([rider?.attachedTo, rider?.attachMode]).toEqual([composite?.ticket, 'batch']);
+      expect(composite?.execArgv?.filter((argument) => argument === '--locked')).toEqual(['--locked']);
+      expect(composite?.execArgv).toEqual(expect.arrayContaining(['-p', 'alpha', '-p', 'beta']));
+    }));
+
   it.live('folds at most sixteen packages into one composite and runs the rest on their own', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(1);

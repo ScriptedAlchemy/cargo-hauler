@@ -29244,11 +29244,25 @@ __webpack_require__.d(__webpack_exports__, {
 ]);
 /** Upper bound on packages merged into one composite invocation. */ const maxBatchPackages = 16;
 /**
+ * Unmodeled cargo flags that assert something about the whole invocation's
+ * lockfile or network access and never select or shape a package's units.
+ * The composite carries the leader's, so participants must make the same
+ * assertions (`sameInvocationAssertions`).
+ */ const invocationAssertions = new Set([
+    '--frozen',
+    '--locked',
+    '--offline'
+]);
+const sameStringSet = (left, right)=>left.every((value)=>right.includes(value)) && right.every((value)=>left.includes(value));
+const invocationAssertionsOf = (intent)=>intent.opaqueArguments.filter((argument)=>invocationAssertions.has(argument));
+/** Unmodeled flags are foldable when each is an invocation assertion or in `extra`. */ const onlyFoldableOpaque = (intent, extra = new Set())=>intent.opaqueArguments.every((argument)=>invocationAssertions.has(argument) || extra.has(argument));
+const sameInvocationAssertions = (leader, candidate)=>sameStringSet(invocationAssertionsOf(leader), invocationAssertionsOf(candidate));
+/**
  * Whether an intent has the explicit-package shape composable into a batch.
  * A `--` trailer (`cargo clippy … -- -D warnings`) is allowed: the composite
  * keeps the leader's trailer once, so `batchCompatible` admits only
  * followers whose trailer is byte-equal (#86).
- */ const batchLeaderEligible = (intent)=>batchableSubcommands.has(intent.subcommand) && !intent.workspace && intent.packages.length > 0 && intent.excludes.length === 0 && intent.opaqueArguments.length === 0;
+ */ const batchLeaderEligible = (intent)=>batchableSubcommands.has(intent.subcommand) && !intent.workspace && intent.packages.length > 0 && intent.excludes.length === 0 && onlyFoldableOpaque(intent);
 /**
  * Whether `candidate` can be folded into a composite invocation led by
  * `leader`: same batchable subcommand, identical compile surface, target
@@ -29258,7 +29272,7 @@ __webpack_require__.d(__webpack_exports__, {
  * `-- -D warnings` another participant's warnings fail the composite; the
  * demux still proves a follower whose own units compiled cleanly, and the
  * rest requeue to run alone.
- */ const batchCompatible = (leader, candidate)=>leader.subcommand === candidate.subcommand && batchLeaderEligible(leader) && batchLeaderEligible(candidate) && (0,_broker_coverage_js__rspack_import_0/* .sameCompileSurface */.hJ)(leader, candidate) && (0,_broker_coverage_js__rspack_import_0/* .stringArraysEqual */.Oh)(leader.targets, candidate.targets) && (0,_broker_coverage_js__rspack_import_0/* .stringArraysEqual */.Oh)(leader.passthrough, candidate.passthrough);
+ */ const batchCompatible = (leader, candidate)=>leader.subcommand === candidate.subcommand && batchLeaderEligible(leader) && batchLeaderEligible(candidate) && (0,_broker_coverage_js__rspack_import_0/* .sameCompileSurface */.hJ)(leader, candidate) && sameInvocationAssertions(leader, candidate) && (0,_broker_coverage_js__rspack_import_0/* .stringArraysEqual */.Oh)(leader.targets, candidate.targets) && (0,_broker_coverage_js__rspack_import_0/* .stringArraysEqual */.Oh)(leader.passthrough, candidate.passthrough);
 /** Packages on `candidate` that the leader invocation does not already name. */ const extraPackagesFor = (leader, candidate)=>candidate.packages.filter((name)=>!leader.packages.includes(name));
 /**
  * Where the leader's argv stops taking cargo flags: the earlier of the demux
@@ -29293,7 +29307,9 @@ __webpack_require__.d(__webpack_exports__, {
         ...argv.slice(insertAt)
     ];
 };
-/** The composite always re-adds `--no-fail-fast`, so it is a benign opaque. */ const onlyNoFailFast = (opaque)=>opaque.every((argument)=>argument === '--no-fail-fast');
+/** The composite always re-adds `--no-fail-fast`, so it is a benign opaque. */ const testRunOpaque = new Set([
+    '--no-fail-fast'
+]);
 /**
  * Walks a `cargo test` trailer one libtest argument at a time — a bare name
  * filter, or a foldable harness flag — or returns null at the first argument
@@ -29443,14 +29459,14 @@ const integrationTestTargetPrefix = 'test:';
  * target narrowing expressible as `--test` / `--lib` flags, a trailer of
  * bare name filters and foldable harness flags only (`classifyTestTrailer`),
  * and no unmodeled cargo flags.
- */ const testBatchEligible = (intent)=>intent.subcommand === 'test' && !intent.workspace && intent.packages.length > 0 && intent.excludes.length === 0 && onlyNoFailFast(intent.opaqueArguments) && foldableTestTargets(intent.targets) && classifyTestTrailer(intent.passthrough) !== null;
+ */ const testBatchEligible = (intent)=>intent.subcommand === 'test' && !intent.workspace && intent.packages.length > 0 && intent.excludes.length === 0 && onlyFoldableOpaque(intent, testRunOpaque) && foldableTestTargets(intent.targets) && classifyTestTrailer(intent.passthrough) !== null;
 /**
  * Whether a `cargo nextest run` intent can fold: explicit packages keep the
  * composite's build scope tight (an -E-only participant would need a
  * workspace-wide build to be a superset), and the whole selection must be
  * expressible as one filterset — positional filters and trailing arguments
  * intersect with `-E` in nextest, so their presence disqualifies folding.
- */ const nextestBatchEligible = (intent)=>intent.subcommand === 'nextest' && intent.nextestCommand === 'run' && !intent.workspace && intent.packages.length > 0 && intent.excludes.length === 0 && onlyNoFailFast(intent.opaqueArguments) && intent.targets.length === 0 && intent.testFilters.length === 0 && intent.passthrough.length === 0;
+ */ const nextestBatchEligible = (intent)=>intent.subcommand === 'nextest' && intent.nextestCommand === 'run' && !intent.workspace && intent.packages.length > 0 && intent.excludes.length === 0 && onlyFoldableOpaque(intent, testRunOpaque) && intent.targets.length === 0 && intent.testFilters.length === 0 && intent.passthrough.length === 0;
 /** How (if at all) this intent can lead or join a composite invocation. */ const batchKindFor = (intent)=>{
     if (batchLeaderEligible(intent)) {
         return 'compile';
@@ -29463,7 +29479,6 @@ const integrationTestTargetPrefix = 'test:';
     }
     return null;
 };
-const sameStringSet = (left, right)=>left.every((value)=>right.includes(value)) && right.every((value)=>left.includes(value));
 /**
  * Whether two `cargo test` selections can share one composite (#87). The
  * `--test` / `--lib` target set and the harness flags must match exactly:
@@ -29514,9 +29529,9 @@ const sameStringSet = (left, right)=>left.every((value)=>right.includes(value)) 
         case 'compile':
             return batchCompatible(leader, candidate);
         case 'test':
-            return testBatchEligible(candidate) && (0,_broker_coverage_js__rspack_import_0/* .sameCompileSurface */.hJ)(leader, candidate) && testSelectionsFold(leader, candidate);
+            return testBatchEligible(candidate) && (0,_broker_coverage_js__rspack_import_0/* .sameCompileSurface */.hJ)(leader, candidate) && sameInvocationAssertions(leader, candidate) && testSelectionsFold(leader, candidate);
         case 'nextest':
-            return nextestBatchEligible(candidate) && (0,_broker_coverage_js__rspack_import_0/* .sameCompileSurface */.hJ)(leader, candidate) && (0,_broker_coverage_js__rspack_import_0/* .stringArraysEqual */.Oh)(leader.filterExpressions, candidate.filterExpressions);
+            return nextestBatchEligible(candidate) && (0,_broker_coverage_js__rspack_import_0/* .sameCompileSurface */.hJ)(leader, candidate) && sameInvocationAssertions(leader, candidate) && (0,_broker_coverage_js__rspack_import_0/* .stringArraysEqual */.Oh)(leader.filterExpressions, candidate.filterExpressions);
         default:
             {
                 const exhaustive = kind;

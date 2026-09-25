@@ -265,6 +265,18 @@ describe('batchKindFor', () => {
     ).toBe('nextest');
   });
 
+  it('allows the lockfile and network assertions on every fold shape', () => {
+    expect(batchKindFor(intent(['cargo', 'check', '-p', 'alpha', '--locked']))).toBe('compile');
+    expect(batchKindFor(intent(['cargo', '--frozen', 'build', '-p', 'alpha']))).toBe('compile');
+    expect(batchKindFor(intent(['cargo', 'test', '-p', 'alpha', '--locked', '--lib', '--', 'x']))).toBe(
+      'test',
+    );
+    expect(
+      batchKindFor(intent(['cargo', 'nextest', 'run', '-p', 'alpha', '--offline', '-E', 'test(x)'])),
+    ).toBe('nextest');
+    expect(batchKindFor(intent(['cargo', 'check', '-p', 'alpha', '--locked', '-j', '4']))).toBe(null);
+  });
+
   it('refuses unfoldable test shapes', () => {
     // Workspace-wide and default-package runs stay on the coverage path.
     expect(batchKindFor(intent(['cargo', 'test', '--workspace']))).toBe(null);
@@ -673,6 +685,44 @@ describe('batchCompatibleFor', () => {
         'nextest',
         intent(['cargo', 'nextest', 'run', '-p', 'alpha']),
         intent(['cargo', 'test', '-p', 'beta']),
+      ),
+    ).toBe(false);
+  });
+
+  it('folds lockfile and network assertions only when every participant makes the same ones', () => {
+    const lib = (name: string, ...flags: string[]) =>
+      intent(['cargo', 'test', '-p', name, ...flags, '--lib', '--', `${name}_filter`]);
+    expect(batchCompatibleFor('test', lib('alpha', '--locked'), lib('beta', '--locked'))).toBe(true);
+    expect(
+      batchCompatibleFor('test', lib('alpha', '--locked', '--offline'), lib('beta', '--offline', '--locked')),
+    ).toBe(true);
+    // The composite runs the leader's argv: a one-sided `--locked` would
+    // forbid a follower's lockfile update, or apply one it forbade.
+    expect(batchCompatibleFor('test', lib('alpha', '--locked'), lib('beta'))).toBe(false);
+    expect(batchCompatibleFor('test', lib('alpha'), lib('beta', '--locked'))).toBe(false);
+    expect(batchCompatibleFor('test', lib('alpha', '--locked'), lib('beta', '--frozen'))).toBe(false);
+    const leaderArgv = ['cargo', 'test', '-p', 'alpha', '--locked', '--lib', '--', 'alpha_filter'];
+    expect(composeTestFoldArgv(leaderArgv, lib('alpha', '--locked'), [lib('beta', '--locked')])).toEqual([
+      'cargo', 'test', '-p', 'alpha', '--locked', '--lib', '-p', 'beta', '--no-fail-fast',
+      '--', 'alpha_filter', 'beta_filter',
+    ]);
+    expect(
+      batchCompatible(
+        intent(['cargo', 'clippy', '-p', 'alpha', '--locked', '--', '-D', 'warnings']),
+        intent(['cargo', 'clippy', '-p', 'beta', '--locked', '--', '-D', 'warnings']),
+      ),
+    ).toBe(true);
+    expect(
+      batchCompatible(
+        intent(['cargo', 'check', '-p', 'alpha', '--locked']),
+        intent(['cargo', 'check', '-p', 'beta']),
+      ),
+    ).toBe(false);
+    expect(
+      batchCompatibleFor(
+        'nextest',
+        intent(['cargo', 'nextest', 'run', '-p', 'alpha', '--locked', '-E', 'test(x)']),
+        intent(['cargo', 'nextest', 'run', '-p', 'beta', '-E', 'test(x)']),
       ),
     ).toBe(false);
   });
