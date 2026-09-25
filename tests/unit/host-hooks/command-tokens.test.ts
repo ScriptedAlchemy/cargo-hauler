@@ -72,6 +72,8 @@ describe('hiddenCargoRun', () => {
     ['$CARGO test -p foo', cargoOutput, false],
     ['./build.sh', '    Checking foo v0.1.0', true],
     ['nohup bash -c ./verify.sh', '   Doc-tests foo', true],
+    ['./doc.sh', ' Documenting foo v0.1.0 (/ws/foo)', true],
+    ['python3 diff.py', '    Running the kernel constructor keeps every disabled handler.', false],
     ['cargo test -p foo', cargoOutput, false],
     ['hauler result cc-7 --full', cargoOutput, false],
     ['tail -30 build.log', cargoOutput, false],
