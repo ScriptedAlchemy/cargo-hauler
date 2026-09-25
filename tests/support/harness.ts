@@ -35,6 +35,7 @@ FAKE_SLEEP="\${CARGO_HAULER_TEST_FAKE_SLEEP:-\${FAKE_SLEEP:-}}"
 FAKE_LATE_OUT="\${CARGO_HAULER_TEST_FAKE_LATE_OUT:-\${FAKE_LATE_OUT:-}}"
 FAKE_EXIT="\${CARGO_HAULER_TEST_FAKE_EXIT:-\${FAKE_EXIT:-0}}"
 FAKE_STAGE_FILE="\${CARGO_HAULER_TEST_FAKE_STAGE_FILE:-\${FAKE_STAGE_FILE:-}}"
+FAKE_EXECUTE_RELEASE_FILE="\${CARGO_HAULER_TEST_FAKE_EXECUTE_RELEASE_FILE:-\${FAKE_EXECUTE_RELEASE_FILE:-}}"
 echo "fake-out:$*"
 echo "fake-err:$*" >&2
 echo "fake-jobs:\${CARGO_BUILD_JOBS:-none}" >&2
@@ -56,6 +57,9 @@ fi
 if [ -n "\$FAKE_FINISHED_AFTER" ]; then
   sleep "\$FAKE_FINISHED_AFTER"
   echo "    Finished \\\`test\\\` profile [unoptimized + debuginfo] target(s) in 0.42s" >&2
+fi
+if [ -n "\$FAKE_EXECUTE_RELEASE_FILE" ]; then
+  while [ ! -e "\$FAKE_EXECUTE_RELEASE_FILE" ]; do sleep 0.01; done
 fi
 if [ -n "\$FAKE_SLEEP" ]; then sleep "\$FAKE_SLEEP"; fi
 if [ -n "\$FAKE_LATE_OUT" ]; then echo "\$FAKE_LATE_OUT"; fi

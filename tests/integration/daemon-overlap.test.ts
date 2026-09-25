@@ -1,3 +1,6 @@
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'effect-rstest';
 import * as Effect from 'effect/Effect';
 import * as Fiber from 'effect/Fiber';
@@ -90,6 +93,51 @@ describe('execution-phase overlap', () => {
         ),
       ).toBe(true);
     }));
+
+  for (const argv of [
+    ['cargo', 'run', '-p', 'alpha'],
+    ['cargo', 'bench', '-p', 'alpha'],
+    ['cargo', 'nextest', 'run', '-p', 'alpha'],
+  ]) {
+    it.live(`\`${argv.join(' ')}\` enters its execute phase at the finished line and frees the lane`, () =>
+      Effect.gen(function* () {
+        const fixture = yield* scopedDaemon(5);
+        const releaseFile = join(fixture.root, 'execute.release');
+        yield* Effect.addFinalizer(() => Effect.sync(() => writeFileSync(releaseFile, '')));
+        const leaderFiber = yield* Effect.forkChild(
+          execRequest(fixture, {
+            cwd: fixture.ws1,
+            argv,
+            finishedAfter: '0',
+            extraEnv: { FAKE_EXECUTE_RELEASE_FILE: releaseFile },
+            timeoutMs: 12_000,
+          }),
+        );
+        const started = yield* pollReport(fixture, (report) => runningLeader(report) !== undefined);
+        const leaderTicket = runningLeader(started)?.ticket ?? '';
+        const executing = yield* pollReport(
+          fixture,
+          (report) => recordFor(report, leaderTicket)?.phase === 'execute',
+          20,
+        );
+        expect(recordFor(executing, leaderTicket)?.phase).toBe('execute');
+        expect(executing.lanes.map((lane) => [lane.runningTicket, lane.executingTickets])).toEqual([
+          [null, [leaderTicket]],
+        ]);
+
+        const followerExit = findExit(
+          yield* execRequest(fixture, { cwd: fixture.ws1, argv: nextCompile, timeoutMs: 12_000 }),
+        );
+        writeFileSync(releaseFile, '');
+        const leaderExit = findExit(yield* Fiber.join(leaderFiber));
+        expect([followerExit.status, leaderExit.status]).toEqual(['done', 'done']);
+        const report = yield* pollReport(fixture, settled(leaderTicket));
+        const leader = recordFor(report, leaderTicket);
+        const follower = recordFor(report, followerExit.ticket);
+        expect(follower?.startedAtMs).toBeGreaterThanOrEqual(leader?.buildFinishedAtMs ?? Number.NaN);
+        expect(follower?.finishedAtMs).toBeLessThan(leader?.finishedAtMs ?? Number.NaN);
+      }));
+  }
 
   it.live('keeps a compile-only leader in the lane even when its output carries a finished line', () =>
     Effect.gen(function* () {
