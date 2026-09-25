@@ -9536,7 +9536,7 @@ const defaultEnsureDependencies = {
     pingDaemon: _control_js__rspack_import_6/* .pingDaemon */.LT,
     pollMs: 100,
     processAlive: _shutdown_js__rspack_import_8/* .processAlive */.FN,
-    requestShutdown: (socketPath)=>(0,_shutdown_js__rspack_import_8/* .requestShutdown */.iU)(socketPath, 5000, (/* inlined export .version */"0.9.7"), true),
+    requestShutdown: (socketPath)=>(0,_shutdown_js__rspack_import_8/* .requestShutdown */.iU)(socketPath, 5000, (/* inlined export .version */"0.9.8"), true),
     spawnDetachedDaemon,
     waitForDaemon
 };
@@ -9556,9 +9556,9 @@ const defaultEnsureDependencies = {
             startedAtMs: daemon.startedAtMs,
             version: daemon.version
         };
-        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(daemon.version, (/* inlined export .version */"0.9.7"))) {
+        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(daemon.version, (/* inlined export .version */"0.9.8"))) {
             return yield* new _shutdown_js__rspack_import_8/* .DaemonNewerError */.gD({
-                clientVersion: (/* inlined export .version */"0.9.7"),
+                clientVersion: (/* inlined export .version */"0.9.8"),
                 daemon: identity,
                 socketPath
             });
@@ -9587,19 +9587,19 @@ const defaultEnsureDependencies = {
             startedAtMs: already.startedAtMs,
             version: already.version
         };
-        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(already.version, (/* inlined export .version */"0.9.7"))) {
+        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(already.version, (/* inlined export .version */"0.9.8"))) {
             if (access === 'read' && (0,_contracts_wire_version_js__rspack_import_18/* .speaksCurrentWireProtocol */.W)(already)) {
                 return already;
             }
             return yield* new _shutdown_js__rspack_import_8/* .DaemonNewerError */.gD({
-                clientVersion: (/* inlined export .version */"0.9.7"),
+                clientVersion: (/* inlined export .version */"0.9.8"),
                 daemon: identity,
                 socketPath: config.socketPath
             });
         }
         if (!(0,_contracts_wire_version_js__rspack_import_18/* .speaksCurrentWireProtocol */.W)(already)) {
             return yield* new _shutdown_js__rspack_import_8/* .DaemonIncompatibleError */.K9({
-                clientVersion: (/* inlined export .version */"0.9.7"),
+                clientVersion: (/* inlined export .version */"0.9.8"),
                 daemon: identity,
                 socketPath: config.socketPath
             });
@@ -9615,11 +9615,11 @@ const ensureDaemonRunning = (config = (0,_daemon_config_js__rspack_import_5/* .r
                 return yield* dependencies.waitForDaemon(config.socketPath);
             });
         }
-        if (daemon.version === (/* inlined export .version */"0.9.7")) {
+        if (daemon.version === (/* inlined export .version */"0.9.8")) {
             return effect_Effect__rspack_import_15/* .succeed */.PyW(daemon);
         }
         const deferred = ()=>effect_Effect__rspack_import_15/* .sync */.OH5(()=>{
-                reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${(/* inlined export .version */"0.9.7")} when idle\n`);
+                reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${(/* inlined export .version */"0.9.8")} when idle\n`);
                 return daemon;
             });
         return dependencies.daemonIsIdle(config.socketPath).pipe(effect_Effect__rspack_import_15/* .flatMap */.qIB((idle)=>{
@@ -10858,7 +10858,7 @@ __webpack_require__.d(__webpack_exports__, {
         }
         return true;
     });
-const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlined export .version */"0.9.7"), ifIdle = false)=>effect_Effect__rspack_import_3/* .suspend */.DYE(()=>{
+const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlined export .version */"0.9.8"), ifIdle = false)=>effect_Effect__rspack_import_3/* .suspend */.DYE(()=>{
         const id = (0,_util_id_js__rspack_import_1/* .shortId */.m)();
         const isResponse = (message)=>message.id === id && (message.type === 'shutting-down' || message.type === 'error');
         return (0,_control_js__rspack_import_2/* .requestOverSocket */.Lb)({
@@ -15796,7 +15796,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 
-const daemonVersion = (/* inlined export .version */"0.9.7");
+const daemonVersion = (/* inlined export .version */"0.9.8");
 const appLayer = (config)=>_broker_broker_js__rspack_import_5/* .BrokerLive.pipe */.Cn.pipe(effect_Layer__rspack_import_15/* .provideMerge */.S5(_scheduling_cost_js__rspack_import_7/* .CostModelLive */.jg), effect_Layer__rspack_import_15/* .provideMerge */.S5(_integrations_kache_status_js__rspack_import_8/* .KacheStatusLive */.pS), effect_Layer__rspack_import_15/* .provideMerge */.S5(_cargo_topology_js__rspack_import_14/* .TopologyLive */.QW), effect_Layer__rspack_import_15/* .provideMerge */.S5(_storage_ledger_js__rspack_import_9/* .LedgerLive */.mX), effect_Layer__rspack_import_15/* .provideMerge */.S5(effect_Layer__rspack_import_15/* .succeed */.Py(_config_js__rspack_import_6/* .DaemonConfig */.FP, config)), effect_Layer__rspack_import_15/* .provideMerge */.S5(_effect_platform_node__rspack_import_16/* .layer */.q));
 const minimumLogLevelLayer = effect_Layer__rspack_import_15/* .unwrap */.oA(effect_Config__rspack_import_17/* .logLevel */.dm('CARGO_HAULER_LOG_LEVEL').pipe(effect_Effect__rspack_import_18/* .orElseSucceed */.DM4(()=>'Info'), effect_Effect__rspack_import_18/* .map */.TjK((level)=>effect_Layer__rspack_import_15/* .succeed */.Py(effect_References__rspack_import_19/* .MinimumLogLevel */.zQ, level))));
 /**
@@ -130037,8 +130037,8 @@ __rspack_async_done();
 // Generated by agent-bundle. Do not edit.
 const name = "cargo-hauler";
 const packageName = "cargo-hauler";
-const packageVersion = "0.9.7";
-const version = "0.9.7";
+const packageVersion = "0.9.8";
+const version = "0.9.8";
 const meta = Object.freeze({
     name,
     packageName,

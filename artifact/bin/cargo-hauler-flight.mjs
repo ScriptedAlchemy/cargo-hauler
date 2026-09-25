@@ -19529,7 +19529,7 @@ const defaultEnsureDependencies = {
     pingDaemon: _control_js__rspack_import_6/* .pingDaemon */.LT,
     pollMs: 100,
     processAlive: _shutdown_js__rspack_import_8/* .processAlive */.FN,
-    requestShutdown: (socketPath)=>(0,_shutdown_js__rspack_import_8/* .requestShutdown */.iU)(socketPath, 5000, (/* inlined export .version */"0.9.7"), true),
+    requestShutdown: (socketPath)=>(0,_shutdown_js__rspack_import_8/* .requestShutdown */.iU)(socketPath, 5000, (/* inlined export .version */"0.9.8"), true),
     spawnDetachedDaemon,
     waitForDaemon
 };
@@ -19549,9 +19549,9 @@ const defaultEnsureDependencies = {
             startedAtMs: daemon.startedAtMs,
             version: daemon.version
         };
-        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(daemon.version, (/* inlined export .version */"0.9.7"))) {
+        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(daemon.version, (/* inlined export .version */"0.9.8"))) {
             return yield* new _shutdown_js__rspack_import_8/* .DaemonNewerError */.gD({
-                clientVersion: (/* inlined export .version */"0.9.7"),
+                clientVersion: (/* inlined export .version */"0.9.8"),
                 daemon: identity,
                 socketPath
             });
@@ -19580,19 +19580,19 @@ const defaultEnsureDependencies = {
             startedAtMs: already.startedAtMs,
             version: already.version
         };
-        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(already.version, (/* inlined export .version */"0.9.7"))) {
+        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(already.version, (/* inlined export .version */"0.9.8"))) {
             if (access === 'read' && (0,_contracts_wire_version_js__rspack_import_18/* .speaksCurrentWireProtocol */.W)(already)) {
                 return already;
             }
             return yield* new _shutdown_js__rspack_import_8/* .DaemonNewerError */.gD({
-                clientVersion: (/* inlined export .version */"0.9.7"),
+                clientVersion: (/* inlined export .version */"0.9.8"),
                 daemon: identity,
                 socketPath: config.socketPath
             });
         }
         if (!(0,_contracts_wire_version_js__rspack_import_18/* .speaksCurrentWireProtocol */.W)(already)) {
             return yield* new _shutdown_js__rspack_import_8/* .DaemonIncompatibleError */.K9({
-                clientVersion: (/* inlined export .version */"0.9.7"),
+                clientVersion: (/* inlined export .version */"0.9.8"),
                 daemon: identity,
                 socketPath: config.socketPath
             });
@@ -19608,11 +19608,11 @@ const ensureDaemonRunning = (config = (0,_daemon_config_js__rspack_import_5/* .r
                 return yield* dependencies.waitForDaemon(config.socketPath);
             });
         }
-        if (daemon.version === (/* inlined export .version */"0.9.7")) {
+        if (daemon.version === (/* inlined export .version */"0.9.8")) {
             return effect_Effect__rspack_import_15/* .succeed */.PyW(daemon);
         }
         const deferred = ()=>effect_Effect__rspack_import_15/* .sync */.OH5(()=>{
-                reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${(/* inlined export .version */"0.9.7")} when idle\n`);
+                reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${(/* inlined export .version */"0.9.8")} when idle\n`);
                 return daemon;
             });
         return dependencies.daemonIsIdle(config.socketPath).pipe(effect_Effect__rspack_import_15/* .flatMap */.qIB((idle)=>{
@@ -19792,7 +19792,7 @@ __webpack_require__.d(__webpack_exports__, {
         }
         return true;
     });
-const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlined export .version */"0.9.7"), ifIdle = false)=>effect_Effect__rspack_import_4/* .suspend */.DYE(()=>{
+const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlined export .version */"0.9.8"), ifIdle = false)=>effect_Effect__rspack_import_4/* .suspend */.DYE(()=>{
         const id = (0,_util_id_js__rspack_import_1/* .shortId */.m)();
         const isResponse = (message)=>message.id === id && (message.type === 'shutting-down' || message.type === 'error');
         return (0,_control_js__rspack_import_2/* .requestOverSocket */.Lb)({
@@ -27072,7 +27072,7 @@ __webpack_require__.r(__webpack_exports__);
             route: route.id,
             server: route.serverId ?? null,
             surface: route.kind,
-            version: (/* inlined export .version */"0.9.7")
+            version: (/* inlined export .version */"0.9.8")
         }
     };
     return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_6/* .Agent.Result */.g.Result, {
@@ -106880,8 +106880,8 @@ __webpack_require__.d(__webpack_exports__, {
 // Generated by agent-bundle. Do not edit.
 const name = "cargo-hauler";
 const packageName = "cargo-hauler";
-const packageVersion = "0.9.7";
-const version = "0.9.7";
+const packageVersion = "0.9.8";
+const version = "0.9.8";
 const meta = Object.freeze({
     name,
     packageName,
