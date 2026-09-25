@@ -35,8 +35,11 @@ export interface ConnectionHandlerOptions {
 }
 
 export interface ConnectionOutputBufferOptions {
+  /** Output cost kept for a peer that is still accepting writes but has fallen behind. */
   readonly maxOutputBytes: number;
-  readonly maxOutputMessages: number;
+  /** Output cost kept once a write has waited `stallMs` on the peer. */
+  readonly stalledOutputBytes: number;
+  readonly stallMs: number;
 }
 
 interface BufferedServerMessage {
@@ -44,13 +47,26 @@ interface BufferedServerMessage {
   outputBytes: number;
 }
 
+/** Heap and framing one queued output message costs beyond its base64 payload. */
+const outputMessageOverheadBytes = 256;
+
+/** Largest frame one write carries, so a pending write measures recent peer progress. */
+const maxFrameBytes = 64 * 1024;
+
+const outputCost = (message: OutputMessage): number =>
+  message.data.length + outputMessageOverheadBytes;
+
 const defaultOutputBufferOptions: ConnectionOutputBufferOptions = {
-  maxOutputBytes: 1024 * 1024,
-  maxOutputMessages: 128,
+  maxOutputBytes: 64 * 1024 * 1024,
+  stalledOutputBytes: 1024 * 1024,
+  stallMs: 2_000,
 };
 
 /**
- * FIFO connection buffer with a bounded bulk-output portion. Control and
+ * FIFO connection buffer with a bounded bulk-output portion. Output queued
+ * between two writer turns is always kept. While a write waits on the peer,
+ * output is kept up to `maxOutputBytes`; once that write has waited `stallMs`
+ * the peer counts as stalled and keeps only `stalledOutputBytes`. Control and
  * terminal messages are always retained; overflow replaces output with one
  * ordinary stderr output message, so the truncation note needs no message
  * type of its own.
@@ -58,8 +74,8 @@ const defaultOutputBufferOptions: ConnectionOutputBufferOptions = {
 export class ConnectionOutputBuffer {
   readonly #options: ConnectionOutputBufferOptions;
   readonly #pending: BufferedServerMessage[] = [];
+  #writeStartedAtMs: number | null = null;
   #bufferedOutputBytes = 0;
-  #bufferedOutputMessages = 0;
   #droppedPayloadBytes = 0;
   #truncation: BufferedServerMessage | null = null;
 
@@ -69,10 +85,6 @@ export class ConnectionOutputBuffer {
 
   get bufferedOutputBytes(): number {
     return this.#bufferedOutputBytes;
-  }
-
-  get bufferedOutputMessages(): number {
-    return this.#bufferedOutputMessages;
   }
 
   get size(): number {
@@ -85,67 +97,83 @@ export class ConnectionOutputBuffer {
       this.#pending.push({ message, outputBytes: 0 });
       return wasEmpty;
     }
-    const outputBytes = message.data.length;
-    if (
-      this.#bufferedOutputMessages < this.#options.maxOutputMessages &&
-      this.#bufferedOutputBytes + outputBytes <= this.#options.maxOutputBytes
-    ) {
+    const outputBytes = outputCost(message);
+    const limit = this.#outputLimit();
+    if (this.#bufferedOutputBytes + outputBytes <= limit) {
       this.#pending.push({ message, outputBytes });
-      this.#bufferedOutputMessages += 1;
       this.#bufferedOutputBytes += outputBytes;
       return wasEmpty;
     }
-    this.#recordDrop(message);
+    this.#recordDrop(message, limit);
     return wasEmpty;
   }
 
-  take(): ServerMessage | null {
-    const envelope = this.#pending.shift();
-    if (envelope === undefined) {
-      return null;
+  /** Writes the oldest queued messages as one frame of at most about `maxFrameBytes`. */
+  flush<E>(write: (frame: string) => Effect.Effect<void, E>): Effect.Effect<void, E> {
+    return Effect.suspend(() => {
+      const frame = this.#takeFrame();
+      if (frame === '') {
+        return Effect.void;
+      }
+      this.#writeStartedAtMs = performance.now();
+      return write(frame).pipe(
+        Effect.ensuring(
+          Effect.sync(() => {
+            this.#writeStartedAtMs = null;
+          }),
+        ),
+      );
+    });
+  }
+
+  #outputLimit(): number {
+    const startedAtMs = this.#writeStartedAtMs;
+    if (startedAtMs === null) {
+      return Number.POSITIVE_INFINITY;
     }
-    if (envelope.message.type === 'output') {
-      this.#bufferedOutputMessages -= 1;
+    return performance.now() - startedAtMs >= this.#options.stallMs
+      ? this.#options.stalledOutputBytes
+      : this.#options.maxOutputBytes;
+  }
+
+  #takeFrame(): string {
+    let frame = '';
+    let taken = 0;
+    for (const envelope of this.#pending) {
+      if (frame.length >= maxFrameBytes) {
+        break;
+      }
+      frame += encodeServerMessage(envelope.message);
       this.#bufferedOutputBytes -= envelope.outputBytes;
       if (envelope === this.#truncation) {
         this.#truncation = null;
         this.#droppedPayloadBytes = 0;
       }
+      taken += 1;
     }
-    return envelope.message;
+    this.#pending.splice(0, taken);
+    return frame;
   }
 
-  drain(): readonly ServerMessage[] {
-    const messages: ServerMessage[] = [];
-    for (let message = this.take(); message !== null; message = this.take()) {
-      messages.push(message);
-    }
-    return messages;
-  }
-
-  #recordDrop(message: OutputMessage): void {
+  #recordDrop(message: OutputMessage, limit: number): void {
     this.#droppedPayloadBytes += Buffer.byteLength(message.data, 'base64');
     if (this.#truncation !== null) {
-      this.#replaceTruncation(message);
+      this.#replaceTruncation(message, limit);
       return;
     }
-    while (
-      this.#bufferedOutputMessages >= this.#options.maxOutputMessages ||
-      this.#bufferedOutputBytes + this.#noticeBytes(message) > this.#options.maxOutputBytes
-    ) {
+    while (this.#bufferedOutputBytes + outputCost(this.#makeNotice(message)) > limit) {
       if (!this.#evictLastOutput()) {
         return;
       }
     }
     const notice = this.#makeNotice(message);
-    const envelope = { message: notice, outputBytes: notice.data.length };
+    const envelope = { message: notice, outputBytes: outputCost(notice) };
     this.#pending.push(envelope);
-    this.#bufferedOutputMessages += 1;
     this.#bufferedOutputBytes += envelope.outputBytes;
     this.#truncation = envelope;
   }
 
-  #replaceTruncation(message: OutputMessage): void {
+  #replaceTruncation(message: OutputMessage, limit: number): void {
     const truncation = this.#truncation;
     if (truncation === null) {
       return;
@@ -153,12 +181,12 @@ export class ConnectionOutputBuffer {
     const notice = this.#makeNotice(message);
     this.#bufferedOutputBytes -= truncation.outputBytes;
     truncation.message = notice;
-    truncation.outputBytes = notice.data.length;
+    truncation.outputBytes = outputCost(notice);
     this.#bufferedOutputBytes += truncation.outputBytes;
-    // The dropped-byte counter grows the notice over time; shed buffered
-    // output (never the notice itself) so the swap cannot exceed the byte
-    // budget the initial insertion honored.
-    while (this.#bufferedOutputBytes > this.#options.maxOutputBytes) {
+    // The dropped-byte counter grows the notice over time, and a stall
+    // lowers the limit; shed buffered output (never the notice itself) so
+    // the swap stays within the limit in force.
+    while (this.#bufferedOutputBytes > limit) {
       if (!this.#evictLastOutput()) {
         return;
       }
@@ -179,13 +207,8 @@ export class ConnectionOutputBuffer {
         ? Buffer.byteLength(removed.message.data, 'base64')
         : 0;
     this.#pending.splice(index, 1);
-    this.#bufferedOutputMessages -= 1;
     this.#bufferedOutputBytes -= removed.outputBytes;
     return true;
-  }
-
-  #noticeBytes(message: OutputMessage): number {
-    return this.#makeNotice(message).data.length;
   }
 
   #makeNotice(message: OutputMessage): OutputMessage {
@@ -196,7 +219,7 @@ export class ConnectionOutputBuffer {
       channel: 'stderr',
       cursorBytes: 0,
       data: Buffer.from(
-        `[cargo-hauler] output truncated for slow client: ${this.#droppedPayloadBytes} bytes dropped\n`,
+        `[cargo-hauler] output truncated: client fell behind; ${this.#droppedPayloadBytes} bytes dropped; full output: hauler result ${message.ticket} --full\n`,
       ).toString('base64'),
     };
   }
@@ -275,22 +298,11 @@ export const makeConnectionHandler =
                   ),
                 );
 
-        const takeOutbound = (): Effect.Effect<ServerMessage> =>
-          Effect.suspend(() => {
-            const message = outbound.take();
-            if (message !== null) {
-              return Effect.succeed(message);
-            }
-            return Queue.take(outboundWake).pipe(Effect.andThen(takeOutbound()));
-          });
-
         yield* Effect.forkChild(
           Effect.forever(
-            Effect.gen(function* () {
-              const message = yield* takeOutbound();
-              const batch = [message, ...outbound.drain()];
-              yield* write(batch.map(encodeServerMessage).join(''));
-            }),
+            Effect.suspend(() =>
+              outbound.size === 0 ? Queue.take(outboundWake) : outbound.flush(write),
+            ),
           ).pipe(
             Effect.catchCause(() =>
               Effect.sync(() => {

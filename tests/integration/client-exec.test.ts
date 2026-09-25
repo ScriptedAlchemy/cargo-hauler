@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync } from 'node:fs';
-import { createServer, type Server, type Socket } from 'node:net';
+import { connect, createServer, type Server, type Socket } from 'node:net';
 import { join } from 'node:path';
 
 import type { AgentTerminal, AgentTerminalColor, AgentTerminalStreamKind } from 'agent-bundle';
@@ -33,6 +33,7 @@ import {
   type StatusResultMessage,
 } from '../../src/internal/contracts/protocol.js';
 import { DaemonNotReplacedError } from '../../src/internal/client/shutdown.js';
+import { awaitTicket } from '../../src/internal/client/tickets.js';
 import { LineBuffer } from '../../src/internal/platform/ndjson.js';
 
 import { fakeCargoEnv, fetchReport, scopedDaemon, scopedFixture } from '../support/harness.js';
@@ -241,6 +242,60 @@ describe('runExecClient', () => {
       expect(collected.stderr()).toMatch(/ticket cc-\d+ queued \(0 ahead/u);
       expect(collected.stderr()).toMatch(/ticket cc-\d+ started \(waited \d+ms\)/u);
     }));
+
+  it.live('bounds a reader that stops reading and names where the full output is', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(5);
+      const socket = yield* Effect.acquireRelease(
+        Effect.sync(() => connect(fixture.config.socketPath).pause()),
+        (stalled) => Effect.sync(() => stalled.destroy()),
+      );
+      socket.write(
+        `${JSON.stringify({
+          type: 'exec',
+          id: 'stalled',
+          argv: ['cargo', 'build'],
+          cwd: fixture.ws1,
+          env: fakeCargoEnv(fixture, {
+            FAKE_OUTPUT_BYTES: '5900000',
+            FAKE_SLEEP: '3',
+            FAKE_LATE_OUT: 'late-last-line',
+          }),
+        })}\n`,
+      );
+      const waited = yield* awaitTicket('cc-1', 20_000, fixture.config);
+      expect(waited.request?.status).toBe('done');
+
+      const received: ServerMessage[] = [];
+      const lines = new LineBuffer();
+      yield* Effect.callback<void>((resume) => {
+        socket.on('data', (chunk: Buffer) => {
+          for (const line of lines.push(chunk)) {
+            const message = JSON.parse(line) as ServerMessage;
+            received.push(message);
+            if (message.type === 'exit') {
+              resume(Effect.void);
+            }
+          }
+        });
+        socket.resume();
+      });
+
+      expect(received.at(-1)).toMatchObject({ type: 'exit', ticket: 'cc-1', exitCode: 0 });
+      const texts = received
+        .filter((message): message is Extract<ServerMessage, { type: 'output' }> => message.type === 'output')
+        .map((message) => Buffer.from(message.data, 'base64').toString('utf8'));
+      const notices = texts.filter((text) => text.includes('output truncated'));
+      expect(notices).toHaveLength(1);
+      // Output arriving after the stall is shed; the ticket log keeps it.
+      expect(texts.some((text) => text.includes('late-last-line'))).toBe(false);
+      expect(notices[0]).toMatch(
+        /^\[cargo-hauler\] output truncated: client fell behind; \d+ bytes dropped; full output: hauler result cc-1 --full\n$/u,
+      );
+      const log = readFileSync(waited.request?.outputPath ?? '', 'utf8').split('\n');
+      expect(log.filter((line) => line.startsWith('fake-bulk:'))).toHaveLength(100_000);
+      expect(log).toContain('late-last-line');
+    }), 60_000);
 
   it.live('exits 2 and prints the shared-target refusal from the daemon', () =>
     Effect.gen(function* () {
@@ -623,7 +678,7 @@ describe('runExecClient', () => {
         const cargoOutput = Buffer.from('cargo-output\n');
         const laterOutput = Buffer.from('later-output\n');
         const notice = Buffer.from(
-          '[cargo-hauler] output truncated for slow client: 128 bytes dropped\n',
+          '[cargo-hauler] output truncated: client fell behind; 128 bytes dropped; full output: hauler result cc-1 --full\n',
         );
         const { collected, result, sent } = yield* lostAfterAck(
           [

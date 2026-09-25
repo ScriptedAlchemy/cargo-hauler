@@ -99,70 +99,134 @@ const output = (sequence: number): OutputMessage => ({
   data: Buffer.from(`chunk-${sequence}-${'x'.repeat(32)}`).toString('base64'),
 });
 
+const exitMessage: ServerMessage = {
+  type: 'exit',
+  id: 'exec-1',
+  ticket: 'cc-1',
+  status: 'done',
+  exitCode: 0,
+  signal: null,
+  waitMs: 0,
+  runMs: 1,
+  error: null,
+};
+
+const outputText = (message: OutputMessage): string =>
+  Buffer.from(message.data, 'base64').toString('utf8');
+
+const parseFrames = (frames: readonly string[]): ServerMessage[] =>
+  frames
+    .join('')
+    .split('\n')
+    .filter((line) => line !== '')
+    .map((line) => JSON.parse(line) as ServerMessage);
+
+const flushAll = (buffer: ConnectionOutputBuffer): Effect.Effect<ServerMessage[]> =>
+  Effect.gen(function* () {
+    const frames: string[] = [];
+    while (buffer.size > 0) {
+      yield* buffer.flush((frame) => Effect.sync(() => frames.push(frame)));
+    }
+    return parseFrames(frames);
+  });
+
+const sentText = (sequence: number): string => `chunk-${sequence}-${'x'.repeat(32)}`;
+
+/**
+ * Offers 100 outputs and an exit while a write waits on the peer, then lets
+ * the peer accept it and offers one more output.
+ */
+const offerBehindPeer = (options: ConstructorParameters<typeof ConnectionOutputBuffer>[0]) =>
+  Effect.gen(function* () {
+    const buffer = new ConnectionOutputBuffer(options);
+    const frames: string[] = [];
+    let bufferedWhileWaiting = -1;
+    buffer.offer({ type: 'started', id: 'exec-1', ticket: 'cc-1', waitMs: 0 });
+    yield* buffer.flush((frame) =>
+      Effect.sync(() => {
+        frames.push(frame);
+        for (let sequence = 0; sequence < 100; sequence += 1) {
+          buffer.offer(output(sequence));
+        }
+        buffer.offer(exitMessage);
+        bufferedWhileWaiting = buffer.bufferedOutputBytes;
+      }),
+    );
+    buffer.offer(output(100));
+    const delivered = [...parseFrames(frames), ...(yield* flushAll(buffer))];
+    const outputs = delivered.filter((message): message is OutputMessage => message.type === 'output');
+    const notice = outputs.find((message) => outputText(message).includes('output truncated'));
+    const kept = outputs.filter((message) => message !== notice).map(outputText);
+    return {
+      bufferedWhileWaiting,
+      kept,
+      notice: notice === undefined ? undefined : outputText(notice),
+      types: delivered.map((message) => message.type),
+    };
+  });
+
+const expectTruncatedPrefix = (result: Effect.Success<ReturnType<typeof offerBehindPeer>>): void => {
+  const sent = Array.from({ length: 100 }, (_, sequence) => sentText(sequence));
+  const dropped = /^\[cargo-hauler\] output truncated: client fell behind; (\d+) bytes dropped; full output: hauler result cc-1 --full\n$/u.exec(
+    result.notice ?? '',
+  );
+  expect(result.types[0]).toBe('started');
+  expect(result.types.slice(-2)).toEqual(['exit', 'output']);
+  // The wait keeps a prefix, the notice accounts for the rest, and output
+  // flows again once the peer accepts the write.
+  expect(result.kept.slice(0, -1)).toEqual(sent.slice(0, result.kept.length - 1));
+  expect(result.kept.at(-1)).toBe(sentText(100));
+  expect(Number(dropped?.[1])).toBe(sent.slice(result.kept.length - 1).join('').length);
+};
+
 describe('daemon connection output buffering', () => {
-  it('bounds a slow reader while retaining control messages and a truncation notice', () => {
-    const buffer = new ConnectionOutputBuffer({
-      maxOutputBytes: 256,
-      maxOutputMessages: 4,
-    });
-    buffer.offer({ type: 'started', id: 'exec-1', ticket: 'cc-1', waitMs: 0 });
-    for (let sequence = 0; sequence < 100; sequence += 1) {
-      buffer.offer(output(sequence));
-    }
-    buffer.offer({
-      type: 'exit',
-      id: 'exec-1',
-      ticket: 'cc-1',
-      status: 'done',
-      exitCode: 0,
-      signal: null,
-      waitMs: 0,
-      runMs: 1,
-      error: null,
-    });
+  it.live('keeps a burst of any length queued between writer turns', () =>
+    Effect.gen(function* () {
+      const buffer = new ConnectionOutputBuffer({ maxOutputBytes: 1024, stalledOutputBytes: 1024, stallMs: 0 });
+      for (let sequence = 0; sequence < 5000; sequence += 1) {
+        buffer.offer(output(sequence));
+      }
 
-    expect(buffer.bufferedOutputMessages).toBeLessThanOrEqual(4);
-    expect(buffer.bufferedOutputBytes).toBeLessThanOrEqual(256);
+      const texts = (yield* flushAll(buffer))
+        .filter((message): message is OutputMessage => message.type === 'output')
+        .map(outputText);
+      expect(texts).toHaveLength(5000);
+      expect(texts.at(-1)).toBe(sentText(4999));
+      expect(texts.filter((text) => text.includes('output truncated'))).toEqual([]);
+    }));
 
-    const drained: ServerMessage[] = [];
-    for (let message = buffer.take(); message !== null; message = buffer.take()) {
-      drained.push(message);
-    }
-    expect(drained[0]?.type).toBe('started');
-    expect(drained.at(-1)?.type).toBe('exit');
-    const notices = drained.filter(
-      (message): message is OutputMessage =>
-        message.type === 'output' &&
-        Buffer.from(message.data, 'base64').toString('utf8').includes('output truncated'),
-    );
-    expect(notices).toHaveLength(1);
-    expect(notices[0]).toMatchObject({ cursorBytes: 0 });
-    expect(Buffer.from(notices[0]?.data ?? '', 'base64').toString('utf8')).toContain(
-      'slow client',
-    );
-  });
+  it.live('bounds a peer that is behind by the lagging limit and a stalled one by the stalled limit', () =>
+    Effect.gen(function* () {
+      const lagging = yield* offerBehindPeer({ maxOutputBytes: 4096, stalledOutputBytes: 1024, stallMs: 60_000 });
+      const stalled = yield* offerBehindPeer({ maxOutputBytes: 4096, stalledOutputBytes: 1024, stallMs: 0 });
 
-  it('drains every currently queued message in FIFO order', () => {
-    const buffer = new ConnectionOutputBuffer();
-    buffer.offer({ type: 'started', id: 'exec-1', ticket: 'cc-1', waitMs: 0 });
-    buffer.offer(output(1));
-    buffer.offer({
-      type: 'exit',
-      id: 'exec-1',
-      ticket: 'cc-1',
-      status: 'done',
-      exitCode: 0,
-      signal: null,
-      waitMs: 0,
-      runMs: 1,
-      error: null,
-    });
+      expect(lagging.bufferedWhileWaiting).toBeGreaterThan(1024);
+      expect(lagging.bufferedWhileWaiting).toBeLessThanOrEqual(4096);
+      expect(stalled.bufferedWhileWaiting).toBeLessThanOrEqual(1024);
+      expect(stalled.kept.length).toBeLessThan(lagging.kept.length);
+      expectTruncatedPrefix(lagging);
+      expectTruncatedPrefix(stalled);
+    }));
 
-    expect(buffer.drain().map((message) => message.type)).toEqual(['started', 'output', 'exit']);
-    expect(buffer.size).toBe(0);
-    expect(buffer.bufferedOutputBytes).toBe(0);
-    expect(buffer.bufferedOutputMessages).toBe(0);
-  });
+  it.live('keeps everything behind a write that is waiting but within the lagging limit', () =>
+    Effect.gen(function* () {
+      const result = yield* offerBehindPeer({ maxOutputBytes: 1024 * 1024, stalledOutputBytes: 1024, stallMs: 60_000 });
+
+      expect(result.notice).toBeUndefined();
+      expect(result.kept).toEqual(Array.from({ length: 101 }, (_, sequence) => sentText(sequence)));
+    }));
+
+  it.live('flushes every queued message in FIFO order', () =>
+    Effect.gen(function* () {
+      const buffer = new ConnectionOutputBuffer();
+      buffer.offer({ type: 'started', id: 'exec-1', ticket: 'cc-1', waitMs: 0 });
+      buffer.offer(output(1));
+      buffer.offer(exitMessage);
+
+      expect((yield* flushAll(buffer)).map((message) => message.type)).toEqual(['started', 'output', 'exit']);
+      expect(buffer.size).toBe(0);
+      expect(buffer.bufferedOutputBytes).toBe(0);
+    }));
 });
 
 describe('daemon connection line cap', () => {
