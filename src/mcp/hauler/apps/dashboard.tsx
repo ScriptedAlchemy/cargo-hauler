@@ -1096,7 +1096,7 @@ const KachePressure = ({ pressure }: { readonly pressure: KachePressureModel | n
 };
 
 const KacheSection = ({ nowMs, value }: { readonly nowMs: number; readonly value: Kache | null }): ReactNode => {
-  if (value?.available !== true) {
+  if (value?.indexState !== 'read') {
     return null;
   }
   const kache = value;

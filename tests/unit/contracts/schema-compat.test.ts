@@ -164,7 +164,7 @@ const metrics = {
 };
 
 const kache = {
-  available: true,
+  indexState: 'read',
   distinctCrates: 2,
   entryCount: 3,
   eventsFreshMs: 750,

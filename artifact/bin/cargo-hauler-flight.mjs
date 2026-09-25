@@ -20664,7 +20664,12 @@ const kacheStorePressureSchema = zod__rspack_import_1/* .object */.Ikc({
     }).nullable()
 });
 const kacheStatusSchema = zod__rspack_import_1/* .object */.Ikc({
-    available: zod__rspack_import_1/* .boolean */.zMY(),
+    indexState: zod__rspack_import_1/* ["enum"] */.k5n([
+        'read',
+        'missing',
+        'unreadable',
+        'timed-out'
+    ]),
     distinctCrates: zod__rspack_import_1/* .number */.aig().int().nonnegative(),
     entryCount: zod__rspack_import_1/* .number */.aig().int().nonnegative(),
     eventsFreshMs: zod__rspack_import_1/* .number */.aig().nonnegative().nullable(),
@@ -25811,7 +25816,7 @@ __webpack_require__.d(__webpack_exports__, {
         case 'unavailable':
             return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_states_js__rspack_import_3/* .UnavailableState */.yb, {
                 what: "kache",
-                children: "not detected; cost priors fall back to ledger history."
+                children: `${model.reason}; cost priors fall back to ledger history.`
             });
         case 'available':
             return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
@@ -26581,15 +26586,21 @@ const admissionModel = (status)=>{
         permits: status.maxConcurrent === null ? null : `${leaders} running of ${status.maxConcurrent} permits${heavy === null ? '' : ` (${heavy})`}${riders === 0 ? '' : `, ${riders} riding shared builds`}, ${queued} queued`
     };
 };
+const kacheIndexUnavailableReasons = {
+    missing: 'not detected',
+    'timed-out': 'index read timed out',
+    unreadable: 'index unreadable'
+};
 const kacheModel = (kache, slowestLimit = 5, nowMs = Date.now())=>{
     if (kache === undefined || kache === null) {
         return {
             kind: 'unknown'
         };
     }
-    if (!kache.available) {
+    if (kache.indexState !== 'read') {
         return {
-            kind: 'unavailable'
+            kind: 'unavailable',
+            reason: kacheIndexUnavailableReasons[kache.indexState]
         };
     }
     return {
@@ -106362,33 +106373,33 @@ var __webpack_exports__ = {};
 /* import */ var _agent_bundle_runtime__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/49.js");
 /* import */ var _agent_bundle_runtime__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/736.js");
 /* import */ var node_url__rspack_import_2 = __webpack_require__("node:url");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_4 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_5 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_6 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
-/* import */ var _tmp_poteto_286_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
-/* import */ var _tmp_poteto_286_src_layout_tsx__rspack_import_10 = __webpack_require__("./src/layout.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_4 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_5 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_6 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
+/* import */ var _tmp_wt_287_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
+/* import */ var _tmp_wt_287_src_layout_tsx__rspack_import_10 = __webpack_require__("./src/layout.tsx");
 
 
 
 
 
 
-const route0 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3);
+const route0 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_3);
 
-const route1 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_4, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_4);
+const route1 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_4, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_4);
 
-const route2 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_5, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_5);
+const route2 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_5, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_5);
 
-const route3 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_6, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_6);
+const route3 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_6, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_6);
 
-const route4 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_7, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_7);
+const route4 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_7, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_7);
 
-const route5 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_8, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_8);
+const route5 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_8, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_8);
 
-const route6 = Object.assign({}, Reflect.get(_tmp_poteto_286_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_9, 'default'), _tmp_poteto_286_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_9);
+const route6 = Object.assign({}, Reflect.get(_tmp_wt_287_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_9, 'default'), _tmp_wt_287_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_9);
 
 const pluginRoot = (0,_agent_bundle_runtime__rspack_import_11/* .resolvePluginRoot */.E7)({
     fallback: (0,node_url__rspack_import_2.fileURLToPath)(new URL('..', import.meta.url)),
@@ -106416,7 +106427,7 @@ const providers = Object.freeze([
 const layouts = Object.freeze([
     Object.freeze({
         id: "layout:root",
-        module: _tmp_poteto_286_src_layout_tsx__rspack_import_10,
+        module: _tmp_wt_287_src_layout_tsx__rspack_import_10,
         source: "src/layout.tsx"
     })
 ]);

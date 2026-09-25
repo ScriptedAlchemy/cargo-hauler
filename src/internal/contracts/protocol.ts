@@ -651,8 +651,11 @@ export interface KacheStorePressureReport {
   readonly keyTiming: KacheKeyTiming | null;
 }
 
+/** Whether the last index scan read the index, or why it could not. */
+export type KacheIndexState = 'read' | 'missing' | 'unreadable' | 'timed-out';
+
 export interface KacheStatusReport {
-  readonly available: boolean;
+  readonly indexState: KacheIndexState;
   readonly entryCount: number;
   readonly distinctCrates: number;
   readonly indexSizeBytes: number;

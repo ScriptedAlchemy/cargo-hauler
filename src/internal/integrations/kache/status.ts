@@ -1,10 +1,10 @@
-import { closeSync, fstatSync, openSync, readSync, statSync } from 'node:fs';
+import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
 import { open, readFile, stat } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { DatabaseSync } from 'node:sqlite';
+import { Worker } from 'node:worker_threads';
 
 import * as Context from 'effect/Context';
 import * as Effect from 'effect/Effect';
@@ -22,6 +22,7 @@ import {
 } from './pressure.js';
 import type {
   KacheGcReport,
+  KacheIndexState,
   KacheKeyTiming,
   KacheStatusReport,
   KacheStorePressureReport,
@@ -36,6 +37,8 @@ const gcLogTailBytes = 1024 * 1024;
 /** kache logs beside the index that record GC eviction warnings. */
 const gcLogFileNames = ['auto-gc.log', 'daemon.log'] as const;
 const defaultTtlMs = 60_000;
+/** A 4.5 GB index scans in about 2 s under load; far past that, the read is stuck. */
+const defaultIndexReadTimeoutMs = 30_000;
 const heartbeatWindowMs = 5 * 60_000;
 /**
  * Slowest crates are selected per profile: dev and release timings are not
@@ -352,7 +355,7 @@ export const readKacheEventPriors = (
 ): KacheEventPriors => readEventTailSync(eventsPath, Date.now(), maxBytes).priors;
 
 interface IndexReadResult {
-  readonly available: boolean;
+  readonly state: KacheIndexState;
   readonly entryCount: number;
   readonly distinctCrates: number;
   readonly indexSizeBytes: number;
@@ -362,101 +365,135 @@ interface IndexReadResult {
   readonly priors: KacheIndexPriors;
 }
 
-const unavailableIndex: IndexReadResult = {
-  available: false,
+const unavailableIndex = (state: Exclude<KacheIndexState, 'read'>): IndexReadResult => ({
+  state,
   entryCount: 0,
   distinctCrates: 0,
   indexSizeBytes: 0,
   storeBytes: null,
   topCrates: [],
   priors: emptyIndexPriors,
-};
+});
 
-/** Blob bytes recorded in the index; null when this kache predates the `blobs` table. */
-const readStoreBytes = (database: DatabaseSync): number | null => {
-  try {
-    const row = database.prepare('SELECT SUM(size) AS total FROM blobs').get();
-    const total = Number(row?.total ?? 0);
-    return Number.isFinite(total) && total >= 0 ? total : null;
-  } catch {
-    return null;
-  }
-};
+type IndexScan =
+  | {
+      readonly kind: 'read';
+      readonly indexSizeBytes: number;
+      readonly storeBytes: number | null;
+      readonly rows: readonly Readonly<Record<string, unknown>>[];
+    }
+  | { readonly kind: 'unreadable' | 'timed-out' };
 
 /**
- * The `GROUP BY` over kache `entries` is synchronous (`node:sqlite`), so the
- * snapshot reader only runs it when the index file (or its WAL) changed.
+ * Body of the index-scan worker, evaluated from its source text: agent-bundle
+ * keeps `new Worker(new URL(…))` verbatim, so a separate worker file would not
+ * ship. It must reference nothing outside itself.
  */
-const readIndexAggregate = (indexPath: string): IndexReadResult => {
-  let database: DatabaseSync | undefined;
+const scanIndexInWorker = (): void => {
+  const { parentPort, workerData } = process.getBuiltinModule('node:worker_threads');
+  const { DatabaseSync } = process.getBuiltinModule('node:sqlite');
+  const { statSync } = process.getBuiltinModule('node:fs');
+  const indexPath = String(workerData);
+  let database: InstanceType<typeof DatabaseSync> | undefined;
   try {
     const indexSizeBytes = statSync(indexPath).size;
     database = new DatabaseSync(indexPath, { readOnly: true });
-    const aggregate = database.prepare(
-      `SELECT crate_name, profile, MAX(compile_time_ms) AS compile_time_ms,
-              COUNT(*) AS entry_count
-       FROM entries
-       GROUP BY crate_name, profile`,
-    );
-    const timings = new Map<string, number>();
-    const maximumByCrate = new Map<string, number>();
-    const crates = new Set<string>();
-    const topCrates: KacheTopCrate[] = [];
-    let entryCount = 0;
-    for (const row of aggregate.all()) {
-      const crateName = String(row.crate_name);
-      const profile = String(row.profile);
-      const compileTimeMs = finitePositiveMs(Number(row.compile_time_ms));
-      entryCount += Number(row.entry_count);
-      crates.add(crateName);
-      if (compileTimeMs === null) {
-        continue;
-      }
-      timings.set(eventPriorKey(crateName, profile), compileTimeMs);
-      maximumByCrate.set(
-        crateName,
-        Math.max(maximumByCrate.get(crateName) ?? 0, compileTimeMs),
-      );
-      topCrates.push({ crate: crateName, profile, ms: compileTimeMs });
-    }
-    topCrates.sort((left, right) => right.ms - left.ms || left.crate.localeCompare(right.crate));
-    // Cap within each profile; the flat ms-descending order of the surviving
-    // rows is presentation-neutral (consumers group by profile).
-    const perProfileSeen = new Map<string, number>();
-    const cappedTopCrates = topCrates.filter((row) => {
-      const seen = perProfileSeen.get(row.profile) ?? 0;
-      perProfileSeen.set(row.profile, seen + 1);
-      return seen < topCratesPerProfile;
-    });
-    return {
-      available: true,
-      entryCount,
-      distinctCrates: crates.size,
-      indexSizeBytes,
-      storeBytes: readStoreBytes(database),
-      topCrates: cappedTopCrates,
-      priors: {
-        compileTimeMs: (crateName, profiles) => {
-          let exact: number | null = null;
-          for (const profile of profiles) {
-            const timing = timings.get(eventPriorKey(crateName, profile));
-            if (timing !== undefined) {
-              exact = Math.max(exact ?? 0, timing);
-            }
-          }
-          return exact ?? maximumByCrate.get(crateName) ?? null;
-        },
-      },
-    };
-  } catch {
-    return unavailableIndex;
-  } finally {
+    const rows = database
+      .prepare(
+        `SELECT crate_name, profile, MAX(compile_time_ms) AS compile_time_ms,
+                COUNT(*) AS entry_count
+         FROM entries
+         GROUP BY crate_name, profile`,
+      )
+      .all();
+    let storeBytes: number | null = null;
     try {
-      database?.close();
+      const total = Number(database.prepare('SELECT SUM(size) AS total FROM blobs').get()?.total ?? 0);
+      storeBytes = Number.isFinite(total) && total >= 0 ? total : null;
     } catch {
-      // A read-only status refresh must never affect daemon availability.
+      // Absent before kache added the `blobs` table.
     }
+    parentPort?.postMessage({ kind: 'read', indexSizeBytes, rows, storeBytes });
+  } catch {
+    parentPort?.postMessage({ kind: 'unreadable' });
+  } finally {
+    database?.close();
   }
+};
+
+const scanIndexSource = `(${scanIndexInWorker.toString()})()`;
+
+/**
+ * Scans the index in a worker thread: the `node:sqlite` scans are synchronous
+ * and take seconds on a large index, which would stall the daemon's socket.
+ */
+const scanIndex = (indexPath: string, timeoutMs: number): Promise<IndexScan> =>
+  new Promise((resolve) => {
+    const worker = new Worker(scanIndexSource, { eval: true, workerData: indexPath });
+    worker.unref();
+    const settle = (scan: IndexScan): void => {
+      clearTimeout(timer);
+      resolve(scan);
+      void worker.terminate();
+    };
+    const timer = setTimeout(() => settle({ kind: 'timed-out' }), timeoutMs);
+    timer.unref();
+    worker.once('message', (scan: IndexScan) => settle(scan));
+    worker.once('error', () => settle({ kind: 'unreadable' }));
+    worker.once('exit', () => settle({ kind: 'unreadable' }));
+  });
+
+const aggregateIndexScan = (scan: IndexScan): IndexReadResult => {
+  if (scan.kind !== 'read') {
+    return unavailableIndex(scan.kind);
+  }
+  const timings = new Map<string, number>();
+  const maximumByCrate = new Map<string, number>();
+  const crates = new Set<string>();
+  const topCrates: KacheTopCrate[] = [];
+  let entryCount = 0;
+  for (const row of scan.rows) {
+    const crateName = String(row.crate_name);
+    const profile = String(row.profile);
+    const compileTimeMs = finitePositiveMs(Number(row.compile_time_ms));
+    entryCount += Number(row.entry_count);
+    crates.add(crateName);
+    if (compileTimeMs === null) {
+      continue;
+    }
+    timings.set(eventPriorKey(crateName, profile), compileTimeMs);
+    maximumByCrate.set(crateName, Math.max(maximumByCrate.get(crateName) ?? 0, compileTimeMs));
+    topCrates.push({ crate: crateName, profile, ms: compileTimeMs });
+  }
+  topCrates.sort((left, right) => right.ms - left.ms || left.crate.localeCompare(right.crate));
+  // Cap within each profile; the flat ms-descending order of the surviving
+  // rows is presentation-neutral (consumers group by profile).
+  const perProfileSeen = new Map<string, number>();
+  const cappedTopCrates = topCrates.filter((row) => {
+    const seen = perProfileSeen.get(row.profile) ?? 0;
+    perProfileSeen.set(row.profile, seen + 1);
+    return seen < topCratesPerProfile;
+  });
+  return {
+    state: 'read',
+    entryCount,
+    distinctCrates: crates.size,
+    indexSizeBytes: scan.indexSizeBytes,
+    storeBytes: scan.storeBytes,
+    topCrates: cappedTopCrates,
+    priors: {
+      compileTimeMs: (crateName, profiles) => {
+        let exact: number | null = null;
+        for (const profile of profiles) {
+          const timing = timings.get(eventPriorKey(crateName, profile));
+          if (timing !== undefined) {
+            exact = Math.max(exact ?? 0, timing);
+          }
+        }
+        return exact ?? maximumByCrate.get(crateName) ?? null;
+      },
+    },
+  };
 };
 
 /** Everything on disk the pressure panel needs besides the index and events. */
@@ -471,7 +508,7 @@ const combineSnapshot = (
   pressure: PressureSources,
 ): KacheStatusSnapshot => ({
   status: {
-    available: index.available,
+    indexState: index.state,
     entryCount: index.entryCount,
     distinctCrates: index.distinctCrates,
     indexSizeBytes: index.indexSizeBytes,
@@ -479,7 +516,7 @@ const combineSnapshot = (
     recentHeartbeatRoots: events.recentHeartbeatRoots,
     topCrates: index.topCrates,
     pressure: {
-      storeBytes: index.available ? index.storeBytes : null,
+      storeBytes: index.storeBytes,
       limit: pressure.limit,
       gc: pressure.gc,
       keyTiming: events.keyTiming,
@@ -576,6 +613,8 @@ export interface CreateKacheSnapshotReaderOptions {
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** Home directory for `~` and the default kache config location. */
   readonly home?: string;
+  /** Longest wait for the index scan before the index reads as `timed-out`. */
+  readonly indexReadTimeoutMs?: number;
 }
 
 interface EventsCursor {
@@ -586,8 +625,9 @@ interface EventsCursor {
 /**
  * Stateful reader behind `KacheStatus`. The events sidecar is consumed
  * incrementally from a persisted byte offset with async reads and
- * `setImmediate`-sliced parsing; the index aggregate is recomputed only when
- * the file fingerprint changes. Every failure degrades to "unavailable".
+ * `setImmediate`-sliced parsing; the index aggregate is recomputed in a worker
+ * only when the file fingerprint changes. Every failure degrades to an index
+ * state that names it.
  */
 export const createKacheSnapshotReader = (
   indexPath: string,
@@ -604,6 +644,7 @@ export const createKacheSnapshotReader = (
     options.maxEventBytes > 0
       ? Math.floor(options.maxEventBytes)
       : defaultEventTailBytes;
+  const indexReadTimeoutMs = options.indexReadTimeoutMs ?? defaultIndexReadTimeoutMs;
   const aggregator = new EventTailAggregator();
   let cursor: EventsCursor | undefined;
   let indexCache: { readonly fingerprint: string; readonly result: IndexReadResult } | undefined;
@@ -703,12 +744,12 @@ export const createKacheSnapshotReader = (
     const fingerprint = await indexFingerprint(indexPath);
     if (fingerprint === null) {
       indexCache = undefined;
-      return unavailableIndex;
+      return unavailableIndex('missing');
     }
     if (indexCache !== undefined && indexCache.fingerprint === fingerprint) {
       return indexCache.result;
     }
-    const result = readIndexAggregate(indexPath);
+    const result = aggregateIndexScan(await scanIndex(indexPath, indexReadTimeoutMs));
     indexCache = { fingerprint, result };
     return result;
   };

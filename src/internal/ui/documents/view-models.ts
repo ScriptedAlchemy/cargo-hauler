@@ -1,6 +1,7 @@
 import type { AgentLineage, AgentRequestContext } from '@agent-bundle/runtime';
 
 import type {
+  KacheIndexState,
   KacheStatusReport,
   LaneStatus,
   PrerequisiteContext,
@@ -199,7 +200,7 @@ export const admissionModel = (status: Pick<StatusResult, 'active' | 'maxConcurr
 
 export type KacheModel =
   | { readonly kind: 'unknown' }
-  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'unavailable'; readonly reason: string }
   | {
       readonly kind: 'available';
       readonly summary: string;
@@ -209,6 +210,12 @@ export type KacheModel =
       readonly pressure: KachePressureModel;
     };
 
+const kacheIndexUnavailableReasons: Readonly<Record<Exclude<KacheIndexState, 'read'>, string>> = {
+  missing: 'not detected',
+  'timed-out': 'index read timed out',
+  unreadable: 'index unreadable',
+};
+
 export const kacheModel = (
   kache: KacheStatusReport | null | undefined,
   slowestLimit = 5,
@@ -217,8 +224,8 @@ export const kacheModel = (
   if (kache === undefined || kache === null) {
     return { kind: 'unknown' };
   }
-  if (!kache.available) {
-    return { kind: 'unavailable' };
+  if (kache.indexState !== 'read') {
+    return { kind: 'unavailable', reason: kacheIndexUnavailableReasons[kache.indexState] };
   }
   return {
     freshness: kache.eventsFreshMs === null ? null : `events ${formatMs(kache.eventsFreshMs)} old`,

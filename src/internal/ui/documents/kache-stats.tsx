@@ -46,7 +46,7 @@ export const KacheStats = ({ kache, nowMs, slowestLimit }: KacheStatsProps) => {
     case 'unknown':
       return null;
     case 'unavailable':
-      return <UnavailableState what="kache">not detected; cost priors fall back to ledger history.</UnavailableState>;
+      return <UnavailableState what="kache">{`${model.reason}; cost priors fall back to ledger history.`}</UnavailableState>;
     case 'available':
       return (
         <>
