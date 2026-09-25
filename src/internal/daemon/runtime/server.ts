@@ -43,8 +43,8 @@ export interface ConnectionOutputBufferOptions {
 }
 
 interface BufferedServerMessage {
-  message: ServerMessage;
-  outputBytes: number;
+  readonly message: ServerMessage;
+  readonly outputBytes: number;
 }
 
 /** Heap and framing one queued output message costs beyond its base64 payload. */
@@ -55,6 +55,15 @@ const maxFrameBytes = 64 * 1024;
 
 const outputCost = (message: OutputMessage): number =>
   message.data.length + outputMessageOverheadBytes;
+
+/** Decoded size of a base64 payload; `Buffer.byteLength` costs a native call per message. */
+const payloadBytes = (data: string): number => {
+  const padding = data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0;
+  return ((data.length - padding) * 3) >>> 2;
+};
+
+/** Output cost reserved for the truncation notice, whose text is rendered only when it is written. */
+const noticeCostBytes = outputMessageOverheadBytes + 512;
 
 const defaultOutputBufferOptions: ConnectionOutputBufferOptions = {
   maxOutputBytes: 64 * 1024 * 1024,
@@ -77,7 +86,7 @@ export class ConnectionOutputBuffer {
   #writeStartedAtMs: number | null = null;
   #bufferedOutputBytes = 0;
   #droppedPayloadBytes = 0;
-  #truncation: BufferedServerMessage | null = null;
+  #truncation: { readonly message: OutputMessage; readonly outputBytes: number } | null = null;
 
   constructor(options: ConnectionOutputBufferOptions = defaultOutputBufferOptions) {
     this.#options = options;
@@ -139,15 +148,18 @@ export class ConnectionOutputBuffer {
   #takeFrame(): string {
     let frame = '';
     let taken = 0;
+    const truncation = this.#truncation;
     for (const envelope of this.#pending) {
       if (frame.length >= maxFrameBytes) {
         break;
       }
-      frame += encodeServerMessage(envelope.message);
       this.#bufferedOutputBytes -= envelope.outputBytes;
-      if (envelope === this.#truncation) {
+      if (envelope === truncation) {
+        frame += encodeServerMessage(this.#renderNotice(truncation.message));
         this.#truncation = null;
         this.#droppedPayloadBytes = 0;
+      } else {
+        frame += encodeServerMessage(envelope.message);
       }
       taken += 1;
     }
@@ -156,82 +168,59 @@ export class ConnectionOutputBuffer {
   }
 
   #recordDrop(message: OutputMessage, limit: number): void {
-    this.#droppedPayloadBytes += Buffer.byteLength(message.data, 'base64');
-    if (this.#truncation !== null) {
-      this.#replaceTruncation(message, limit);
-      return;
+    this.#droppedPayloadBytes += payloadBytes(message.data);
+    if (this.#truncation === null) {
+      this.#truncation = {
+        message: { type: 'output', id: message.id, ticket: message.ticket, channel: 'stderr', cursorBytes: 0, data: '' },
+        outputBytes: noticeCostBytes,
+      };
+      this.#pending.push(this.#truncation);
+      this.#bufferedOutputBytes += noticeCostBytes;
     }
-    while (this.#bufferedOutputBytes + outputCost(this.#makeNotice(message)) > limit) {
-      if (!this.#evictLastOutput()) {
-        return;
+    if (this.#bufferedOutputBytes > limit) {
+      this.#keepPrefixWithin(limit);
+    }
+  }
+
+  /**
+   * Keeps the longest run of oldest output that fits `limit` beside the
+   * notice and drops the newer output in one pass: a stall can lower the
+   * limit under a queue of tens of MiB.
+   * ponytail: one pass over at most maxOutputBytes / 256 queued entries; a
+   * running payload counter plus a control-message count would make the
+   * cut O(1).
+   */
+  #keepPrefixWithin(limit: number): void {
+    const pending = this.#pending;
+    let kept = noticeCostBytes;
+    let cut = 0;
+    for (; cut < pending.length; cut += 1) {
+      const envelope = pending[cut];
+      if (envelope === undefined || envelope === this.#truncation) {
+        continue;
+      }
+      if (kept + envelope.outputBytes > limit) {
+        break;
+      }
+      kept += envelope.outputBytes;
+    }
+    for (const envelope of pending.splice(cut)) {
+      if (envelope.message.type === 'output' && envelope !== this.#truncation) {
+        this.#droppedPayloadBytes += payloadBytes(envelope.message.data);
+      } else {
+        pending.push(envelope);
       }
     }
-    const notice = this.#makeNotice(message);
-    const envelope = { message: notice, outputBytes: outputCost(notice) };
-    this.#pending.push(envelope);
-    this.#bufferedOutputBytes += envelope.outputBytes;
-    this.#truncation = envelope;
+    this.#bufferedOutputBytes = kept;
   }
 
-  #replaceTruncation(message: OutputMessage, limit: number): void {
-    const truncation = this.#truncation;
-    if (truncation === null) {
-      return;
-    }
-    const notice = this.#makeNotice(message);
-    this.#bufferedOutputBytes -= truncation.outputBytes;
-    truncation.message = notice;
-    truncation.outputBytes = outputCost(notice);
-    this.#bufferedOutputBytes += truncation.outputBytes;
-    // The dropped-byte counter grows the notice over time, and a stall
-    // lowers the limit; shed buffered output (never the notice itself) so
-    // the swap stays within the limit in force.
-    while (this.#bufferedOutputBytes > limit) {
-      if (!this.#evictLastOutput()) {
-        return;
-      }
-    }
-  }
-
-  #evictLastOutput(): boolean {
-    const index = this.#lastOutputIndex();
-    if (index === -1) {
-      return false;
-    }
-    const removed = this.#pending[index];
-    if (removed === undefined) {
-      return false;
-    }
-    this.#droppedPayloadBytes +=
-      removed.message.type === 'output'
-        ? Buffer.byteLength(removed.message.data, 'base64')
-        : 0;
-    this.#pending.splice(index, 1);
-    this.#bufferedOutputBytes -= removed.outputBytes;
-    return true;
-  }
-
-  #makeNotice(message: OutputMessage): OutputMessage {
+  #renderNotice(message: OutputMessage): OutputMessage {
     return {
-      type: 'output',
-      id: message.id,
-      ticket: message.ticket,
-      channel: 'stderr',
-      cursorBytes: 0,
+      ...message,
       data: Buffer.from(
         `[cargo-hauler] output truncated: client fell behind; ${this.#droppedPayloadBytes} bytes dropped; full output: hauler result ${message.ticket} --full\n`,
       ).toString('base64'),
     };
-  }
-
-  #lastOutputIndex(): number {
-    for (let index = this.#pending.length - 1; index >= 0; index -= 1) {
-      const envelope = this.#pending[index];
-      if (envelope?.message.type === 'output' && envelope !== this.#truncation) {
-        return index;
-      }
-    }
-    return -1;
   }
 }
 
