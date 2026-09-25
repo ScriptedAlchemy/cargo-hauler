@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { connect, createServer, type Server, type Socket } from 'node:net';
 import { join } from 'node:path';
 
@@ -1101,14 +1101,17 @@ describe('runExecClient', () => {
       const fixture = yield* scopedFixture(5);
       const collected = collectIo();
       const listenersBefore = process.listenerCount('SIGINT');
-      const startedAt = Date.now();
+      // Nothing opens the gate while the run is joined, so only killing the
+      // fake cargo can end it.
+      const gate = join(fixture.root, 'cargo.gate');
+      yield* Effect.addFinalizer(() => Effect.sync(() => writeFileSync(gate, '')));
       const run = yield* Effect.forkChild(
         runExecClient({
           argv: ['cargo', 'build'],
           autoSpawn: false,
           config: fixture.config,
           cwd: fixture.ws1,
-          env: fakeCargoEnv(fixture, { FAKE_SLEEP: '20' }),
+          env: fakeCargoEnv(fixture, { FAKE_RELEASE_FILE: gate }),
           io: collected.io,
         }),
       );
@@ -1120,7 +1123,6 @@ describe('runExecClient', () => {
       // The child is spawned detached, so without a handler Ctrl-C killed
       // only the client and left cargo (and its rustc children) running.
       expect(result).toEqual({ exitCode: 130, mode: 'passthrough' });
-      expect(Date.now() - startedAt).toBeLessThan(15_000);
       expect(process.listenerCount('SIGINT')).toBe(listenersBefore);
     }));
 

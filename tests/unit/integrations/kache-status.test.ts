@@ -421,43 +421,30 @@ describe('createKacheSnapshotReader', () => {
     }
   });
 
-  it('aggregates a large index without stalling the event loop', async () => {
+  it('scans a large index off the event-loop thread', async () => {
     const root = mkdtempSync(join(tmpdir(), 'cc-kache-status-large-index-'));
     const indexPath = join(root, 'index.db');
     try {
       const database = new DatabaseSync(indexPath);
       database.exec(`
         CREATE TABLE entries (crate_name TEXT, profile TEXT, compile_time_ms INTEGER);
-        WITH RECURSIVE n(i) AS (SELECT 0 UNION ALL SELECT i + 1 FROM n WHERE i < 399999)
+        WITH RECURSIVE n(i) AS (SELECT 0 UNION ALL SELECT i + 1 FROM n WHERE i < 199999)
         INSERT INTO entries
-        SELECT 'crate-' || (i % 5000), CASE i % 2 WHEN 0 THEN 'dev' ELSE 'release' END, 100 + i % 977
+        SELECT 'crate-' || (i % 500), CASE i % 2 WHEN 0 THEN 'dev' ELSE 'release' END, 100 + i % 977
         FROM n;
       `);
       database.close();
       const reader = createKacheSnapshotReader(indexPath);
 
-      let longestGapMs = 0;
-      let probing = true;
-      const pump = (async () => {
-        let last = performance.now();
-        while (probing) {
-          await new Promise<void>((resolve) => {
-            setImmediate(resolve);
-          });
-          const now = performance.now();
-          longestGapMs = Math.max(longestGapMs, now - last);
-          last = now;
-        }
-      })();
-      const startedAt = performance.now();
-      try {
-        const { status } = await reader.read(1_000);
-        expect(status).toMatchObject({ distinctCrates: 5_000, entryCount: 400_000, indexState: 'read' });
-      } finally {
-        probing = false;
-        await pump;
-      }
-      expect(longestGapMs).toBeLessThan((performance.now() - startedAt) / 2);
+      const loopThread = process.threadCpuUsage();
+      const wholeProcess = process.cpuUsage();
+      const { status } = await reader.read(1_000);
+      const loopCpu = process.threadCpuUsage(loopThread);
+      const processCpu = process.cpuUsage(wholeProcess);
+
+      expect(status).toMatchObject({ distinctCrates: 500, entryCount: 200_000, indexState: 'read' });
+      // The scan is most of the read's CPU; on the loop thread it would be nearly all of it.
+      expect(loopCpu.user + loopCpu.system).toBeLessThan((processCpu.user + processCpu.system) / 2);
     } finally {
       removeTestPath(root);
     }

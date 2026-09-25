@@ -98,13 +98,11 @@ describe('awaitTicket', () => {
   it.live('fails fast on a daemon error reply instead of waiting out the full timeout', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);
-      const startedAt = Date.now();
       // Over the wire ceiling: the daemon answers `error` with this request's
-      // id at once; the client used to wait maxWaitMs + 2 s for an
-      // `await-result` that would never come.
+      // id at once; the client used to wait maxWaitMs + 2 s (two hours here)
+      // for an `await-result` that would never come, then fail ControlTimeout.
       const error = yield* Effect.flip(awaitTicket('cc-1', awaitCeilingMs + 1, fixture.config));
       expect(error._tag).toBe('DaemonRejected');
-      expect(Date.now() - startedAt).toBeLessThan(5_000);
     }));
 });
 

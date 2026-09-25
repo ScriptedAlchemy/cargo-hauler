@@ -196,13 +196,20 @@ describe('pingSessionCompleted', () => {
   it('gives up within the budget when the daemon accepts but never answers', async () => {
     await withServer(
       () => undefined,
-      async (socketPath) => {
-        const startedAt = performance.now();
+      async (socketPath, received) => {
+        let longerSettled = false;
+        const longer = pingSessionCompleted('sess-longer', 0, { socketPath, timeoutMs: 1_000 }).finally(() => {
+          longerSettled = true;
+        });
+        while (received.length === 0) {
+          await new Promise((resolve) => setImmediate(resolve));
+        }
         expect(await pingSessionCompleted('sess-ping', 0, { socketPath, timeoutMs: 100 })).toEqual({
           kind: 'unavailable',
           reason: 'timeout',
         });
-        expect(performance.now() - startedAt).toBeLessThan(2_000);
+        expect(longerSettled).toBe(false);
+        expect(await longer).toEqual({ kind: 'unavailable', reason: 'timeout' });
       },
     );
   });
