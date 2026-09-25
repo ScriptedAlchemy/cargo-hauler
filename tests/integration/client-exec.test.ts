@@ -476,7 +476,7 @@ describe('runExecClient', () => {
       // `cargo test > out.log` auto-backgrounded: out.log holds only this
       // notice, so it must say where the test output actually went.
       expect(redirected.stderr()).toContain(
-        'your redirected stdout receives no output; read it with `hauler result cc-1 --full`',
+        'your redirected stdout receives no output; once it runs, `hauler result cc-1` names its full log',
       );
 
       const terminal = collectIo();

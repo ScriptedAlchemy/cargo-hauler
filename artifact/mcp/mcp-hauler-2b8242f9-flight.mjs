@@ -21930,7 +21930,7 @@ const formatProgressLine = (event)=>{
                 if (event.auto === undefined) {
                     return `${prefix} ticket ${event.ticket} submitted in background${eta}\n${retrieve}`;
                 }
-                const redirected = event.auto.stdoutRedirected ? `; your redirected stdout receives no output; read it with \`hauler result ${event.ticket} --full\`` : '';
+                const redirected = event.auto.stdoutRedirected ? `; your redirected stdout receives no output; once it runs, \`hauler result ${event.ticket}\` names its full log` : '';
                 return `${prefix} ticket ${event.ticket} estimate${eta} exceeds the ${event.auto.host} shell cap (${formatDuration(event.auto.capMs)}); submitted in background, not run yet (exit 75)${redirected}\n${retrieve}`;
             }
         default:
@@ -29229,7 +29229,7 @@ const truncationLine = (maxBytes)=>`\n[cargo-hauler] output log truncated at ${m
  * One open log. Writes go through a single append stream for the life of the
  * run (no per-chunk `appendFileSync`); the stream buffers in memory and
  * drains on the event loop, and `close` waits for the flush so a
- * `hauler result --full` issued right after the exit sees complete content.
+ * reader issued right after the exit sees complete content.
  * A stream error is remembered and silences the writer: the ticket's cargo
  * run must never fail because its log could not be written.
  */ class TicketLogWriter {

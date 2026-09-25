@@ -3958,7 +3958,7 @@ const truncationLine = (maxBytes)=>`\n[cargo-hauler] output log truncated at ${m
  * One open log. Writes go through a single append stream for the life of the
  * run (no per-chunk `appendFileSync`); the stream buffers in memory and
  * drains on the event loop, and `close` waits for the flush so a
- * `hauler result --full` issued right after the exit sees complete content.
+ * reader issued right after the exit sees complete content.
  * A stream error is remembered and silences the writer: the ticket's cargo
  * run must never fail because its log could not be written.
  */ class TicketLogWriter {
@@ -28148,7 +28148,7 @@ const prepareRouteInvocation = async (nativeInput, signal, observer, receipt)=>{
     return withEventState(signal, async (bindings)=>{
         const gate = await (0,_agent_bundle_runtime_request__rspack_import_6/* .runAgentRequest */.iC)({
             invocation: {
-                artifactEpoch: "1a10ed5c2277984e500dc1541858f0f78e72b50485aaa22997e6f536867ae5a6",
+                artifactEpoch: "d381c4a3b91026f0d58944f95f3a698b919e2756a687a54b7e86c4e369d0c3af",
                 hostContractRevision: capabilityRevision,
                 kind: "event",
                 operationId: `event:${canonicalEvent}`,

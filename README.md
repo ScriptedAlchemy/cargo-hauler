@@ -371,7 +371,7 @@ diagnostics stream, not cargo's JSON — up to `CARGO_HAULER_TICKET_LOG_MAX_BYTE
 that attached to an in-flight run shares its leader's log, and the row records
 that path. `hauler result cc-N` names the file and its size, `--json` carries
 it as `request.outputPath`, and `hauler result cc-N --full` (or `hauler_result`
-with `full: true`) renders the log itself — so a red `cargo test` is triaged
+with `full: true`) renders the log itself, its last 768 KiB when larger — so a red `cargo test` is triaged
 from the ticket's own `failures:` list and panic sections instead of a second
 run. The startup retention pass that prunes old ledger rows removes their logs
 too, along with any log whose row is gone. `hauler exec --bg -- cargo …` and
@@ -390,7 +390,8 @@ conversion exits `75` (`EX_TEMPFAIL`) with the ticket on stderr, so
 `cargo build && …` chains and scripts cannot mistake "submitted" for "built";
 explicit `--bg` keeps exit `0`. When the caller's stdout is not a terminal
 (`cargo test > out.log`), the notice adds that the redirect receives no
-output and to read it with `hauler result cc-N --full`. Failed runs feed the
+output and that `hauler result cc-N` names the ticket's full log once it
+runs. Failed runs feed the
 estimate history too, so a broken build is not re-estimated cold on every retry.
 
 A foreground `hauler exec` that receives SIGINT or SIGTERM (Ctrl-C, or a
@@ -906,7 +907,7 @@ assertion share one derivation.
 | `<AdmissionState>` | permits in use, load, memory clamp, sharing savings; calls out a paused admission gate |
 | `<KacheStats>` | kache coverage and freshness, slowest crates by profile, or an honest "not detected" |
 | `<LogTail>` | the captured output tail of a detail record, labelled live while the run is in progress; summary rows carry only `outputPreview` and render no tail |
-| `<FullOutput>` | where the ticket's whole output log lives and how large it is; under `full`, the log itself in code-block chunks |
+| `<FullOutput>` | where the ticket's whole output log lives and how large it is; under `full`, the log itself (its last 768 KiB when larger) in code-block chunks |
 | `<BuildDiagnostics>` | an index of cargo `error[E…]`/`warning:` blocks (level / code / message / location) followed by every captured block verbatim |
 | `<BatchTestSummary>` | every observed binary result from a shared test log, with explicit composite-run and partial-evidence warnings |
 | `<DashboardLink>` | where the MCP App lives and how to open it elsewhere |
