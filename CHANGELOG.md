@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.9
+
+### Patch Changes
+
+- 6d793d4: A running daemon from another release whose status report this client cannot read no longer makes `hauler status`, `hauler daemon status`, `hauler log`, `hauler last`, the dashboard, or the MCP tools print a raw schema error or a stack trace. They render the new `skewed` daemon state: the daemon's pid and version, whether it is older, newer, or another build, the command that replaces it, and its tickets from the ledger with their recorded status. `hauler result` and `hauler await` name a ticket record they cannot read instead of dumping the schema error.
+  
+  Reading the ledger without a daemon report (a stopped, unresponsive, or skewed daemon) no longer crashes with `no such column` when the ledger predates a column migration. The read falls back to the writable opener, which adds the missing columns.
+- d10889b: Build against Effect `4.0.0-rc.117` and agent-bundle main (`1a77058`). The daemon and its clients read the socket through Effect's new pull-based reader. Requests, streaming output, reattach, kill, and shutdown behave as before. The bundle carries one Effect copy, so the CLI stays near its previous size.
+
 ## 0.9.8
 
 ### Patch Changes
