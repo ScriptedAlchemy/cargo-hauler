@@ -1,9 +1,8 @@
 allowBuilds:
   msgpackr-extract: false
-# agent-bundle is pinned as a pkg.pr.new preview (see package.json); the
-# `@agent-bundle/runtime` preview depends on the same-commit preview tarball of
-# `rsc-markdown-stream`, which is not on npm. pnpm 11 blocks URL-resolved
-# transitive dependencies by default; remove this once agent-bundle is on npm.
+# agent-bundle and `@agent-bundle/runtime` are dev-only build dependencies,
+# bundled into dist and never installed by consumers. Their pkg.pr.new preview
+# tarballs pull URL-resolved subdependencies, so exotic subdeps stay allowed.
 blockExoticSubdeps: false
 # Do not block brand-new npm publishes; CI and Renovate bump deps the same day.
 minimumReleaseAge: 0
