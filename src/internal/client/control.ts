@@ -89,8 +89,8 @@ const runRequest = (
     const exchange = Effect.gen(function* () {
       // Acquiring the reader dials: open failures and the open timeout surface here.
       const pull = yield* Socket.readerBytes(socket);
-      yield* write(encodeClientMessage(options.message));
-      const readUntilTerminal = Effect.gen(function* () {
+      const respond = Effect.gen(function* () {
+        yield* write(encodeClientMessage(options.message));
         while (true) {
           let sawTerminal = false;
           for (const data of yield* pull) {
@@ -105,7 +105,7 @@ const runRequest = (
           }
         }
       });
-      return yield* readUntilTerminal.pipe(
+      return yield* respond.pipe(
         Effect.timeoutOrElse({
           duration: timeoutMs,
           orElse: () =>

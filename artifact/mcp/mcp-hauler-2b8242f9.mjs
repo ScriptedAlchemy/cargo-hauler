@@ -16751,7 +16751,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 },
 "./src/internal/client/control.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-/* import */ var _effect_platform_node_NodeSocket__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_effect@4.0.0-rc.117/node_modules/@effect/platform-node-shared/dist/NodeSocket.js");
+/* import */ var _effect_platform_node_NodeSocket__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeSocket.js");
 /* import */ var effect_Data__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Data.js");
 /* import */ var effect_Effect__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
 /* import */ var effect_unstable_socket_Socket__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/unstable/socket/Socket.js");
@@ -16817,8 +16817,8 @@ const runRequest = (options)=>effect_Effect__rspack_import_4/* .gen */.JkU(funct
         const exchange = effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
             // Acquiring the reader dials: open failures and the open timeout surface here.
             const pull = yield* effect_unstable_socket_Socket__rspack_import_6/* .readerBytes */.vt(socket);
-            yield* write((0,_contracts_protocol_js__rspack_import_1/* .encodeClientMessage */.ni)(options.message));
-            const readUntilTerminal = effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
+            const respond = effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
+                yield* write((0,_contracts_protocol_js__rspack_import_1/* .encodeClientMessage */.ni)(options.message));
                 while(true){
                     let sawTerminal = false;
                     for (const data of yield* pull){
@@ -16833,7 +16833,7 @@ const runRequest = (options)=>effect_Effect__rspack_import_4/* .gen */.JkU(funct
                     }
                 }
             });
-            return yield* readUntilTerminal.pipe(effect_Effect__rspack_import_4/* .timeoutOrElse */.mgX({
+            return yield* respond.pipe(effect_Effect__rspack_import_4/* .timeoutOrElse */.mgX({
                 duration: timeoutMs,
                 orElse: ()=>effect_Effect__rspack_import_4/* .fail */.fJG(new ControlTimeoutError({
                         phase: 'response',
@@ -28985,7 +28985,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_effect@4.0.0-rc.117/node_modules/@effect/platform-node-shared/dist/NodeSocket.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=d7a36645e3b87b4bc096a142f63bffedf4_4eadcce6d0e3d072782603aa28cec5e8/node_modules/@effect/platform-node-shared/dist/NodeSocket.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var effect_Array__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Array.js");
 /* import */ var effect_Context__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Context.js");
 /* import */ var effect_Effect__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
@@ -29335,6 +29335,11 @@ const fromDuplex = (open, options) => effect_Effect__rspack_import_5/* .withFibe
           cause: new Error("socket closed")
         })
       })));
+    }
+    // A destroyed or ended stream emits none of these events again.
+    if (!conn.writable) {
+      onClose();
+      return;
     }
     conn.on("drain", onDrain);
     conn.on("error", onError);
@@ -160995,7 +161000,7 @@ const routes = Object.freeze({
         name: "hauler_status"
     })
 });
-const EVENT_ARTIFACT_EPOCH = "c4acb6a057729deb863fcf55d51189569939b5b3920c6400a51ca17086288455";
+const EVENT_ARTIFACT_EPOCH = "e79d554cfb9079f3e388b76ee54d6454d0c4c0c1fc2069131a8fa918ef27d021";
 const EVENT_ALLOWED_TARGETS = Object.freeze([
     "claude",
     "codex",

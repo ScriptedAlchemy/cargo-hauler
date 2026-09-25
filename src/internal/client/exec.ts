@@ -784,7 +784,12 @@ const streamBrokered = (
                 : { after: [...options.after] }),
             },
       ),
-    ).pipe(Effect.mapError((error) => mapOpenError(error, config.socketPath)));
+    ).pipe(
+      Effect.mapError((error) => mapOpenError(error, config.socketPath)),
+      // Once the pump ends, its reader scope closes the writer's latch and
+      // this write would wait forever.
+      Effect.raceFirst(Fiber.join(pumpFiber)),
+    );
 
     const heartbeatMs = options.heartbeatMs ?? defaultHeartbeatMs;
     const heartbeatSilenceThresholdMs = options.silenceThresholdMs ?? silenceThresholdMs;
