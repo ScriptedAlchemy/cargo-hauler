@@ -55,10 +55,10 @@ describe('hook RPC NDJSON framing', () => {
   it('sends a denied-attempt audit without waiting for a version ping', async () => {
     const root = mkdtempSync(join(tmpdir(), 'cc-hook-attempt-'));
     const socketPath = join(root, 'daemon.sock');
-    let received: Record<string, unknown> | undefined;
+    const { promise: received, resolve: receive } = Promise.withResolvers<Record<string, unknown>>();
     const server = createServer((socket) => {
       socket.once('data', (chunk: Buffer) => {
-        received = JSON.parse(chunk.toString('utf8')) as Record<string, unknown>;
+        receive(JSON.parse(chunk.toString('utf8')) as Record<string, unknown>);
       });
     });
     try {
@@ -76,7 +76,7 @@ describe('hook RPC NDJSON framing', () => {
         },
         socketPath,
       );
-      expect(received).toMatchObject({ type: 'attempt', argv: ['cargo', 'clean'] });
+      expect(await received).toMatchObject({ type: 'attempt', argv: ['cargo', 'clean'] });
     } finally {
       await new Promise<void>((resolve) => {
         server.close(() => resolve());
