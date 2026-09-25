@@ -21244,7 +21244,7 @@ const defaultEnsureDependencies = {
     pingDaemon: _control_js__rspack_import_6/* .pingDaemon */.LT,
     pollMs: 100,
     processAlive: _shutdown_js__rspack_import_8/* .processAlive */.FN,
-    requestShutdown: (socketPath)=>(0,_shutdown_js__rspack_import_8/* .requestShutdown */.iU)(socketPath, 5000, (/* inlined export .version */"0.9.6"), true),
+    requestShutdown: (socketPath)=>(0,_shutdown_js__rspack_import_8/* .requestShutdown */.iU)(socketPath, 5000, (/* inlined export .version */"0.9.7"), true),
     spawnDetachedDaemon,
     waitForDaemon
 };
@@ -21264,9 +21264,9 @@ const defaultEnsureDependencies = {
             startedAtMs: daemon.startedAtMs,
             version: daemon.version
         };
-        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(daemon.version, (/* inlined export .version */"0.9.6"))) {
+        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(daemon.version, (/* inlined export .version */"0.9.7"))) {
             return yield* new _shutdown_js__rspack_import_8/* .DaemonNewerError */.gD({
-                clientVersion: (/* inlined export .version */"0.9.6"),
+                clientVersion: (/* inlined export .version */"0.9.7"),
                 daemon: identity,
                 socketPath
             });
@@ -21295,19 +21295,19 @@ const defaultEnsureDependencies = {
             startedAtMs: already.startedAtMs,
             version: already.version
         };
-        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(already.version, (/* inlined export .version */"0.9.6"))) {
+        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(already.version, (/* inlined export .version */"0.9.7"))) {
             if (access === 'read' && (0,_contracts_wire_version_js__rspack_import_18/* .speaksCurrentWireProtocol */.W)(already)) {
                 return already;
             }
             return yield* new _shutdown_js__rspack_import_8/* .DaemonNewerError */.gD({
-                clientVersion: (/* inlined export .version */"0.9.6"),
+                clientVersion: (/* inlined export .version */"0.9.7"),
                 daemon: identity,
                 socketPath: config.socketPath
             });
         }
         if (!(0,_contracts_wire_version_js__rspack_import_18/* .speaksCurrentWireProtocol */.W)(already)) {
             return yield* new _shutdown_js__rspack_import_8/* .DaemonIncompatibleError */.K9({
-                clientVersion: (/* inlined export .version */"0.9.6"),
+                clientVersion: (/* inlined export .version */"0.9.7"),
                 daemon: identity,
                 socketPath: config.socketPath
             });
@@ -21323,11 +21323,11 @@ const ensureDaemonRunning = (config = (0,_daemon_config_js__rspack_import_5/* .r
                 return yield* dependencies.waitForDaemon(config.socketPath);
             });
         }
-        if (daemon.version === (/* inlined export .version */"0.9.6")) {
+        if (daemon.version === (/* inlined export .version */"0.9.7")) {
             return effect_Effect__rspack_import_15/* .succeed */.PyW(daemon);
         }
         const deferred = ()=>effect_Effect__rspack_import_15/* .sync */.OH5(()=>{
-                reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${(/* inlined export .version */"0.9.6")} when idle\n`);
+                reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${(/* inlined export .version */"0.9.7")} when idle\n`);
                 return daemon;
             });
         return dependencies.daemonIsIdle(config.socketPath).pipe(effect_Effect__rspack_import_15/* .flatMap */.qIB((idle)=>{
@@ -21625,7 +21625,7 @@ __webpack_require__.d(__webpack_exports__, {
         }
         return true;
     });
-const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlined export .version */"0.9.6"), ifIdle = false)=>effect_Effect__rspack_import_3/* .suspend */.DYE(()=>{
+const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlined export .version */"0.9.7"), ifIdle = false)=>effect_Effect__rspack_import_3/* .suspend */.DYE(()=>{
         const id = (0,_util_id_js__rspack_import_1/* .shortId */.m)();
         const isResponse = (message)=>message.id === id && (message.type === 'shutting-down' || message.type === 'error');
         return (0,_control_js__rspack_import_2/* .requestOverSocket */.Lb)({
@@ -26807,7 +26807,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 
-const daemonVersion = (/* inlined export .version */"0.9.6");
+const daemonVersion = (/* inlined export .version */"0.9.7");
 const appLayer = (config)=>_broker_broker_js__rspack_import_5/* .BrokerLive.pipe */.Cn.pipe(effect_Layer__rspack_import_15/* .provideMerge */.S5(_scheduling_cost_js__rspack_import_7/* .CostModelLive */.jg), effect_Layer__rspack_import_15/* .provideMerge */.S5(_integrations_kache_status_js__rspack_import_8/* .KacheStatusLive */.pS), effect_Layer__rspack_import_15/* .provideMerge */.S5(_cargo_topology_js__rspack_import_14/* .TopologyLive */.QW), effect_Layer__rspack_import_15/* .provideMerge */.S5(_storage_ledger_js__rspack_import_9/* .LedgerLive */.mX), effect_Layer__rspack_import_15/* .provideMerge */.S5(effect_Layer__rspack_import_15/* .succeed */.Py(_config_js__rspack_import_6/* .DaemonConfig */.FP, config)), effect_Layer__rspack_import_15/* .provideMerge */.S5(_effect_platform_node__rspack_import_16/* .layer */.q));
 const minimumLogLevelLayer = effect_Layer__rspack_import_15/* .unwrap */.oA(effect_Config__rspack_import_17/* .logLevel */.dm('CARGO_HAULER_LOG_LEVEL').pipe(effect_Effect__rspack_import_18/* .orElseSucceed */.DM4(()=>'Info'), effect_Effect__rspack_import_18/* .map */.TjK((level)=>effect_Layer__rspack_import_15/* .succeed */.Py(effect_References__rspack_import_19/* .MinimumLogLevel */.zQ, level))));
 /**
@@ -176462,21 +176462,21 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 /* import */ var _agent_bundle_runtime__rspack_import_23 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/index.js");
 /* import */ var node_url__rspack_import_4 = __webpack_require__("node:url");
 /* import */ var node_worker_threads__rspack_import_5 = __webpack_require__("node:worker_threads");
-/* import */ var _tmp_poteto_sect_src_cli_daemon_ts__rspack_import_6 = __webpack_require__("./src/cli/daemon.ts");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.cli.ts");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.cli.ts");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.cli.ts");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.cli.ts");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.cli.ts");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.cli.ts");
-/* import */ var _tmp_poteto_sect_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.cli.ts");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_cli_daemon_ts__rspack_import_6 = __webpack_require__("./src/cli/daemon.ts");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.cli.ts");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.cli.ts");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.cli.ts");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.cli.ts");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.cli.ts");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.cli.ts");
+/* import */ var _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.cli.ts");
 
 
 
@@ -176485,21 +176485,21 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 
 
 
-const route0 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_cli_daemon_ts__rspack_import_6, 'default'), _tmp_poteto_sect_src_cli_daemon_ts__rspack_import_6);
+const route0 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_cli_daemon_ts__rspack_import_6, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_cli_daemon_ts__rspack_import_6);
 
-const route1 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7);
+const route1 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7);
 
-const route2 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
+const route2 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
 
-const route3 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
+const route3 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
 
-const route4 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
+const route4 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
 
-const route5 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
+const route5 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
 
-const route6 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
+const route6 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
 
-const route7 = Object.assign({}, Reflect.get(_tmp_poteto_sect_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _tmp_poteto_sect_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
+const route7 = Object.assign({}, Reflect.get(_home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
 
 
 
@@ -176530,31 +176530,31 @@ const routes = Object.freeze({
     }),
     "tool:hauler/hauler_await": Object.freeze({
         module: route1,
-        projection: _tmp_poteto_sect_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16
+        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16
     }),
     "tool:hauler/hauler_kill": Object.freeze({
         module: route2,
-        projection: _tmp_poteto_sect_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17
+        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17
     }),
     "tool:hauler/hauler_last": Object.freeze({
         module: route3,
-        projection: _tmp_poteto_sect_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18
+        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18
     }),
     "tool:hauler/hauler_log": Object.freeze({
         module: route4,
-        projection: _tmp_poteto_sect_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19
+        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19
     }),
     "tool:hauler/hauler_request": Object.freeze({
         module: route5,
-        projection: _tmp_poteto_sect_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14
+        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14
     }),
     "tool:hauler/hauler_result": Object.freeze({
         module: route6,
-        projection: _tmp_poteto_sect_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20
+        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20
     }),
     "tool:hauler/hauler_status": Object.freeze({
         module: route7,
-        projection: _tmp_poteto_sect_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21
+        projection: _home_runner_work_cargo_hauler_cargo_hauler_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21
     })
 });
 const commands = Object.freeze([
@@ -177126,7 +177126,7 @@ if (import.meta.main) {
         execute,
         name: "cargo-hauler",
         render,
-        version: "0.9.6",
+        version: "0.9.7",
         web: Object.freeze({
             run: (argv, context)=>(0,agent_bundle_web_host__rspack_import_2/* .runWebCommand */.PP)({
                     argv,
@@ -177153,8 +177153,8 @@ __rspack_async_done();
 // Generated by agent-bundle. Do not edit.
 const name = "cargo-hauler";
 const packageName = "cargo-hauler";
-const packageVersion = "0.9.6";
-const version = "0.9.6";
+const packageVersion = "0.9.7";
+const version = "0.9.7";
 const meta = Object.freeze({
     name,
     packageName,

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.7
+
+### Patch Changes
+
+- f0873d1: Status and the dashboard no longer count a batch rider's solo estimate as compute avoided. A batch rider's packages compile inside the leader's combined run, so it now credits no avoided compute. Its latency saved now counts its solo run from after the leader's compile estimate, because it was queued behind the leader until the leader handed the lane on. A batch that beats both runs back to back no longer shows as "finished later than alone". Rows written before this release keep their old credit.
+- b3b6f4f: A live daemon whose socket this client cannot open (`EACCES`, `EMFILE`, `EPERM`) no longer reads as stopped. `hauler result` and `hauler await` fail with `render-failed` instead of calling a running ticket `orphaned` and `stranded by a stopped daemon`. `hauler status`, `hauler log`, and `hauler last` report the daemon `unresponsive` with the errno, and `hauler daemon status` names it. Only a missing socket or a refused connection falls back to the stopped-daemon ledger read.
+- 0691e77: `hauler result`, `hauler await`, `hauler kill`, and `hauler request` against a live daemon whose socket cannot be opened now name the errno and point at `hauler daemon status`. They no longer say the daemon starts on demand or to run `hauler daemon start`.
+
 ## 0.9.6
 
 ### Patch Changes
