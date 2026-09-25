@@ -163,7 +163,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@effect/platform-node-shared@4.0.0-rc.117': d7a36645e3b87b4bc096a142f63bffedf4346bb363fdee222669b767915b613d
+  '@effect/platform-node-shared@4.0.0-rc.117': 4a91f30c92993fc75800f9dc1483722836b8a5d6fed17e8b2789767fb447e171
 
 importers:
 
@@ -1725,7 +1725,7 @@ snapshots:
       react: 19.3.0
       scheduler: 0.28.0
 
-  '@effect/platform-node-shared@4.0.0-rc.117(patch_hash=d7a36645e3b87b4bc096a142f63bffedf4346bb363fdee222669b767915b613d)(effect@4.0.0-rc.117)':
+  '@effect/platform-node-shared@4.0.0-rc.117(patch_hash=4a91f30c92993fc75800f9dc1483722836b8a5d6fed17e8b2789767fb447e171)(effect@4.0.0-rc.117)':
     dependencies:
       '@types/ws': 8.18.1
       effect: 4.0.0-rc.117
@@ -1736,7 +1736,7 @@ snapshots:
 
   '@effect/platform-node@4.0.0-rc.117(effect@4.0.0-rc.117)(redis@6.2.1)':
     dependencies:
-      '@effect/platform-node-shared': 4.0.0-rc.117(patch_hash=d7a36645e3b87b4bc096a142f63bffedf4346bb363fdee222669b767915b613d)(effect@4.0.0-rc.117)
+      '@effect/platform-node-shared': 4.0.0-rc.117(patch_hash=4a91f30c92993fc75800f9dc1483722836b8a5d6fed17e8b2789767fb447e171)(effect@4.0.0-rc.117)
       effect: 4.0.0-rc.117
       redis: 6.2.1
       undici: 8.11.2
@@ -2199,7 +2199,7 @@ snapshots:
 
   agent-bundle@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@1a7705899f4e5fc8382524d6d7869aa8e5884a21(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@1a7705899f4e5fc8382524d6d7869aa8e5884a21(@rspack/core@2.2.7(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5))(@rspack/core@2.2.7(@swc/helpers@0.5.23))(@rstest/core@0.12.1)(hono@4.13.7)(react@19.3.0)(typescript@7.0.2):
     dependencies:
-      '@effect/platform-node-shared': 4.0.0-rc.117(patch_hash=d7a36645e3b87b4bc096a142f63bffedf4346bb363fdee222669b767915b613d)(effect@4.0.0-rc.117)
+      '@effect/platform-node-shared': 4.0.0-rc.117(patch_hash=4a91f30c92993fc75800f9dc1483722836b8a5d6fed17e8b2789767fb447e171)(effect@4.0.0-rc.117)
       '@modelcontextprotocol/client': 2.0.0
       '@modelcontextprotocol/node': 2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.13.7)
       '@modelcontextprotocol/server': 2.0.0

@@ -1,3 +1,22 @@
+diff --git a/dist/NodeChildProcessSpawner.js b/dist/NodeChildProcessSpawner.js
+index 732c8483d89c7b0cc7c2d2b91202f6062f05a1cb..5c133c3a7af2a912ee298b0a3c3960ed5b80ff22 100644
+--- a/dist/NodeChildProcessSpawner.js
++++ b/dist/NodeChildProcessSpawner.js
+@@ -406,7 +406,13 @@ const make = /*#__PURE__*/Effect.gen(function* () {
+               return;
+             }
+             yield* Effect.ignore(terminateProcessGroup(cmd, childProcess, exitSignal, cmd.options));
+-          }));
++          },
++          // A descendant that inherited the pipes must not pin the parent's handles once the leader exited.
++          (effect, [childProcess, exitSignal]) => Effect.ensuring(effect, Effect.sync(() => {
++            if (Deferred.isDoneUnsafe(exitSignal)) {
++              for (const stream of childProcess.stdio) stream?.destroy();
++            }
++          }))));
+           const pid = ProcessId(childProcess.pid);
+           childProcess.on("exit", code => {
+             if (code !== 0 && Predicate.isNotNull(code)) {
 diff --git a/dist/NodeSocket.js b/dist/NodeSocket.js
 index da7435342bda02b2a8ea7ba038de351a3ed6e590..a31b286c2b8b00e4e6da3effe98596b7555b0ce9 100644
 --- a/dist/NodeSocket.js
@@ -14,6 +33,28 @@ index da7435342bda02b2a8ea7ba038de351a3ed6e590..a31b286c2b8b00e4e6da3effe98596b7
      conn.on("drain", onDrain);
      conn.on("error", onError);
      conn.on("close", onClose);
+diff --git a/src/NodeChildProcessSpawner.ts b/src/NodeChildProcessSpawner.ts
+index 588f9891cbd1b1b613503a0978bd2b1dc943087f..61611bebe2dc0dbd678de3eaf2a1c3c513361918 100644
+--- a/src/NodeChildProcessSpawner.ts
++++ b/src/NodeChildProcessSpawner.ts
+@@ -557,7 +557,16 @@ const make = Effect.gen(function*() {
+               return
+             }
+             yield* Effect.ignore(terminateProcessGroup(cmd, childProcess, exitSignal, cmd.options))
+-          })
++          }, (effect, [childProcess, exitSignal]) =>
++            // A descendant that inherited the pipes must not pin the parent's handles once the leader exited.
++            Effect.ensuring(
++              effect,
++              Effect.sync(() => {
++                if (Deferred.isDoneUnsafe(exitSignal)) {
++                  for (const stream of childProcess.stdio) stream?.destroy()
++                }
++              })
++            ))
+         )
+ 
+         const pid = ProcessId(childProcess.pid!)
 diff --git a/src/NodeSocket.ts b/src/NodeSocket.ts
 index 3fed8cd252cf99b25e14b5466113284571a21346..3a51c0d18cebab06826396f49ec783b8cc779c74 100644
 --- a/src/NodeSocket.ts
