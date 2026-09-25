@@ -132,6 +132,17 @@ const flushAll = (buffer: ConnectionOutputBuffer): Effect.Effect<ServerMessage[]
 
 const sentText = (sequence: number): string => `chunk-${sequence}-${'x'.repeat(32)}`;
 
+const outputOf = (text: string): OutputMessage => ({
+  type: 'output',
+  id: 'exec-1',
+  ticket: 'cc-1',
+  channel: 'stdout',
+  data: Buffer.from(text).toString('base64'),
+});
+
+const describeDelivered = (messages: readonly ServerMessage[]): string[] =>
+  messages.map((message) => (message.type === 'output' ? `${message.channel}: ${outputText(message)}` : message.type));
+
 /**
  * Offers 100 outputs and an exit while a write waits on the peer, then lets
  * the peer accept it and offers one more output.
@@ -215,6 +226,65 @@ describe('daemon connection output buffering', () => {
       expect(result.notice).toBeUndefined();
       expect(result.kept).toEqual(Array.from({ length: 101 }, (_, sequence) => sentText(sequence)));
     }));
+
+  it.live('cuts output queued before a stalled write to its oldest run behind one notice', () =>
+    Effect.gen(function* () {
+      const buffer = new ConnectionOutputBuffer({ maxOutputBytes: 64 * 1024 * 1024, stalledOutputBytes: 1600, stallMs: 0 });
+      const frames: string[] = [];
+      buffer.offer({ type: 'started', id: 'exec-1', ticket: 'cc-1', waitMs: 0 });
+      buffer.offer(outputOf('x'.repeat(48 * 1024)));
+      for (let sequence = 1; sequence <= 9; sequence += 1) {
+        buffer.offer(outputOf(`out-${sequence}\n`));
+      }
+      yield* buffer.flush((frame) =>
+        Effect.sync(() => {
+          frames.push(frame);
+          buffer.offer(outputOf('late\n'));
+          buffer.offer(exitMessage);
+        }),
+      );
+      buffer.offer(outputOf('next\n'));
+
+      expect(describeDelivered([...parseFrames(frames), ...(yield* flushAll(buffer))])).toEqual([
+        'started',
+        `stdout: ${'x'.repeat(48 * 1024)}`,
+        'stdout: out-1\n',
+        'stdout: out-2\n',
+        'stdout: out-3\n',
+        'stderr: [cargo-hauler] output truncated: client fell behind; 41 bytes dropped; stored result: hauler result cc-1\n',
+        'exit',
+        'stdout: next\n',
+      ]);
+    }));
+
+  it.live('cuts two million queued outputs to the stalled limit for about the work of queueing them', () =>
+    Effect.gen(function* () {
+      const buffer = new ConnectionOutputBuffer({ maxOutputBytes: 64 * 1024 * 1024, stalledOutputBytes: 1024 * 1024, stallMs: 0 });
+      const line = outputOf('   Compiling crate v0.1.0 (/workspace/crates/crate)\n');
+      const queueing = process.threadCpuUsage();
+      for (let sequence = 0; sequence < 2_000_000; sequence += 1) {
+        buffer.offer(line);
+      }
+      const queued = process.threadCpuUsage(queueing);
+      let cut = { user: Number.POSITIVE_INFINITY, system: 0 };
+      yield* buffer.flush(() =>
+        Effect.sync(() => {
+          const cutting = process.threadCpuUsage();
+          buffer.offer(line);
+          cut = process.threadCpuUsage(cutting);
+        }),
+      );
+      const notices = describeDelivered(yield* flushAll(buffer)).filter((text) => text.includes('output truncated'));
+
+      // This thread's CPU time leaves out other processes' turns on the host,
+      // and queueing the same messages is the yardstick for host speed. The
+      // one-pass cut measures 0.2 to 1.5 times the queueing work and evicting
+      // one message at a time 8 to 20 times.
+      expect((cut.user + cut.system) / (queued.user + queued.system)).toBeLessThan(3);
+      expect(notices).toEqual([
+        'stderr: [cargo-hauler] output truncated: client fell behind; 103811084 bytes dropped; stored result: hauler result cc-1\n',
+      ]);
+    }), 60_000);
 
   it.live('flushes every queued message in FIFO order', () =>
     Effect.gen(function* () {
