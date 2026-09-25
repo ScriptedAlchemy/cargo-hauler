@@ -110,14 +110,40 @@ export declare namespace SqlClient {
    */
   export interface MakeOptions {
     readonly acquirer: Connection.Acquirer
+    /**
+     * Lends a connection for one statement instead of leasing one into a
+     * scope. A client that can do this saves the scope and finalizer per
+     * statement; `stream`, transactions, and `reserve` keep the `acquirer`,
+     * whose lease outlives the effect that starts it.
+     */
+    readonly borrower?: Connection.Borrower | undefined
     readonly compiler: Compiler
     readonly transactionAcquirer?: Connection.Acquirer
     readonly spanAttributes: ReadonlyArray<readonly [string, unknown]>
     readonly transactionService?: Context.Service<TransactionConnection, TransactionConnection.Service>
+    /**
+     * Whether the transaction control statements - `BEGIN`, `COMMIT`,
+     * `ROLLBACK`, and the savepoint pair - can be prepared like any other
+     * statement.
+     *
+     * **Details**
+     *
+     * They run on every transaction and never change, so a database that can
+     * prepare them stops parsing them again each time. Off by default,
+     * because several databases refuse to prepare transaction control at all;
+     * a driver has to say that its own does not.
+     */
+    readonly prepareTransactionControls?: boolean | undefined
     readonly beginTransaction?: string | undefined
     readonly rollback?: string | undefined
     readonly commit?: string | undefined
     readonly savepoint?: ((name: string) => string) | undefined
+    /**
+     * SQL to release a nested savepoint after success or a successful rollback.
+     * Omit to leave savepoints unreleased, including for dialects such as MSSQL
+     * that do not support releasing savepoints.
+     */
+    readonly releaseSavepoint?: ((name: string) => string) | undefined
     readonly rollbackSavepoint?: ((name: string) => string) | undefined
     readonly transformRows?: (<A extends object>(row: ReadonlyArray<A>) => ReadonlyArray<A>) | undefined
     readonly reactiveQueue?: <A, E, R>(
@@ -151,9 +177,13 @@ export const make = Effect.fnUntraced(function*(options: SqlClient.MakeOptions) 
   const beginTransaction = options.beginTransaction ?? "BEGIN"
   const commit = options.commit ?? "COMMIT"
   const savepoint = options.savepoint ?? ((name: string) => `SAVEPOINT ${name}`)
+  const releaseSavepoint = options.releaseSavepoint
   const rollback = options.rollback ?? "ROLLBACK"
   const rollbackSavepoint = options.rollbackSavepoint ?? ((name: string) => `ROLLBACK TO SAVEPOINT ${name}`)
   const transactionAcquirer = options.transactionAcquirer ?? options.acquirer
+  const control = options.prepareTransactionControls === true
+    ? (conn: Connection.Connection, sql: string) => conn.execute(sql, [], undefined)
+    : (conn: Connection.Connection, sql: string) => conn.executeUnprepared(sql, [], undefined)
   const withTransaction = makeWithTransaction({
     transactionService,
     spanAttributes: options.spanAttributes,
@@ -161,16 +191,30 @@ export const make = Effect.fnUntraced(function*(options: SqlClient.MakeOptions) 
       Scope.make(),
       (scope) => Effect.map(Scope.provide(transactionAcquirer!, scope), (conn) => [scope, conn] as const)
     ),
-    begin: (conn) => conn.executeUnprepared(beginTransaction, [], undefined),
-    savepoint: (conn, id) => conn.executeUnprepared(savepoint(`effect_sql_${id}`), [], undefined),
-    commit: (conn) => conn.executeUnprepared(commit, [], undefined),
-    rollback: (conn) => conn.executeUnprepared(rollback, [], undefined),
-    rollbackSavepoint: (conn, id) => conn.executeUnprepared(rollbackSavepoint(`effect_sql_${id}`), [], undefined)
+    begin: (conn) => control(conn, beginTransaction),
+    savepoint: (conn, id) => control(conn, savepoint(`effect_sql_${id}`)),
+    releaseSavepoint: releaseSavepoint
+      ? (conn, id) => control(conn, releaseSavepoint(`effect_sql_${id}`))
+      : undefined,
+    commit: (conn) => control(conn, commit),
+    rollback: (conn) => control(conn, rollback),
+    rollbackSavepoint: (conn, id) => control(conn, rollbackSavepoint(`effect_sql_${id}`))
   })
 
   const reactivity = yield* Reactivity
+  // A statement inside a transaction has to run on that transaction's
+  // connection, so borrowing is only for statements that reach the pool.
+  const borrower: Connection.Borrower | undefined = options.borrower === undefined ? undefined : (f) =>
+    Effect.flatMap(
+      Effect.serviceOption(transactionService),
+      Option.match({
+        onNone: () => options.borrower!(f),
+        onSome: ([conn]) => f(conn)
+      })
+    )
+
   const client: SqlClient = Object.assign(
-    Statement.make(getConnection, options.compiler, options.spanAttributes, options.transformRows),
+    Statement.make(getConnection, options.compiler, options.spanAttributes, options.transformRows, borrower),
     {
       [TypeId]: TypeId as typeof TypeId,
       safe: undefined as any,
@@ -185,7 +229,8 @@ export const make = Effect.fnUntraced(function*(options: SqlClient.MakeOptions) 
           getConnection,
           options.compiler.withoutTransform,
           options.spanAttributes,
-          undefined
+          undefined,
+          borrower
         )
         const client = Object.assign(statement, {
           ...this,
@@ -216,7 +261,8 @@ export const make = Effect.fnUntraced(function*(options: SqlClient.MakeOptions) 
 /**
  * Builds a transaction wrapper that begins top-level transactions, uses
  * savepoints for nested transactions, commits on success, and rolls back on
- * failure or interruption.
+ * failure or interruption. Releases nested savepoints when `releaseSavepoint`
+ * is provided.
  *
  * @category transactions
  * @since 4.0.0
@@ -227,6 +273,12 @@ export const makeWithTransaction = <I, S>(options: {
   readonly acquireConnection: Effect.Effect<readonly [Scope.Closeable | undefined, S], SqlError>
   readonly begin: (conn: NoInfer<S>) => Effect.Effect<void, SqlError>
   readonly savepoint: (conn: NoInfer<S>, id: number) => Effect.Effect<void, SqlError>
+  /**
+   * Releases a nested savepoint after success or a successful rollback.
+   * Omit to leave savepoints unreleased, including for dialects such as MSSQL
+   * that do not support releasing savepoints.
+   */
+  readonly releaseSavepoint?: ((conn: NoInfer<S>, id: number) => Effect.Effect<void, SqlError>) | undefined
   readonly commit: (conn: NoInfer<S>) => Effect.Effect<void, SqlError>
   readonly rollback: (conn: NoInfer<S>) => Effect.Effect<void, SqlError>
   readonly rollbackSavepoint: (conn: NoInfer<S>, id: number) => Effect.Effect<void, SqlError>
@@ -284,6 +336,9 @@ export const makeWithTransaction = <I, S>(options: {
                               ? options.rollbackSavepoint(conn, id)
                               : options.rollback(conn)
                           )
+                        }
+                        if (id > 0 && options.releaseSavepoint) {
+                          effect = Effect.andThen(effect, Effect.orDie(options.releaseSavepoint(conn, id)))
                         }
                         return Effect.flatMap(effect, () => exit)
                       },
