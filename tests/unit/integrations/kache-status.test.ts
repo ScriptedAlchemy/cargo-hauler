@@ -406,6 +406,48 @@ describe('createKacheSnapshotReader', () => {
       removeTestPath(root);
     }
   });
+
+  it('aggregates a large index without stalling the event loop', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'cc-kache-status-large-index-'));
+    const indexPath = join(root, 'index.db');
+    try {
+      const database = new DatabaseSync(indexPath);
+      database.exec(`
+        CREATE TABLE entries (crate_name TEXT, profile TEXT, compile_time_ms INTEGER);
+        WITH RECURSIVE n(i) AS (SELECT 0 UNION ALL SELECT i + 1 FROM n WHERE i < 399999)
+        INSERT INTO entries
+        SELECT 'crate-' || (i % 5000), CASE i % 2 WHEN 0 THEN 'dev' ELSE 'release' END, 100 + i % 977
+        FROM n;
+      `);
+      database.close();
+      const reader = createKacheSnapshotReader(indexPath);
+
+      let longestGapMs = 0;
+      let probing = true;
+      const pump = (async () => {
+        let last = performance.now();
+        while (probing) {
+          await new Promise<void>((resolve) => {
+            setImmediate(resolve);
+          });
+          const now = performance.now();
+          longestGapMs = Math.max(longestGapMs, now - last);
+          last = now;
+        }
+      })();
+      const startedAt = performance.now();
+      try {
+        const { status } = await reader.read(1_000);
+        expect(status).toMatchObject({ available: true, distinctCrates: 5_000, entryCount: 400_000 });
+      } finally {
+        probing = false;
+        await pump;
+      }
+      expect(longestGapMs).toBeLessThan((performance.now() - startedAt) / 2);
+    } finally {
+      removeTestPath(root);
+    }
+  });
 });
 
 describe('readKacheEventPriors', () => {
