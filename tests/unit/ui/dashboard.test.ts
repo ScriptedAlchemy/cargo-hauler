@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'effect-rstest';
-import { Effect, Stream } from 'effect';
+import * as Effect from 'effect/Effect';
+import * as Stream from 'effect/Stream';
 
 import {
   DEMUX_FLAG,

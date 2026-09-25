@@ -1,7 +1,8 @@
 import { rename } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
-import { NodeServices, NodeSocketServer } from '@effect/platform-node';
+import * as NodeServices from '@effect/platform-node/NodeServices';
+import * as NodeSocketServer from '@effect/platform-node/NodeSocketServer';
 import { version } from 'agent-bundle/meta';
 import * as Config from 'effect/Config';
 import * as Deferred from 'effect/Deferred';
