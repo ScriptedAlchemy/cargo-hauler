@@ -1,1 +1,1 @@
-{"author":{"name":"cargo-hauler"},"description":"Coalesce, schedule, and stream cargo so concurrent agent sessions share compiles instead of fighting locks.","name":"cargo-hauler","version":"0.9.9"}
+{"author":{"name":"cargo-hauler"},"description":"Coalesce, schedule, and stream cargo so concurrent agent sessions share compiles instead of fighting locks.","name":"cargo-hauler","version":"0.9.10"}

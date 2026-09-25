@@ -2,7 +2,7 @@
 
 Coalesce, schedule, and stream cargo so concurrent agent sessions share compiles instead of fighting locks.
 
-Version: `0.9.9`
+Version: `0.9.10`
 
 Run these commands from this bundle directory. The bundle is self-contained: every command below is
 a host command or the bundled installer, and nothing requires the `agent-bundle` CLI. Where that CLI is
