@@ -22884,7 +22884,7 @@ __webpack_require__.d(__webpack_exports__, {
  * never merge, so the flag is irrelevant there.
  */ const channelsCompatible = (leader, attachment)=>leader.demux !== null || leader.input.mergeStderr === true === (attachment.input.mergeStderr === true);
 const leaderRunMsAt = (job, atMs)=>job.startedAtMs === null ? null : (0,_reporting_savings_js__rspack_import_5/* .nonNegativeMs */.PG)(atMs - job.startedAtMs);
-const servedSavings = (attachment, atMs, leaderRunMs, leaderStartedAtMs)=>(0,_reporting_savings_js__rspack_import_5/* .calculateServedSavings */.J2)(attachment.mode, attachment.estimateMs, attachment.createdAtMs, atMs, leaderRunMs, leaderStartedAtMs);
+const servedSavings = (attachment, atMs, leaderRunMs, leader)=>(0,_reporting_savings_js__rspack_import_5/* .calculateServedSavings */.J2)(attachment.mode, attachment.estimateMs, attachment.createdAtMs, atMs, leaderRunMs, leader.startedAtMs, leader.compileEstimateMs);
 const makeAttachmentRuntime = (deps)=>{
     const { ledger, directory } = deps;
     /**
@@ -23243,7 +23243,7 @@ const makeAttachmentRuntime = (deps)=>{
                     exitCode: 101,
                     signal: null,
                     error: `compile errors in ${failed}`
-                }, servedSavings(attachment, atMs, null, job.startedAtMs))), {
+                }, servedSavings(attachment, atMs, null, job))), {
                 discard: true
             });
         });
@@ -23282,7 +23282,7 @@ const makeAttachmentRuntime = (deps)=>{
                     exitCode: 0,
                     signal: null,
                     error: null
-                }, servedSavings(attachment, atMs, leaderBuildMs, job.startedAtMs))), {
+                }, servedSavings(attachment, atMs, leaderBuildMs, job))), {
                 discard: true
             });
         });
@@ -23457,7 +23457,7 @@ const makeAttachmentRuntime = (deps)=>{
                         exitCode: 0,
                         signal: null,
                         error: null
-                    }, servedSavings(attachment, atMs, leaderRunMs, job.startedAtMs));
+                    }, servedSavings(attachment, atMs, leaderRunMs, job));
                 }
                 if (mirrors) {
                     return notifyAttachmentStarted(attachment, atMs).pipe(effect_Effect__rspack_import_6/* .andThen */.hgn(finishAttachment(attachment, atMs, {
@@ -23465,7 +23465,7 @@ const makeAttachmentRuntime = (deps)=>{
                         exitCode,
                         signal,
                         error
-                    }, servedSavings(attachment, atMs, leaderRunMs, job.startedAtMs))));
+                    }, servedSavings(attachment, atMs, leaderRunMs, job))));
                 }
                 if (requeue !== null) {
                     return requeue(attachment, (0,_job_state_js__rspack_import_4/* .requeueReasonFor */.c0)(attachment.mode, status));
@@ -27201,12 +27201,16 @@ const nonNegativeMs = (value)=>Math.max(0, Math.round(value));
  */ const riddenFromMs = (createdAtMs, leaderStartedAtMs)=>leaderStartedAtMs === null ? createdAtMs : Math.max(createdAtMs, leaderStartedAtMs);
 /**
  * Counterfactual credit for one request served by another cargo process.
- * Compute is what the rider's own process would have burned. Latency
- * compares the rider's estimated solo run, starting at `riddenFromMs`,
- * with the time it actually spent riding; it stays signed, so a rider whose
+ * Compute is what the rider's own process would have burned. A batch rider's
+ * packages still compile inside the leader's combined run, so it avoided no
+ * measurable compute. Latency compares the rider's estimated solo run,
+ * starting at `riddenFromMs`, with the time it actually spent riding; a batch
+ * rider was queued behind the leader in its lane, so its solo run starts only
+ * after the leader's estimated compile, when the leader would have handed the
+ * lane on. It stays signed, so a rider whose
  * leader ran longer than the rider's own run would have shows the regression
  * rather than hiding it.
- */ const calculateServedSavings = (mode, estimateMsValue, createdAtMs, settledAtMs, leaderRunMs, leaderStartedAtMs = null)=>{
+ */ const calculateServedSavings = (mode, estimateMsValue, createdAtMs, settledAtMs, leaderRunMs, leaderStartedAtMs = null, leaderCompileEstimateMs = 0)=>{
     const estimateMs = nonNegativeMs(estimateMsValue);
     let compute;
     switch(mode){
@@ -27238,7 +27242,7 @@ const nonNegativeMs = (value)=>Math.max(0, Math.round(value));
             }
         case 'batch':
             compute = {
-                savedComputeMs: estimateMs,
+                savedComputeMs: 0,
                 savedComputeSource: 'estimate'
             };
             break;
@@ -27249,9 +27253,10 @@ const nonNegativeMs = (value)=>Math.max(0, Math.round(value));
             }
     }
     const riddenMs = Math.max(0, settledAtMs - riddenFromMs(createdAtMs, leaderStartedAtMs));
+    const behindLeaderMs = mode === 'batch' && leaderStartedAtMs !== null ? nonNegativeMs(leaderCompileEstimateMs) : 0;
     return {
         ...compute,
-        savedLatencyMs: Math.round(estimateMs - riddenMs)
+        savedLatencyMs: Math.round(estimateMs + behindLeaderMs - riddenMs)
     };
 };
 
@@ -176448,21 +176453,21 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 /* import */ var _agent_bundle_runtime__rspack_import_23 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_085db54030f7fcdbcf47c4fef1a79b08/node_modules/@agent-bundle/runtime/dist/index.js");
 /* import */ var node_url__rspack_import_4 = __webpack_require__("node:url");
 /* import */ var node_worker_threads__rspack_import_5 = __webpack_require__("node:worker_threads");
-/* import */ var _tmp_poteto_guard_src_cli_daemon_ts__rspack_import_6 = __webpack_require__("./src/cli/daemon.ts");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.cli.ts");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.cli.ts");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.cli.ts");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.cli.ts");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.cli.ts");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.cli.ts");
-/* import */ var _tmp_poteto_guard_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.cli.ts");
+/* import */ var _tmp_poteto_savings_src_cli_daemon_ts__rspack_import_6 = __webpack_require__("./src/cli/daemon.ts");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.tsx");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.tsx");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.tsx");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.tsx");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.tsx");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.tsx");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.cli.ts");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17 = __webpack_require__("./src/mcp/hauler/tools/hauler_kill.cli.ts");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18 = __webpack_require__("./src/mcp/hauler/tools/hauler_last.cli.ts");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19 = __webpack_require__("./src/mcp/hauler/tools/hauler_log.cli.ts");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14 = __webpack_require__("./src/mcp/hauler/tools/hauler_request.cli.ts");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20 = __webpack_require__("./src/mcp/hauler/tools/hauler_result.cli.ts");
+/* import */ var _tmp_poteto_savings_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21 = __webpack_require__("./src/mcp/hauler/tools/hauler_status.cli.ts");
 
 
 
@@ -176471,21 +176476,21 @@ __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_de
 
 
 
-const route0 = Object.assign({}, Reflect.get(_tmp_poteto_guard_src_cli_daemon_ts__rspack_import_6, 'default'), _tmp_poteto_guard_src_cli_daemon_ts__rspack_import_6);
+const route0 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_cli_daemon_ts__rspack_import_6, 'default'), _tmp_poteto_savings_src_cli_daemon_ts__rspack_import_6);
 
-const route1 = Object.assign({}, Reflect.get(_tmp_poteto_guard_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7, 'default'), _tmp_poteto_guard_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7);
+const route1 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_await_tsx__rspack_import_7);
 
-const route2 = Object.assign({}, Reflect.get(_tmp_poteto_guard_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _tmp_poteto_guard_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
+const route2 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_kill_tsx__rspack_import_8);
 
-const route3 = Object.assign({}, Reflect.get(_tmp_poteto_guard_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _tmp_poteto_guard_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
+const route3 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_last_tsx__rspack_import_9);
 
-const route4 = Object.assign({}, Reflect.get(_tmp_poteto_guard_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _tmp_poteto_guard_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
+const route4 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_log_tsx__rspack_import_10);
 
-const route5 = Object.assign({}, Reflect.get(_tmp_poteto_guard_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _tmp_poteto_guard_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
+const route5 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_request_tsx__rspack_import_11);
 
-const route6 = Object.assign({}, Reflect.get(_tmp_poteto_guard_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _tmp_poteto_guard_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
+const route6 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_result_tsx__rspack_import_12);
 
-const route7 = Object.assign({}, Reflect.get(_tmp_poteto_guard_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _tmp_poteto_guard_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
+const route7 = Object.assign({}, Reflect.get(_tmp_poteto_savings_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13, 'default'), _tmp_poteto_savings_src_mcp_hauler_tools_hauler_status_tsx__rspack_import_13);
 
 
 
@@ -176516,31 +176521,31 @@ const routes = Object.freeze({
     }),
     "tool:hauler/hauler_await": Object.freeze({
         module: route1,
-        projection: _tmp_poteto_guard_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16
+        projection: _tmp_poteto_savings_src_mcp_hauler_tools_hauler_await_cli_ts__rspack_import_16
     }),
     "tool:hauler/hauler_kill": Object.freeze({
         module: route2,
-        projection: _tmp_poteto_guard_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17
+        projection: _tmp_poteto_savings_src_mcp_hauler_tools_hauler_kill_cli_ts__rspack_import_17
     }),
     "tool:hauler/hauler_last": Object.freeze({
         module: route3,
-        projection: _tmp_poteto_guard_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18
+        projection: _tmp_poteto_savings_src_mcp_hauler_tools_hauler_last_cli_ts__rspack_import_18
     }),
     "tool:hauler/hauler_log": Object.freeze({
         module: route4,
-        projection: _tmp_poteto_guard_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19
+        projection: _tmp_poteto_savings_src_mcp_hauler_tools_hauler_log_cli_ts__rspack_import_19
     }),
     "tool:hauler/hauler_request": Object.freeze({
         module: route5,
-        projection: _tmp_poteto_guard_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14
+        projection: _tmp_poteto_savings_src_mcp_hauler_tools_hauler_request_cli_ts__rspack_import_14
     }),
     "tool:hauler/hauler_result": Object.freeze({
         module: route6,
-        projection: _tmp_poteto_guard_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20
+        projection: _tmp_poteto_savings_src_mcp_hauler_tools_hauler_result_cli_ts__rspack_import_20
     }),
     "tool:hauler/hauler_status": Object.freeze({
         module: route7,
-        projection: _tmp_poteto_guard_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21
+        projection: _tmp_poteto_savings_src_mcp_hauler_tools_hauler_status_cli_ts__rspack_import_21
     })
 });
 const commands = Object.freeze([

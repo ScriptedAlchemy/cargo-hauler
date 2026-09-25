@@ -1209,9 +1209,6 @@ export const attachSavings = (
         }
         break;
       case 'batch':
-        if (estimateMs !== null) {
-          savedEstimatedMs += estimateMs;
-        }
         break;
       default: {
         const exhaustive: never = row.attachMode;

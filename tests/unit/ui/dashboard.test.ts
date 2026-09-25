@@ -1029,7 +1029,7 @@ describe('attachSavings (runs avoided is attach coalescing, not kache)', () => {
       { attachMode: 'batch', attachedTo: 'cc-9', estimateMs: 5_000, ticket: 'cc-3' },
     ]);
     expect(savings.savedExactMs).toBe(0);
-    expect(savings.savedEstimatedMs).toBe(44_000);
+    expect(savings.savedEstimatedMs).toBe(39_000);
     expect(savings.avoidedRuns).toBe(2);
   });
 

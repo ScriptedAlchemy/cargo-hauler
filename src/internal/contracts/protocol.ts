@@ -210,8 +210,10 @@ export interface RequestRecord {
    * Counterfactual latency savings for the follower:
    * `estimateMs - (settledAtMs - max(createdAtMs, leaderStartedAtMs))`: time
    * queued behind a leader that had not started yet is lane wait the rider
-   * would have paid alone as well. Negative values are expected and honest:
-   * they mean the rider rode longer than its own solo run would have taken.
+   * would have paid alone as well. A batch rider was queued behind its
+   * leader, so the leader's compile estimate is added to its solo run. Negative
+   * values are expected and honest: they mean the rider finished later than
+   * it would have alone.
    */
   readonly savedLatencyMs: number | null;
   /** The invocation actually spawned (demux flag, batch-folded -p packages); null until run. */

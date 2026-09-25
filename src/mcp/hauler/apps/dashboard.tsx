@@ -782,8 +782,8 @@ const MetricsSection = ({
       : latencySavedStat(totals.savedLatencyMs);
   const latencyTitle =
     totals !== null
-      ? `counterfactual estimateMs minus actual time-to-result; negative means the rider waited longer than its own solo estimate (${formatCompactNumber(totals.negativeLatencyRiders)} rider${totals.negativeLatencyRiders === 1 ? '' : 's'} are negative)`
-      : 'unavailable: the status carried no ledger savings; negative means the rider waited longer than its own solo estimate';
+      ? `counterfactual estimateMs minus actual time-to-result; negative means the rider finished later than it would have alone (${formatCompactNumber(totals.negativeLatencyRiders)} rider${totals.negativeLatencyRiders === 1 ? '' : 's'} are negative)`
+      : 'unavailable: the status carried no ledger savings; negative means the rider finished later than it would have alone';
   const ridersByMode = savings === null ? null : ridersByModeText(savings);
   const percentileText = (count: number, value: number | null): string =>
     count === 0 ? '—' : (count < percentileMinSamples || value === null)
