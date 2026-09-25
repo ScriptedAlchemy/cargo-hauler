@@ -7,7 +7,7 @@ name: hauler-dashboard
 
 # hauler-dashboard
 
-Use the dashboard for machine-wide fleet state (cargo-hauler 0.9.12). Use the `cargo-hauler` Skill for submitting, scoping, or waiting on work.
+Use the dashboard for machine-wide fleet state (cargo-hauler 0.9.13). Use the `cargo-hauler` Skill for submitting, scoping, or waiting on work.
 
 ## Open it
 
