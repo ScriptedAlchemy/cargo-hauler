@@ -105,6 +105,21 @@ describe('hauler script', () => {
     expect(() => JSON.parse(result.text)).toThrow();
   });
 
+  it('refuses a non-cargo program with exit 2 before the exec client can run it', async () => {
+    let seenArgv: readonly string[] | undefined;
+    const result = await run(['exec', '--', 'ls', '-la'], {
+      runExec: (options) => {
+        seenArgv = options.argv;
+        return Effect.succeed({ exitCode: 0, mode: 'passthrough' });
+      },
+    });
+    expect({ ...result, seenArgv }).toEqual({
+      code: 2,
+      seenArgv: undefined,
+      text: '[cargo-hauler] program must be cargo, got ls\n',
+    });
+  });
+
   it('passes the shared-target opt-in from the flag or request environment', async () => {
     const seen: boolean[] = [];
     const runExec = (options: RunExecOptions) => {

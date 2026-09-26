@@ -83,6 +83,7 @@ const splitFeatures = (value: string): string[] =>
   value.split(/[,\s]+/u).filter((feature) => feature.length > 0);
 
 export const cargoExecutablePattern = /(?:^|[/\\])cargo(?:\.exe)?$/u;
+export class ProgramNotCargoError extends Error {}
 const envProgramPattern = /(?:^|[/\\])env$/u;
 const shellProgramPattern = /(?:^|[/\\])(?:bash|sh|zsh|dash)$/u;
 const shellAssignmentPattern = /^([A-Za-z_][A-Za-z0-9_]*)=([\s\S]*)$/u;
@@ -488,14 +489,10 @@ export const parseCargoArgv = (input: readonly string[]): ParsedCargoArgv => {
   }
   if (argv[0] !== undefined && cargoExecutablePattern.test(argv[0])) {
     argv.shift();
-  } else if (prefix.peeled) {
-    throw new Error(`program must be cargo, got ${argv[0] ?? 'nothing'}`);
-  } else if (argv[0] !== undefined && /[/\\]/u.test(argv[0])) {
-    // A path-shaped first argument is a program, and the only program the
-    // broker runs is cargo. A mis-resolved shim once submitted
-    // `~/.cargo/bin/rustup test …`; running it would fail and the path would
-    // be recorded as the "subcommand" in every metrics view.
-    throw new Error(`program must be cargo, got ${argv[0]}`);
+  } else if (wrapper === null || prefix.peeled) {
+    // The executor spawns argv[0], so any other first word would run as a
+    // program rather than be read as a cargo subcommand.
+    throw new ProgramNotCargoError(`program must be cargo, got ${argv[0] ?? 'nothing'}`);
   }
 
   const toolchainArgument = argv[0]?.startsWith('+') === true ? argv.shift() : undefined;
