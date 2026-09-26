@@ -21718,7 +21718,7 @@ const defaultEnsureDependencies = {
     pingDaemon: _control_js__rspack_import_6/* .pingDaemon */.LT,
     pollMs: 100,
     processAlive: _shutdown_js__rspack_import_8/* .processAlive */.FN,
-    requestShutdown: (socketPath)=>(0,_shutdown_js__rspack_import_8/* .requestShutdown */.iU)(socketPath, 5000, (/* inlined export .version */"0.9.13"), true),
+    requestShutdown: (socketPath)=>(0,_shutdown_js__rspack_import_8/* .requestShutdown */.iU)(socketPath, 5000, (/* inlined export .version */"0.9.14"), true),
     spawnDetachedDaemon,
     waitForDaemon
 };
@@ -21739,9 +21739,9 @@ const defaultEnsureDependencies = {
             startedAtMs: daemon.startedAtMs,
             version: daemon.version
         };
-        if (isNewerVersion(daemon.version, (/* inlined export .version */"0.9.13"))) {
+        if (isNewerVersion(daemon.version, (/* inlined export .version */"0.9.14"))) {
             return yield* new DaemonNewerError({
-                clientVersion: (/* inlined export .version */"0.9.13"),
+                clientVersion: (/* inlined export .version */"0.9.14"),
                 daemon: identity,
                 socketPath
             });
@@ -21770,19 +21770,19 @@ const defaultEnsureDependencies = {
             startedAtMs: already.startedAtMs,
             version: already.version
         };
-        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(already.version, (/* inlined export .version */"0.9.13"))) {
+        if ((0,_contracts_version_order_js__rspack_import_17/* .isNewerVersion */.M)(already.version, (/* inlined export .version */"0.9.14"))) {
             if (access === 'read' && (0,_contracts_wire_version_js__rspack_import_18/* .speaksCurrentWireProtocol */.W)(already)) {
                 return already;
             }
             return yield* new _shutdown_js__rspack_import_8/* .DaemonNewerError */.gD({
-                clientVersion: (/* inlined export .version */"0.9.13"),
+                clientVersion: (/* inlined export .version */"0.9.14"),
                 daemon: identity,
                 socketPath: config.socketPath
             });
         }
         if (!(0,_contracts_wire_version_js__rspack_import_18/* .speaksCurrentWireProtocol */.W)(already)) {
             return yield* new _shutdown_js__rspack_import_8/* .DaemonIncompatibleError */.K9({
-                clientVersion: (/* inlined export .version */"0.9.13"),
+                clientVersion: (/* inlined export .version */"0.9.14"),
                 daemon: identity,
                 socketPath: config.socketPath
             });
@@ -21798,11 +21798,11 @@ const ensureDaemonRunning = (config = resolveDaemonConfig(), dependencies = defa
                 return yield* dependencies.waitForDaemon(config.socketPath);
             });
         }
-        if (daemon.version === (/* inlined export .version */"0.9.13")) {
+        if (daemon.version === (/* inlined export .version */"0.9.14")) {
             return Effect.succeed(daemon);
         }
         const deferred = ()=>Effect.sync(()=>{
-                reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${(/* inlined export .version */"0.9.13")} when idle\n`);
+                reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${(/* inlined export .version */"0.9.14")} when idle\n`);
                 return daemon;
             });
         return dependencies.daemonIsIdle(config.socketPath).pipe(Effect.flatMap((idle)=>{
@@ -21866,7 +21866,7 @@ __webpack_require__.d(__webpack_exports__, {
         }
         return true;
     });
-const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlined export .version */"0.9.13"), ifIdle = false)=>effect_Effect__rspack_import_4/* .suspend */.DYE(()=>{
+const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlined export .version */"0.9.14"), ifIdle = false)=>effect_Effect__rspack_import_4/* .suspend */.DYE(()=>{
         const id = (0,_util_id_js__rspack_import_1/* .shortId */.m)();
         const isResponse = (message)=>message.id === id && (message.type === 'shutting-down' || message.type === 'error');
         return (0,_control_js__rspack_import_2/* .requestOverSocket */.Lb)({
@@ -24057,15 +24057,15 @@ const requestOnce = (message, socketPath, timeoutMs)=>new Promise((resolve)=>{
             kind: 'malformed'
         };
     }
-    if ((0,_contracts_version_order_js__rspack_import_5/* .isNewerVersion */.M)(ping.message.version, (/* inlined export .version */"0.9.13"))) {
+    if ((0,_contracts_version_order_js__rspack_import_5/* .isNewerVersion */.M)(ping.message.version, (/* inlined export .version */"0.9.14"))) {
         return {
-            detail: `cargo-hauler daemon ${ping.message.version} is newer than this client ${(/* inlined export .version */"0.9.13")}`,
+            detail: `cargo-hauler daemon ${ping.message.version} is newer than this client ${(/* inlined export .version */"0.9.14")}`,
             kind: 'replacement-failed'
         };
     }
     if (!(0,_contracts_wire_version_js__rspack_import_6/* .speaksCurrentWireProtocol */.W)(ping.message)) {
         return {
-            detail: `cargo-hauler daemon ${ping.message.version} is incompatible with this client ${(/* inlined export .version */"0.9.13")}`,
+            detail: `cargo-hauler daemon ${ping.message.version} is incompatible with this client ${(/* inlined export .version */"0.9.14")}`,
             kind: 'replacement-failed'
         };
     }
@@ -110621,8 +110621,8 @@ __webpack_require__.d(__webpack_exports__, {
 // Generated by agent-bundle. Do not edit.
 const name = "cargo-hauler";
 const packageName = "cargo-hauler";
-const packageVersion = "0.9.13";
-const version = "0.9.13";
+const packageVersion = "0.9.14";
+const version = "0.9.14";
 const meta = Object.freeze({
     name,
     packageName,
@@ -110732,7 +110732,7 @@ globalThis.__rspack_rsc_manifest__ ??= Object.freeze({
 });
 if (node_worker_threads__rspack_import_0.parentPort === null) throw new Error('Generated Flight worker requires a parent port.');
 process.stdout.write = process.stderr.write.bind(process.stderr);
-const ARTIFACT_EPOCH = "cargo-hauler@0.9.13";
+const ARTIFACT_EPOCH = "cargo-hauler@0.9.14";
 const processLifetime = {
     hits: 0,
     instanceId: crypto.randomUUID(),

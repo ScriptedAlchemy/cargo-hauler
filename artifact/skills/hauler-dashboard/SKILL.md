@@ -8,7 +8,7 @@ name: hauler-dashboard
 
 # hauler-dashboard
 
-The dashboard shows machine-wide state for cargo-hauler 0.9.13. To submit, scope, or wait on work, use the `cargo-hauler` skill.
+The dashboard shows machine-wide state for cargo-hauler 0.9.14. To submit, scope, or wait on work, use the `cargo-hauler` skill.
 
 ## Open it
 
