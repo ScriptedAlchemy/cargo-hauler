@@ -15,7 +15,7 @@ var __webpack_modules__ = ({
 
 
 /**
- * The gate every shell tool call pays (#90): commands that name neither cargo
+ * The gate every shell tool call pays (#90). Commands that name neither cargo
  * nor hauler continue before the rendered view, bash parser, and daemon probe
  * load.
  */ /* export default */ const __rspack_default_export = (agent_bundle_routes__rspack_import_0/* .events.tool.before */.AZ.tool.before({
@@ -783,17 +783,17 @@ __webpack_require__.d(__webpack_exports__, {
 "./src/internal/host-hooks/tokens.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /**
  * The pre-parse test the cheap `tool/before` and `tool/after` handlers apply
- * before anything heavy loads: does the shell command name `cargo` or
- * `hauler` as a token? Boundaries are any character outside
+ * before anything heavy loads. It asks whether the shell command names
+ * `cargo` or `hauler` as a token. Boundaries are any character outside
  * `[A-Za-z0-9_]`, so `cargo-hauler`, `~/.cargo/bin/cargo`, `cargo.exe`,
  * `./scripts/cargo-wrapper`, and `echo cargo` all match while `mycargo` and
- * `CARGO_HOME=/x ls` do not. The match is case-insensitive (`Cargo.toml`
- * matches): false positives cost one parse of the command in-process, false
- * negatives would let a cargo invocation bypass the hauler, so the test errs
- * toward matching.
+ * `CARGO_HOME=/x ls` do not. The match is case-insensitive, so `Cargo.toml`
+ * matches. A false positive costs one parse of the command in-process, and a
+ * false negative would let a cargo invocation bypass the hauler, so the test
+ * errs toward matching.
  *
  * This is a superset of the check `before-shell.ts` itself applies
- * (`command.includes('cargo')`): every command the rewrite could govern, and
+ * (`command.includes('cargo')`). Every command the rewrite could govern, and
  * every command `after-shell.ts` records, mentions one of these tokens.
  */ const haulerToken = /(?:^|[^A-Za-z0-9_])(?:cargo|hauler)(?![A-Za-z0-9_])/iu;
 /** True when the command mentions cargo or hauler as a token; `undefined` and `''` never do. */ const commandMentionsHauler = (command)=>command !== undefined && command.length > 0 && haulerToken.test(command);
@@ -802,8 +802,8 @@ __webpack_require__.d(__webpack_exports__, {
  * foo v0.1.0`, `    Finished \`test\` profile …`, `     Running unittests`,
  * `   Doc-tests foo`. Found in a shell tool's captured output for a command
  * that never named cargo, they mean cargo ran through a wrapper script, an
- * alias, or a shell variable — the one shape neither the rewrite nor the
- * PATH shim sees (the shim is skipped by an absolute toolchain path).
+ * alias, or a shell variable. Neither the rewrite nor the PATH shim sees that
+ * shape, and an absolute toolchain path skips the shim.
  */ const cargoStatusLine = /^(?: {3}Compiling| {4}Checking| {4}Finished| {5}Running| {3}Doc-tests| Documenting| {4}Blocking) \S/mu;
 /**
  * Commands whose output is a file they were asked to show. A saved cargo log
@@ -829,7 +829,7 @@ const readsFile = (command)=>{
 };
 /**
  * True when the command names neither cargo nor hauler, is not a file reader,
- * and its output carries cargo status lines: cargo ran, and nothing brokered
+ * and its output carries cargo status lines. Cargo ran, and nothing brokered
  * it. `undefined` output never does.
  */ const hiddenCargoRun = (command, output)=>command !== undefined && output !== undefined && !commandMentionsHauler(command) && !readsFile(command) && cargoStatusLine.test(output);
 
@@ -846,8 +846,8 @@ __webpack_require__.d(__webpack_exports__, {
 /**
  * `tool_input.command` as the host sent it; `undefined` when the tool input
  * is not a shell call (Read, Edit, an MCP tool, Codex's non-object input).
- * Dependency-free on purpose: the cheap hook handlers read it before anything
- * heavier loads.
+ * It has no dependencies because the cheap hook handlers read it before
+ * anything heavier loads.
  */ const extractShellCommand = (toolInput)=>{
     if (!(0,_util_guards_js__rspack_import_0/* .isRecord */.u)(toolInput) || typeof toolInput.command !== 'string') {
         return undefined;
@@ -862,10 +862,10 @@ const outputKeys = (/* unused pure expression or super */ null && ([
     'result'
 ]));
 /**
- * The text a finished shell call produced, as the host reports it: Claude's
- * `{stdout, stderr}`, a bare string, or an `output`/`content`/`result` field.
- * `undefined` when the response carries no text — the hook then has nothing
- * to look at and fails open.
+ * The text a finished shell call produced, as the host reports it in Claude's
+ * `{stdout, stderr}`, a bare string, or an `output`, `content`, or `result`
+ * field. `undefined` when the response carries no text, and the hook then has
+ * nothing to look at and fails open.
  */ const extractShellOutput = (toolResponse)=>{
     if (typeof toolResponse === 'string') {
         return toolResponse;
@@ -25375,7 +25375,7 @@ const prepareRouteInvocation = async (nativeInput, signal, observer, receipt)=>{
     return withEventState(signal, async (bindings)=>{
         const gate = await (0,_agent_bundle_runtime_request__rspack_import_6/* .runAgentRequest */.iC)({
             invocation: {
-                artifactEpoch: "53cec059e5931cc853d6bd03cdf47e62383d0a1e46925901b9d845d23d9c8a6e",
+                artifactEpoch: "ac32996f186ee50baa605c39657ef7b45cd716a65d1c460596b086528b72e2ea",
                 hostContractRevision: capabilityRevision,
                 kind: "event",
                 operationId: `event:${canonicalEvent}`,

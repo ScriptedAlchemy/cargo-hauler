@@ -20441,11 +20441,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 /**
- * Session start: tell the new session what the hauler daemon looks like right
- * now, so the first cargo decision is made with the fleet state in view
- * instead of a `ps` probe. Standalone and short: a session must never wait on
- * the shared MCP runtime to begin, and a saturated daemon is reported as such
- * within the probe budget rather than delaying the session.
+ * Session start tells the new session what the hauler daemon looks like right
+ * now, so the agent makes its first cargo decision with the fleet state in
+ * view instead of a `ps` probe. The route is standalone and short. A session
+ * must never wait on the shared MCP runtime to begin, and the probe reports a
+ * saturated daemon within its budget rather than delaying the session.
  */ const config = {
     requires: [
         'events.sessionStart.context'
@@ -20457,13 +20457,13 @@ __webpack_require__.r(__webpack_exports__);
 const notice = (model)=>{
     switch(model.state){
         case 'running':
-            return `cargo-hauler ${model.headline}; ${model.detail ?? ''}. Before running cargo, check \`hauler status --session <id>\` (or the hauler_status tool with its session field) and attach to in-flight work instead of starting a duplicate; never kill cargo by PID — \`hauler kill cc-N\` stops a stuck ticket through the broker.`;
+            return `cargo-hauler ${model.headline}: ${model.detail ?? ''}. Before you run cargo, check \`hauler status --session <id>\` (or the hauler_status tool with its session field). Attach to in-flight work instead of starting a duplicate. Never kill cargo by PID. \`hauler kill cc-N\` stops a stuck ticket through the broker.`;
         case 'stopped':
-            return `cargo-hauler ${model.headline} (${model.detail ?? 'no detail'}). It starts on demand with the first brokered cargo command; the hooks route cargo through it automatically.`;
+            return `cargo-hauler ${model.headline} (${model.detail ?? 'no detail'}). The daemon starts on demand with the first brokered cargo command, and the hooks route cargo through it.`;
         case 'unresponsive':
-            return `cargo-hauler ${model.headline}: ${model.detail ?? ''}. Treat the machine as saturated — prefer \`hauler status\` (or the hauler_status tool) over new builds until it answers.`;
+            return `cargo-hauler ${model.headline}: ${model.detail ?? ''}. Treat the machine as saturated. Prefer \`hauler status\` (or the hauler_status tool) to new builds until the daemon answers.`;
         case 'unreachable':
-            return `cargo-hauler ${model.headline}: ${model.detail ?? ''}. Cargo still runs (the hooks fail open), but nothing is brokered until the socket can be opened.`;
+            return `cargo-hauler ${model.headline}: ${model.detail ?? ''}. Cargo still runs because the hooks fail open, but the hauler brokers nothing until it can open the socket.`;
         default:
             {
                 const exhaustive = model.state;
@@ -20506,8 +20506,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-// Standalone: stop-hold may block for its bounded wait and must not occupy
-// the shared MCP runtime. Budget mirrors the former 900 s stop hook.
+// Stop-hold may block for its bounded wait, so it runs standalone and does
+// not occupy the shared MCP runtime.
 const config = {
     requires: [
         'events.stop.deny'
@@ -21834,7 +21834,7 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var _util_id_js__rspack_import_1 = __webpack_require__("./src/internal/util/id.ts");
 /* import */ var _control_js__rspack_import_2 = __webpack_require__("./src/internal/client/control.ts");
 /**
- * The primitives for replacing a running daemon, shared by the automatic
+ * The building blocks for replacing a running daemon, shared by the automatic
  * replacement in `ensureDaemonRunning` (a daemon of another version answers
  * the socket) and the manual `hauler daemon restart`. A leaf on purpose:
  * `lifecycle.ts` imports `ensure-daemon.ts`, and both import this.
@@ -21851,8 +21851,8 @@ __webpack_require__.d(__webpack_exports__, {
             version: pong.version
         })), Effect.orElseSucceed(()=>null));
 /**
- * How long a daemon gets to exit after acknowledging a shutdown request —
- * the same window its own signal handler allows before forcing the exit.
+ * How long a daemon gets to exit after acknowledging a shutdown request. It
+ * is the same window its own signal handler allows before forcing the exit.
  */ const exitGraceMs = 5000;
 /** `kill -0`: EPERM is another user's live process, ESRCH is gone. */ const processAlive = (pid)=>{
     try {
@@ -21928,7 +21928,7 @@ const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlin
                 kind: 'unreachable'
             })
     }));
-/** The one text for a daemon newer than the client that asked it to go. */ const newerDaemonMessage = (daemon, clientVersion)=>`cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is newer than this client (${clientVersion}); not replaced — upgrade this install, or restart the session so its hooks and MCP server come from the current plugin`;
+/** The one text for a daemon newer than the client that asked it to go. */ const newerDaemonMessage = (daemon, clientVersion)=>`cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is newer than this client (${clientVersion}), so this client did not replace it. Upgrade this install, or restart the session so its hooks and MCP server come from the current plugin.`;
 /**
  * The daemon behind the socket is a newer build than this client, or refused
  * the shutdown as one. Replacement is directional: an older client never
@@ -21947,11 +21947,11 @@ const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlin
     constructor(fields){
         super({
             ...fields,
-            message: `cargo-hauler daemon pid ${fields.daemon.pid} (${fields.daemon.version}) is incompatible with this client (${fields.clientVersion}); not replaced while compatibility cannot be established — stop it with \`hauler daemon stop\` from its install`
+            message: `cargo-hauler daemon pid ${fields.daemon.pid} (${fields.daemon.version}) is incompatible with this client (${fields.clientVersion}). This client cannot establish compatibility, so it did not replace the daemon. Stop it with \`hauler daemon stop\` from its install.`
         });
     }
 }
-/** The one text for a daemon that outlived the grace after a shutdown request. */ const notReplacedMessage = (daemon, graceMs)=>`cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is still running ${(0,_ui_shared_format_js__rspack_import_6/* .formatMs */._V)(graceMs)} after the shutdown request; not restarted — retry once it has exited, or stop it with \`hauler daemon stop\``;
+/** The one text for a daemon that outlived the grace after a shutdown request. */ const notReplacedMessage = (daemon, graceMs)=>`cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is still running ${(0,_ui_shared_format_js__rspack_import_6/* .formatMs */._V)(graceMs)} after the shutdown request, so the restart did not start a new daemon. Retry once it has exited, or stop it with \`hauler daemon stop\`.`;
 /**
  * A daemon of another version acknowledged the shutdown request but was
  * still running at the end of the grace, so this build's daemon was not
@@ -22844,7 +22844,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 const hiddenCargoReason = 'cargo ran outside cargo-hauler (wrapper script, alias, or shell variable)';
-const hiddenCargoContext = 'cargo-hauler: this command ran cargo outside the broker — through a wrapper script, alias, or shell variable the hook cannot see — so it skipped lane serialization, attach, and the ledger. Name `cargo` in the command itself (env prefixes are fine: `RUSTC_WRAPPER= cargo test …`) or run `hauler exec -- cargo …` so the daemon brokers it.';
+const hiddenCargoContext = 'cargo-hauler: this command ran cargo outside the broker, through a wrapper script, alias, or shell variable the hook cannot see. The run skipped lane serialization, attach, and the ledger. Name `cargo` in the command itself, or run `hauler exec -- cargo …` so the daemon brokers it. An env prefix such as `RUSTC_WRAPPER= cargo test …` is fine.';
 const extractExitCode = (toolResponse)=>{
     if (!(0,_util_guards_js__rspack_import_4/* .isRecord */.u)(toolResponse)) {
         return undefined;
@@ -22888,7 +22888,7 @@ const decideAfterShell = async (event, context, services)=>{
     // Only cargo/hauler activity belongs in the telemetry log; every other
     // shell command still flows through so completion notifications inject.
     // A command that never named cargo but printed cargo's status lines ran it
-    // unbrokered; it is recorded with the reason and the agent is told.
+    // unbrokered. The hook records it with the reason and tells the agent.
     const hidden = (0,_tokens_js__rspack_import_3/* .hiddenCargoRun */.j)(command, (0,_tool_input_js__rspack_import_6/* .extractShellOutput */.N)(event.toolResponse));
     if (hidden || command.includes('cargo') || command.includes('hauler')) {
         const record = services.record ?? _record_js__rspack_import_1/* .appendHookRecord */.r;
@@ -22972,8 +22972,8 @@ __webpack_require__.d(__webpack_exports__, {
 const continueResult = ()=>({
         outcome: 'continue'
     });
-const denyCleanReason = 'cargo clean is blocked while cargo-hauler has in-flight builds; wait for them to finish or run hauler status';
-// Telemetry only: whitespace splitting intentionally does not preserve quoted arguments.
+const denyCleanReason = 'cargo clean is blocked while cargo-hauler has in-flight builds. Wait for them to finish, or run hauler status.';
+// Whitespace splitting does not preserve quoted arguments, which telemetry accepts.
 const attemptArgv = (command)=>command.trim().split(/\s+/u);
 const denyClean = async (input)=>{
     const result = {
@@ -23017,8 +23017,8 @@ const decideBeforeShell = async (event, context, services)=>{
     }
     const prepared = (0,_inspect_js__rspack_import_0/* .prepareShellCommand */.Ty)(command);
     const inspection = prepared.inspection;
-    // `alreadyWrapped` alone is not a short-circuit: `hauler exec -- cargo build
-    // && cargo test` still has an unbrokered half.
+    // `alreadyWrapped` alone is not a short-circuit, because
+    // `hauler exec -- cargo build && cargo test` still has an unbrokered half.
     if (!inspection.hasCargo) {
         return continueResult();
     }
@@ -23044,8 +23044,8 @@ const decideBeforeShell = async (event, context, services)=>{
             case 'busy':
                 break;
             case 'absent':
-                // No daemon: nothing to race, and brokering would only auto-start one
-                // for a clean.
+                // With no daemon there is nothing to race, and brokering would only
+                // auto-start one for a clean.
                 return continueResult();
             case 'active':
                 return denyClean({
@@ -23082,11 +23082,11 @@ const decideBeforeShell = async (event, context, services)=>{
     } : {
         command: rewritten
     };
-    // Every segment brokered: the daemon governs the whole command, so an
+    // When every segment is brokered, the daemon governs the whole command, so an
     // explicit allow keeps the host from prompting for it (a pass-through result
     // carries no decision since agent-bundle#461). A command that also runs
     // something the daemon does not govern (`cargo test && rm -rf target`) is
-    // still rewritten, but never approved as a whole: `continue` hands the
+    // still rewritten, but never approved as a whole. `continue` hands the
     // rewritten input to the host's own permission flow, exactly as it would
     // have decided the original.
     const outcome = inspection.ungoverned ? 'continue' : 'allow';
@@ -23133,7 +23133,7 @@ __webpack_require__.d(__webpack_exports__, {
 "./src/internal/host-hooks/best-effort.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 // A hook's control result must not wait on observability indefinitely.
 const recordBudgetMs = 50;
-/** Fixed codes only: never disclose a command, argument, path, or error payload. */ const reportHookDiagnostic = (services, code)=>{
+/** Report fixed codes only. Never disclose a command, argument, path, or error payload. */ const reportHookDiagnostic = (services, code)=>{
     try {
         const result = services.diagnostic === undefined ? process.stderr.write(`[cargo-hauler] beforeTool ${code}\n`) : services.diagnostic(code);
         void Promise.resolve(result).catch(()=>undefined);
@@ -23184,8 +23184,8 @@ __webpack_require__.d(__webpack_exports__, {
 
 /**
  * The hook libraries' shell event read from the framework's canonical payload
- * (agent-bundle#466): one cross-host reading of the envelope, each field absent
- * when the host did not send it. A `tool/before` payload is the same reading
+ * (agent-bundle#466). It is one cross-host reading of the envelope, with each
+ * field absent when the host did not send it. A `tool/before` payload is the same reading
  * without `toolResponse`, so `handleBeforeShell` takes the result as is.
  */ const shellEventFrom = (payload)=>({
         cwd: payload.cwd?.value,
@@ -23282,8 +23282,8 @@ const sleepSync = (ms)=>{
  * Serializes read-modify-write cycles on the shared state file across the
  * hook processes of every concurrent session (#110). Atomic rename keeps
  * readers from seeing a torn file, but two hooks that both load state,
- * apply their own change, and save would drop each other's: one session's
- * cursor or deny counter silently lost. The lock is a `.lock` directory
+ * apply their own change, and save would drop each other's. One session's
+ * cursor or deny counter would be lost without an error. The lock is a `.lock` directory
  * beside the file (proper-lockfile, the daemon singleton's mechanism);
  * hooks are short-lived, so waiting is bounded and a lock that cannot be
  * taken in time degrades to the previous unlocked update rather than
@@ -23683,7 +23683,7 @@ const wrapWords = (words, cargoIndex, options)=>[
         ...words.slice(cargoIndex)
     ];
 /**
- * Tokens the round-trip comparison treats as one statement separator: the
+ * Tokens the round-trip comparison treats as one statement separator. The
  * printer emits `;\n` where the source had `;` or a newline.
  */ const separatorTypes = new Set([
     bashjsast__rspack_import_0.T.NEWLINE,
@@ -23691,7 +23691,7 @@ const wrapWords = (words, cargoIndex, options)=>[
 ]);
 /**
  * Reserved words and grouping tokens the printer pads with newlines (`then\n`,
- * `do\n`, `{ \n`, `\nfi`). Separators next to them carry no meaning: the lexer
+ * `do\n`, `{ \n`, `\nfi`). Separators next to them carry no meaning, because the lexer
  * only produces these token types in command position, so a missing separator
  * would already show up as a different token type.
  */ const structuralTypes = new Set([
@@ -23870,7 +23870,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 const defaultTimeoutMs = 250;
-/** `ENOTSOCK` joins the shared set here: a stale non-socket file at the path is no daemon either. */ const absent = (code)=>_platform_socket_errors_js__rspack_import_0/* .absentSocketCodes.has */.d.has(code) || code === 'ENOTSOCK';
+/** `ENOTSOCK` joins the shared set here, because a stale non-socket file at the path is no daemon either. */ const absent = (code)=>_platform_socket_errors_js__rspack_import_0/* .absentSocketCodes.has */.d.has(code) || code === 'ENOTSOCK';
 const reportHasActive = (report)=>{
     if (Array.isArray(report.active) && report.active.length > 0) {
         return true;
@@ -23973,8 +23973,8 @@ const asPending = (value)=>{
 };
 /**
  * Newline-splits the reply stream one decoded chunk at a time. A one-shot
- * request reads a single line, so this stays dependency-free on purpose: the
- * hook entries built from this module must not load Effect (the shared
+ * request reads a single line, so this stays dependency-free. The hook
+ * entries built from this module must not load Effect (the shared
  * `LineBuffer` does) before deciding whether a shell call concerns them.
  */ const lineSplitter = ()=>{
     let pending = '';
@@ -24081,7 +24081,7 @@ const requestOnce = (message, socketPath, timeoutMs)=>new Promise((resolve)=>{
     return outcome.kind === 'reply' ? outcome.message : null;
 };
 const recordDeniedAttempt = async (attempt, socketPath = (0,_paths_js__rspack_import_3/* .resolveHookSocketPath */.G)())=>{
-    // Fire-and-forget write: it parses no versioned payload, and sending it
+    // A fire-and-forget write parses no versioned payload, and sending it
     // directly preserves the 30 ms audit path when a busy daemon delays ping.
     await requestOnce({
         argv: [
@@ -24130,7 +24130,7 @@ const listSessionCompleted = async (session, sinceMs, socketPath = (0,_paths_js_
     });
 };
 const waitForTickets = async (tickets, maxWaitMs, socketPath = (0,_paths_js__rspack_import_3/* .resolveHookSocketPath */.G)())=>{
-    // Await concurrently: with serial waits, one slow ticket could burn the
+    // Await concurrently. With serial waits, one slow ticket could use up the
     // whole budget and hide another ticket that finished long ago.
     const awaited = await Promise.all(tickets.map(async (ticket)=>{
         const message = await requestJson({
@@ -24168,9 +24168,9 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 /**
- * The bounded wait `after-shell.ts` has always given the `session-completed`
- * request: long enough for a daemon busy fanning out builds, short enough
- * that a stuck socket cannot hold a tool call.
+ * The bounded wait for the `session-completed` request. It is long enough
+ * for a daemon busy fanning out builds and short enough that a stuck socket
+ * cannot hold a tool call.
  */ const defaultPingTimeoutMs = 500;
 /** Tickets the `tool/after` handler handed the rendered view, or undefined when it did not ping. */ const finishedTicketsFromRenderInput = (value)=>{
     if (!(0,_util_guards_js__rspack_import_2/* .isRecord */.u)(value) || value.kind !== 'finished' || !Array.isArray(value.tickets)) {
@@ -24190,16 +24190,16 @@ __webpack_require__.d(__webpack_exports__, {
     };
 };
 /**
- * The smallest client of the daemon's `session-completed` request: one
- * `net.connect` on the Unix socket, one NDJSON line out, the first line back
- * (`requestOutcome`, which is dependency-free — no Effect runtime, no shared
- * `LineBuffer`). The `tool/after` handler runs this on every shell call before
- * deciding whether the rendered view needs to load at all. It never throws
- * and never writes to stdout or stderr: a daemon that is down or slow is an
- * `unavailable` value, not an error.
+ * The smallest client of the daemon's `session-completed` request. It makes
+ * one `net.connect` on the Unix socket, writes one NDJSON line, and reads the
+ * first line back through `requestOutcome`, which loads no Effect runtime and
+ * no shared `LineBuffer`. The `tool/after` handler runs this on every shell
+ * call before deciding whether the rendered view needs to load at all. It
+ * never throws and never writes to stdout or stderr. A daemon that is down or
+ * slow is an `unavailable` value, not an error.
  *
  * The wire shape is exactly the one `listSessionCompleted` in `rpc.ts`
- * sends: one client on the wire, whichever entry point built the message.
+ * sends, so the wire sees one client whichever entry point built the message.
  */ const pingSessionCompleted = async (session, sinceMs, options = {})=>{
     const outcome = await requestOutcome({
         id: 'hook-completed',
@@ -24259,14 +24259,14 @@ const formatFinishedTicket = (ticket)=>{
     const counts = (0,_ui_documents_headlines_js__rspack_import_0/* .diagnosticCounts */.YQ)(ticket);
     switch(ticket.status){
         case 'done':
-            return `ticket ${ticket.ticket} finished: success${counts === null ? '' : `, ${counts}`} — call hauler_result ${ticket.ticket}`;
+            return `ticket ${ticket.ticket} finished: success${counts === null ? '' : `, ${counts}`}. Call hauler_result ${ticket.ticket}.`;
         case 'failed':
             {
                 const detail = ticket.error === null || ticket.error.length === 0 ? '' : ` (${ticket.error})`;
-                return `ticket ${ticket.ticket} finished: failed${counts === null ? '' : `, ${counts}`}${detail} — call hauler_result ${ticket.ticket}`;
+                return `ticket ${ticket.ticket} finished: failed${counts === null ? '' : `, ${counts}`}${detail}. Call hauler_result ${ticket.ticket}.`;
             }
         case 'killed':
-            return `ticket ${ticket.ticket} finished: killed${counts === null ? '' : `, ${counts}`} — call hauler_result ${ticket.ticket}`;
+            return `ticket ${ticket.ticket} finished: killed${counts === null ? '' : `, ${counts}`}. Call hauler_result ${ticket.ticket}.`;
         default:
             {
                 const exhaustive = ticket.status;
@@ -24307,9 +24307,9 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 
-// 30s per hold is deliberately far below the 900s stop-hook budget: Codex's
-// per-hook timeout honoring is unverified, and the re-deny loop already makes
-// the total wait unbounded. Raise via CARGO_HAULER_STOP_WAIT_MS on hosts
+// 30s per hold is far below the 900s stop-hook budget, because nobody has
+// verified that Codex honors per-hook timeouts, and the re-deny loop already
+// makes the total wait unbounded. Raise via CARGO_HAULER_STOP_WAIT_MS on hosts
 // known to honor long hook timeouts; values above the daemon's await ceiling
 // are clamped, since the wire schema rejects a larger `maxWaitMs` outright
 // and every ticket would then read as unfinished.
@@ -24377,7 +24377,7 @@ const decideStopHold = async (event, services)=>{
     if (finished.length > 0) {
         return {
             outcome: 'deny',
-            reason: `${finished.map(_shared_js__rspack_import_3/* .formatFinishedTicket */.S).join('; ')}; agent should restart holding these results`
+            reason: `${finished.map(_shared_js__rspack_import_3/* .formatFinishedTicket */.S).join(' ')} Restart with these results in hand.`
         };
     }
     const bump = services.incrementDenyCount ?? _hook_state_js__rspack_import_1/* .incrementDenyCount */.ln;
@@ -24386,7 +24386,7 @@ const decideStopHold = async (event, services)=>{
     }
     return {
         outcome: 'deny',
-        reason: `results pending: ${pending.map((ticket)=>formatPending(ticket, nowMs)).join('; ')}; stop again to keep waiting or call hauler_await`
+        reason: `results pending: ${pending.map((ticket)=>formatPending(ticket, nowMs)).join('; ')}. Stop again to keep waiting, or call hauler_await.`
     };
 };
 const handleStopHold = async (event, services = {}, _context = {})=>{
@@ -24410,17 +24410,17 @@ __webpack_require__.d(__webpack_exports__, {
 "./src/internal/host-hooks/tokens.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /**
  * The pre-parse test the cheap `tool/before` and `tool/after` handlers apply
- * before anything heavy loads: does the shell command name `cargo` or
- * `hauler` as a token? Boundaries are any character outside
+ * before anything heavy loads. It asks whether the shell command names
+ * `cargo` or `hauler` as a token. Boundaries are any character outside
  * `[A-Za-z0-9_]`, so `cargo-hauler`, `~/.cargo/bin/cargo`, `cargo.exe`,
  * `./scripts/cargo-wrapper`, and `echo cargo` all match while `mycargo` and
- * `CARGO_HOME=/x ls` do not. The match is case-insensitive (`Cargo.toml`
- * matches): false positives cost one parse of the command in-process, false
- * negatives would let a cargo invocation bypass the hauler, so the test errs
- * toward matching.
+ * `CARGO_HOME=/x ls` do not. The match is case-insensitive, so `Cargo.toml`
+ * matches. A false positive costs one parse of the command in-process, and a
+ * false negative would let a cargo invocation bypass the hauler, so the test
+ * errs toward matching.
  *
  * This is a superset of the check `before-shell.ts` itself applies
- * (`command.includes('cargo')`): every command the rewrite could govern, and
+ * (`command.includes('cargo')`). Every command the rewrite could govern, and
  * every command `after-shell.ts` records, mentions one of these tokens.
  */ const haulerToken = /(?:^|[^A-Za-z0-9_])(?:cargo|hauler)(?![A-Za-z0-9_])/iu;
 /** True when the command mentions cargo or hauler as a token; `undefined` and `''` never do. */ const commandMentionsHauler = (command)=>command !== undefined && command.length > 0 && haulerToken.test(command);
@@ -24429,8 +24429,8 @@ __webpack_require__.d(__webpack_exports__, {
  * foo v0.1.0`, `    Finished \`test\` profile …`, `     Running unittests`,
  * `   Doc-tests foo`. Found in a shell tool's captured output for a command
  * that never named cargo, they mean cargo ran through a wrapper script, an
- * alias, or a shell variable — the one shape neither the rewrite nor the
- * PATH shim sees (the shim is skipped by an absolute toolchain path).
+ * alias, or a shell variable. Neither the rewrite nor the PATH shim sees that
+ * shape, and an absolute toolchain path skips the shim.
  */ const cargoStatusLine = /^(?: {3}Compiling| {4}Checking| {4}Finished| {5}Running| {3}Doc-tests| Documenting| {4}Blocking) \S/mu;
 /**
  * Commands whose output is a file they were asked to show. A saved cargo log
@@ -24456,7 +24456,7 @@ const readsFile = (command)=>{
 };
 /**
  * True when the command names neither cargo nor hauler, is not a file reader,
- * and its output carries cargo status lines: cargo ran, and nothing brokered
+ * and its output carries cargo status lines. Cargo ran, and nothing brokered
  * it. `undefined` output never does.
  */ const hiddenCargoRun = (command, output)=>command !== undefined && output !== undefined && !commandMentionsHauler(command) && !readsFile(command) && cargoStatusLine.test(output);
 
@@ -24473,8 +24473,8 @@ __webpack_require__.d(__webpack_exports__, {
 /**
  * `tool_input.command` as the host sent it; `undefined` when the tool input
  * is not a shell call (Read, Edit, an MCP tool, Codex's non-object input).
- * Dependency-free on purpose: the cheap hook handlers read it before anything
- * heavier loads.
+ * It has no dependencies because the cheap hook handlers read it before
+ * anything heavier loads.
  */ const extractShellCommand = (toolInput)=>{
     if (!(0,_util_guards_js__rspack_import_0/* .isRecord */.u)(toolInput) || typeof toolInput.command !== 'string') {
         return undefined;
@@ -24489,10 +24489,10 @@ const outputKeys = [
     'result'
 ];
 /**
- * The text a finished shell call produced, as the host reports it: Claude's
- * `{stdout, stderr}`, a bare string, or an `output`/`content`/`result` field.
- * `undefined` when the response carries no text — the hook then has nothing
- * to look at and fails open.
+ * The text a finished shell call produced, as the host reports it in Claude's
+ * `{stdout, stderr}`, a bare string, or an `output`, `content`, or `result`
+ * field. `undefined` when the response carries no text, and the hook then has
+ * nothing to look at and fails open.
  */ const extractShellOutput = (toolResponse)=>{
     if (typeof toolResponse === 'string') {
         return toolResponse;
@@ -25402,8 +25402,9 @@ const elapsedMs = (record, nowMs)=>{
 const diagnosticCounts = (record)=>record.errorCount === null || record.warningCount === null ? null : `${(0,_util_text_js__rspack_import_0/* .countWord */.M)(record.errorCount, 'error')}, ${(0,_util_text_js__rspack_import_0/* .countWord */.M)(record.warningCount, 'warning')}`;
 /**
  * The dependency watcher records `prerequisite cc-N <status>` when it fails
- * a queued job without starting it. Check the lifecycle too: an executed
- * command with similar error text is still a failed run, not a blocked one.
+ * a queued job without starting it. Check the lifecycle too, because an
+ * executed command with similar error text is still a failed run, not a
+ * blocked one.
  */ const failedPrerequisite = (record)=>{
     if (record.status !== 'failed' || record.startedAtMs !== null || record.exitCode !== null) return null;
     return /^prerequisite (cc-\d+) (?:failed|killed|denied|passthrough|unknown)$/u.exec(record.error ?? '')?.[1] ?? null;
@@ -25437,11 +25438,11 @@ __webpack_require__.d(__webpack_exports__, {
 const unresponsiveDetail = (reason, timeoutMs)=>{
     switch(reason){
         case 'accept-timeout':
-            return `did not accept a connection within ${(0,_shared_format_js__rspack_import_0/* .formatMs */._V)(timeoutMs)} (machine saturated); ledger reads still work`;
+            return `did not accept a connection within ${(0,_shared_format_js__rspack_import_0/* .formatMs */._V)(timeoutMs)} (machine saturated). Ledger reads still work`;
         case 'answer-timeout':
-            return `accepted the connection but sent no status within ${(0,_shared_format_js__rspack_import_0/* .formatMs */._V)(timeoutMs)} (busy fanning out output); ledger reads still work`;
+            return `accepted the connection but sent no status within ${(0,_shared_format_js__rspack_import_0/* .formatMs */._V)(timeoutMs)} (busy fanning out output). Ledger reads still work`;
         case 'connection-closed':
-            return 'closed the connection before answering; ledger reads still work';
+            return 'closed the connection before answering. Ledger reads still work';
         default:
             {
                 const exhaustive = reason;
@@ -25463,7 +25464,7 @@ const daemonBadgeModel = (health, nowMs)=>{
             }
         case 'stopped':
             return {
-                detail: health.reason === 'socket-missing' ? 'no socket; it starts on demand with the next cargo request' : 'socket present but connection refused; a stale socket from an earlier daemon',
+                detail: health.reason === 'socket-missing' ? 'no socket' : 'a stale socket from an earlier daemon refused the connection',
                 headline: 'daemon stopped',
                 state: health.state
             };
@@ -25475,7 +25476,7 @@ const daemonBadgeModel = (health, nowMs)=>{
             };
         case 'unreachable':
             return {
-                detail: `socket present but could not be opened (${health.detail}); the daemon may be running — check permissions on the state directory`,
+                detail: `socket present but could not be opened (${health.detail}). The daemon may be running, so check permissions on the state directory`,
                 headline: 'daemon unreachable',
                 state: health.state
             };
@@ -25599,13 +25600,13 @@ const attachText = (record)=>{
     }
     const mode = record.attachMode === null ? '' : ` (${record.attachMode})`;
     const saved = record.savedComputeMs === null || record.savedComputeMs === undefined ? '' : `, saved ~${formatMs(record.savedComputeMs)} of compute`;
-    return `rode ${record.attachedTo}${mode}${saved}`;
+    return `attached to ${record.attachedTo}${mode}${saved}`;
 };
-/** `cc-3 (running 2m/~5m)` or `cc-4 (queued)`: one unsettled prerequisite. */ const prerequisiteText = (prerequisite)=>{
+/** One unsettled prerequisite, as `cc-3 (running 2m/~5m)` or `cc-4 (queued)`. */ const prerequisiteText = (prerequisite)=>{
     const progress = prerequisite.elapsedMs === undefined ? prerequisite.status : `running ${formatMs(prerequisite.elapsedMs)}${prerequisite.estimateMs === undefined ? '' : `/~${formatMs(prerequisite.estimateMs)}`}`;
     return `${prerequisite.ticket} (${progress})`;
 };
-/** What a queued ticket is waiting on: prerequisites first (it has no lane position while blocked), then the lane. */ const waitsForText = (record)=>record.waitingFor === undefined || record.waitingFor.length === 0 ? null : `waits for ${record.waitingFor.map(prerequisiteText).join(', ')}`;
+/** What a queued ticket waits on. Prerequisites come first because a blocked ticket has no lane position, then the lane. */ const waitsForText = (record)=>record.waitingFor === undefined || record.waitingFor.length === 0 ? null : `waits for ${record.waitingFor.map(prerequisiteText).join(', ')}`;
 const queueText = (record)=>{
     const queue = record.queue;
     if (record.status !== 'queued') {
@@ -25616,7 +25617,7 @@ const queueText = (record)=>{
         waitsForText(record),
         queue === undefined ? null : `${queue.position} ahead${head}, wait ~${formatMs(queue.waitEtaMs)}`,
         record.admissionHold === undefined ? null : `waiting: ${record.admissionHold.detail}`,
-        record.delayed === true ? 'wait exceeds estimate — lane busy' : null,
+        record.delayed === true ? 'wait exceeds estimate because the lane is busy' : null,
         queue?.headEstimateState === 'overrun' ? 'head overrunning its estimate but alive' : null
     ].filter((part)=>part !== null);
     return parts.length === 0 ? null : parts.join('; ');
@@ -25629,8 +25630,8 @@ const queueText = (record)=>{
     if (record.status !== 'running' || record.stall === undefined) {
         return null;
     }
-    const owner = record.orphaned === true ? '; owner disconnected' : '';
-    return `looks stalled: no CPU for ${formatMs(record.stall.idleMs)} and no output${owner} — hauler kill ${record.attachedTo ?? record.ticket}`;
+    const owner = record.orphaned === true ? ', owner disconnected' : '';
+    return `looks stalled: no CPU for ${formatMs(record.stall.idleMs)} and no output${owner}. Free the lane with hauler kill ${record.attachedTo ?? record.ticket}`;
 };
 const ranAs = (record)=>{
     if (record.execArgv === null) {
@@ -25765,7 +25766,7 @@ const formatMs = (ms)=>{
     }
     return `${unit === 0 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`;
 };
-/** Hand-rolled rather than `node:path`: this module also runs in the browser dashboard. */ const pathBasename = (path)=>path.split('/').filter(Boolean).at(-1) ?? path;
+/** Hand-rolled rather than `node:path`, because this module also runs in the browser dashboard. */ const pathBasename = (path)=>path.split('/').filter(Boolean).at(-1) ?? path;
 const shortenPath = (path, maxLength = 38)=>{
     const homed = path.replace(/^\/(?:home|Users)\/[^/]+/u, '~');
     if (homed.length <= maxLength) {
@@ -25778,7 +25779,7 @@ const shortenPath = (path, maxLength = 38)=>{
     return `…/${segments.slice(-2).join('/')}`;
 };
 /**
- * A command line for display: the program is shown by basename so a request
+ * A command line for display. The program shows by basename, so a request
  * that arrived as `/home/me/.cargo/bin/cargo check` (the PATH shim passes the
  * real binary to avoid re-entering itself) reads as `cargo check`.
  */ const commandDisplay = (argv)=>{

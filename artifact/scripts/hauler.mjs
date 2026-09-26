@@ -9724,9 +9724,9 @@ const reattachRetryDelay = '1 second';
 const terminationExitCode = (signal)=>signalExitCode(signal) ?? 1;
 /**
  * Resolves with the first SIGINT/SIGTERM delivered to this process. Handlers
- * are installed only while a fiber awaits this effect — resuming or
- * interrupting removes them — so Node's default (exit on signal) is back in
- * force as soon as the run is over.
+ * are installed only while a fiber awaits this effect, and resuming or
+ * interrupting removes them. Node's default (exit on signal) applies again
+ * as soon as the run is over.
  */ const awaitTerminationSignal = effect_Effect__rspack_import_14/* .callback */.E2r((resume)=>{
     const listeners = new Map();
     const remove = ()=>{
@@ -9899,7 +9899,7 @@ const handleServerMessage = (options, message, state)=>effect_Effect__rspack_imp
                         } : {}
                     }));
                     const capHost = (0,_host_cap_js__rspack_import_12/* .shellCapHost */.Jm)(options.host, process.env);
-                    // What the shell tool actually waits for is the queue plus the run:
+                    // The shell tool waits for the queue plus the run, so
                     // a five-minute build behind six minutes of queued work is killed
                     // just as surely as an eleven-minute build.
                     const totalEtaMs = message.etaMs === undefined ? undefined : message.etaMs + waitEtaMs;
@@ -10046,7 +10046,7 @@ const handleServerMessage = (options, message, state)=>effect_Effect__rspack_imp
                 }
             case 'detach-result':
                 if (!message.detached) {
-                    options.io.writeStderr(`[cargo-hauler] daemon did not detach ticket ${message.ticket} (not owned by this connection); it may be killed when this client exits\n`);
+                    options.io.writeStderr(`[cargo-hauler] daemon did not detach ticket ${message.ticket} (not owned by this connection). The daemon may kill it when this client exits.\n`);
                 }
                 yield* effect_Deferred__rspack_import_16/* .succeed */.Py(state.handshake.acknowledged, undefined);
                 return;
@@ -10145,9 +10145,9 @@ const streamBrokered = (options, config, request, cursor)=>effect_Effect__rspack
         const pumpDone = effect_Fiber__rspack_import_18/* .join */.fj(pumpFiber).pipe(effect_Effect__rspack_import_14/* .asVoid */.NLW, effect_Effect__rspack_import_14/* .ignore */.XeO);
         // A foreground ticket outlives its client's disconnect (holdStop), so a
         // terminal's Ctrl-C or a `timeout` wrapper must ask the daemon to stop
-        // it — and wait for the answer — before this process exits. Scoped to
-        // this connection attempt: a failed open must not leave handlers behind
-        // for the passthrough that follows.
+        // it and wait for the answer before this process exits. The relay is
+        // scoped to this connection attempt, because a failed open must not leave
+        // handlers behind for the passthrough that follows.
         const relay = yield* effect_Effect__rspack_import_14/* .forkScoped */.x6Z(awaitTerminationSignal.pipe(effect_Effect__rspack_import_14/* .flatMap */.qIB((signal)=>effect_Effect__rspack_import_14/* .gen */.JkU(function*() {
                 yield* effect_Ref__rspack_import_17/* .set */.hZ(state.interruptedBy, signal);
                 const owned = yield* effect_Ref__rspack_import_17/* .get */.Jt(ticket);
@@ -10246,7 +10246,7 @@ const streamBrokered = (options, config, request, cursor)=>effect_Effect__rspack
                 orElse: ()=>effect_Effect__rspack_import_14/* .succeed */.PyW(false)
             }));
             if (!acknowledged) {
-                options.io.writeStderr(`[cargo-hauler] daemon did not confirm the detach of ticket ${result.ticket ?? '?'} within ${detachAckTimeout}; check it with hauler result\n`);
+                options.io.writeStderr(`[cargo-hauler] daemon did not confirm the detach of ticket ${result.ticket ?? '?'} within ${detachAckTimeout}. Check it with hauler result.\n`);
             }
         }
         return result;
@@ -10713,8 +10713,8 @@ const formatProgressLine = (event)=>{
         case 'queued':
             {
                 const seconds = (ms)=>`~${Math.max(1, Math.round(ms / 1000))}s`;
-                // A blocked dependent has no lane position yet: what holds it is the
-                // prerequisite, not the queue.
+                // A blocked dependent has no lane position yet, because the
+                // prerequisite holds it, not the queue.
                 const blocked = event.waitingFor !== undefined && event.waitingFor.length > 0;
                 const placement = blocked ? ` waiting for ${ticketList(event.waitingFor ?? [])}` : event.ahead === undefined || event.ahead.length === 0 ? '' : ` behind ${ticketList(event.ahead)}`;
                 const parts = [
@@ -10735,7 +10735,7 @@ const formatProgressLine = (event)=>{
             {
                 switch(event.mode){
                     case 'identity':
-                        return `${prefix} ticket ${event.ticket} attached to ${event.leaderTicket} (identical run in flight; replaying its output)\n`;
+                        return `${prefix} ticket ${event.ticket} attached to ${event.leaderTicket} (identical run in flight, replaying its output)\n`;
                     case 'coverage':
                         return `${prefix} ticket ${event.ticket} attached to ${event.leaderTicket} (covered by a larger run in flight)\n`;
                     case 'batch':
@@ -10756,7 +10756,7 @@ const formatProgressLine = (event)=>{
                 if (event.command !== undefined) {
                     const held = event.hold === undefined ? '' : ` · waiting: ${event.hold.detail}`;
                     const prerequisites = event.waitingFor === undefined || event.waitingFor.length === 0 ? '' : ` · waiting for ${event.waitingFor.map(prerequisiteText).join(', ')}`;
-                    const delayed = `${held}${prerequisites}${event.delayed === true ? ' · wait exceeds estimate — lane busy' : ''}`;
+                    const delayed = `${held}${prerequisites}${event.delayed === true ? ' · wait exceeds estimate because the lane is busy' : ''}`;
                     if (event.phase === 'queued' && event.queue !== undefined) {
                         const head = event.queue.headTicket === undefined ? '' : ` (head ${event.queue.headTicket} running${event.queue.headElapsedMs === undefined ? '' : ` ${formatDuration(event.queue.headElapsedMs)}${event.queue.headEstimateMs === undefined ? '' : `/~${formatDuration(event.queue.headEstimateMs)}`}`})`;
                         const lane = event.laneName === undefined ? event.ticket : event.laneName;
@@ -10769,7 +10769,7 @@ const formatProgressLine = (event)=>{
                 return `${prefix} ticket ${event.ticket} still ${event.phase} (${Math.floor(event.elapsedMs / 1000)}s)\n`;
             }
         case 'passthrough':
-            return `${prefix} ${event.reason}; running cargo directly\n`;
+            return `${prefix} running cargo directly: ${event.reason}\n`;
         case 'background':
             {
                 const eta = event.estimateMs === null ? '' : ` (ETA ${Math.max(1, Math.round(event.estimateMs / 1000))}s)`;
@@ -10777,8 +10777,8 @@ const formatProgressLine = (event)=>{
                 if (event.auto === undefined) {
                     return `${prefix} ticket ${event.ticket} submitted in background${eta}\n${retrieve}`;
                 }
-                const redirected = event.auto.stdoutRedirected ? `; your redirected stdout receives no output; once it runs, \`hauler result ${event.ticket}\` names its full log` : '';
-                return `${prefix} ticket ${event.ticket} estimate${eta} exceeds the ${event.auto.host} shell cap (${formatDuration(event.auto.capMs)}); submitted in background, not run yet (exit 75)${redirected}\n${retrieve}`;
+                const redirected = event.auto.stdoutRedirected ? ` Your redirected stdout receives no output. Once the ticket runs, \`hauler result ${event.ticket}\` names its full log.` : '';
+                return `${prefix} ticket ${event.ticket} estimate${eta} exceeds the ${event.auto.host} shell cap (${formatDuration(event.auto.capMs)}). It runs in the background and has not started yet (exit 75).${redirected}\n${retrieve}`;
             }
         default:
             {
@@ -10804,7 +10804,7 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var _util_id_js__rspack_import_1 = __webpack_require__("./src/internal/util/id.ts");
 /* import */ var _control_js__rspack_import_2 = __webpack_require__("./src/internal/client/control.ts");
 /**
- * The primitives for replacing a running daemon, shared by the automatic
+ * The building blocks for replacing a running daemon, shared by the automatic
  * replacement in `ensureDaemonRunning` (a daemon of another version answers
  * the socket) and the manual `hauler daemon restart`. A leaf on purpose:
  * `lifecycle.ts` imports `ensure-daemon.ts`, and both import this.
@@ -10821,8 +10821,8 @@ __webpack_require__.d(__webpack_exports__, {
             version: pong.version
         })), effect_Effect__rspack_import_3/* .orElseSucceed */.DM4(()=>null));
 /**
- * How long a daemon gets to exit after acknowledging a shutdown request —
- * the same window its own signal handler allows before forcing the exit.
+ * How long a daemon gets to exit after acknowledging a shutdown request. It
+ * is the same window its own signal handler allows before forcing the exit.
  */ const exitGraceMs = 5000;
 /** `kill -0`: EPERM is another user's live process, ESRCH is gone. */ const processAlive = (pid)=>{
     try {
@@ -10898,7 +10898,7 @@ const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlin
                 kind: 'unreachable'
             })
     }));
-/** The one text for a daemon newer than the client that asked it to go. */ const newerDaemonMessage = (daemon, clientVersion)=>`cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is newer than this client (${clientVersion}); not replaced — upgrade this install, or restart the session so its hooks and MCP server come from the current plugin`;
+/** The one text for a daemon newer than the client that asked it to go. */ const newerDaemonMessage = (daemon, clientVersion)=>`cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is newer than this client (${clientVersion}), so this client did not replace it. Upgrade this install, or restart the session so its hooks and MCP server come from the current plugin.`;
 /**
  * The daemon behind the socket is a newer build than this client, or refused
  * the shutdown as one. Replacement is directional: an older client never
@@ -10917,11 +10917,11 @@ const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlin
     constructor(fields){
         super({
             ...fields,
-            message: `cargo-hauler daemon pid ${fields.daemon.pid} (${fields.daemon.version}) is incompatible with this client (${fields.clientVersion}); not replaced while compatibility cannot be established — stop it with \`hauler daemon stop\` from its install`
+            message: `cargo-hauler daemon pid ${fields.daemon.pid} (${fields.daemon.version}) is incompatible with this client (${fields.clientVersion}). This client cannot establish compatibility, so it did not replace the daemon. Stop it with \`hauler daemon stop\` from its install.`
         });
     }
 }
-/** The one text for a daemon that outlived the grace after a shutdown request. */ const notReplacedMessage = (daemon, graceMs)=>`cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is still running ${(0,_ui_shared_format_js__rspack_import_6/* .formatMs */._V)(graceMs)} after the shutdown request; not restarted — retry once it has exited, or stop it with \`hauler daemon stop\``;
+/** The one text for a daemon that outlived the grace after a shutdown request. */ const notReplacedMessage = (daemon, graceMs)=>`cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is still running ${(0,_ui_shared_format_js__rspack_import_6/* .formatMs */._V)(graceMs)} after the shutdown request, so the restart did not start a new daemon. Retry once it has exited, or stop it with \`hauler daemon stop\`.`;
 /**
  * A daemon of another version acknowledged the shutdown request but was
  * still running at the end of the grace, so this build's daemon was not
@@ -11554,7 +11554,7 @@ const statusInputSchema = zod__rspack_import_1/* .object */.Ikc({
     session: zod__rspack_import_1/* .string */.YjP().min(1).optional(),
     laneKey: zod__rspack_import_1/* .string */.YjP().min(1).optional(),
     tickets: zod__rspack_import_1/* .array */.YOg(zod__rspack_import_1/* .string */.YjP().min(1)).max(100).optional(),
-    statuses: zod__rspack_import_1/* .array */.YOg(zod__rspack_import_1/* ["enum"] */.k5n(_protocol_js__rspack_import_0/* .statusRowStatuses */.$K)).max(_protocol_js__rspack_import_0/* .statusRowStatuses.length */.$K.length).optional().describe('Filter by projected status, where stopped-daemon active rows appear as orphaned and running matches nothing'),
+    statuses: zod__rspack_import_1/* .array */.YOg(zod__rspack_import_1/* ["enum"] */.k5n(_protocol_js__rspack_import_0/* .statusRowStatuses */.$K)).max(_protocol_js__rspack_import_0/* .statusRowStatuses.length */.$K.length).optional().describe('Filter by projected status. While the daemon is stopped, active rows appear as orphaned and running matches nothing.'),
     commandContains: zod__rspack_import_1/* .string */.YjP().min(1).optional()
 }).strict();
 const statusResultSchema = zod__rspack_import_1/* .object */.Ikc({
@@ -11647,7 +11647,7 @@ const daemonResultSchema = zod__rspack_import_1/* .object */.Ikc({
  * 2 h): the rendered routes declare a matching `config.render.maxElapsedMs`
  * (agent-bundle#454), so the wire is the only bound. Callers wanting longer
  * call again.
- */ const awaitMaxWaitMessage = `maxWaitMs is capped at ${_protocol_js__rspack_import_0/* .awaitCeilingMs */._K} ms (2 h) per call — the daemon's await ceiling; call await again to keep waiting`;
+ */ const awaitMaxWaitMessage = `maxWaitMs is capped at ${_protocol_js__rspack_import_0/* .awaitCeilingMs */._K} ms (2 h) per call, the daemon's await ceiling. Call await again to keep waiting.`;
 const ticketInputSchema = zod__rspack_import_1/* .object */.Ikc({
     ticket: zod__rspack_import_1/* .string */.YjP().min(1),
     maxWaitMs: zod__rspack_import_1/* .number */.aig().int().min(0).max(_protocol_js__rspack_import_0/* .awaitCeilingMs */._K, {
@@ -11661,7 +11661,7 @@ const ticketInputSchema = zod__rspack_import_1/* .object */.Ikc({
  * rendered-route budget for nothing.
  */ const resultInputSchema = zod__rspack_import_1/* .object */.Ikc({
     ticket: zod__rspack_import_1/* .string */.YjP().min(1),
-    full: zod__rspack_import_1/* .boolean */.zMY().optional().describe('Render the on-disk output log, its last 768 KiB when larger, instead of the stored tail')
+    full: zod__rspack_import_1/* .boolean */.zMY().optional().describe('Render the on-disk output log instead of the stored tail. A log over 768 KiB renders its last 768 KiB.')
 }).strict();
 const awaitResultSchema = zod__rspack_import_1/* .object */.Ikc({
     daemon: daemonStatusSchema,
@@ -11690,7 +11690,7 @@ const requestInputSchema = zod__rspack_import_1/* .object */.Ikc({
     cwd: zod__rspack_import_1/* .string */.YjP().min(1).optional(),
     session: zod__rspack_import_1/* .string */.YjP().optional(),
     host: zod__rspack_import_1/* .string */.YjP().optional(),
-    after: zod__rspack_import_1/* .array */.YOg(zod__rspack_import_1/* .string */.YjP().min(1)).max(50).optional().describe('Tickets (cc-N) that must finish before this request starts; it fails if any of them fails or is killed')
+    after: zod__rspack_import_1/* .array */.YOg(zod__rspack_import_1/* .string */.YjP().min(1)).max(50).optional().describe('Tickets (cc-N) that must finish before this request starts. The request fails if any of them fails or is killed.')
 }).strict();
 /** Where a just-submitted request landed in its lane, from the daemon's acknowledgement. */ const requestQueueSchema = zod__rspack_import_1/* .object */.Ikc({
     ahead: zod__rspack_import_1/* .array */.YOg(zod__rspack_import_1/* .string */.YjP()),
@@ -11873,10 +11873,10 @@ const makeAttachmentRuntime = (deps)=>{
    *
    * The log gets exactly what flows through here, in arrival order, bytes
    * as captured (ANSI included). For a demultiplexed run that is the
-   * rendered view — cargo's JSON message stream never reaches this point;
-   * `handleStdoutLine` forwards each diagnostic's `rendered` text and the
-   * non-JSON stdout lines instead — which is what a reader triaging the
-   * ticket wants, not the raw `--message-format=json` lines.
+   * rendered view, because cargo's JSON message stream never reaches this
+   * point. `handleStdoutLine` forwards each diagnostic's `rendered` text and
+   * the non-JSON stdout lines instead. A reader triaging the ticket wants
+   * that view, not the raw `--message-format=json` lines.
    */ const emitChunk = (job, channel, data, audience = {
         kind: 'all'
     })=>effect_Effect__rspack_import_6/* .gen */.JkU(function*() {
@@ -12054,8 +12054,9 @@ const makeAttachmentRuntime = (deps)=>{
    * nearer miss. A coverage rider needs a leader whose compile is still
    * ahead: one past its build finished proves nothing about the sources as
    * they are now, and the lane has already been handed on, so the rider
-   * runs its own (fresh, likely no-op) cargo instead. Identity riders keep
-   * riding executing leaders — they want the test results, not the build.
+   * runs its own (fresh, likely no-op) cargo instead. Identity riders still
+   * attach to executing leaders, because they want the test results, not the
+   * build.
    */ const decideAttach = (job, attachment)=>{
         const decision = (0,_coverage_js__rspack_import_3/* .attachDecisionFor */.lW)(job.intent, attachment.intent);
         if (decision._tag === 'rejected') {
@@ -12079,7 +12080,7 @@ const makeAttachmentRuntime = (deps)=>{
     };
     /**
    * One debug line per leader that refused the rider, and one count for the
-   * request under its nearest miss — the latest gate any leader reached —
+   * request under its nearest miss (the latest gate any leader reached),
    * so the status metrics answer "why did this not coalesce" without
    * inflating one missed request into one count per leader.
    */ const recordAttachRejections = (attachment, rejections)=>effect_Effect__rspack_import_6/* .gen */.JkU(function*() {
@@ -12230,8 +12231,8 @@ const makeAttachmentRuntime = (deps)=>{
    * Cargo's `Finished` line means every unit in the leader's plan compiled,
    * the rider's among them: a `--no-run` rider would print that line and
    * exit 0 right there. Released with the leader's compile time so far as
-   * the measured compute it did not spend; the leader's exit — a test
-   * failure, a kill mid-run — is no longer the rider's concern.
+   * the measured compute it did not spend. The leader's exit, such as a test
+   * failure or a kill mid-run, is no longer the rider's concern.
    */ const releaseBuildFinishedAttachments = (job, atMs)=>effect_Effect__rspack_import_6/* .gen */.JkU(function*() {
             const released = yield* effect_Effect__rspack_import_6/* .sync */.OH5(()=>{
                 const proven = [];
@@ -12256,7 +12257,7 @@ const makeAttachmentRuntime = (deps)=>{
             const leaderBuildMs = leaderRunMsAt(job, atMs);
             // Released from the stdout pump, like the demux releases: a ledger or
             // metric defect must not surface as a pump failure.
-            yield* effect_Effect__rspack_import_6/* .forEach */.jJl(released, (attachment)=>(0,_job_state_js__rspack_import_4/* .settlementStep */.sb)(`build-finished release (${attachment.ticket})`, finishAttachmentWithNote(job, attachment, atMs, `[cargo-hauler] released early: build finished under ${job.ticket}; --no-run has nothing left to do\n`, {
+            yield* effect_Effect__rspack_import_6/* .forEach */.jJl(released, (attachment)=>(0,_job_state_js__rspack_import_4/* .settlementStep */.sb)(`build-finished release (${attachment.ticket})`, finishAttachmentWithNote(job, attachment, atMs, `[cargo-hauler] released early: build finished under ${job.ticket}, and --no-run has nothing left to do\n`, {
                     status: 'done',
                     exitCode: 0,
                     signal: null,
@@ -12268,8 +12269,8 @@ const makeAttachmentRuntime = (deps)=>{
     /**
    * Follow-up after tryRegisterAttachment wins: ledger the attach, and if
    * the leader is already running, deliver the start notice and replay
-   * catch-up, then re-check early release — the demand may already be
-   * proven by units that finished before this attachment arrived.
+   * catch-up, then re-check early release. Units that finished before this
+   * attachment arrived may already prove the demand.
    *
    * The registration frame and this follow-up are separate steps, so the
    * leader may have settled (or the attachment been killed or released) in
@@ -12323,8 +12324,8 @@ const makeAttachmentRuntime = (deps)=>{
         }
         const event = (0,_cargo_execution_cargo_json_js__rspack_import_2/* .parseCargoJsonLine */.uk)(line);
         if (event === null) {
-            // Non-JSON stdout (test binaries, stray prints): leader and identity
-            // attachments only — it cannot be attributed to a coverage scope.
+            // Non-JSON stdout (test binaries, stray prints) goes to the leader and
+            // identity attachments only, because it has no coverage scope.
             return emitChunk(job, 'stdout', Buffer.from(`${line}\n`), {
                 kind: 'identity'
             });
@@ -13903,8 +13904,8 @@ const isTerminalStatus = (status)=>_contracts_protocol_js__rspack_import_1/* .te
 const guarded = (effect)=>effect.pipe(effect_Effect__rspack_import_3/* .tapDefect */.nAi((cause)=>effect_Effect__rspack_import_3/* .logDebug */.MDB('broker callback defect', cause)), effect_Effect__rspack_import_3/* .catchCauseIf */.sJf((cause)=>!effect_Cause__rspack_import_4/* .hasInterruptsOnly */.nn(cause), (cause)=>effect_Effect__rspack_import_3/* .logError */.vVN(`broker callback failed: ${effect_Cause__rspack_import_4/* .pretty */.j9(cause)}`)));
 /**
  * One step of a settlement sequence. A defect (a busy sqlite ledger, a
- * metric registry fault) is logged and swallowed so the steps after it —
- * waiter notification, lane release, exit fan-out — still run; otherwise
+ * metric registry fault) is logged and swallowed so the steps after it
+ * (waiter notification, lane release, exit fan-out) still run. Otherwise
  * the claimed settlement would be lost and the ticket never terminal.
  */ const settlementStep = (label, effect)=>effect.pipe(effect_Effect__rspack_import_3/* .catchCauseIf */.sJf((cause)=>!effect_Cause__rspack_import_4/* .hasInterruptsOnly */.nn(cause), (cause)=>effect_Effect__rspack_import_3/* .logError */.vVN(`settlement step ${label} failed: ${effect_Cause__rspack_import_4/* .pretty */.j9(cause)}`)));
 const attachmentReceives = (attachment, audience)=>{
@@ -13944,7 +13945,7 @@ const quietMsSinceOutput = (lastOutputAtMs, atMs)=>{
     const quietMs = Math.max(0, atMs - lastOutputAtMs);
     return quietMs > quietOutputThresholdMs ? quietMs : undefined;
 };
-const requeueReasonFor = (mode, status)=>mode === 'identity' ? 'coalesced run was killed; running your request directly' : `${mode === 'batch' ? 'batched' : 'covering'} ${status === 'killed' ? 'run was killed' : 'run failed'}; running your request directly`;
+const requeueReasonFor = (mode, status)=>mode === 'identity' ? 'coalesced run was killed, so the daemon runs your request directly' : `${mode === 'batch' ? 'batched' : 'covering'} ${status === 'killed' ? 'run was killed' : 'run failed'}, so the daemon runs your request directly`;
 
 __webpack_require__.d(__webpack_exports__, {
 }, {
@@ -15264,7 +15265,7 @@ const StallProbe = effect_Context__rspack_import_3/* .Reference */.Or('cargo-hau
         })
 });
 /**
- * One sampling step. Any change in tree CPU time counts as progress — a
+ * One sampling step. Any change in tree CPU time counts as progress, and a
  * drop means a child exited, which is activity too. A stall keeps its
  * original `since` across samples while the idle window keeps growing.
  */ const evaluateStall = (input, thresholds)=>{
@@ -15290,7 +15291,7 @@ const StallProbe = effect_Context__rspack_import_3/* .Reference */.Or('cargo-hau
         } : null
     };
 };
-const stalledKillReason = (idleMs)=>`stalled: no CPU for ${Math.floor(idleMs / 60000)}m after owner disconnected; killed automatically`;
+const stalledKillReason = (idleMs)=>`stalled: no CPU for ${Math.floor(idleMs / 60000)}m after owner disconnected, so the daemon killed it`;
 /**
  * Daemon-wide sampling loop over every running leader in the directory.
  * Flags stalls on the job; kills only when the owner is gone and auto-kill
@@ -16770,9 +16771,9 @@ const daemonSubcommands = [
             return result.message === 'completed' || result.message === 'already-running' ? 0 : 1;
         case 'start':
         case 'restart':
-            // Success is a running daemon that is not the one we found: a daemon
-            // that outlived the grace is still serving, but was not restarted —
-            // for `start`, it is a daemon of another version that was not replaced.
+            // Success is a running daemon that is not the one we found. A daemon
+            // that outlived the grace is still serving but was not restarted. For
+            // `start`, it is a daemon of another version that was not replaced.
             return result.running && result.pid !== null && result.pid !== result.previousPid ? 0 : 1;
         case 'status':
             return result.running && result.previousPid === undefined ? 0 : 1;
@@ -16856,11 +16857,11 @@ const causeMessage = (cause)=>cause instanceof Error ? cause.message : String(ca
 /**
  * `hauler daemon start`: `ensureDaemonRunning`, so a daemon of another
  * version answering the socket is replaced on the way. One that outlives the
- * grace is reported as running and not replaced — `previousPid` equal to
- * `pid`, the verdict `daemonExitCode` turns into a failure.
+ * grace is reported as running and not replaced, with `previousPid` equal to
+ * `pid`, which `daemonExitCode` turns into a failure.
  */ const startDaemon = (config = (0,_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)(), dependencies = _client_ensure_daemon_js__rspack_import_0/* .defaultEnsureDependencies */.R2)=>{
     const failedStart = ()=>effect_Effect__rspack_import_6/* .succeed */.PyW(result(config, 'start', {
-            message: `cargo-hauler daemon did not come up; check ${config.logPath}`,
+            message: `cargo-hauler daemon did not come up. Check ${config.logPath}`,
             pid: null,
             report: null,
             running: false
@@ -16897,10 +16898,10 @@ const causeMessage = (cause)=>cause instanceof Error ? cause.message : String(ca
             })),
         DaemonUnreachable: failedStart,
         // A refused state path fails before the log is opened, so pointing at
-        // the log alone would send the user to a file that was never written;
-        // the reason names the path they have to fix.
+        // the log alone would send the user to a file that was never written.
+        // The reason names the path they have to fix.
         SpawnDaemonError: (error)=>effect_Effect__rspack_import_6/* .succeed */.PyW(result(config, 'start', {
-                message: `cargo-hauler daemon did not come up; check ${config.logPath}: ${causeMessage(error.cause)}`,
+                message: `cargo-hauler daemon did not come up: ${causeMessage(error.cause)}. Check ${config.logPath}`,
                 pid: null,
                 report: null,
                 running: false
@@ -16912,11 +16913,11 @@ const stopMessage = (outcome, running, pid)=>{
         case 'acknowledged':
             return running ? `cargo-hauler daemon acknowledged the shutdown request, but pid ${pid} is still running` : 'cargo-hauler daemon stopped';
         case 'connection-closed':
-            return running ? `cargo-hauler daemon connection closed before acknowledging shutdown; pid ${pid} is still running` : 'cargo-hauler daemon connection closed before acknowledging shutdown';
+            return running ? `cargo-hauler daemon connection closed before acknowledging shutdown, and pid ${pid} is still running` : 'cargo-hauler daemon connection closed before acknowledging shutdown';
         case 'timeout':
             return `cargo-hauler daemon did not acknowledge the shutdown request (${outcome.phase} timeout)`;
         case 'unreachable':
-            return 'cargo-hauler daemon could not be reached; its running state is unknown';
+            return 'cargo-hauler daemon could not be reached, so its running state is unknown';
         case 'absent':
             return 'cargo-hauler daemon is not running';
         case 'refused':
@@ -16962,12 +16963,12 @@ const stopDaemonAt = (config, socketPath, dependencies)=>{
             return effect_Effect__rspack_import_6/* .succeed */.PyW(stopped(shutdown, running, running ? identity.pid : null, identity.pid));
         }))), effect_Effect__rspack_import_6/* .catchTags */.loE({
         ConnectionClosed: ()=>effect_Effect__rspack_import_6/* .succeed */.PyW(probeFailed('cargo-hauler daemon identity connection closed before it could identify the process')),
-        ControlTimeout: (error)=>effect_Effect__rspack_import_6/* .succeed */.PyW(probeFailed(`cargo-hauler daemon identity probe timed out during ${error.phase}; its running state is unknown`)),
+        ControlTimeout: (error)=>effect_Effect__rspack_import_6/* .succeed */.PyW(probeFailed(`cargo-hauler daemon identity probe timed out during ${error.phase}, so its running state is unknown`)),
         DaemonUnreachable: (error)=>{
             const absent = (0,_client_ensure_daemon_js__rspack_import_0/* .daemonIsAbsent */.Yj)(error.cause);
             return effect_Effect__rspack_import_6/* .succeed */.PyW(absent ? stopped({
                 kind: 'absent'
-            }, false, null) : probeFailed('cargo-hauler daemon identity probe could not reach the process; its running state is unknown'));
+            }, false, null) : probeFailed('cargo-hauler daemon identity probe could not reach the process, so its running state is unknown'));
         }
     }));
 };
@@ -17006,13 +17007,13 @@ const statusDaemon = (config = (0,_config_js__rspack_import_2/* .resolveDaemonCo
                 running: true
             })),
         SpawnDaemonError: (error)=>effect_Effect__rspack_import_6/* .succeed */.PyW(result(config, 'status', {
-                message: `cargo-hauler daemon could not be started; check ${config.logPath}: ${causeMessage(error.cause)}`,
+                message: `cargo-hauler daemon could not be started: ${causeMessage(error.cause)}. Check ${config.logPath}`,
                 pid: null,
                 report: null,
                 running: false
             })),
         DaemonReplacementFailed: (error)=>effect_Effect__rspack_import_6/* .succeed */.PyW(result(config, 'status', {
-                message: `cargo-hauler replacement daemon failed its version handshake (${error.cause._tag}); check ${config.logPath}`,
+                message: `cargo-hauler replacement daemon failed its version handshake (${error.cause._tag}). Check ${config.logPath}`,
                 pid: null,
                 report: null,
                 running: false
@@ -17032,11 +17033,11 @@ const versionText = (identity)=>identity === null ? 'version unknown' : identity
  * for the old pid to exit, then the usual start. A daemon of another version
  * is replaced automatically by `ensureDaemonRunning` on the next call; this
  * command replaces a daemon of any version. In-flight tickets are not handed
- * over: the old daemon settles them itself as it shuts down (`killed`, error
- * `daemon shutdown`); `orphaned by daemon restart` is stamped by the next
- * daemon's first ledger pass only on rows a daemon that died without shutting
- * down never marked. The old daemon is never signalled past the
- * shutdown request; one that does not exit within the grace is reported,
+ * over. The old daemon settles them itself as it shuts down (`killed`, error
+ * `daemon shutdown`). The next daemon's first ledger pass stamps
+ * `orphaned by daemon restart` only on rows that a daemon which died without
+ * shutting down never marked. The old daemon is never signalled past the
+ * shutdown request. One that does not exit within the grace is reported,
  * not killed.
  */ const restartDaemon = (config = (0,_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)(), dependencies = defaultRestartDependencies)=>effect_Effect__rspack_import_6/* .gen */.JkU(function*() {
         const restart = (fields)=>result(config, 'restart', fields);
@@ -17051,7 +17052,7 @@ const versionText = (identity)=>identity === null ? 'version unknown' : identity
             }
             const after = yield* dependencies.identify(config.socketPath);
             return restart({
-                message: `cargo-hauler daemon was not running; started pid ${started.pid} (${versionText(after)})`,
+                message: `cargo-hauler daemon was not running, so the restart started pid ${started.pid} (${versionText(after)})`,
                 pid: started.pid,
                 previousPid: null,
                 report: null,
@@ -17062,7 +17063,7 @@ const versionText = (identity)=>identity === null ? 'version unknown' : identity
         const exited = stopped.shutdown?.kind === 'acknowledged' ? stopped.running === false : yield* (0,_client_shutdown_js__rspack_import_5/* .waitForExit */.zE)(before.pid, dependencies);
         if (!exited) {
             return restart({
-                message: stopped.shutdown === undefined && stopped.running === null ? `${stopped.message}; cargo-hauler daemon pid ${before.pid} (${before.version}) is still running ${(0,_ui_shared_format_js__rspack_import_7/* .formatMs */._V)(dependencies.exitGraceMs)} later; not restarted — retry once it has exited` : (0,_client_shutdown_js__rspack_import_5/* .notReplacedMessage */.x0)(before, dependencies.exitGraceMs),
+                message: stopped.shutdown === undefined && stopped.running === null ? `${stopped.message}. cargo-hauler daemon pid ${before.pid} (${before.version}) is still running ${(0,_ui_shared_format_js__rspack_import_7/* .formatMs */._V)(dependencies.exitGraceMs)} later, so the restart did not start a new daemon. Retry once it has exited.` : (0,_client_shutdown_js__rspack_import_5/* .notReplacedMessage */.x0)(before, dependencies.exitGraceMs),
                 pid: before.pid,
                 previousPid: before.pid,
                 report: null,
@@ -17079,7 +17080,7 @@ const versionText = (identity)=>identity === null ? 'version unknown' : identity
         }
         const after = yield* dependencies.identify(config.socketPath);
         return restart({
-            message: `cargo-hauler daemon restarted: pid ${before.pid} (${before.version}) → pid ${started.pid} (${versionText(after)})`,
+            message: `cargo-hauler daemon restarted from pid ${before.pid} (${before.version}) to pid ${started.pid} (${versionText(after)})`,
             pid: started.pid,
             previousPid: before.pid,
             report: null,
@@ -17641,7 +17642,7 @@ const extractId = (value)=>{
                                         type: 'error',
                                         id: message.id,
                                         code: 'shutdown-refused',
-                                        message: `shutdown refused: this daemon is ${options.version} and the requesting client is ${requester ?? 'unversioned (older)'}; only a newer install replaces a daemon — upgrade that client, or stop the daemon with \`hauler daemon stop\` from this install`
+                                        message: `shutdown refused: this daemon is ${options.version} and the requesting client is ${requester ?? 'unversioned (older)'}. Only a newer install replaces a daemon. Upgrade that client, or stop the daemon with \`hauler daemon stop\` from this install.`
                                     });
                                 }
                                 if (message.ifIdle === true) {
@@ -20704,7 +20705,7 @@ const defaultRecentLimit = 50;
     return isOrphanedByRestart({
         error: request.error,
         status: request.status
-    }) ? `${orphanedByRestartError}: the daemon stopped while it was in flight and does not hand runs over; resubmit if the work is still needed` : null;
+    }) ? `${orphanedByRestartError}: the daemon stopped while it was in flight and does not hand runs over. Resubmit if you still need the work` : null;
 };
 const describeRequestRecord = (ticket, request)=>{
     if (request === null) {
@@ -20717,8 +20718,8 @@ const describeRequestRecord = (ticket, request)=>{
 /**
  * Projects one stored record onto a structured operation result. Ledger
  * records keep cargo output verbatim (color included), but every operation
- * result is JSON on the wire — the CLI prints `JSON.stringify(result)` and
- * MCP structured content is JSON-RPC — where an ESC byte can only ever
+ * result is JSON on the wire. The CLI prints `JSON.stringify(result)`, and
+ * MCP structured content is JSON-RPC, where an ESC byte can only ever
  * render as literal `\u001b[…` noise. That holds regardless of process
  * stdout: a TTY still sees the escaped JSON form, and an inherited
  * FORCE_COLOR/CLICOLOR_FORCE cannot make JSON paint color. So the
@@ -20737,7 +20738,7 @@ const describeRequestRecord = (ticket, request)=>{
 const displayStatusRows = (rows)=>rows.map(displayStatusRow);
 const strandedReasons = {
     stopped: 'stranded by a stopped daemon',
-    unresponsive: 'daemon did not answer; ownership unconfirmed'
+    unresponsive: 'daemon did not answer, so ownership is unconfirmed'
 };
 const ledgerRequestRecord = (record, daemon)=>{
     // A skewed daemon answered, so it still owns and will finish its in-flight tickets.
@@ -20805,7 +20806,7 @@ const fromReport = (report, config)=>withReport({
             case -1:
                 return [
                     'an older release',
-                    'The next `hauler exec` or `hauler daemon start` replaces it once it is idle; `hauler daemon restart` replaces it now and ends its in-flight tickets.'
+                    'The next `hauler exec` or `hauler daemon start` replaces it once it is idle. `hauler daemon restart` replaces it now and ends its in-flight tickets.'
                 ];
             case 0:
                 return [
@@ -20824,7 +20825,7 @@ const fromReport = (report, config)=>withReport({
                 }
         }
     })();
-    return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${(/* inlined export .version */"0.9.13")}) cannot read; showing tickets as the ledger recorded them. ${fix}`;
+    return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${(/* inlined export .version */"0.9.13")}) cannot read, so this client shows tickets as the ledger recorded them. ${fix}`;
 };
 /**
  * A live daemon's report, decoded with this release's schema. The read gate
@@ -20941,7 +20942,7 @@ const loadHaulerSnapshot = (options = {})=>{
 const unresponsiveSnapshot = (config, recentLimit, what)=>fromLedger(config, recentLimit, 'unresponsive').pipe(effect_Effect__rspack_import_13/* .map */.TjK((snapshot)=>withReport({
             ...snapshot,
             daemon: 'unresponsive',
-            summary: `cargo-hauler daemon ${what}; showing ledger data (${snapshot.recent.length} recorded)`
+            summary: `cargo-hauler daemon ${what}, so status shows ledger data (${snapshot.recent.length} recorded)`
         }, snapshot.report)));
 
 __webpack_require__.d(__webpack_exports__, {
@@ -21550,14 +21551,14 @@ const pluginCachePath = /\/(?:\.cursor\/plugins\/|\.claude\/plugins\/cache\/|\.c
             location.path
         ];
     }
-    throw new Error('could not resolve `hauler` on PATH; install it with `npm i -g cargo-hauler`');
+    throw new Error('could not resolve `hauler` on PATH. Install it with `npm i -g cargo-hauler`');
 };
 const nodeScript = /\.[cm]?js$/u;
 /**
  * The canonical script behind one PATH candidate, or `null` when it is not a
  * regular JavaScript file the shim can hand to `node` (a directory, a dangling
  * link, a version-manager shim that resolves to a native binary), or resolves
- * into a host plugin copy — which is exactly what the shim must not embed.
+ * into a host plugin copy, which is exactly what the shim must not embed.
  */ const pathHaulerScript = (candidate)=>{
     let resolved;
     try {
@@ -21631,8 +21632,8 @@ const defaultShimDir = ()=>(0,node_path__rspack_import_2.join)((0,node_os__rspac
 /**
  * Resolves the real cargo to an ABSOLUTE path, skipping anything inside the
  * shim's own directory. Embedding a bare `cargo` would let the broker daemon
- * resolve the shim itself through PATH — the shim would call the broker
- * which spawns the shim: a self-attachment deadlock.
+ * resolve the shim itself through PATH. The shim would call the broker,
+ * which spawns the shim, and the two would deadlock on each other.
  */ const resolveRealCargo = (realCargo, destDir, env = process.env)=>{
     const canonicalDest = (0,_entry_location_js__rspack_import_3/* .canonical */.$N)(destDir);
     const insideDest = (path)=>{
@@ -21645,7 +21646,7 @@ const defaultShimDir = ()=>(0,node_path__rspack_import_2.join)((0,node_os__rspac
         // An explicit absolute path is the operator's call; only self-reference
         // is refused.
         if (insideDest(realCargo)) {
-            throw new Error(`--real-cargo ${realCargo} points at the shim itself; pass the real cargo binary`);
+            throw new Error(`--real-cargo ${realCargo} points at the shim itself. Pass the real cargo binary`);
         }
         return realCargo;
     }
@@ -21662,7 +21663,7 @@ const defaultShimDir = ()=>(0,node_path__rspack_import_2.join)((0,node_os__rspac
         // it would make the shim run rustup itself instead of cargo.
         return (0,node_path__rspack_import_2.resolve)(candidate);
     }
-    throw new Error(`could not resolve a real ${realCargo} outside ${destDir}; pass --real-cargo /path/to/cargo`);
+    throw new Error(`could not resolve a real ${realCargo} outside ${destDir}. Pass --real-cargo /path/to/cargo`);
 };
 const isFile = (path)=>{
     try {
@@ -21691,7 +21692,7 @@ const pathCargo = (env)=>{
 /**
  * Where a fresh PATH lookup of `cargo` lands relative to the installed shim.
  * rustup's `~/.cargo/bin` commonly precedes `~/.local/bin`, in which case
- * the shim never runs — surface that at install time instead of letting the
+ * the shim never runs. The install reports that instead of letting the
  * operator discover it from an idle dashboard.
  */ const shimPathStatus = (shimPath, env = process.env)=>{
     const found = pathCargo(env);
@@ -21823,7 +21824,7 @@ const installCargoShim = (options)=>{
     // The shim is a POSIX shell script; installing it as `cargo` on Windows
     // would produce a file cmd.exe cannot execute. Refuse clearly instead.
     if ((options.platform ?? process.platform) === 'win32') {
-        throw new Error('hauler install-shim is not supported on Windows: the shim is a POSIX shell script. Windows is not yet supported.');
+        throw new Error('hauler install-shim is not supported on Windows, because the shim is a POSIX shell script.');
     }
     const destDir = options.destDir ?? defaultShimDir();
     (0,node_fs__rspack_import_0.mkdirSync)(destDir, {
@@ -21833,7 +21834,7 @@ const installCargoShim = (options)=>{
     if ((0,node_fs__rspack_import_0.lstatSync)(path, {
         throwIfNoEntry: false
     }) !== undefined && options.force !== true) {
-        throw new Error(`cargo already exists at ${path}; pass --force to replace it`);
+        throw new Error(`cargo already exists at ${path}. Pass --force to replace it`);
     }
     const realCargo = resolveRealCargo(options.realCargo, destDir);
     publishShim(path, renderCargoShim({
@@ -23001,7 +23002,7 @@ const formatMs = (ms)=>{
     }
     return `${unit === 0 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`;
 };
-/** Hand-rolled rather than `node:path`: this module also runs in the browser dashboard. */ const pathBasename = (path)=>path.split('/').filter(Boolean).at(-1) ?? path;
+/** Hand-rolled rather than `node:path`, because this module also runs in the browser dashboard. */ const pathBasename = (path)=>path.split('/').filter(Boolean).at(-1) ?? path;
 const shortenPath = (path, maxLength = 38)=>{
     const homed = path.replace(/^\/(?:home|Users)\/[^/]+/u, '~');
     if (homed.length <= maxLength) {
@@ -23014,7 +23015,7 @@ const shortenPath = (path, maxLength = 38)=>{
     return `…/${segments.slice(-2).join('/')}`;
 };
 /**
- * A command line for display: the program is shown by basename so a request
+ * A command line for display. The program shows by basename, so a request
  * that arrived as `/home/me/.cargo/bin/cargo check` (the PATH shim passes the
  * real binary to avoid re-entering itself) reads as `cargo check`.
  */ const commandDisplay = (argv)=>{
@@ -23063,8 +23064,8 @@ __webpack_require__.d(__webpack_exports__, {
         ...groups.values()
     ];
 };
-const sharedTargetMechanism = "Cargo's -C metadata hash is relative to the workspace root, so same-layout worktrees write identical artifact filenames there; whichever compiled last may be treated as fresh and run by another worktree. This is a stale-binary problem, not a kache miss.";
-const usedBy = (targetDir, workspaceRoots)=>`shared Cargo target dir ${targetDir} is used by workspace roots ${workspaceRoots.join(' and ')}`;
+const sharedTargetMechanism = "Cargo's -C metadata hash is relative to the workspace root, so same-layout worktrees write identical artifact filenames there. Another worktree may treat whichever build compiled last as fresh and run it. This is a stale-binary problem, not a kache miss.";
+const usedBy = (targetDir, workspaceRoots)=>`workspace roots ${workspaceRoots.join(' and ')} share Cargo target dir ${targetDir}`;
 /** The status-surface line for one flagged group. */ const sharedTargetWarning = (group)=>`WARNING: ${usedBy(group.targetDir, group.workspaceRoots)}. ${sharedTargetMechanism}`;
 /** The `bad-intent` refusal and, when the request was allowed, the ack warning. */ const sharedTargetRefusal = (lane, otherWorkspaceRoots)=>`${usedBy(lane.targetDir, [
         lane.workspaceRoot,
@@ -23212,25 +23213,26 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 /**
- * The process-level entry: `exec` owns stdout/stderr byte-for-byte for the
- * cargo stream, `install-shim` embeds the global PATH entry, and `daemon` is
- * what the detached spawn re-enters. Everything else is a routed CLI command
- * (the tools' `.cli.ts` projections) and is forwarded to the generated `cargo-hauler` bin: beside
- * this script in the npm package, or under `bin/` in a host artifact.
+ * The process-level entry. `exec` owns stdout and stderr byte for byte for
+ * the cargo stream, `install-shim` embeds the global PATH entry, and `daemon`
+ * is what the detached spawn re-enters. Every other command is a routed CLI
+ * command (the tools' `.cli.ts` projections), forwarded to the generated
+ * `cargo-hauler` bin. That bin sits beside this script in the npm package and
+ * under `bin/` in a host artifact.
  */ const usage = `Usage: hauler <command>
 
 Commands:
   exec [--session ID] [--host HOST] [--cwd DIR] [--bg] [--after TICKET[,TICKET…]]
        [--allow-shared-target] -- <cargo command>
-      Run cargo through the hauler daemon; --after queues it until those
-      tickets finish (it fails if one of them fails or is killed)
+      Run cargo through the hauler daemon. --after holds the run until those
+      tickets finish, and the run fails if one of them fails or is killed.
   daemon <run|start|stop|status|restart>
-      Control the hauler daemon; restart replaces the running daemon
-      (in-flight tickets end killed: "daemon shutdown")
+      Control the hauler daemon. restart replaces the running daemon and
+      ends in-flight tickets as killed with "daemon shutdown".
   install-shim [--dir DIR] [--real-cargo PATH] [--force]
-      Install an optional PATH cargo shim
+      Install an optional PATH cargo shim.
   status | log | last | await <ticket> | result <ticket> | request [--after TICKET] -- <cargo command>
-      Routed commands; run \`cargo-hauler --help\` for options
+      Routed commands. Run \`cargo-hauler --help\` for their options.
 `;
 const defaultWrite = (value)=>{
     process.stdout.write(value);
@@ -23242,17 +23244,17 @@ const defaultWriteStderr = (data)=>{
     process.stderr.write(data);
 };
 /**
- * PATH honesty at install time: a shim nobody's PATH reaches (rustup's
- * ~/.cargo/bin usually precedes ~/.local/bin) silently bypasses the broker.
+ * A shim that no PATH reaches lets cargo bypass the broker without a warning.
+ * Rustup's ~/.cargo/bin usually precedes ~/.local/bin.
  */ const describeShimPathStatus = (status, destDir)=>{
     const prepend = `export PATH="${destDir}:$PATH"`;
     switch(status.kind){
         case 'wins':
-            return 'cargo now resolves through the shim; scripted cargo goes through the broker.';
+            return 'cargo now resolves through the shim, so scripted cargo goes through the broker.';
         case 'shadowed':
-            return `warning: PATH resolves cargo to ${status.by} before the shim. Put ${destDir} earlier on PATH (e.g. ${prepend} in your shell profile) or the shim never runs.`;
+            return `warning: PATH resolves cargo to ${status.by} before the shim. Put ${destDir} earlier on PATH, for example with ${prepend} in your shell profile. Otherwise the shim never runs.`;
         case 'not-on-path':
-            return `warning: ${destDir} is not on PATH. Add it ahead of rustup's ~/.cargo/bin (e.g. ${prepend} in your shell profile) so scripted cargo goes through the broker.`;
+            return `warning: ${destDir} is not on PATH. Add it ahead of rustup's ~/.cargo/bin, for example with ${prepend} in your shell profile, so scripted cargo goes through the broker.`;
         default:
             {
                 const exhaustive = status;
@@ -23285,8 +23287,8 @@ const runExecCommand = async (argv, options)=>{
             allowSharedTarget: true
         } : {},
         argv: parsed.cargoArgv,
-        // Resolved here: the daemon would otherwise resolve a relative --cwd
-        // against its own working directory, not the caller's.
+        // The daemon would otherwise resolve a relative --cwd against its own
+        // working directory, not the caller's.
         cwd: (0,node_path__rspack_import_2.resolve)(parsed.cwd ?? process.cwd()),
         env: (0,_internal_client_env_js__rspack_import_4/* .buildTransportedEnv */.o)(env),
         host: parsed.host ?? attributed.host ?? 'cli',
@@ -23356,7 +23358,7 @@ const runDaemonCommand = async (rest, write)=>{
     return (0,_internal_daemon_runtime_lifecycle_js__rspack_import_8/* .daemonExitCode */.mi)(result);
 };
 const pluginInstallShimRefusal = 'hauler install-shim cannot run from a host plugin copy. Install the global CLI with `npm i -g cargo-hauler`, then run `hauler install-shim` from PATH.\n';
-const pluginDirectCliRefusal = 'This plugin-local scripts/hauler.mjs is for host hooks only. Install the global CLI with `npm i -g cargo-hauler` and use `hauler` on PATH; never run scripts/hauler.mjs directly.\n';
+const pluginDirectCliRefusal = 'This plugin-local scripts/hauler.mjs is for host hooks only. Install the global CLI with `npm i -g cargo-hauler` and use `hauler` on PATH. Do not run scripts/hauler.mjs directly.\n';
 const pluginRootNames = [
     'AGENT_BUNDLE_PLUGIN_ROOT',
     'CLAUDE_PLUGIN_ROOT',
@@ -23374,8 +23376,9 @@ const pluginInvocationAllowed = (argv, env)=>{
     if (command !== 'exec') {
         return false;
     }
-    // Only flags ahead of `--` belong to hauler; `exec -- cargo --host x` is a
-    // cargo argv, not a hook rewrite (same boundary as `parseExecArgv`).
+    // Only flags ahead of `--` belong to hauler, the same boundary
+    // `parseExecArgv` uses. `exec -- cargo --host x` is a cargo argv, not a hook
+    // rewrite.
     const separator = rest.indexOf('--');
     const flags = separator === -1 ? rest : rest.slice(0, separator);
     const hostIndex = flags.indexOf('--host');
@@ -23470,7 +23473,7 @@ const runScript = async (argv, options = {})=>{
 };
 /**
  * `agent-bundle build` detects the `main` export and generates the process
- * envelope: this module is emitted as `scripts/hauler.mjs` in every host
+ * envelope. The build emits this module as `scripts/hauler.mjs` in every host
  * artifact (the hook rewrite target) and as the package `hauler` bin. The
  * envelope probes the process's terminal once and hands it in as `context`
  * (agent-bundle#511), so `exec` never inspects `process.stdout` itself.
