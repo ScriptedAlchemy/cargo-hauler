@@ -470,6 +470,11 @@ describe('hauler daemon', () => {
       const queuedRecord = report.recent.find((record) => record.ticket === queuedTicket);
       expect(queuedRecord?.startedAtMs).toBeNull();
       expect(queuedRecord?.error).toBe('killed while queued');
+      expect({
+        errorCount: queuedRecord?.errorCount,
+        warningCount: queuedRecord?.warningCount,
+        diagnostics: queuedRecord?.diagnostics,
+      }).toEqual({ errorCount: null, warningCount: null, diagnostics: null });
       expect(report.active.map((record) => record.ticket)).toEqual([holderTicket]);
 
       yield* requestOverSocket({
