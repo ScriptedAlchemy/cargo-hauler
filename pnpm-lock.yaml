@@ -170,8 +170,8 @@ importers:
   .:
     devDependencies:
       '@agent-bundle/runtime':
-        specifier: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b4e38409f4
-        version: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b4e38409f4(@rspack/core@2.2.7(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)
+        specifier: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d
+        version: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.7(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)
       '@changesets/cli':
         specifier: 3.0.3
         version: 3.0.3
@@ -206,8 +206,8 @@ importers:
         specifier: ^7.0.0-dev.20260707.2
         version: 7.0.0-dev.20260707.2
       agent-bundle:
-        specifier: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b4e38409f4
-        version: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b4e38409f4(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b4e38409f4(@rspack/core@2.2.7(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5))(@rspack/core@2.2.7(@swc/helpers@0.5.23))(@rstest/core@0.12.2)(hono@4.13.7)(react@19.3.0)(typescript@7.0.2)
+        specifier: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@899755dc6d
+        version: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@899755dc6d(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.7(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5))(@rspack/core@2.2.7(@swc/helpers@0.5.23))(@rstest/core@0.12.2)(hono@4.13.7)(react@19.3.0)(typescript@7.0.2)
       bashjsast:
         specifier: github:woolkingx/bashjsast#131f4b677d1906774fc49cfceab0ccb7b370b2e6
         version: https://codeload.github.com/woolkingx/bashjsast/tar.gz/131f4b677d1906774fc49cfceab0ccb7b370b2e6
@@ -241,9 +241,9 @@ importers:
 
 packages:
 
-  '@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b4e38409f4':
-    resolution: {integrity: sha512-5V3wdHhpNZWK343uZ46i9j+lavO4Wnch/JmSMmpJ9m4e1Wonmd14jyd0zIoqaDwD+B9gOS0CuUoC8//ttJiqXw==, tarball: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b4e38409f4}
-    version: 0.0.0-preview-b4e3840
+  '@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d':
+    resolution: {integrity: sha512-eWkwTjPOfsxhIU+gUi1umzsU7oCQ5RJBGzffcpI5Rv9ma7/ec8CITvvyvyZfetdOHXDzxvWAKvsuTOoFKK8GnA==, tarball: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d}
+    version: 0.0.0-preview-899755d
     engines: {node: '>=22.19.0'}
     peerDependencies:
       '@rspack/core': ^2.2.0-0
@@ -1001,13 +1001,13 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  agent-bundle@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b4e38409f4:
-    resolution: {integrity: sha512-k6MACgqSDqLBsXSi6ijjsNXwYwnocWhXDimtkIkdu1db9VYfc6ijQQukAqXUy23hNTRsuNpK86p9qZO0om2Z4g==, tarball: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b4e38409f4}
-    version: 0.0.0-preview-b4e3840
+  agent-bundle@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@899755dc6d:
+    resolution: {integrity: sha512-PCqWYkxCgqkcEDt8KnTKVnmqEk8Dw0rCp9UpY5nTAU9+RlArPwFm4epYuiuiRvDwabH4WNAboIbkkvqoX0ZmUA==, tarball: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@899755dc6d}
+    version: 0.0.0-preview-899755d
     engines: {node: '>=22.19.0'}
     hasBin: true
     peerDependencies:
-      '@agent-bundle/runtime': 0.0.0-preview-b4e3840
+      '@agent-bundle/runtime': 0.0.0-preview-899755d
       '@rstest/core': ^0.11.10
       react: ^19.2.0
     peerDependenciesMeta:
@@ -1412,9 +1412,9 @@ packages:
       typescript:
         optional: true
 
-  rsc-markdown-stream@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@b4e38409f4e2f2f1166dbabc6c40662a9e35c08b:
-    resolution: {integrity: sha512-twuZQC2Gtz6N9N11d1AB2OAAUthSzn4jmKKxeu8bR8CZvbnyx6vzujNGLA9d36306MzD2RKFa2fWm94S9/f8MQ==, tarball: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@b4e38409f4e2f2f1166dbabc6c40662a9e35c08b}
-    version: 0.0.0-preview-b4e3840
+  rsc-markdown-stream@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@899755dc6db7b742fa4e568f8672c41453d09bbe:
+    resolution: {integrity: sha512-05BFHmKM1ZWQ7KabL6iOUXEG5xnXH9Z7IxFUSA8z/exzbzDD6LbMp8+M+9gDi2ruHcSWytXJ6rLAgSGbexX8sQ==, tarball: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@899755dc6db7b742fa4e568f8672c41453d09bbe}
+    version: 0.0.0-preview-899755d
     engines: {node: '>=22.19.0'}
     peerDependencies:
       react: ^19.0.0
@@ -1551,7 +1551,7 @@ packages:
 
 snapshots:
 
-  '@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b4e38409f4(@rspack/core@2.2.7(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)':
+  '@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.7(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)':
     dependencies:
       '@modelcontextprotocol/server': 2.0.0
       effect: 4.0.0-rc.117
@@ -1559,7 +1559,7 @@ snapshots:
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
       react-server-dom-rspack: 0.1.0(@rspack/core@2.2.7(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      rsc-markdown-stream: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@b4e38409f4e2f2f1166dbabc6c40662a9e35c08b(react@19.3.0)
+      rsc-markdown-stream: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@899755dc6db7b742fa4e568f8672c41453d09bbe(react@19.3.0)
       zod: 4.6.5
     optionalDependencies:
       '@rspack/core': 2.2.7(@swc/helpers@0.5.23)
@@ -2197,7 +2197,7 @@ snapshots:
 
   acorn@8.18.0: {}
 
-  agent-bundle@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@b4e38409f4(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b4e38409f4(@rspack/core@2.2.7(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5))(@rspack/core@2.2.7(@swc/helpers@0.5.23))(@rstest/core@0.12.2)(hono@4.13.7)(react@19.3.0)(typescript@7.0.2):
+  agent-bundle@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@899755dc6d(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.7(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5))(@rspack/core@2.2.7(@swc/helpers@0.5.23))(@rstest/core@0.12.2)(hono@4.13.7)(react@19.3.0)(typescript@7.0.2):
     dependencies:
       '@effect/platform-node-shared': 4.0.0-rc.117(patch_hash=4a91f30c92993fc75800f9dc1483722836b8a5d6fed17e8b2789767fb447e171)(effect@4.0.0-rc.117)
       '@modelcontextprotocol/client': 2.0.0
@@ -2222,7 +2222,7 @@ snapshots:
       ws: 8.21.3
       yaml: 2.9.1
     optionalDependencies:
-      '@agent-bundle/runtime': https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@b4e38409f4(@rspack/core@2.2.7(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)
+      '@agent-bundle/runtime': https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.7(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)
       '@rstest/core': 0.12.2
       react: 19.3.0
     transitivePeerDependencies:
@@ -2555,7 +2555,7 @@ snapshots:
     optionalDependencies:
       typescript: 7.0.2
 
-  rsc-markdown-stream@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@b4e38409f4e2f2f1166dbabc6c40662a9e35c08b(react@19.3.0):
+  rsc-markdown-stream@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@899755dc6db7b742fa4e568f8672c41453d09bbe(react@19.3.0):
     dependencies:
       react: 19.3.0
 

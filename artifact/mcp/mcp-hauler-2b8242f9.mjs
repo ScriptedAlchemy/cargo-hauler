@@ -13691,7 +13691,7 @@ var __webpack_modules__ = {
     },
     "./src/internal/platform/hauler-binding.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var node_path__rspack_import_0 = __webpack_require__("node:path");
-        var _agent_bundle_runtime_plugin__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/49.js");
+        var _agent_bundle_runtime_plugin__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/49.js");
         const haulerArgvForRoot = (root)=>[
                 process.execPath,
                 (0, node_path__rspack_import_0.join)(root, "scripts/hauler.mjs")
@@ -15009,7 +15009,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./src/internal/ui/documents/admission-state.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_1_default = __webpack_require__.n(react__rspack_import_1);
         var _primitives_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/primitives.tsx");
@@ -15050,7 +15050,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./src/internal/ui/documents/batch-test-summary.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_1_default = __webpack_require__.n(react__rspack_import_1);
         var _operations_batch_test_output_js__rspack_import_2 = __webpack_require__("./src/internal/operations/batch-test-output.ts");
@@ -15126,7 +15126,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./src/internal/ui/documents/dashboard-link.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var _agent_bundle_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_1_default = __webpack_require__.n(react__rspack_import_1);
         var _constants_js__rspack_import_3 = __webpack_require__("./src/constants.ts");
@@ -15139,7 +15139,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./src/internal/ui/documents/documents.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var _agent_bundle_runtime__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_1_default = __webpack_require__.n(react__rspack_import_1);
         var _constants_js__rspack_import_16 = __webpack_require__("./src/constants.ts");
@@ -15389,7 +15389,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./src/internal/ui/documents/full-output.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var _agent_bundle_runtime__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_1_default = __webpack_require__.n(react__rspack_import_1);
         var _shared_format_js__rspack_import_6 = __webpack_require__("./src/internal/ui/shared/format.ts");
@@ -15491,7 +15491,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./src/internal/ui/documents/kache-stats.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_1_default = __webpack_require__.n(react__rspack_import_1);
         var _primitives_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/primitives.tsx");
@@ -15578,7 +15578,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./src/internal/ui/documents/lane-board.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var _agent_bundle_runtime__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_1_default = __webpack_require__.n(react__rspack_import_1);
         var _shared_shared_target_js__rspack_import_6 = __webpack_require__("./src/internal/ui/shared/shared-target.ts");
@@ -15634,7 +15634,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./src/internal/ui/documents/log-tail.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var _agent_bundle_runtime__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_1_default = __webpack_require__.n(react__rspack_import_1);
         var _primitives_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/primitives.tsx");
@@ -15664,7 +15664,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./src/internal/ui/documents/primitives.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var _agent_bundle_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_1_default = __webpack_require__.n(react__rspack_import_1);
         const singleLine = (value)=>value.replaceAll(/\s*\n\s*/gu, ' ');
@@ -15705,7 +15705,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./src/internal/ui/documents/states.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var _agent_bundle_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_1_default = __webpack_require__.n(react__rspack_import_1);
         const EmptyState = ({ children })=>(0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2.g.Text, {
@@ -15726,7 +15726,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./src/internal/ui/documents/streaming.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_1_default = __webpack_require__.n(react__rspack_import_1);
         var _shared_format_js__rspack_import_5 = __webpack_require__("./src/internal/ui/shared/format.ts");
@@ -15920,7 +15920,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./src/internal/ui/documents/ticket-guidance.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var _agent_bundle_runtime__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_1_default = __webpack_require__.n(react__rspack_import_1);
         var _contracts_protocol_js__rspack_import_2 = __webpack_require__("./src/internal/contracts/protocol.ts");
@@ -16512,7 +16512,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     "./src/mcp/hauler/tools/hauler_await.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         __webpack_require__.r(__webpack_exports__);
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/routes.js");
+        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/routes.js");
         var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_2_default = __webpack_require__.n(react__rspack_import_2);
         var _internal_ui_documents_streaming_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/streaming.tsx");
@@ -16591,7 +16591,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     "./src/mcp/hauler/tools/hauler_dashboard.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         __webpack_require__.r(__webpack_exports__);
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/routes.js");
+        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/routes.js");
         var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_2_default = __webpack_require__.n(react__rspack_import_2);
         var _internal_ui_documents_documents_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
@@ -16642,7 +16642,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     "./src/mcp/hauler/tools/hauler_kill.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         __webpack_require__.r(__webpack_exports__);
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/routes.js");
+        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/routes.js");
         var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_2_default = __webpack_require__.n(react__rspack_import_2);
         var zod__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/schemas.js");
@@ -16697,7 +16697,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     "./src/mcp/hauler/tools/hauler_last.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         __webpack_require__.r(__webpack_exports__);
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/routes.js");
+        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/routes.js");
         var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_2_default = __webpack_require__.n(react__rspack_import_2);
         var zod__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/schemas.js");
@@ -16741,7 +16741,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     "./src/mcp/hauler/tools/hauler_log.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         __webpack_require__.r(__webpack_exports__);
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/routes.js");
+        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/routes.js");
         var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_2_default = __webpack_require__.n(react__rspack_import_2);
         var _internal_ui_documents_streaming_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/streaming.tsx");
@@ -16784,7 +16784,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     "./src/mcp/hauler/tools/hauler_request.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         __webpack_require__.r(__webpack_exports__);
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/routes.js");
+        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/routes.js");
         var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_2_default = __webpack_require__.n(react__rspack_import_2);
         var _internal_ui_documents_documents_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
@@ -16855,7 +16855,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     "./src/mcp/hauler/tools/hauler_result.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         __webpack_require__.r(__webpack_exports__);
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/routes.js");
+        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/routes.js");
         var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_2_default = __webpack_require__.n(react__rspack_import_2);
         var _internal_ui_documents_documents_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
@@ -16910,7 +16910,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     "./src/mcp/hauler/tools/hauler_status.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         __webpack_require__.r(__webpack_exports__);
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.js");
-        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/routes.js");
+        var agent_bundle_routes__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/routes.js");
         var react__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react__rspack_import_2_default = __webpack_require__.n(react__rspack_import_2);
         var _internal_ui_documents_documents_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
@@ -17070,7 +17070,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     "zlib" (module) {
         module.exports = __rspack_createRequire_require("zlib");
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/302.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/302.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_buffer__rspack_import_0 = __webpack_require__("node:buffer");
         const jsonLeafBytes = (value)=>node_buffer__rspack_import_0.Buffer.byteLength(JSON.stringify(value), 'utf8');
         const isArrayIndex = (key, length)=>{
@@ -17480,15 +17480,15 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             zm: elapsedTimeExceeded
         });
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/315.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/315.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var effect__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
         var effect__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Cause.js");
         var effect__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Exit.js");
         var effect__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Latch.js");
         var effect__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Stream.js");
         var effect__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Fiber.js");
-        var _736_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/736.js");
-        var _302_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/302.js");
+        var _736_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/736.js");
+        var _302_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/302.js");
         const TYPED_ERROR_NAMES = new Set([
             'AgentContractError',
             'AgentNoticeError',
@@ -17641,7 +17641,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             zf: isAbortError
         });
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/40.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/40.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_fs_promises__rspack_import_0 = __webpack_require__("node:fs/promises");
         const CODEX_ROLLOUT_HEAD_BYTES = 1048576;
         const ROLLOUT_BASENAME = /rollout-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\.jsonl$/iu;
@@ -17827,12 +17827,12 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             hv: readCodexRolloutHead
         });
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/49.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/49.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
         var node_fs__rspack_import_1 = __webpack_require__("node:fs");
         var node_os__rspack_import_2 = __webpack_require__("node:os");
         var node_path__rspack_import_3 = __webpack_require__("node:path");
-        var _736_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/736.js");
+        var _736_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/736.js");
         const PLUGIN_ROOT_ENV_ANCHOR = 'AGENT_BUNDLE_PLUGIN_ROOT';
         const PLUGIN_STATE_ROOT_ENV_ANCHOR = 'AGENT_BUNDLE_STATE_ROOT';
         const PLUGIN_STATE_DIRECTORY = 'state';
@@ -17899,7 +17899,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             bf: PLUGIN_ROOT_ENV_ANCHOR
         });
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/506.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var react__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         const AgentResult = ({ children, metadata, value })=>(0, react__rspack_import_0.createElement)('agent-result', {
                 metadata,
@@ -17948,7 +17948,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             g: Agent1
         });
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/65.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/65.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         const isPlainObject = (value)=>null !== value && 'object' == typeof value && !Array.isArray(value) && (Object.getPrototypeOf(value) === Object.prototype || null === Object.getPrototypeOf(value));
         const isJsonSafe = (value)=>{
             if (null === value || 'string' == typeof value || 'boolean' == typeof value) return true;
@@ -18094,7 +18094,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             dj: canonicalJson
         });
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/707.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/707.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         const EMPTY_FLIGHT_MANIFEST = Object.freeze({
             clientManifest: Object.freeze({}),
             moduleLoading: null,
@@ -18110,7 +18110,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             n: ensureAgentFlightManifest
         });
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/736.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/736.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_async_hooks__rspack_import_0 = __webpack_require__("node:async_hooks");
         const AGENT_REQUEST_STORE_VERSION = 6;
         const STORE_SYMBOL = Symbol.for('@agent-bundle/runtime/request-store');
@@ -18395,7 +18395,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             qC: available1
         });
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/index.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/index.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var effect__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Latch.js");
         var effect__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
         var effect__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Duration.js");
@@ -18407,9 +18407,9 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
         var effect__rspack_import_13 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Clock.js");
         var react__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/index.js");
         var react_server_dom_rspack_client_node__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react-server-dom-rspack@0.1.0_@rspack+core@2.2.7_@swc+helpers@0.5.23__react-dom@19.3.0_react@19.3.0__react@19.3.0/node_modules/react-server-dom-rspack/client.node.js");
-        var _315_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/315.js");
-        var _302_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/302.js");
-        var _707_js__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/707.js");
+        var _315_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/315.js");
+        var _302_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/302.js");
+        var _707_js__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/707.js");
         const createFlightDemand = ()=>{
             const pulling = effect__rspack_import_2.LZ(false);
             let shellEmitted = false;
@@ -19479,12 +19479,12 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             w3: createWarmFlightHost
         });
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/lineage.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/lineage.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
         var zod__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/classic/schemas.js");
-        var _65_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/65.js");
-        var _40_js__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/40.js");
-        var _736_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/736.js");
+        var _65_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/65.js");
+        var _40_js__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/40.js");
+        var _736_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/736.js");
         const id = zod__rspack_import_1.YjP().min(1).max(512);
         const timestamp = zod__rspack_import_1.YjP().min(1).max(64);
         const LineageNodeSchema = zod__rspack_import_1.Ikc({
@@ -20594,8 +20594,8 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             Q5: createAgentLineageRegistry
         });
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/request.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-        var _736_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/736.js");
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/request.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+        var _736_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/736.js");
         var request_AGENT_REQUEST_STORE_VERSION = 6;
         var request_PLUGIN_STATE_DIRECTORY = "state";
         __webpack_require__.d(__webpack_exports__, {
@@ -39628,7 +39628,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             StdioServerTransport: ()=>StdioServerTransport
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/242~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/242~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         function getEnumValues(entries) {
             const numericValues = Object.values(entries).filter((v)=>"number" == typeof v);
             const values = Object.entries(entries).filter(([k, _])=>-1 === numericValues.indexOf(+k)).map(([_, v])=>v);
@@ -45329,18 +45329,18 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             xf: ()=>schemas_object
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/573~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-        var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/917~1.js");
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/573~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+        var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/917~1.js");
         const appResourceUri = (reference)=>reference;
         const MAX_ROUTE_RENDER_ELAPSED_MS = 86400000;
         __webpack_require__.d(__webpack_exports__, {}, {
             e: appResourceUri
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/667~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/667~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
         var node_fs_promises__rspack_import_1 = __webpack_require__("node:fs/promises");
-        var _991_1_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/991~1.js");
+        var _991_1_js__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/991~1.js");
         const sha256Hex = (bytes)=>createHash('sha256').update(bytes).digest('hex');
         const serializeJson = (value, key = '')=>{
             if (null !== value && 'object' == typeof value) {
@@ -45377,7 +45377,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             _Y: stableJson
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/790~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/790~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         const isErrno = (error, code)=>'object' == typeof error && null !== error && 'code' in error && error.code === code;
         const errorMessage1 = (error)=>error instanceof Error ? error.message : String(error);
         class CodedError extends Error {
@@ -45394,7 +45394,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             gJ: errorMessage1
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/818~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/818~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         const isPlainObjectOrArray = (value)=>{
             if (Array.isArray(value)) return true;
             const proto = Object.getPrototypeOf(value);
@@ -45411,8 +45411,8 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             o: deepFreeze1
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/917~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-        var _818_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/818~1.js");
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/917~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+        var _818_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/818~1.js");
         const canonicalAgentEvents = Object.freeze([
             'session/start',
             'tool/before',
@@ -45972,7 +45972,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             jz: agentEventPayloadFields
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/991~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/991~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         const isJsonWhitespace = (code)=>0x09 === code || 0x0a === code || 0x0d === code || 0x20 === code;
         const isValueTerminator = (code)=>isJsonWhitespace(code) || 0x2c === code || 0x7d === code || 0x5d === code;
         const skipWhitespace = (bytes, index)=>{
@@ -46150,7 +46150,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             u4: isRecord1
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/event-ipc.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/event-ipc.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
         var node_fs_promises__rspack_import_1 = __webpack_require__("node:fs/promises");
         var node_net__rspack_import_2 = __webpack_require__("node:net");
@@ -46166,9 +46166,9 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
         var effect__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Ref.js");
         var effect__rspack_import_16 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Random.js");
         var effect__rspack_import_17 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Layer.js");
-        var _790_1_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/790~1.js");
-        var _991_1_js__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/991~1.js");
-        var _242_1_js__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/242~1.js");
+        var _790_1_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/790~1.js");
+        var _991_1_js__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/991~1.js");
+        var _242_1_js__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/242~1.js");
         const formatSummary = (diagnostics)=>{
             const count = diagnostics.length;
             const noun = 1 === count ? 'error' : 'errors';
@@ -46928,15 +46928,15 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             E6: createEventRuntimeServer
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/event-project.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/event-project.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
         var node_fs_promises__rspack_import_1 = __webpack_require__("node:fs/promises");
         var node_path__rspack_import_2 = __webpack_require__("node:path");
         var node_url__rspack_import_3 = __webpack_require__("node:url");
-        var _917_1_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/917~1.js");
-        var _242_1_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/242~1.js");
-        var _818_1_js__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/818~1.js");
-        var _991_1_js__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/991~1.js");
+        var _917_1_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/917~1.js");
+        var _242_1_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/242~1.js");
+        var _818_1_js__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/818~1.js");
+        var _991_1_js__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/991~1.js");
         const isJsonValue = (value)=>{
             switch(typeof value){
                 case 'boolean':
@@ -48316,7 +48316,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             no: createCanonicalEventProps
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/launch-env.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/launch-env.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_fs__rspack_import_0 = __webpack_require__("node:fs");
         var node_path__rspack_import_1 = __webpack_require__("node:path");
         const OPERATOR_ENV_FILE_VARIABLE = 'AGENT_BUNDLE_ENV_FILE';
@@ -48439,7 +48439,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             OJ: applyOperatorEnv
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/mcp-entry.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/mcp-entry.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         const defaultHeartbeatIntervalMs = 300000;
         const defaultActivityThrottleMs = 60000;
         const defaultShutdownTimeoutMs = 5000;
@@ -48583,19 +48583,19 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             p9: redirectConsoleToStderr
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/mcp-server-runtime.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/mcp-server-runtime.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_worker_threads__rspack_import_0 = __webpack_require__("node:worker_threads");
         var _modelcontextprotocol_server__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@modelcontextprotocol+server@2.0.0/node_modules/@modelcontextprotocol/server/dist/index.mjs");
-        var _agent_bundle_runtime__rspack_import_9 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/736.js");
-        var _agent_bundle_runtime__rspack_import_10 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/40.js");
-        var _agent_bundle_runtime__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/index.js");
+        var _agent_bundle_runtime__rspack_import_9 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/736.js");
+        var _agent_bundle_runtime__rspack_import_10 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/40.js");
+        var _agent_bundle_runtime__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/index.js");
         var node_crypto__rspack_import_2 = __webpack_require__("node:crypto");
-        var _667_1_js__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/667~1.js");
-        var _991_1_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/991~1.js");
-        var _790_1_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/790~1.js");
-        var _573_1_js__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/573~1.js");
-        var _terminal_capability_js__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/terminal-capability.js");
-        var _917_1_js__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/917~1.js");
+        var _667_1_js__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/667~1.js");
+        var _991_1_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/991~1.js");
+        var _790_1_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/790~1.js");
+        var _573_1_js__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/573~1.js");
+        var _terminal_capability_js__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/terminal-capability.js");
+        var _917_1_js__rspack_import_8 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/917~1.js");
         const SINGLE_SCHEMA_KEYWORDS = new Set([
             'additionalItems',
             'additionalProperties',
@@ -49769,11 +49769,11 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             HG: createFlightWorkerHost
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/routes.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-        var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/917~1.js");
-        var _573_1_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/573~1.js");
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/routes.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+        var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/917~1.js");
+        var _573_1_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/573~1.js");
         const defineTool = (config, handler)=>Object.assign(async (props)=>{
-                const { agent } = await Promise.resolve().then(__webpack_require__.bind(__webpack_require__, "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/request.js"));
+                const { agent } = await Promise.resolve().then(__webpack_require__.bind(__webpack_require__, "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/request.js"));
                 return handler(props.input, await agent());
             }, config);
         const definitions = {};
@@ -49800,7 +49800,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             uO: defineTool
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/terminal-capability.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/terminal-capability.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_fs__rspack_import_0 = __webpack_require__("node:fs");
         const isSet = (value)=>void 0 !== value && '' !== value;
         const isOn = (value)=>'0' !== value && 'false' !== value.toLowerCase();
@@ -86397,11 +86397,11 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
         __webpack_require__.r(__webpack_exports__);
         var node_path__rspack_import_0 = __webpack_require__("node:path");
         var node_url__rspack_import_1 = __webpack_require__("node:url");
-        var _agent_bundle_runtime__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/49.js");
-        var agent_bundle_mcp_server_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/mcp-server-runtime.js");
-        var agent_bundle_event_ipc__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/event-ipc.js");
-        var agent_bundle_event_project__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/event-project.js");
-        var _agent_bundle_runtime_lineage__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_1445e1a7607dc23b468f6da7f4feb12f/node_modules/@agent-bundle/runtime/dist/lineage.js");
+        var _agent_bundle_runtime__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/49.js");
+        var agent_bundle_mcp_server_runtime__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/mcp-server-runtime.js");
+        var agent_bundle_event_ipc__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/event-ipc.js");
+        var agent_bundle_event_project__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/event-project.js");
+        var _agent_bundle_runtime_lineage__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/lineage.js");
         var agent_bundle_mcp_apps__rspack_import_5 = __webpack_require__("./.agent-bundle-virtual/mcp-hauler-2b8242f9-0.mjs");
         var _src_mcp_hauler_tools_hauler_await_tsx__rspack_import_6 = __webpack_require__("./src/mcp/hauler/tools/hauler_await.tsx");
         var _src_mcp_hauler_tools_hauler_dashboard_tsx__rspack_import_7 = __webpack_require__("./src/mcp/hauler/tools/hauler_dashboard.tsx");
@@ -86686,7 +86686,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                 name: "hauler_status"
             })
         });
-        const EVENT_ARTIFACT_EPOCH = "56e173e669dbe8f01de71869b076699025c69bca290d2e4b00b708baa013094d";
+        const EVENT_ARTIFACT_EPOCH = "e731fa2d0c1ebc883aa63b807f3856fafb7be4ec81505e50fdb1633aa80e492a";
         const EVENT_ALLOWED_TARGETS = Object.freeze([
             "claude",
             "codex",
@@ -86731,8 +86731,8 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./.agent-bundle-virtual/mcp-hauler-2b8242f9-2.mjs" (__unused_rspack___webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
         var node_url__rspack_import_0 = __webpack_require__("node:url");
-        var agent_bundle_launch_env__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/launch-env.js");
-        var agent_bundle_mcp_entry__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/mcp-entry.js");
+        var agent_bundle_launch_env__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/launch-env.js");
+        var agent_bundle_mcp_entry__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/mcp-entry.js");
         (0, agent_bundle_mcp_entry__rspack_import_2.p9)();
         (0, agent_bundle_launch_env__rspack_import_1.OJ)({
             pluginRoot: (0, agent_bundle_launch_env__rspack_import_1.FF)((0, node_url__rspack_import_0.fileURLToPath)(new URL('..', import.meta.url)))
@@ -86742,7 +86742,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
         __webpack_require__.a(__webpack_module__, async function(__rspack_load_async_deps, __rspack_async_done) {
             try {
                 var agent_bundle_stdio_prelude__rspack_import_0 = __webpack_require__("./.agent-bundle-virtual/mcp-hauler-2b8242f9-2.mjs");
-                var agent_bundle_mcp_entry__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@b4e38409f4_@a_407112354bbeae5e45110a2f0be71135/node_modules/agent-bundle/dist/mcp-entry.js");
+                var agent_bundle_mcp_entry__rspack_import_2 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/mcp-entry.js");
                 var agent_bundle_generated_route_server__rspack_import_1 = __webpack_require__("./.agent-bundle-virtual/mcp-hauler-2b8242f9-1.mjs");
                 await (0, agent_bundle_mcp_entry__rspack_import_2.WQ)({
                     loadEntry: async ()=>agent_bundle_generated_route_server__rspack_import_1,
