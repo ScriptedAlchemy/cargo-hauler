@@ -576,13 +576,14 @@ export const awaitResultSchema = z
 
 export const killResultSchema = z
   .object({
+    daemon: daemonStatusSchema,
     killed: z.boolean(),
     operation: z.literal('kill'),
-    request: requestRecordSchema.nullable(),
+    request: displayRequestRecordSchema.nullable(),
     summary: z.string(),
     ticket: z.string(),
   })
-  .strict();
+  .strict() satisfies z.ZodType<KillResult>;
 
 export const resultFetchResultSchema = z
   .object({
@@ -662,11 +663,12 @@ export interface AwaitResult {
 }
 
 export interface KillResult {
-  /** True when the daemon accepted the kill; false when the ticket was unknown or already finished. */
+  readonly daemon: DaemonStatus;
+  /** True when the daemon accepted the kill; false when the ticket was unknown, already finished, or the daemon is stopped. */
   readonly killed: boolean;
   readonly operation: 'kill';
   /** The ticket right after the request was accepted; it settles as `killed` once the process is gone. */
-  readonly request: RequestRecord | null;
+  readonly request: DisplayRequestRecord | null;
   readonly summary: string;
   readonly ticket: string;
 }

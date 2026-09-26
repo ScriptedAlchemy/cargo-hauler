@@ -22685,9 +22685,10 @@ const awaitResultSchema = zod__rspack_import_1/* .object */.Ikc({
     timedOut: zod__rspack_import_1/* .boolean */.zMY()
 }).strict();
 const killResultSchema = zod__rspack_import_1/* .object */.Ikc({
+    daemon: daemonStatusSchema,
     killed: zod__rspack_import_1/* .boolean */.zMY(),
     operation: zod__rspack_import_1/* .literal */.euz('kill'),
-    request: requestRecordSchema.nullable(),
+    request: displayRequestRecordSchema.nullable(),
     summary: zod__rspack_import_1/* .string */.YjP(),
     ticket: zod__rspack_import_1/* .string */.YjP()
 }).strict();
@@ -32721,9 +32722,22 @@ const acceptedKillSummary = (ticket, request)=>{
     }
 };
 const killTicketResult = async (input, options)=>{
-    const killed = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .killTicket */.N6)(input.ticket, options.config), options.signal);
+    const killed = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)(fromLedgerWhenStopped((0,_client_tickets_js__rspack_import_0/* .killTicket */.N6)(input.ticket, options.config), input.ticket, options.config, (request)=>({
+            request
+        })), options.signal);
+    if (typeof killed !== 'boolean') {
+        return {
+            daemon: 'stopped',
+            killed: false,
+            operation: 'kill',
+            request: killed.request,
+            summary: `${input.ticket}: nothing to kill (the daemon is stopped)`,
+            ticket: input.ticket
+        };
+    }
     const request = await (0,_ticket_errors_js__rspack_import_3/* .runTicketEffect */.n)((0,_client_tickets_js__rspack_import_0/* .fetchTicket */.vA)(input.ticket, options.config), options.signal);
     return {
+        daemon: 'running',
         killed,
         operation: 'kill',
         request: requestForConsumer(request),
@@ -34787,7 +34801,7 @@ const KillDocument = ({ names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runt
                 record: result.request
             }),
             /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g.Context, {
-                children: result.killed ? `Riders attached to ${result.ticket} return to their lane or fail with it. Confirm with ${names.result} ${result.ticket}, which shows status killed. Resubmit only if you still need the work.` : `Nothing changed. Use ${names.status} to find the ticket that holds the lane.`
+                children: result.killed ? `Riders attached to ${result.ticket} return to their lane or fail with it. Confirm with ${names.result} ${result.ticket}, which shows status killed. Resubmit only if you still need the work.` : result.daemon === 'stopped' ? 'Nothing changed. The daemon is stopped, so no ticket holds a lane.' : `Nothing changed. Use ${names.status} to find the ticket that holds the lane.`
             })
         ]
     });
