@@ -1013,7 +1013,7 @@ export const isOrphanedByRestart = (record: Pick<TicketSummary, 'status' | 'erro
 
 export const formatTicket = (id: number): string => `cc-${id}`;
 
-const ticketPattern = /^cc-(\d+)$/u;
+const ticketPattern = /^cc-([1-9]\d*)$/u;
 
 export const parseTicket = (ticket: string): number | null => {
   const match = ticketPattern.exec(ticket);
