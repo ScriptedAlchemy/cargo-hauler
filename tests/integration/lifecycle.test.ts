@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { mkdtemp, rename, stat, unlink, writeFile } from 'node:fs/promises';
-import { connect } from 'node:net';
+import { connect, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -12,7 +12,11 @@ import * as Fiber from 'effect/Fiber';
 import * as Schedule from 'effect/Schedule';
 import * as Scope from 'effect/Scope';
 
-import { SpawnDaemonError, type EnsureDaemonDependencies } from '../../src/internal/client/ensure-daemon.js';
+import {
+  daemonIdentity,
+  SpawnDaemonError,
+  type EnsureDaemonDependencies,
+} from '../../src/internal/client/ensure-daemon.js';
 import { resolveDaemonConfig } from '../../src/internal/daemon/config.js';
 import type { DaemonConfigShape } from '../../src/internal/daemon/config.js';
 import { DaemonUnreachableError, pingDaemon } from '../../src/internal/client/control.js';
@@ -29,11 +33,7 @@ import {
   type StopDaemonDependencies,
 } from '../../src/internal/daemon/runtime/lifecycle.js';
 import { bindDaemonSocket, runDaemon, socketListenPath } from '../../src/internal/daemon/main.js';
-import {
-  daemonIdentity,
-  requestShutdown,
-  type DaemonIdentity,
-} from '../../src/internal/client/shutdown.js';
+import { requestShutdown, type DaemonIdentity } from '../../src/internal/client/shutdown.js';
 import { wireProtocol } from '../../src/internal/contracts/wire-version.js';
 import {
   monitorSocketOwnership,
@@ -425,6 +425,35 @@ describe('daemon restart', () => {
       expect(result.message).toContain('so the restart did not start a new daemon');
       expect(result.message).not.toContain('after the shutdown request');
       expect(result).toMatchObject({ pid: 41, previousPid: 41, running: true });
+      expect(daemonExitCode(result)).toBe(1);
+    }));
+
+  it.live('reports a daemon that accepts the connection but never answers as unresponsive, not absent', () =>
+    Effect.gen(function* () {
+      const root = yield* scopedTempDir('cargo-hauler-restart-hung-');
+      const hungConfig = resolveDaemonConfig({ CARGO_HAULER_STATE_DIR: root });
+      const server = createServer(() => {});
+      yield* Effect.acquireRelease(
+        Effect.callback<void>((resume) => {
+          server.listen(hungConfig.socketPath, () => resume(Effect.void));
+        }),
+        () => Effect.sync(() => server.close()),
+      );
+      const { calls, dependencies } = fakes({ identify: daemonIdentity });
+
+      const result = yield* restartDaemon(hungConfig, dependencies);
+
+      expect(calls).toEqual([]);
+      expect(result).toEqual({
+        message:
+          'cargo-hauler daemon identity probe timed out during response, so its running state is unknown; not restarted',
+        operation: 'daemon',
+        pid: null,
+        report: null,
+        running: null,
+        socketPath: hungConfig.socketPath,
+        subcommand: 'restart',
+      });
       expect(daemonExitCode(result)).toBe(1);
     }));
 

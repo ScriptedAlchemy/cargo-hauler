@@ -21227,6 +21227,7 @@ const defaultEnsureDependencies = {
 /**
  * Probe the current socket without lifecycle side effects; absent stays absent.
  */ const pingOrAbsent = (socketPath, dependencies, pingTimeoutMs)=>dependencies.pingDaemon(socketPath, pingTimeoutMs).pipe(effect_Effect__rspack_import_15/* .catchTag */.KuX('DaemonUnreachable', (error)=>daemonIsAbsent(error.cause) ? effect_Effect__rspack_import_15/* .succeed */.PyW(null) : effect_Effect__rspack_import_15/* .fail */.fJG(error)));
+/** Who is behind the socket, or null when no daemon owns it. A daemon that does not answer fails typed. */ const daemonIdentity = (socketPath, timeoutMs = 1000)=>pingOrAbsent(socketPath, defaultEnsureDependencies, timeoutMs);
 /**
  * Retire a daemon from another install: the graceful request, then a wait for
  * its pid. Directional — only an older daemon is replaced. A newer one
@@ -21319,6 +21320,7 @@ const ensureDaemonRunning = (config = (0,_daemon_config_js__rspack_import_5/* .r
 
 __webpack_require__.d(__webpack_exports__, {
 }, {
+  $c: daemonIdentity,
   R2: defaultEnsureDependencies,
   Yj: daemonIsAbsent,
   oE: ensureDaemonRunning,
@@ -21557,9 +21559,9 @@ __webpack_require__.d(__webpack_exports__, {
 "./src/internal/client/shutdown.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var agent_bundle_meta__rspack_import_0 = __webpack_require__("./.agent-bundle-virtual/meta.mjs");
 /* import */ var effect_Data__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Data.js");
-/* import */ var effect_Effect__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
+/* import */ var effect_Effect__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
 /* import */ var _ui_shared_format_js__rspack_import_6 = __webpack_require__("./src/internal/ui/shared/format.ts");
-/* import */ var _util_guards_js__rspack_import_4 = __webpack_require__("./src/internal/util/guards.ts");
+/* import */ var _util_guards_js__rspack_import_3 = __webpack_require__("./src/internal/util/guards.ts");
 /* import */ var _util_id_js__rspack_import_1 = __webpack_require__("./src/internal/util/id.ts");
 /* import */ var _control_js__rspack_import_2 = __webpack_require__("./src/internal/client/control.ts");
 /**
@@ -21574,11 +21576,6 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 
-/** Who is behind the socket, or null when nothing answered a ping in time. */ const daemonIdentity = (socketPath, timeoutMs = 1000)=>(0,_control_js__rspack_import_2/* .pingDaemon */.LT)(socketPath, timeoutMs).pipe(effect_Effect__rspack_import_3/* .map */.TjK((pong)=>({
-            pid: pong.pid,
-            startedAtMs: pong.startedAtMs,
-            version: pong.version
-        })), effect_Effect__rspack_import_3/* .orElseSucceed */.DM4(()=>null));
 /**
  * How long a daemon gets to exit after acknowledging a shutdown request. It
  * is the same window its own signal handler allows before forcing the exit.
@@ -21588,20 +21585,20 @@ __webpack_require__.d(__webpack_exports__, {
         process.kill(pid, 0);
         return true;
     } catch (error) {
-        return (0,_util_guards_js__rspack_import_4/* .isRecord */.u)(error) && error.code === 'EPERM';
+        return (0,_util_guards_js__rspack_import_3/* .isRecord */.u)(error) && error.code === 'EPERM';
     }
 };
-/** True once the pid is gone, false when it is still there at the end of the grace. */ const waitForExit = (pid, options)=>effect_Effect__rspack_import_3/* .gen */.JkU(function*() {
+/** True once the pid is gone, false when it is still there at the end of the grace. */ const waitForExit = (pid, options)=>effect_Effect__rspack_import_4/* .gen */.JkU(function*() {
         const deadline = Date.now() + options.exitGraceMs;
         while(options.processAlive(pid)){
             if (Date.now() >= deadline) {
                 return false;
             }
-            yield* effect_Effect__rspack_import_3/* .sleep */.yy4(options.pollMs);
+            yield* effect_Effect__rspack_import_4/* .sleep */.yy4(options.pollMs);
         }
         return true;
     });
-const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlined export .version */"0.9.13"), ifIdle = false)=>effect_Effect__rspack_import_3/* .suspend */.DYE(()=>{
+const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlined export .version */"0.9.13"), ifIdle = false)=>effect_Effect__rspack_import_4/* .suspend */.DYE(()=>{
         const id = (0,_util_id_js__rspack_import_1/* .shortId */.m)();
         const isResponse = (message)=>message.id === id && (message.type === 'shutting-down' || message.type === 'error');
         return (0,_control_js__rspack_import_2/* .requestOverSocket */.Lb)({
@@ -21616,7 +21613,7 @@ const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlin
             },
             socketPath,
             timeoutMs
-        }).pipe(effect_Effect__rspack_import_3/* .map */.TjK((messages)=>{
+        }).pipe(effect_Effect__rspack_import_4/* .map */.TjK((messages)=>{
             const response = messages.find(isResponse);
             if (response === undefined) {
                 return {
@@ -21645,15 +21642,15 @@ const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlin
                     }
             }
         }));
-    }).pipe(effect_Effect__rspack_import_3/* .catchTags */.loE({
-        ConnectionClosed: ()=>effect_Effect__rspack_import_3/* .succeed */.PyW({
+    }).pipe(effect_Effect__rspack_import_4/* .catchTags */.loE({
+        ConnectionClosed: ()=>effect_Effect__rspack_import_4/* .succeed */.PyW({
                 kind: 'connection-closed'
             }),
-        ControlTimeout: (error)=>effect_Effect__rspack_import_3/* .succeed */.PyW({
+        ControlTimeout: (error)=>effect_Effect__rspack_import_4/* .succeed */.PyW({
                 kind: 'timeout',
                 phase: error.phase
             }),
-        DaemonUnreachable: ()=>effect_Effect__rspack_import_3/* .succeed */.PyW({
+        DaemonUnreachable: ()=>effect_Effect__rspack_import_4/* .succeed */.PyW({
                 kind: 'unreachable'
             })
     }));
@@ -21700,7 +21697,6 @@ __webpack_require__.d(__webpack_exports__, {
   gD: () => (DaemonNewerError),
   wx: () => (DaemonNotReplacedError)
 }, {
-  $c: daemonIdentity,
   FN: processAlive,
   iU: requestShutdown,
   x0: notReplacedMessage,
@@ -27988,16 +27984,24 @@ const stopDaemonAt = (config, socketPath, dependencies)=>{
             }
             const running = dependencies.processAlive(identity.pid);
             return effect_Effect__rspack_import_6/* .succeed */.PyW(stopped(shutdown, running, running ? identity.pid : null, identity.pid));
-        }))), effect_Effect__rspack_import_6/* .catchTags */.loE({
-        ConnectionClosed: ()=>effect_Effect__rspack_import_6/* .succeed */.PyW(probeFailed('cargo-hauler daemon identity connection closed before it could identify the process')),
-        ControlTimeout: (error)=>effect_Effect__rspack_import_6/* .succeed */.PyW(probeFailed(`cargo-hauler daemon identity probe timed out during ${error.phase}, so its running state is unknown`)),
-        DaemonUnreachable: (error)=>{
-            const absent = (0,_client_ensure_daemon_js__rspack_import_0/* .daemonIsAbsent */.Yj)(error.cause);
-            return effect_Effect__rspack_import_6/* .succeed */.PyW(absent ? stopped({
-                kind: 'absent'
-            }, false, null) : probeFailed('cargo-hauler daemon identity probe could not reach the process, so its running state is unknown'));
-        }
-    }));
+        }))), effect_Effect__rspack_import_6/* ["catch"] */.MfU((error)=>effect_Effect__rspack_import_6/* .succeed */.PyW(error._tag === 'DaemonUnreachable' && (0,_client_ensure_daemon_js__rspack_import_0/* .daemonIsAbsent */.Yj)(error.cause) ? stopped({
+            kind: 'absent'
+        }, false, null) : probeFailed(identityProbeFailure(error)))));
+};
+const identityProbeFailure = (error)=>{
+    switch(error._tag){
+        case 'ConnectionClosed':
+            return 'cargo-hauler daemon identity connection closed before it could identify the process';
+        case 'ControlTimeout':
+            return `cargo-hauler daemon identity probe timed out during ${error.phase}, so its running state is unknown`;
+        case 'DaemonUnreachable':
+            return 'cargo-hauler daemon identity probe could not reach the process, so its running state is unknown';
+        default:
+            {
+                const exhaustive = error;
+                return exhaustive;
+            }
+    }
 };
 const stopDaemon = (config = (0,_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)(), dependencies = defaultStopDependencies)=>stopDaemonAt(config, config.socketPath, dependencies);
 const statusDaemon = (config = (0,_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)())=>(0,_operations_status_js__rspack_import_1/* .loadHaulerSnapshot */.M3)({
@@ -28048,7 +28052,7 @@ const statusDaemon = (config = (0,_config_js__rspack_import_2/* .resolveDaemonCo
     }));
 const defaultRestartDependencies = {
     exitGraceMs: (/* inlined export .exitGraceMs */5000),
-    identify: _client_shutdown_js__rspack_import_5/* .daemonIdentity */.$c,
+    identify: _client_ensure_daemon_js__rspack_import_0/* .daemonIdentity */.$c,
     pollMs: 100,
     processAlive: _client_shutdown_js__rspack_import_5/* .processAlive */.FN,
     start: startDaemon,
@@ -28068,6 +28072,7 @@ const versionText = (identity)=>identity === null ? 'version unknown' : identity
  * not killed.
  */ const restartDaemon = (config = (0,_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)(), dependencies = defaultRestartDependencies)=>effect_Effect__rspack_import_6/* .gen */.JkU(function*() {
         const restart = (fields)=>result(config, 'restart', fields);
+        const identifyStarted = dependencies.identify(config.socketPath).pipe(effect_Effect__rspack_import_6/* .orElseSucceed */.DM4(()=>null));
         const before = yield* dependencies.identify(config.socketPath);
         if (before === null) {
             const started = yield* dependencies.start(config);
@@ -28077,7 +28082,7 @@ const versionText = (identity)=>identity === null ? 'version unknown' : identity
                     previousPid: null
                 });
             }
-            const after = yield* dependencies.identify(config.socketPath);
+            const after = yield* identifyStarted;
             return restart({
                 message: `cargo-hauler daemon was not running, so the restart started pid ${started.pid} (${versionText(after)})`,
                 pid: started.pid,
@@ -28105,7 +28110,7 @@ const versionText = (identity)=>identity === null ? 'version unknown' : identity
                 previousPid: before.pid
             });
         }
-        const after = yield* dependencies.identify(config.socketPath);
+        const after = yield* identifyStarted;
         return restart({
             message: `cargo-hauler daemon restarted from pid ${before.pid} (${before.version}) to pid ${started.pid} (${versionText(after)})`,
             pid: started.pid,
@@ -28113,7 +28118,12 @@ const versionText = (identity)=>identity === null ? 'version unknown' : identity
             report: null,
             running: true
         });
-    });
+    }).pipe(effect_Effect__rspack_import_6/* ["catch"] */.MfU((error)=>effect_Effect__rspack_import_6/* .succeed */.PyW(result(config, 'restart', {
+            message: `${identityProbeFailure(error)}; not restarted`,
+            pid: null,
+            report: null,
+            running: null
+        }))));
 const runForegroundDaemon = (config = (0,_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)())=>{
     const program = (0,_main_js__rspack_import_4/* .runDaemon */.OZ)(config);
     const fiber = effect_Effect__rspack_import_6/* .runFork */.MY7(program);

@@ -19508,6 +19508,7 @@ const defaultEnsureDependencies = {
 /**
  * Probe the current socket without lifecycle side effects; absent stays absent.
  */ const pingOrAbsent = (socketPath, dependencies, pingTimeoutMs)=>dependencies.pingDaemon(socketPath, pingTimeoutMs).pipe(effect_Effect__rspack_import_15/* .catchTag */.KuX('DaemonUnreachable', (error)=>daemonIsAbsent(error.cause) ? effect_Effect__rspack_import_15/* .succeed */.PyW(null) : effect_Effect__rspack_import_15/* .fail */.fJG(error)));
+/** Who is behind the socket, or null when no daemon owns it. A daemon that does not answer fails typed. */ const daemonIdentity = (socketPath, timeoutMs = 1000)=>pingOrAbsent(socketPath, defaultEnsureDependencies, timeoutMs);
 /**
  * Retire a daemon from another install: the graceful request, then a wait for
  * its pid. Directional — only an older daemon is replaced. A newer one
@@ -19737,11 +19738,6 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 
-/** Who is behind the socket, or null when nothing answered a ping in time. */ const daemonIdentity = (socketPath, timeoutMs = 1000)=>pingDaemon(socketPath, timeoutMs).pipe(Effect.map((pong)=>({
-            pid: pong.pid,
-            startedAtMs: pong.startedAtMs,
-            version: pong.version
-        })), Effect.orElseSucceed(()=>null));
 /**
  * How long a daemon gets to exit after acknowledging a shutdown request. It
  * is the same window its own signal handler allows before forcing the exit.

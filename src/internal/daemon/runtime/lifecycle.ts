@@ -4,6 +4,7 @@ import * as Exit from 'effect/Exit';
 import * as Fiber from 'effect/Fiber';
 
 import {
+  daemonIdentity,
   daemonIsAbsent,
   defaultEnsureDependencies,
   ensureDaemonRunning,
@@ -21,7 +22,6 @@ import { pingDaemon } from '../../client/control.js';
 import { runDaemon } from '../main.js';
 import type { StatusReport } from '../../contracts/protocol.js';
 import {
-  daemonIdentity,
   exitGraceMs,
   notReplacedMessage,
   processAlive,
@@ -359,29 +359,29 @@ const stopDaemonAt = (
         }),
       ),
     ),
-    Effect.catchTags({
-      ConnectionClosed: () =>
-        Effect.succeed(
-          probeFailed('cargo-hauler daemon identity connection closed before it could identify the process'),
-        ),
-      ControlTimeout: (error) =>
-        Effect.succeed(
-          probeFailed(
-            `cargo-hauler daemon identity probe timed out during ${error.phase}, so its running state is unknown`,
-          ),
-        ),
-      DaemonUnreachable: (error) => {
-        const absent = daemonIsAbsent(error.cause);
-        return Effect.succeed(
-          absent
-            ? stopped({ kind: 'absent' }, false, null)
-            : probeFailed(
-                'cargo-hauler daemon identity probe could not reach the process, so its running state is unknown',
-              ),
-        );
-      },
-    }),
+    Effect.catch((error) =>
+      Effect.succeed(
+        error._tag === 'DaemonUnreachable' && daemonIsAbsent(error.cause)
+          ? stopped({ kind: 'absent' }, false, null)
+          : probeFailed(identityProbeFailure(error)),
+      ),
+    ),
   );
+};
+
+const identityProbeFailure = (error: WaitForDaemonError): string => {
+  switch (error._tag) {
+    case 'ConnectionClosed':
+      return 'cargo-hauler daemon identity connection closed before it could identify the process';
+    case 'ControlTimeout':
+      return `cargo-hauler daemon identity probe timed out during ${error.phase}, so its running state is unknown`;
+    case 'DaemonUnreachable':
+      return 'cargo-hauler daemon identity probe could not reach the process, so its running state is unknown';
+    default: {
+      const exhaustive: never = error;
+      return exhaustive;
+    }
+  }
 };
 
 export const stopDaemon = (
@@ -457,8 +457,8 @@ export const statusDaemon = (
   );
 
 export interface RestartDaemonDependencies {
-  /** Who answers the socket right now; null when nobody does. */
-  readonly identify: (socketPath: string) => Effect.Effect<DaemonIdentity | null>;
+  /** Who answers the socket right now; null when no daemon owns it. */
+  readonly identify: (socketPath: string) => Effect.Effect<DaemonIdentity | null, WaitForDaemonError>;
   readonly stop: (config: DaemonConfigShape) => Effect.Effect<DaemonControlResult>;
   readonly start: (config: DaemonConfigShape) => Effect.Effect<DaemonControlResult>;
   /** Whether the process still exists (`kill -0`). */
@@ -499,13 +499,14 @@ export const restartDaemon = (
   Effect.gen(function* () {
     const restart = (fields: Omit<DaemonControlResult, 'operation' | 'socketPath' | 'subcommand'>) =>
       result(config, 'restart', fields);
+    const identifyStarted = dependencies.identify(config.socketPath).pipe(Effect.orElseSucceed(() => null));
     const before = yield* dependencies.identify(config.socketPath);
     if (before === null) {
       const started = yield* dependencies.start(config);
       if (!started.running) {
         return restart({ ...started, previousPid: null });
       }
-      const after = yield* dependencies.identify(config.socketPath);
+      const after = yield* identifyStarted;
       return restart({
         message: `cargo-hauler daemon was not running, so the restart started pid ${started.pid} (${versionText(after)})`,
         pid: started.pid,
@@ -539,7 +540,7 @@ export const restartDaemon = (
         previousPid: before.pid,
       });
     }
-    const after = yield* dependencies.identify(config.socketPath);
+    const after = yield* identifyStarted;
     return restart({
       message: `cargo-hauler daemon restarted from pid ${before.pid} (${before.version}) to pid ${started.pid} (${versionText(after)})`,
       pid: started.pid,
@@ -547,7 +548,18 @@ export const restartDaemon = (
       report: null,
       running: true,
     });
-  });
+  }).pipe(
+    Effect.catch((error) =>
+      Effect.succeed(
+        result(config, 'restart', {
+          message: `${identityProbeFailure(error)}; not restarted`,
+          pid: null,
+          report: null,
+          running: null,
+        }),
+      ),
+    ),
+  );
 
 export const runForegroundDaemon = (
   config: DaemonConfigShape = resolveDaemonConfig(),

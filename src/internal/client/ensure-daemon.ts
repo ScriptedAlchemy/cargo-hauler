@@ -27,7 +27,7 @@ import {
   requestShutdown,
   waitForExit,
 } from './shutdown.js';
-import type { ExitWaitOptions, ShutdownOutcome } from './shutdown.js';
+import type { DaemonIdentity, ExitWaitOptions, ShutdownOutcome } from './shutdown.js';
 import { isNewerVersion } from '../contracts/version-order.js';
 import { resolveHaulerArgv } from '../platform/hauler-binding.js';
 import { absentSocketCodes, socketErrorCode } from '../platform/socket-errors.js';
@@ -286,6 +286,13 @@ const pingOrAbsent = (
       daemonIsAbsent(error.cause) ? Effect.succeed(null) : Effect.fail(error),
     ),
   );
+
+/** Who is behind the socket, or null when no daemon owns it. A daemon that does not answer fails typed. */
+export const daemonIdentity = (
+  socketPath: string,
+  timeoutMs = 1_000,
+): Effect.Effect<DaemonIdentity | null, WaitForDaemonError> =>
+  pingOrAbsent(socketPath, defaultEnsureDependencies, timeoutMs);
 
 /**
  * Retire a daemon from another install: the graceful request, then a wait for
