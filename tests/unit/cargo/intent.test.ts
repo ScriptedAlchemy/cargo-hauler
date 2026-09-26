@@ -92,6 +92,10 @@ describe('parseCargoArgv', () => {
     );
   });
 
+  it('rejects a bare program that is not cargo instead of treating it as the subcommand', () => {
+    expect(() => parseCargoArgv(['ls', '-la'])).toThrow('program must be cargo, got ls');
+  });
+
   it('accepts cargo global options before the subcommand', () => {
     expect(parseCargoArgv([
       '/usr/local/bin/cargo',
@@ -695,7 +699,7 @@ describe('program prefixes', () => {
     expect(several.subcommand).toBe('bash');
     expect(several.shellScript).toBe('cargo build -p a && cargo test -p a');
     // A shell run without -c is not a wrapper at all.
-    expect(parseCargoArgv(['bash', 'script.sh']).subcommand).toBe('bash');
+    expect(() => parseCargoArgv(['bash', 'script.sh'])).toThrow('program must be cargo, got bash');
   });
 
   it('separates wrapped intents by script and by cargo tail', () => {
