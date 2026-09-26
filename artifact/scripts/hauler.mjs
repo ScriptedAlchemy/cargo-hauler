@@ -20955,7 +20955,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./src/internal/platform/hauler-binding.ts"(__unused_rspack_module, __webpack_exports__, __webpack_require__) {
 /* import */ var node_path__rspack_import_0 = __webpack_require__("node:path");
-/* import */ var _agent_bundle_runtime_plugin__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/49.js");
+/* import */ var _agent_bundle_runtime_plugin__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e15397add7c7c09ca430d28a4e1b2eb4/node_modules/@agent-bundle/runtime/dist/49.js");
 
 
 /** The product's declared script identity, relative to a framework code root. */ const haulerArgvForRoot = (root)=>[
@@ -23663,12 +23663,12 @@ module.exports = __rspack_createRequire_require("util");
 module.exports = __rspack_createRequire_require("zlib");
 
 },
-"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/49.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e15397add7c7c09ca430d28a4e1b2eb4/node_modules/@agent-bundle/runtime/dist/49.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
 /* import */ var node_fs__rspack_import_1 = __webpack_require__("node:fs");
 /* import */ var node_os__rspack_import_2 = __webpack_require__("node:os");
 /* import */ var node_path__rspack_import_3 = __webpack_require__("node:path");
-/* import */ var _736_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/736.js");
+/* import */ var _736_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e15397add7c7c09ca430d28a4e1b2eb4/node_modules/@agent-bundle/runtime/dist/736.js");
 
 
 
@@ -23745,7 +23745,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_8a520d7a3aaeaa0cabb76a1d5a9cc798/node_modules/@agent-bundle/runtime/dist/736.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e15397add7c7c09ca430d28a4e1b2eb4/node_modules/@agent-bundle/runtime/dist/736.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_async_hooks__rspack_import_0 = __webpack_require__("node:async_hooks");
 
 const AGENT_REQUEST_STORE_VERSION = 6;
@@ -27042,7 +27042,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 },
-"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_305fe8f390df053948b85681214b16dc/node_modules/agent-bundle/dist/terminal-capability.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+"./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@4f62216f30_@a_115552f4b15708cb809a5142ecbcc800/node_modules/agent-bundle/dist/terminal-capability.js"(__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
 /* import */ var node_fs__rspack_import_0 = __webpack_require__("node:fs");
 
 const isSet = (value)=>void 0 !== value && '' !== value;
@@ -134930,7 +134930,7 @@ __webpack_require__.d(__webpack_exports__, {
 },
 "./.agent-bundle-virtual/hauler-entry.mjs"(__webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
 __webpack_require__.a(__webpack_module__, async function (__rspack_load_async_deps, __rspack_async_done) { try {
-/* import */ var agent_bundle_terminal_capability__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@1a7705899f4e5_305fe8f390df053948b85681214b16dc/node_modules/agent-bundle/dist/terminal-capability.js");
+/* import */ var agent_bundle_terminal_capability__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@4f62216f30_@a_115552f4b15708cb809a5142ecbcc800/node_modules/agent-bundle/dist/terminal-capability.js");
 /* import */ var _src_scripts_hauler_ts__rspack_import_1 = __webpack_require__("./src/scripts/hauler.ts");
 
 
