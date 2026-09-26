@@ -226,6 +226,41 @@ describe('explicit ticket dependencies (--after)', () => {
       ).toHaveLength(2);
     }));
 
+  it.live('rejects a zero-padded prerequisite and runs the canonical dependent', () =>
+    Effect.gen(function* () {
+      const { fixture, layer } = yield* brokerFixture(5);
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const broker = yield* Broker;
+          const prerequisite = yield* submit(broker, fixture, {
+            argv: ['cargo', 'check', '-p', 'prerequisite'],
+            cwd: fixture.ws1,
+            sleep: '1',
+          });
+          expect(prerequisite.result.ticket).toBe('cc-1');
+          const padded = yield* Effect.flip(
+            submit(broker, fixture, {
+              after: ['cc-01'],
+              argv: ['cargo', 'check', '-p', 'padded'],
+              cwd: fixture.ws1,
+            }),
+          );
+          expect(padded).toMatchObject({ _tag: 'CargoIntentError' });
+          expect(String((padded as { readonly message: string }).message)).toContain(
+            'unknown prerequisite ticket cc-01',
+          );
+          const dependent = yield* submit(broker, fixture, {
+            after: ['cc-1'],
+            argv: ['cargo', 'check', '-p', 'dependent'],
+            cwd: fixture.ws1,
+          });
+          expect(dependent.result.waitingFor).toEqual(['cc-1']);
+          expect((yield* settled(broker, dependent.result.ticket)).status).toBe('done');
+          expect((yield* broker.awaitTicket('cc-01', 5_000)).record).toBeNull();
+        }),
+      ).pipe(Effect.provide(layer));
+    }));
+
   it.live('resolves prerequisites that already settled at submit time', () =>
     Effect.gen(function* () {
       const { fixture, layer } = yield* brokerFixture(5);

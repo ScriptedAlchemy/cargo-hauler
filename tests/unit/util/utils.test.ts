@@ -45,5 +45,6 @@ describe('shared micro utilities', () => {
     expect(parseTicket('cc-42')).toBe(42);
     expect(parseTicket('cc-nope')).toBeNull();
     expect(parseTicket('prefix-cc-42')).toBeNull();
+    expect(parseTicket('cc-042')).toBeNull();
   });
 });
