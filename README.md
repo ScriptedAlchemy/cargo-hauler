@@ -221,6 +221,8 @@ Within a lane, the daemon can reduce work in three ways:
    check.
 3. **Batch folding.** The daemon combines compatible queued compile or test
    requests into one invocation.
+   The lane head folds when it wins its admission permit, so requests that
+   join the lane while it waits for one still ride it.
 
 A leading `env NAME=value … cargo …` folds into the request environment, so
 the daemon schedules, estimates, attaches, and phase-tracks the cargo behind
@@ -270,7 +272,9 @@ Requests that name the same packages share no compile and still need the same
 filters. Unfiltered runs fold only with unfiltered runs. `--skip`,
 `--ignored`, `--include-ignored`, `--list`, `--format`, `--logfile`, or any
 other harness flag keeps a run out of composites. `cargo nextest run`
-requests fold only on an identical filterset. On success, every participant
+requests fold only on an identical filterset. Of the cargo flags the daemon
+does not model, only `--locked`, `--frozen`, and `--offline` fold, and only
+when every participant passes the same ones. On success, every participant
 shares the exit. When the composite fails, a participant inherits that
 failure only if it named every package and every filter the composite ran.
 Otherwise the failing tests may belong to another participant's package or

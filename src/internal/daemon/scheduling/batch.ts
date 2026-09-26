@@ -13,6 +13,34 @@ const testFoldSubcommands = new Set(['nextest', 'test']);
 export const maxBatchPackages = 16;
 
 /**
+ * Unmodeled cargo flags that assert something about the whole invocation's
+ * lockfile or network access and never select or shape a package's units.
+ * The composite carries the leader's, so participants must make the same
+ * assertions (`sameInvocationAssertions`).
+ */
+const invocationAssertions = new Set(['--frozen', '--locked', '--offline']);
+
+const sameStringSet = (left: readonly string[], right: readonly string[]): boolean =>
+  left.every((value) => right.includes(value)) && right.every((value) => left.includes(value));
+
+const invocationAssertionsOf = (intent: NormalizedCargoIntent): readonly string[] =>
+  intent.opaqueArguments.filter((argument) => invocationAssertions.has(argument));
+
+/** Unmodeled flags are foldable when each is an invocation assertion or in `extra`. */
+const onlyFoldableOpaque = (
+  intent: NormalizedCargoIntent,
+  extra: ReadonlySet<string> = new Set(),
+): boolean =>
+  intent.opaqueArguments.every(
+    (argument) => invocationAssertions.has(argument) || extra.has(argument),
+  );
+
+const sameInvocationAssertions = (
+  leader: NormalizedCargoIntent,
+  candidate: NormalizedCargoIntent,
+): boolean => sameStringSet(invocationAssertionsOf(leader), invocationAssertionsOf(candidate));
+
+/**
  * Whether an intent has the explicit-package shape composable into a batch.
  * A `--` trailer (`cargo clippy … -- -D warnings`) is allowed: the composite
  * keeps the leader's trailer once, so `batchCompatible` admits only
@@ -23,7 +51,7 @@ const batchLeaderEligible = (intent: NormalizedCargoIntent): boolean =>
   !intent.workspace &&
   intent.packages.length > 0 &&
   intent.excludes.length === 0 &&
-  intent.opaqueArguments.length === 0;
+  onlyFoldableOpaque(intent);
 
 /**
  * Whether `candidate` can be folded into a composite invocation led by
@@ -43,6 +71,7 @@ export const batchCompatible = (
   batchLeaderEligible(leader) &&
   batchLeaderEligible(candidate) &&
   sameCompileSurface(leader, candidate) &&
+  sameInvocationAssertions(leader, candidate) &&
   stringArraysEqual(leader.targets, candidate.targets) &&
   stringArraysEqual(leader.passthrough, candidate.passthrough);
 
@@ -90,8 +119,7 @@ export const withExtraPackages = (
 };
 
 /** The composite always re-adds `--no-fail-fast`, so it is a benign opaque. */
-const onlyNoFailFast = (opaque: readonly string[]): boolean =>
-  opaque.every((argument) => argument === '--no-fail-fast');
+const testRunOpaque: ReadonlySet<string> = new Set(['--no-fail-fast']);
 
 /**
  * The libtest arguments after `--` of a `cargo test`, split into what they
@@ -268,7 +296,7 @@ const testBatchEligible = (intent: NormalizedCargoIntent): boolean =>
   !intent.workspace &&
   intent.packages.length > 0 &&
   intent.excludes.length === 0 &&
-  onlyNoFailFast(intent.opaqueArguments) &&
+  onlyFoldableOpaque(intent, testRunOpaque) &&
   foldableTestTargets(intent.targets) &&
   classifyTestTrailer(intent.passthrough) !== null;
 
@@ -285,7 +313,7 @@ const nextestBatchEligible = (intent: NormalizedCargoIntent): boolean =>
   !intent.workspace &&
   intent.packages.length > 0 &&
   intent.excludes.length === 0 &&
-  onlyNoFailFast(intent.opaqueArguments) &&
+  onlyFoldableOpaque(intent, testRunOpaque) &&
   intent.targets.length === 0 &&
   intent.testFilters.length === 0 &&
   intent.passthrough.length === 0;
@@ -305,9 +333,6 @@ export const batchKindFor = (intent: NormalizedCargoIntent): BatchKind | null =>
   }
   return null;
 };
-
-const sameStringSet = (left: readonly string[], right: readonly string[]): boolean =>
-  left.every((value) => right.includes(value)) && right.every((value) => left.includes(value));
 
 /**
  * Whether two `cargo test` selections can share one composite (#87). The
@@ -376,12 +401,14 @@ export const batchCompatibleFor = (
       return (
         testBatchEligible(candidate) &&
         sameCompileSurface(leader, candidate) &&
+        sameInvocationAssertions(leader, candidate) &&
         testSelectionsFold(leader, candidate)
       );
     case 'nextest':
       return (
         nextestBatchEligible(candidate) &&
         sameCompileSurface(leader, candidate) &&
+        sameInvocationAssertions(leader, candidate) &&
         stringArraysEqual(leader.filterExpressions, candidate.filterExpressions)
       );
     default: {

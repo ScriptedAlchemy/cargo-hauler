@@ -14157,6 +14157,11 @@ const makeLaneRuntime = (deps)=>effect_Effect__rspack_import_15/* .gen */.JkU(fu
      * composite would run it before the work it declared it needs.
      * Folded followers keep their own `mergeStderr`; the composite's channels
      * are forwarded as the leader produced them.
+     *
+     * It runs once the leader holds its admission permit, not when the lane
+     * takes it: a head can park at the gate or on the permit for most of an
+     * hour, and every compatible request that joins the lane meanwhile must
+     * ride this run rather than wait out another permit of its own.
      */ const foldBatch = (lane, leader)=>effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
                 const kind = config.batchEnabled ? (0,_scheduling_batch_js__rspack_import_2/* .batchKindFor */.Wk)(leader.intent) : null;
                 if (kind === null) {
@@ -14623,6 +14628,7 @@ const makeLaneRuntime = (deps)=>effect_Effect__rspack_import_15/* .gen */.JkU(fu
      * same signal — so this arm parks forever rather than interrupting an
      * admitted run.
      */ const killedBeforeStart = (job)=>effect_Deferred__rspack_import_19/* ["await"] */.Tx(job.killSignal).pipe(effect_Effect__rspack_import_15/* .andThen */.hgn(effect_Ref__rspack_import_17/* .get */.Jt(job.state)), effect_Effect__rspack_import_15/* .flatMap */.qIB((state)=>state === 'kill-requested' ? effect_Effect__rspack_import_15/* ["void"] */.rIH : effect_Effect__rspack_import_15/* .never */.ZmZ));
+        const stillQueued = (job)=>effect_Ref__rspack_import_17/* .get */.Jt(job.state).pipe(effect_Effect__rspack_import_15/* .map */.TjK((state)=>state === 'queued'));
         const processJob = (lane, job)=>effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
                 const state = yield* effect_Ref__rspack_import_17/* .get */.Jt(job.state);
                 if (state === 'kill-requested') {
@@ -14636,21 +14642,23 @@ const makeLaneRuntime = (deps)=>effect_Effect__rspack_import_15/* .gen */.JkU(fu
                 const claimed = {
                     value: false
                 };
-                const admitAndRun = waitForLoadHeadroom(job, heavy, claimed).pipe(effect_Effect__rspack_import_15/* .andThen */.hgn(admission.withPermits(1)(effect_Ref__rspack_import_17/* .update */.yo(admittedCount, (count)=>count + 1).pipe(effect_Effect__rspack_import_15/* .andThen */.hgn(runAdmitted(lane, job)), effect_Effect__rspack_import_15/* .ensuring */.yeE(effect_Ref__rspack_import_17/* .update */.yo(admittedCount, (count)=>count - 1))))));
+                const admitAndRun = waitForLoadHeadroom(job, heavy, claimed).pipe(effect_Effect__rspack_import_15/* .andThen */.hgn(admission.withPermits(1)(effect_Ref__rspack_import_17/* .update */.yo(admittedCount, (count)=>count + 1).pipe(// Uninterruptible so a racing kill settles a fully folded
+                // composite (requeueing its followers), never a half-folded one.
+                effect_Effect__rspack_import_15/* .andThen */.hgn(effect_Effect__rspack_import_15/* .uninterruptible */.rfi(effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
+                    if (yield* stillQueued(job)) {
+                        yield* foldBatch(lane, job);
+                    }
+                }))), effect_Effect__rspack_import_15/* .andThen */.hgn(runAdmitted(lane, job)), effect_Effect__rspack_import_15/* .ensuring */.yeE(effect_Ref__rspack_import_17/* .update */.yo(admittedCount, (count)=>count - 1))))));
                 // A job parked at the load gate or on the permit can wait minutes
                 // (and blocks its whole lane); a kill must settle it right away
                 // instead of waiting for a permit it will never use.
                 yield* effect_Effect__rspack_import_15/* .raceFirst */.KT6(admitAndRun, killedBeforeStart(job).pipe(effect_Effect__rspack_import_15/* .andThen */.hgn(finishKilledBeforeRun(lane, job)))).pipe(effect_Effect__rspack_import_15/* .ensuring */.yeE(effect_Effect__rspack_import_15/* .suspend */.DYE(()=>claimed.value ? releaseHeavy : effect_Effect__rspack_import_15/* ["void"] */.rIH)));
             }).pipe(effect_Effect__rspack_import_15/* .onInterrupt */.nAr(()=>settleInterruptedJob(job)));
-        const stillQueued = (job)=>effect_Ref__rspack_import_17/* .get */.Jt(job.state).pipe(effect_Effect__rspack_import_15/* .map */.TjK((state)=>state === 'queued'));
         const processLaneJob = (lane, job)=>effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
                 // A kill-requested head neither waits for nor leads a batch: it
                 // would fold followers only to requeue them one by one.
                 if (config.batchEnabled && config.batchWindowMs > 0 && !lane.pending.some(_dependencies_js__rspack_import_7/* .isSchedulable */.pg) && (0,_scheduling_batch_js__rspack_import_2/* .batchKindFor */.Wk)(job.intent) !== null && (yield* stillQueued(job))) {
                     yield* effect_Effect__rspack_import_15/* .raceFirst */.KT6(effect_Effect__rspack_import_15/* .sleep */.yy4(`${config.batchWindowMs} millis`), effect_Deferred__rspack_import_19/* ["await"] */.Tx(job.killSignal));
-                }
-                if (yield* stillQueued(job)) {
-                    yield* foldBatch(lane, job);
                 }
                 yield* processJob(lane, job);
             }).pipe(effect_Effect__rspack_import_15/* .catchCauseIf */.sJf((cause)=>!effect_Cause__rspack_import_18/* .hasInterruptsOnly */.nn(cause), (cause)=>{
@@ -18221,11 +18229,25 @@ __webpack_require__.d(__webpack_exports__, {
 ]);
 /** Upper bound on packages merged into one composite invocation. */ const maxBatchPackages = 16;
 /**
+ * Unmodeled cargo flags that assert something about the whole invocation's
+ * lockfile or network access and never select or shape a package's units.
+ * The composite carries the leader's, so participants must make the same
+ * assertions (`sameInvocationAssertions`).
+ */ const invocationAssertions = new Set([
+    '--frozen',
+    '--locked',
+    '--offline'
+]);
+const sameStringSet = (left, right)=>left.every((value)=>right.includes(value)) && right.every((value)=>left.includes(value));
+const invocationAssertionsOf = (intent)=>intent.opaqueArguments.filter((argument)=>invocationAssertions.has(argument));
+/** Unmodeled flags are foldable when each is an invocation assertion or in `extra`. */ const onlyFoldableOpaque = (intent, extra = new Set())=>intent.opaqueArguments.every((argument)=>invocationAssertions.has(argument) || extra.has(argument));
+const sameInvocationAssertions = (leader, candidate)=>sameStringSet(invocationAssertionsOf(leader), invocationAssertionsOf(candidate));
+/**
  * Whether an intent has the explicit-package shape composable into a batch.
  * A `--` trailer (`cargo clippy … -- -D warnings`) is allowed: the composite
  * keeps the leader's trailer once, so `batchCompatible` admits only
  * followers whose trailer is byte-equal (#86).
- */ const batchLeaderEligible = (intent)=>batchableSubcommands.has(intent.subcommand) && !intent.workspace && intent.packages.length > 0 && intent.excludes.length === 0 && intent.opaqueArguments.length === 0;
+ */ const batchLeaderEligible = (intent)=>batchableSubcommands.has(intent.subcommand) && !intent.workspace && intent.packages.length > 0 && intent.excludes.length === 0 && onlyFoldableOpaque(intent);
 /**
  * Whether `candidate` can be folded into a composite invocation led by
  * `leader`: same batchable subcommand, identical compile surface, target
@@ -18235,7 +18257,7 @@ __webpack_require__.d(__webpack_exports__, {
  * `-- -D warnings` another participant's warnings fail the composite; the
  * demux still proves a follower whose own units compiled cleanly, and the
  * rest requeue to run alone.
- */ const batchCompatible = (leader, candidate)=>leader.subcommand === candidate.subcommand && batchLeaderEligible(leader) && batchLeaderEligible(candidate) && (0,_broker_coverage_js__rspack_import_0/* .sameCompileSurface */.hJ)(leader, candidate) && (0,_broker_coverage_js__rspack_import_0/* .stringArraysEqual */.Oh)(leader.targets, candidate.targets) && (0,_broker_coverage_js__rspack_import_0/* .stringArraysEqual */.Oh)(leader.passthrough, candidate.passthrough);
+ */ const batchCompatible = (leader, candidate)=>leader.subcommand === candidate.subcommand && batchLeaderEligible(leader) && batchLeaderEligible(candidate) && (0,_broker_coverage_js__rspack_import_0/* .sameCompileSurface */.hJ)(leader, candidate) && sameInvocationAssertions(leader, candidate) && (0,_broker_coverage_js__rspack_import_0/* .stringArraysEqual */.Oh)(leader.targets, candidate.targets) && (0,_broker_coverage_js__rspack_import_0/* .stringArraysEqual */.Oh)(leader.passthrough, candidate.passthrough);
 /** Packages on `candidate` that the leader invocation does not already name. */ const extraPackagesFor = (leader, candidate)=>candidate.packages.filter((name)=>!leader.packages.includes(name));
 /**
  * Where the leader's argv stops taking cargo flags: the earlier of the demux
@@ -18270,7 +18292,9 @@ __webpack_require__.d(__webpack_exports__, {
         ...argv.slice(insertAt)
     ];
 };
-/** The composite always re-adds `--no-fail-fast`, so it is a benign opaque. */ const onlyNoFailFast = (opaque)=>opaque.every((argument)=>argument === '--no-fail-fast');
+/** The composite always re-adds `--no-fail-fast`, so it is a benign opaque. */ const testRunOpaque = new Set([
+    '--no-fail-fast'
+]);
 /**
  * Walks a `cargo test` trailer one libtest argument at a time — a bare name
  * filter, or a foldable harness flag — or returns null at the first argument
@@ -18420,14 +18444,14 @@ const integrationTestTargetPrefix = 'test:';
  * target narrowing expressible as `--test` / `--lib` flags, a trailer of
  * bare name filters and foldable harness flags only (`classifyTestTrailer`),
  * and no unmodeled cargo flags.
- */ const testBatchEligible = (intent)=>intent.subcommand === 'test' && !intent.workspace && intent.packages.length > 0 && intent.excludes.length === 0 && onlyNoFailFast(intent.opaqueArguments) && foldableTestTargets(intent.targets) && classifyTestTrailer(intent.passthrough) !== null;
+ */ const testBatchEligible = (intent)=>intent.subcommand === 'test' && !intent.workspace && intent.packages.length > 0 && intent.excludes.length === 0 && onlyFoldableOpaque(intent, testRunOpaque) && foldableTestTargets(intent.targets) && classifyTestTrailer(intent.passthrough) !== null;
 /**
  * Whether a `cargo nextest run` intent can fold: explicit packages keep the
  * composite's build scope tight (an -E-only participant would need a
  * workspace-wide build to be a superset), and the whole selection must be
  * expressible as one filterset — positional filters and trailing arguments
  * intersect with `-E` in nextest, so their presence disqualifies folding.
- */ const nextestBatchEligible = (intent)=>intent.subcommand === 'nextest' && intent.nextestCommand === 'run' && !intent.workspace && intent.packages.length > 0 && intent.excludes.length === 0 && onlyNoFailFast(intent.opaqueArguments) && intent.targets.length === 0 && intent.testFilters.length === 0 && intent.passthrough.length === 0;
+ */ const nextestBatchEligible = (intent)=>intent.subcommand === 'nextest' && intent.nextestCommand === 'run' && !intent.workspace && intent.packages.length > 0 && intent.excludes.length === 0 && onlyFoldableOpaque(intent, testRunOpaque) && intent.targets.length === 0 && intent.testFilters.length === 0 && intent.passthrough.length === 0;
 /** How (if at all) this intent can lead or join a composite invocation. */ const batchKindFor = (intent)=>{
     if (batchLeaderEligible(intent)) {
         return 'compile';
@@ -18440,7 +18464,6 @@ const integrationTestTargetPrefix = 'test:';
     }
     return null;
 };
-const sameStringSet = (left, right)=>left.every((value)=>right.includes(value)) && right.every((value)=>left.includes(value));
 /**
  * Whether two `cargo test` selections can share one composite (#87). The
  * `--test` / `--lib` target set and the harness flags must match exactly:
@@ -18491,9 +18514,9 @@ const sameStringSet = (left, right)=>left.every((value)=>right.includes(value)) 
         case 'compile':
             return batchCompatible(leader, candidate);
         case 'test':
-            return testBatchEligible(candidate) && (0,_broker_coverage_js__rspack_import_0/* .sameCompileSurface */.hJ)(leader, candidate) && testSelectionsFold(leader, candidate);
+            return testBatchEligible(candidate) && (0,_broker_coverage_js__rspack_import_0/* .sameCompileSurface */.hJ)(leader, candidate) && sameInvocationAssertions(leader, candidate) && testSelectionsFold(leader, candidate);
         case 'nextest':
-            return nextestBatchEligible(candidate) && (0,_broker_coverage_js__rspack_import_0/* .sameCompileSurface */.hJ)(leader, candidate) && (0,_broker_coverage_js__rspack_import_0/* .stringArraysEqual */.Oh)(leader.filterExpressions, candidate.filterExpressions);
+            return nextestBatchEligible(candidate) && (0,_broker_coverage_js__rspack_import_0/* .sameCompileSurface */.hJ)(leader, candidate) && sameInvocationAssertions(leader, candidate) && (0,_broker_coverage_js__rspack_import_0/* .stringArraysEqual */.Oh)(leader.filterExpressions, candidate.filterExpressions);
         default:
             {
                 const exhaustive = kind;
