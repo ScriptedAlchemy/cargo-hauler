@@ -258,6 +258,7 @@ describe('loadHaulerSnapshot', () => {
               targetDir: '/repo/target',
               workspaceRoot: '/repo',
             });
+            yield* ledger.markRunning(1, 1_500);
             yield* ledger.markFinished(1, { atMs: 2_000, exitCode: 0, outputTail: 'ok\n', status: 'done' });
             yield* ledger.createRequest({
               argv: ['cargo', 'test'],
@@ -329,6 +330,7 @@ describe('loadHaulerSnapshot', () => {
             workspaceRoot: '/repo',
           } as const;
           yield* ledger.createRequest({ ...input, createdAtMs: 1_000 });
+          yield* ledger.markRunning(1, 1_500);
           yield* ledger.markFinished(1, { atMs: 2_000, exitCode: 0, outputTail: 'ok\n', status: 'done' });
           yield* ledger.createRequest({ ...input, argv: ['cargo', 'test'], createdAtMs: 500 });
           yield* ledger.markQueued(2, 600);
@@ -372,6 +374,7 @@ describe('loadHaulerSnapshot', () => {
             targetDir: '/repo/target',
             workspaceRoot: '/repo',
           });
+          yield* ledger.markRunning(1, 1_500);
           yield* ledger.markFinished(1, {
             atMs: 2_000,
             exitCode: 0,
@@ -446,6 +449,7 @@ describe('loadHaulerSnapshot', () => {
             targetDir: '/repo/target',
             workspaceRoot: '/repo',
           });
+          yield* ledger.markRunning(1, 1_500);
           yield* ledger.markFinished(1, {
             atMs: 2_000,
             exitCode: 101,

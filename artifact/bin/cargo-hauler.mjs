@@ -25397,7 +25397,7 @@ const makeLaneRuntime = (deps)=>effect_Effect__rspack_import_15/* .gen */.JkU(fu
                     atMs,
                     exitCode,
                     signal,
-                    outputTail: startedAtMs === null ? null : job.tail.toString(),
+                    outputTail: job.tail.toString(),
                     error,
                     ...(0,_job_state_js__rspack_import_9/* .diagnosticFinishFields */.Az)(job.demux?.globalDiagnostics ?? null)
                 }));
@@ -33721,11 +33721,11 @@ const parsePassthroughSpoolRecord = (line)=>{
          END,
          exit_code = ?,
          signal = ?,
-         output_tail = ?,
+         output_tail = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
          error = ?,
-         error_count = ?,
-         warning_count = ?,
-         diagnostics_json = ?,
+         error_count = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
+         warning_count = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
+         diagnostics_json = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
          saved_compute_ms = ?,
          saved_compute_source = ?,
          saved_latency_ms = ?

@@ -411,6 +411,7 @@ describe('ledger queries', () => {
         outputTail: 'large early tail',
         status: 'done',
       });
+      yield* ledger.markRunning(matching.id, 2_400);
       yield* ledger.markFinished(matching.id, {
         atMs: 2_500,
         error: 'compile failed',
