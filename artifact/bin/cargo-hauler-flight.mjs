@@ -20329,7 +20329,7 @@ const encodeClientMessage = (message)=>`${JSON.stringify(message)}\n`;
  */ const orphanedByRestartError = 'orphaned by daemon restart';
 const isOrphanedByRestart = (record)=>record.status === 'killed' && record.error === orphanedByRestartError;
 const formatTicket = (id)=>`cc-${id}`;
-const ticketPattern = /^cc-(\d+)$/u;
+const ticketPattern = /^cc-([1-9]\d*)$/u;
 const parseTicket = (ticket)=>{
     const match = ticketPattern.exec(ticket);
     return match === null ? null : Number(match[1]);
