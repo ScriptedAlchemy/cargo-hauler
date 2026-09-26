@@ -1301,13 +1301,8 @@ const DashboardContent = ({ structured }: { readonly structured: DashboardStatus
                   maxConcurrent={maxConcurrent}
                 />
               </div>
-            ) : daemonState === 'skewed' ? (
+            ) : daemonState === 'skewed' || daemonState === 'unresponsive' ? (
               <p className="down-cue">{structured?.summary.split('\n', 1)[0]}</p>
-            ) : daemonState === 'unresponsive' ? (
-              <p className="down-cue">
-                Daemon is up but did not answer in time — the machine is saturated. Rows below
-                come from the ledger and in-flight runs are still live; this refreshes on the next poll.
-              </p>
             ) : (
               <p className="down-cue">
                 Daemon is not running — it starts on demand with any cargo exec, or run{' '}

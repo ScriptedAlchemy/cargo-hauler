@@ -181,7 +181,7 @@ describe.skipIf(!existsSync(haulerEntry))('ticket reads on a stopped daemon', ()
 
     it('reports status with the errno the socket refused, not a daemon that is up', () => {
       const summary = [
-        'cargo-hauler daemon socket could not be opened (EACCES); showing ledger data (1 recorded)',
+        'cargo-hauler daemon socket could not be opened (EACCES), so status shows ledger data (1 recorded)',
         'cargo-hauler daemon is unresponsive (showing ledger data); 0 active, 1 recent',
       ];
       expect(haulerJson('status')).toMatchObject({
@@ -201,7 +201,7 @@ describe.skipIf(!existsSync(haulerEntry))('ticket reads on a stopped daemon', ()
           daemon: 'unresponsive',
           operation: 'last',
           request: { ...seededRecord, error: 'daemon did not answer, so ownership is unconfirmed', status: 'orphaned' },
-          summary: 'cc-1 orphaned',
+          summary: 'cargo-hauler daemon socket could not be opened (EACCES), so status shows ledger data (1 recorded)\ncc-1 orphaned',
         },
         stderr: '',
       });
