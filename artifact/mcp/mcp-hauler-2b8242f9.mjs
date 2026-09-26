@@ -161014,7 +161014,7 @@ const routes = Object.freeze({
         name: "hauler_status"
     })
 });
-const EVENT_ARTIFACT_EPOCH = "dd3709d1d5293d0c0ebc1075d58e25e2abb896451064d0622d4e00811136ca79";
+const EVENT_ARTIFACT_EPOCH = "ebb08d4587a819a6fb8024fbe11c2dbc52c07434021626dede0641693c365056";
 const EVENT_ALLOWED_TARGETS = Object.freeze([
     "claude",
     "codex",
