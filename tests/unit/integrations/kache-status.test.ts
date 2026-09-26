@@ -391,52 +391,47 @@ describe('createKacheSnapshotReader', () => {
     }
   });
 
-  it('refreshes a large events tail without stalling the event loop', async () => {
-    const root = mkdtempSync(join(tmpdir(), 'cc-kache-status-large-'));
-    const indexPath = join(root, 'index.db');
-    const eventsPath = join(root, 'events.jsonl');
+  it('yields the event loop between parse slices of the events tail', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'cc-kache-status-slices-'));
     const nowMs = Date.parse('2026-09-01T12:00:00.000Z');
-    const lineCount = 200_000;
+    const line = JSON.stringify({
+      ts: new Date(nowMs - 1_000).toISOString(),
+      crate_name: 'alpha',
+      profile: 'dev',
+      compile_time_ms: 400,
+    });
+    // Ten 256-line slices, all inside one read chunk.
+    writeFileSync(join(root, 'events.jsonl'), `${line}\n`.repeat(2_560));
+    const realNow = performance.now;
+    // Every clock read lands a full 4 ms slice later, so each slice check yields.
+    let clockReads = 0;
+    performance.now = () => {
+      clockReads += 1;
+      return clockReads * 4;
+    };
+    const seen = new Set<number>();
+    let probing = true;
+    const pump = (async () => {
+      while (probing) {
+        seen.add(clockReads);
+        await new Promise<void>((resolve) => {
+          setImmediate(resolve);
+        });
+      }
+    })();
     try {
-      createIndex(indexPath, [['alpha', 'dev', 100]]);
-      const ts = new Date(nowMs - 1_000).toISOString();
-      const lines: string[] = [];
-      for (let index = 0; index < lineCount; index += 1) {
-        lines.push(
-          JSON.stringify({
-            ts,
-            crate_name: `crate-${index % 5_000}`,
-            profile: index % 2 === 0 ? 'dev' : 'release',
-            compile_time_ms: 100 + (index % 977),
-          }),
-        );
-      }
-      writeFileSync(eventsPath, `${lines.join('\n')}\n`);
-      const fileBytes = statSync(eventsPath).size;
-      const reader = createKacheSnapshotReader(indexPath, { maxEventBytes: fileBytes * 2 });
-
-      let turns = 0;
-      let probing = true;
-      const pump = (async () => {
-        while (probing) {
-          turns += 1;
-          await new Promise<void>((resolve) => {
-            setImmediate(resolve);
-          });
-        }
-      })();
-      try {
-        const snapshot = await reader.read(nowMs);
-        expect(snapshot.eventPriors.sampleCount).toBe(lineCount);
-        expect(snapshot.eventPriors.bytesRead).toBe(fileBytes);
-      } finally {
-        probing = false;
-        await pump;
-      }
-      expect(turns).toBeGreaterThan(10);
+      const snapshot = await createKacheSnapshotReader(join(root, 'index.db')).read(nowMs);
+      expect(snapshot.eventPriors.sampleCount).toBe(2_560);
     } finally {
+      probing = false;
+      await pump;
+      performance.now = realNow;
       removeTestPath(root);
     }
+    // The loop ran after each slice's clock check, not only around the whole parse.
+    expect([...seen].filter((reads) => reads > 0 && reads < clockReads)).toEqual([
+      2, 4, 6, 8, 10, 12, 14, 16, 18, 20,
+    ]);
   });
 
   it('scans the index off the event-loop thread', async () => {
