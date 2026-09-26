@@ -14,7 +14,7 @@ export default defineTool(
   {
     annotations: { readOnlyHint: true },
     description:
-      'Long-poll a cargo-hauler ticket until it finishes or the wait expires (maxWaitMs default 30000, ceiling 7200000 — the daemon\'s 2 h await ceiling; call again to keep waiting; a host with its own per-call deadline, such as Codex\'s tool_timeout_sec, still bounds one call). The document streams: the live ticket card first, then the settled result; progress notifications carry queue position, elapsed time, and the cost estimate while waiting.',
+      'Long-poll a cargo-hauler ticket until it finishes or the wait expires. maxWaitMs defaults to 30000 and is capped at 7200000, the daemon\'s 2 h await ceiling. Call again to keep waiting. A host with its own per-call deadline, such as Codex\'s tool_timeout_sec, still limits each call. The document streams the live ticket card first and the settled result second. While the wait runs, progress notifications report queue position, elapsed time, and the cost estimate.',
     inputJsonSchema: {
       additionalProperties: false,
       properties: {
@@ -26,9 +26,10 @@ export default defineTool(
     },
     inputSchema,
     // The daemon's 2 h await ceiling (`awaitCeilingMs`) plus a minute for the
-    // snapshot fetch before the wait and the socket round trip after it — a
-    // literal, as route config is read statically; `tests/unit/contracts/await-budget.test.ts`
-    // holds the two together. The host's own tool-call deadline still applies.
+    // snapshot fetch before the wait and the socket round trip after it. Route
+    // config is read statically, so this is a literal, and
+    // `tests/unit/contracts/await-budget.test.ts` keeps the two in step. The
+    // host's own tool-call deadline still applies.
     render: { maxElapsedMs: 7_260_000 },
     resultSchema,
     title: 'Await hauler ticket',
@@ -38,12 +39,11 @@ export default defineTool(
     const daemonConfig = await requestDaemonConfig(context);
     const maxWaitMs = input.maxWaitMs ?? defaultAwaitMs;
     const startedAt = Date.now();
-    // The shell frame: the ticket as it is right now, before the wait blocks.
     const snapshot = await fetchTicketResult(input, { config: daemonConfig, signal });
     const awaited = awaitTicketResult({ ...input, maxWaitMs }, {
       config: daemonConfig,
-      // Heartbeats become MCP progress notifications. Progress is best-effort:
-      // a host that cannot deliver it must not fail the wait.
+      // Progress is best-effort. A host that cannot deliver a notification
+      // must not fail the wait.
       onProgress: ({ line }) => {
         void context.progress
           .report({

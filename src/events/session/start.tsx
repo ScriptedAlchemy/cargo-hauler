@@ -8,11 +8,11 @@ import { decisionValue } from '../../internal/host-hooks/event-support.js';
 import { requestDaemonConfig } from '../../internal/operations/request-config.js';
 
 /**
- * Session start: tell the new session what the hauler daemon looks like right
- * now, so the first cargo decision is made with the fleet state in view
- * instead of a `ps` probe. Standalone and short: a session must never wait on
- * the shared MCP runtime to begin, and a saturated daemon is reported as such
- * within the probe budget rather than delaying the session.
+ * Session start tells the new session what the hauler daemon looks like right
+ * now, so the agent makes its first cargo decision with the fleet state in
+ * view instead of a `ps` probe. The route is standalone and short. A session
+ * must never wait on the shared MCP runtime to begin, and the probe reports a
+ * saturated daemon within its budget rather than delaying the session.
  */
 export const config = {
   requires: ['events.sessionStart.context'],
@@ -24,13 +24,13 @@ export const config = {
 const notice = (model: ReturnType<typeof daemonBadgeModel>): string => {
   switch (model.state) {
     case 'running':
-      return `cargo-hauler ${model.headline}; ${model.detail ?? ''}. Before running cargo, check \`hauler status --session <id>\` (or the hauler_status tool with its session field) and attach to in-flight work instead of starting a duplicate; never kill cargo by PID — \`hauler kill cc-N\` stops a stuck ticket through the broker.`;
+      return `cargo-hauler ${model.headline}: ${model.detail ?? ''}. Before you run cargo, check \`hauler status --session <id>\` (or the hauler_status tool with its session field). Attach to in-flight work instead of starting a duplicate. Never kill cargo by PID. \`hauler kill cc-N\` stops a stuck ticket through the broker.`;
     case 'stopped':
-      return `cargo-hauler ${model.headline} (${model.detail ?? 'no detail'}). It starts on demand with the first brokered cargo command; the hooks route cargo through it automatically.`;
+      return `cargo-hauler ${model.headline} (${model.detail ?? 'no detail'}). The daemon starts on demand with the first brokered cargo command, and the hooks route cargo through it.`;
     case 'unresponsive':
-      return `cargo-hauler ${model.headline}: ${model.detail ?? ''}. Treat the machine as saturated — prefer \`hauler status\` (or the hauler_status tool) over new builds until it answers.`;
+      return `cargo-hauler ${model.headline}: ${model.detail ?? ''}. Treat the machine as saturated. Prefer \`hauler status\` (or the hauler_status tool) to new builds until the daemon answers.`;
     case 'unreachable':
-      return `cargo-hauler ${model.headline}: ${model.detail ?? ''}. Cargo still runs (the hooks fail open), but nothing is brokered until the socket can be opened.`;
+      return `cargo-hauler ${model.headline}: ${model.detail ?? ''}. Cargo still runs because the hooks fail open, but the hauler brokers nothing until it can open the socket.`;
     default: {
       const exhaustive: never = model.state;
       return exhaustive;

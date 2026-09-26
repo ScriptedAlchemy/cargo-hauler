@@ -5,16 +5,16 @@ import { resolveHookSocketPath } from './paths.js';
 import { requestOutcome } from './rpc.js';
 
 /**
- * The bounded wait `after-shell.ts` has always given the `session-completed`
- * request: long enough for a daemon busy fanning out builds, short enough
- * that a stuck socket cannot hold a tool call.
+ * The bounded wait for the `session-completed` request. It is long enough
+ * for a daemon busy fanning out builds and short enough that a stuck socket
+ * cannot hold a tool call.
  */
 export const defaultPingTimeoutMs = 500;
 
 /**
  * What one session-completion ping learned. `finished` is the daemon's
- * answer (possibly empty). `unavailable` is every way the answer did not
- * arrive: nothing listening (`unreachable`, with the errno so a caller can
+ * answer (possibly empty). `unavailable` covers every way the answer did not
+ * arrive, which is nothing listening (`unreachable`, with the errno so a caller can
  * tell `ECONNREFUSED` / `ENOENT` from the rest), no reply within the budget
  * (`timeout`), the daemon hanging up first (`closed`), or a reply that is not
  * a `session-completed-result` (`malformed`). A stale daemon that could not be
@@ -51,16 +51,16 @@ export interface SessionPingOptions {
 }
 
 /**
- * The smallest client of the daemon's `session-completed` request: one
- * `net.connect` on the Unix socket, one NDJSON line out, the first line back
- * (`requestOutcome`, which is dependency-free — no Effect runtime, no shared
- * `LineBuffer`). The `tool/after` handler runs this on every shell call before
- * deciding whether the rendered view needs to load at all. It never throws
- * and never writes to stdout or stderr: a daemon that is down or slow is an
- * `unavailable` value, not an error.
+ * The smallest client of the daemon's `session-completed` request. It makes
+ * one `net.connect` on the Unix socket, writes one NDJSON line, and reads the
+ * first line back through `requestOutcome`, which loads no Effect runtime and
+ * no shared `LineBuffer`. The `tool/after` handler runs this on every shell
+ * call before deciding whether the rendered view needs to load at all. It
+ * never throws and never writes to stdout or stderr. A daemon that is down or
+ * slow is an `unavailable` value, not an error.
  *
  * The wire shape is exactly the one `listSessionCompleted` in `rpc.ts`
- * sends: one client on the wire, whichever entry point built the message.
+ * sends, so the wire sees one client whichever entry point built the message.
  */
 export const pingSessionCompleted = async (
   session: string,

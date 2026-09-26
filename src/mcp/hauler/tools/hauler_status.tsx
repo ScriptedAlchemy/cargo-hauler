@@ -15,7 +15,7 @@ export default defineTool(
   {
     annotations: { readOnlyHint: true },
     description:
-      'Show cargo-hauler queue and in-flight work as text. Filter by cwd, session, laneKey, tickets, statuses, or commandContains instead of piping CLI JSON through jq. Rows are bounded summaries: no output tail, only a short outputPreview (last 8 lines) on running rows; read one ticket with hauler_result for its whole live tail. To open the visual dashboard (MCP App) call hauler_dashboard.',
+      'Show the cargo-hauler queue and in-flight work as text. Filter by cwd, session, laneKey, tickets, statuses, or commandContains instead of piping CLI JSON through jq. Rows are bounded summaries without an output tail. A running row carries only a short outputPreview of its last 8 lines. Call hauler_result on one ticket for its whole live tail. To open the visual dashboard (an MCP App), call hauler_dashboard.',
     inputJsonSchema: {
       additionalProperties: false,
       properties: {
@@ -26,7 +26,7 @@ export default defineTool(
         session: { type: 'string' },
         statuses: {
           description:
-            'Filter by projected status, where stopped-daemon active rows appear as orphaned and running matches nothing',
+            'Filter by projected status. While the daemon is stopped, active rows appear as orphaned and running matches nothing.',
           items: {
             enum: ['requested', 'queued', 'running', 'done', 'failed', 'killed', 'denied', 'passthrough', 'orphaned'],
             type: 'string',

@@ -47,9 +47,9 @@ export const progressMessage = (line: string): string =>
 
 /**
  * Records cross from storage (ANSI kept) to a structured result here. Both
- * transports serialize the result to JSON — the CLI prints it, the MCP
- * server ships it as structured content — so the projection always strips:
- * an inherited FORCE_COLOR/CLICOLOR_FORCE must not leave ESC bytes to become
+ * transports serialize the result to JSON. The CLI prints it, and the MCP
+ * server ships it as structured content, so the projection always strips.
+ * An inherited FORCE_COLOR/CLICOLOR_FORCE must not leave ESC bytes to become
  * literal `\u001b[…` in the JSON.
  */
 const requestForConsumer = (request: RequestRecord | null): RequestRecord | null =>
@@ -140,10 +140,11 @@ export interface TicketResultView {
 }
 
 /**
- * `hauler result` / `hauler_result`: the structured result plus the view of
- * the full output log — a pointer (path and size) by default, the log text
- * itself under `full`. The log stays out of the JSON result: a 64 MiB run
- * belongs in a file the agent can grep, not in structured content.
+ * `hauler result` and `hauler_result` return the structured result plus the
+ * view of the full output log. The view is a pointer (path and size) by
+ * default and the log text itself under `full`. The log stays out of the
+ * JSON result, because a 64 MiB run belongs in a file the agent can grep,
+ * not in structured content.
  */
 export const fetchTicketResultView = async (
   input: ResultInput,
@@ -160,21 +161,21 @@ const acceptedKillSummary = (ticket: string, request: RequestRecord | null): str
   switch (request.status) {
     case 'requested':
     case 'queued':
-      return `${ticket} kill requested before it started; it settles killed`;
+      return `${ticket} kill requested before it started, so it settles as killed`;
     case 'running':
-      return `${ticket} kill requested; the daemon stops its cargo process and frees the lane`;
+      return `${ticket} kill requested. The daemon stops its cargo process and frees the lane`;
     case 'killed':
       if (request.attachedTo !== null) {
-        return `${ticket} killed; detached from ${request.attachedTo}`;
+        return `${ticket} killed and detached from ${request.attachedTo}`;
       }
       return request.startedAtMs === null
-        ? `${ticket} killed before it started; no cargo process ran`
+        ? `${ticket} killed before it started, so no cargo process ran`
         : `${ticket} killed`;
     case 'done':
     case 'failed':
     case 'denied':
     case 'passthrough':
-      return `${ticket} kill requested; it settled ${request.status}`;
+      return `${ticket} kill requested, but it had already settled as ${request.status}`;
     default: {
       const exhaustive: never = request.status;
       return exhaustive;

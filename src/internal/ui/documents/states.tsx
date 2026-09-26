@@ -24,5 +24,5 @@ export interface ErrorStateProps {
   readonly code: string;
 }
 
-/** A represented failure: the document stays a document, the status flips to error. */
+/** A represented failure. The document stays a document, and the status flips to error. */
 export const ErrorState = ({ children, code }: ErrorStateProps) => <Agent.Error code={code}>{children}</Agent.Error>;

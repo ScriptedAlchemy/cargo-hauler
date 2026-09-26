@@ -40,7 +40,7 @@ describe('prerequisite failure guidance (#169)', () => {
       for (const names of [cliSurface, mcpSurface]) {
         const text = guidanceText(entry, names);
         expect(text).toContain(`cc-9421 never ran: prerequisite cc-9395 ${status}`);
-        expect(text).toContain('fix or rerun cc-9395, then resubmit');
+        expect(text).toContain('Fix or rerun cc-9395, then resubmit');
         expect(text).toContain('new ticket');
         expect(text).not.toContain('Fix the diagnostics');
         expect(text).not.toContain('dedupes identical');

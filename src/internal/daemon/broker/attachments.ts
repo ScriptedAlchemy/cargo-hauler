@@ -132,10 +132,10 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
    *
    * The log gets exactly what flows through here, in arrival order, bytes
    * as captured (ANSI included). For a demultiplexed run that is the
-   * rendered view — cargo's JSON message stream never reaches this point;
-   * `handleStdoutLine` forwards each diagnostic's `rendered` text and the
-   * non-JSON stdout lines instead — which is what a reader triaging the
-   * ticket wants, not the raw `--message-format=json` lines.
+   * rendered view, because cargo's JSON message stream never reaches this
+   * point. `handleStdoutLine` forwards each diagnostic's `rendered` text and
+   * the non-JSON stdout lines instead. A reader triaging the ticket wants
+   * that view, not the raw `--message-format=json` lines.
    */
   const emitChunk = (
     job: Job,
@@ -380,8 +380,9 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
    * nearer miss. A coverage rider needs a leader whose compile is still
    * ahead: one past its build finished proves nothing about the sources as
    * they are now, and the lane has already been handed on, so the rider
-   * runs its own (fresh, likely no-op) cargo instead. Identity riders keep
-   * riding executing leaders — they want the test results, not the build.
+   * runs its own (fresh, likely no-op) cargo instead. Identity riders still
+   * attach to executing leaders, because they want the test results, not the
+   * build.
    */
   const decideAttach = (job: Job, attachment: Attachment): AttachDecision => {
     const decision = attachDecisionFor(job.intent, attachment.intent);
@@ -413,7 +414,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
 
   /**
    * One debug line per leader that refused the rider, and one count for the
-   * request under its nearest miss — the latest gate any leader reached —
+   * request under its nearest miss (the latest gate any leader reached),
    * so the status metrics answer "why did this not coalesce" without
    * inflating one missed request into one count per leader.
    */
@@ -585,8 +586,8 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
    * Cargo's `Finished` line means every unit in the leader's plan compiled,
    * the rider's among them: a `--no-run` rider would print that line and
    * exit 0 right there. Released with the leader's compile time so far as
-   * the measured compute it did not spend; the leader's exit — a test
-   * failure, a kill mid-run — is no longer the rider's concern.
+   * the measured compute it did not spend. The leader's exit, such as a test
+   * failure or a kill mid-run, is no longer the rider's concern.
    */
   const releaseBuildFinishedAttachments = (job: Job, atMs: number): Effect.Effect<void> =>
     Effect.gen(function* () {
@@ -622,7 +623,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
               job,
               attachment,
               atMs,
-              `[cargo-hauler] released early: build finished under ${job.ticket}; --no-run has nothing left to do\n`,
+              `[cargo-hauler] released early: build finished under ${job.ticket}, and --no-run has nothing left to do\n`,
               { status: 'done', exitCode: 0, signal: null, error: null },
               servedSavings(attachment, atMs, leaderBuildMs, job),
             ),
@@ -634,8 +635,8 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
   /**
    * Follow-up after tryRegisterAttachment wins: ledger the attach, and if
    * the leader is already running, deliver the start notice and replay
-   * catch-up, then re-check early release — the demand may already be
-   * proven by units that finished before this attachment arrived.
+   * catch-up, then re-check early release. Units that finished before this
+   * attachment arrived may already prove the demand.
    *
    * The registration frame and this follow-up are separate steps, so the
    * leader may have settled (or the attachment been killed or released) in
@@ -702,8 +703,8 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
     }
     const event = parseCargoJsonLine(line);
     if (event === null) {
-      // Non-JSON stdout (test binaries, stray prints): leader and identity
-      // attachments only — it cannot be attributed to a coverage scope.
+      // Non-JSON stdout (test binaries, stray prints) goes to the leader and
+      // identity attachments only, because it has no coverage scope.
       return emitChunk(job, 'stdout', Buffer.from(`${line}\n`), { kind: 'identity' });
     }
     switch (event.kind) {

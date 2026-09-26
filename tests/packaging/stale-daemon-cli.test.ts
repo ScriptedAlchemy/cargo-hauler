@@ -206,7 +206,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
   }, 30_000);
 
   const skewLine = (release: string, daemonVersion: string, pid: number, fix: string): string =>
-    `cargo-hauler daemon pid ${pid} (${daemonVersion}) is ${release} whose status report this client (${version}) cannot read; showing tickets as the ledger recorded them. ${fix}`;
+    `cargo-hauler daemon pid ${pid} (${daemonVersion}) is ${release} whose status report this client (${version}) cannot read, so this client shows tickets as the ledger recorded them. ${fix}`;
 
   it('names a same-protocol older daemon whose status report this client cannot read, on every read surface', async () => {
     const root = mkdtempSync(join(tmpdir(), 'ch-stale-skewed-'));
@@ -218,7 +218,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
         'an older release',
         '0.7.1',
         daemon.pid ?? -1,
-        'The next `hauler exec` or `hauler daemon start` replaces it once it is idle; `hauler daemon restart` replaces it now and ends its in-flight tickets.',
+        'The next `hauler exec` or `hauler daemon start` replaces it once it is idle. `hauler daemon restart` replaces it now and ends its in-flight tickets.',
       );
       const status = await run(haulerEntry, ['status', '--json'], env);
       expect(status).toMatchObject({ code: 0, stderr: '' });
@@ -269,7 +269,7 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
       const result = await run(haulerEntry, ['result', 'cc-old'], env);
       expect(result.code).toBe(1);
       expect(result.stderr.trim()).toBe(
-        `[render-failed] cargo-hauler daemon at ${socketPath} sent a ticket record this client (${version}) cannot read; it is another release or build, and \`hauler status\` names it with the command that replaces it`,
+        `[render-failed] cargo-hauler daemon at ${socketPath} sent a ticket record this client (${version}) cannot read. The daemon is another release or build, and \`hauler status\` names it with the command that replaces it.`,
       );
     } finally {
       removeTestPath(root);

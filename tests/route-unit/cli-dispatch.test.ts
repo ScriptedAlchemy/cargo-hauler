@@ -103,7 +103,7 @@ describe('routed CLI', () => {
     expect(run.exitCode).toBe(0);
     expect(run.stderr).toBe('');
     expect(run.stdout).toContain(
-      'cc-1 unavailable: not in the ledger, and the daemon is stopped. Tickets look like cc-123; check hauler log for recent ids.',
+      'cc-1 unavailable: not in the ledger, and the daemon is stopped. Tickets look like cc-123. Check hauler log for recent ids.',
     );
     expect(cliJson(await invokeCli(['result', 'cc-1', '--json']))).toEqual({
       daemon: 'stopped',

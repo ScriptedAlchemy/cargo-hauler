@@ -9,7 +9,7 @@ export const config = {
     ticket: { description: 'Ticket id, e.g. cc-123' },
     maxWaitMs: {
       description:
-        'Give up after this many milliseconds (default 30000, ceiling 7200000 — the daemon\'s 2 h await ceiling); call again to keep waiting',
+        'Give up after this many milliseconds (default 30000, ceiling 7200000). The ceiling is the daemon\'s 2 h await limit. Call again to keep waiting.',
     },
   },
   positionals: ['ticket'],

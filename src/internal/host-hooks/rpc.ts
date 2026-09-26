@@ -45,7 +45,7 @@ const asPending = (value: unknown): PendingTicket | null => {
 
 /**
  * Why a one-shot request produced no usable reply. `timeout` means the daemon
- * accepted (or is still accepting) but did not answer in time — it is alive
+ * accepted (or is still accepting) but did not answer in time, so it is alive
  * and busy. `unreachable` is a socket error before any reply, with the error
  * code so callers can tell "nothing listens" (`ECONNREFUSED`, `ENOENT`) from
  * everything else. `closed` and `malformed` mean the daemon spoke, but not a
@@ -61,8 +61,8 @@ export type RequestOutcome =
 
 /**
  * Newline-splits the reply stream one decoded chunk at a time. A one-shot
- * request reads a single line, so this stays dependency-free on purpose: the
- * hook entries built from this module must not load Effect (the shared
+ * request reads a single line, so this stays dependency-free. The hook
+ * entries built from this module must not load Effect (the shared
  * `LineBuffer` does) before deciding whether a shell call concerns them.
  */
 const lineSplitter = (): ((chunk: string) => string[]) => {
@@ -177,7 +177,7 @@ export const recordDeniedAttempt = async (
   attempt: DeniedAttempt,
   socketPath: string = resolveHookSocketPath(),
 ): Promise<void> => {
-  // Fire-and-forget write: it parses no versioned payload, and sending it
+  // A fire-and-forget write parses no versioned payload, and sending it
   // directly preserves the 30 ms audit path when a busy daemon delays ping.
   await requestOnce(
     {
@@ -237,7 +237,7 @@ export const waitForTickets = async (
   maxWaitMs: number,
   socketPath: string = resolveHookSocketPath(),
 ): Promise<readonly FinishedTicket[]> => {
-  // Await concurrently: with serial waits, one slow ticket could burn the
+  // Await concurrently. With serial waits, one slow ticket could use up the
   // whole budget and hide another ticket that finished long ago.
   const awaited = await Promise.all(
     tickets.map(async (ticket) => {

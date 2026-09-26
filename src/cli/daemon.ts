@@ -6,7 +6,7 @@ import { daemonResultSchema } from '../internal/contracts/tool-schemas.js';
 
 export const config = {
   description:
-    'Control the hauler daemon: run in the foreground, start detached, stop, restart (stop, wait for exit, start), or report status.',
+    'Control the hauler daemon. The subcommands run it in the foreground, start it detached, stop it, restart it (stop, wait for exit, start), or report its status.',
   exitCode: 'result',
   inputJsonSchema: {
     additionalProperties: false,

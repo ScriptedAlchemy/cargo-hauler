@@ -39,7 +39,7 @@ const text = (node: ReactNode): string => {
 describe('shared test-run report component', () => {
   it('states shared exit, widened filters, and missing evidence instead of a guessed verdict', async () => {
     const rendered = await BatchTestSummary({ record: shared() });
-    expect(text(rendered)).toContain('output and exit are shared');
+    expect(text(rendered)).toContain("shares that run's output and exit");
     expect(text(rendered)).toContain('union of test filters');
     expect(text(rendered)).toContain('log is missing or unreadable');
     expect(text(rendered)).toContain('tail alone cannot establish');

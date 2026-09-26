@@ -3,8 +3,8 @@ import { isRecord } from '../util/guards.js';
 /**
  * `tool_input.command` as the host sent it; `undefined` when the tool input
  * is not a shell call (Read, Edit, an MCP tool, Codex's non-object input).
- * Dependency-free on purpose: the cheap hook handlers read it before anything
- * heavier loads.
+ * It has no dependencies because the cheap hook handlers read it before
+ * anything heavier loads.
  */
 export const extractShellCommand = (toolInput: unknown): string | undefined => {
   if (!isRecord(toolInput) || typeof toolInput.command !== 'string') {
@@ -16,10 +16,10 @@ export const extractShellCommand = (toolInput: unknown): string | undefined => {
 const outputKeys = ['stdout', 'stderr', 'output', 'content', 'result'] as const;
 
 /**
- * The text a finished shell call produced, as the host reports it: Claude's
- * `{stdout, stderr}`, a bare string, or an `output`/`content`/`result` field.
- * `undefined` when the response carries no text — the hook then has nothing
- * to look at and fails open.
+ * The text a finished shell call produced, as the host reports it in Claude's
+ * `{stdout, stderr}`, a bare string, or an `output`, `content`, or `result`
+ * field. `undefined` when the response carries no text, and the hook then has
+ * nothing to look at and fails open.
  */
 export const extractShellOutput = (toolResponse: unknown): string | undefined => {
   if (typeof toolResponse === 'string') {

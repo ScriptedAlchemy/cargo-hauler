@@ -10,11 +10,11 @@ export interface BuildDiagnosticsProps {
 }
 
 /**
- * Cargo diagnostics as structure: an index table with one row per
- * `error[E…]`/`warning:` block (code, message, first `-->` location) so an
- * agent can jump to the file, followed by every captured block verbatim —
- * spans, expected/found types, notes, and suggested fixes — because the index
- * is a way in, not a substitute for what rustc said.
+ * Cargo diagnostics as structure. An index table has one row per
+ * `error[E…]` or `warning:` block (code, message, first `-->` location) so an
+ * agent can jump to the file. Every captured block follows verbatim, with
+ * spans, expected and found types, notes, and suggested fixes, because the
+ * index points into what rustc said and does not replace it.
  */
 export const BuildDiagnostics = ({ record }: BuildDiagnosticsProps) => {
   const model = buildDiagnosticsModel(record);

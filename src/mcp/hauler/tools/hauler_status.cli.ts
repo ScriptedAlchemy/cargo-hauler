@@ -2,7 +2,7 @@ import type { CliProjectionConfig } from 'agent-bundle/routes';
 
 import type { inputSchema } from './hauler_status.js';
 
-/** `hauler status`: the tool's canonical keys under the CLI's flag spellings. */
+/** `hauler status` maps the tool's canonical keys to the CLI's flag spellings. */
 export const config = {
   command: ['status'],
   description: 'Show the queue, in-flight cargo work, lanes, and admission state.',

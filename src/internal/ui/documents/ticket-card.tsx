@@ -18,7 +18,7 @@ export interface TicketCardProps {
 }
 
 /**
- * One ticket, fully: headline, attribution and placement, structured
+ * One ticket in full, with its headline, attribution and placement, structured
  * diagnostics, and the output tail (live while the run is in progress).
  * `hauler_result`, `hauler_last`, and `hauler_await` all render this card, so
  * a ticket reads identically wherever an agent meets it.

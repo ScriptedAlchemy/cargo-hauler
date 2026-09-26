@@ -15,12 +15,12 @@ export default defineTool(
   {
     annotations: { readOnlyHint: false },
     description:
-      'Submit a background cargo request and return a durable ticket id. Host and session are inferred from the request (the calling conversation when the host provides lineage); explicit fields override inferred attribution.',
+      'Submit a background cargo request and return a durable ticket id. The tool infers host and session from the request, and uses the calling conversation when the host provides lineage. Explicit fields override the inferred attribution.',
     inputJsonSchema: {
       additionalProperties: false,
       properties: {
         after: {
-          description: 'Tickets (cc-N) that must finish before this request starts; it fails if any of them fails or is killed',
+          description: 'Tickets (cc-N) that must finish before this request starts. The request fails if any of them fails or is killed.',
           items: { type: 'string' },
           type: 'array',
         },

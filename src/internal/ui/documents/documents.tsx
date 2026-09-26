@@ -51,8 +51,8 @@ const OrphanedStatus = ({ result }: { readonly result: StatusResult }) => {
   return (
     <Agent.Context>
       {result.daemon === 'unresponsive'
-        ? `${tickets} ${count === 1 ? 'has' : 'have'} unconfirmed ownership because the daemon did not answer; check daemon health before resubmitting.`
-        : `${tickets} ${count === 1 ? 'was' : 'were'} stranded by the stopped daemon and will not finish; resubmit the ones still wanted.`}
+        ? `${tickets} ${count === 1 ? 'has' : 'have'} unconfirmed ownership because the daemon did not answer. Check daemon health before you resubmit.`
+        : `The stopped daemon stranded ${tickets}, and ${count === 1 ? 'it' : 'they'} will not finish. Resubmit any you still need.`}
     </Agent.Context>
   );
 };
@@ -83,7 +83,7 @@ export const StatusDocument = ({
     <OrphanedStatus result={result} />
     {result.active.length > 0 ? (
       <Agent.Context>
-        {`Do not start a duplicate cargo run for anything listed in flight: submit through ${names.request} or run cargo normally and the hauler attaches you to the existing run. Wait with ${names.await} <ticket>.`}
+        {`Do not start a duplicate cargo run for anything listed in flight. Submit through ${names.request} or run cargo normally, and the hauler attaches you to the existing run. Wait with ${names.await} <ticket>.`}
       </Agent.Context>
     ) : null}
     <DashboardLink names={names} />
@@ -91,7 +91,7 @@ export const StatusDocument = ({
 );
 
 /**
- * The `hauler_dashboard` text: the App opens beside it on hosts that render
+ * The `hauler_dashboard` text. The App opens beside it on hosts that render
  * MCP Apps, so the model gets the daemon's summary line and where the text
  * form is, not a second copy of the status document.
  */
@@ -99,7 +99,7 @@ export const DashboardDocument = ({ names, result }: Omit<DocumentProps<StatusRe
   <Agent.Result value={documentValue(result)}>
     <Agent.Text>{result.summary.split('\n', 1)[0] ?? result.summary}</Agent.Text>
     <Agent.Context>
-      {`Dashboard: ${APP_RESOURCE_URI} opens beside this result on hosts that render MCP Apps; elsewhere run the browser preview (see the hauler-dashboard skill). For the queue, lanes, and tickets as text call ${names.status}.`}
+      {`Dashboard: ${APP_RESOURCE_URI}. It opens beside this result on hosts that render MCP Apps. On other hosts, run the browser preview from the hauler-dashboard skill. For the queue, lanes, and tickets as text, call ${names.status}.`}
     </Agent.Context>
   </Agent.Result>
 );
@@ -121,7 +121,7 @@ const TicketNotKnown = ({
   readonly ticket: string;
 }) => (
   <UnavailableState what={ticket}>
-    {`${daemon === 'running' ? 'not known to the daemon' : `not in the ledger, and the daemon is ${daemon}`}. Tickets look like cc-123; check ${names.log} for recent ids.`}
+    {`${daemon === 'running' ? 'not known to the daemon' : `not in the ledger, and the daemon is ${daemon}`}. Tickets look like cc-123. Check ${names.log} for recent ids.`}
   </UnavailableState>
 );
 
@@ -138,13 +138,13 @@ export const LastDocument = ({ names, nowMs, result }: DocumentProps<LastResult>
 );
 
 export interface ResultDocumentProps extends DocumentProps<ResultFetchResult> {
-  /** The ticket's on-disk full output log: a pointer by default, the log itself under `--full`. */
+  /** The ticket's on-disk full output log, as a pointer by default and as the log itself under `--full`. */
   readonly output: TicketOutputModel;
 }
 
 /**
- * `hauler result`: the ticket card with the stored tail, then where the whole
- * output lives. Under `--full` the log replaces the tail as the document body
+ * `hauler result` renders the ticket card with the stored tail, then where the
+ * whole output lives. Under `--full` the log replaces the tail as the document body
  * (the tail would only repeat its last lines).
  */
 export const ResultDocument = ({ names, nowMs, output, result }: ResultDocumentProps) => (
@@ -168,8 +168,8 @@ export const KillDocument = ({ names, nowMs, result }: DocumentProps<KillResult>
     {result.request === null ? null : <TicketCard nowMs={nowMs} record={result.request} />}
     <Agent.Context>
       {result.killed
-        ? `Riders attached to ${result.ticket} return to their lane or fail with it. Confirm with ${names.result} ${result.ticket} (status becomes killed) and re-submit only if the work is still wanted.`
-        : `Nothing changed. Use ${names.status} to find the ticket that is actually holding the lane.`}
+        ? `Riders attached to ${result.ticket} return to their lane or fail with it. Confirm with ${names.result} ${result.ticket}, which shows status killed. Resubmit only if you still need the work.`
+        : `Nothing changed. Use ${names.status} to find the ticket that holds the lane.`}
     </Agent.Context>
   </Agent.Result>
 );
@@ -185,7 +185,7 @@ export const AwaitDocument = ({
     {result.request === null ? null : <TicketCard nowMs={nowMs} record={result.request} />}
     {result.timedOut ? (
       <Agent.Context>
-        {`The ${formatMs(maxWaitMs)} wait expired before ${result.ticket} finished. Call ${names.await} again (each call waits up to ${formatMs(awaitCeilingMs)}) rather than polling ${names.result} in a tight loop.`}
+        {`The ${formatMs(maxWaitMs)} wait expired before ${result.ticket} finished. Call ${names.await} again instead of polling ${names.result} in a tight loop. Each call waits up to ${formatMs(awaitCeilingMs)}.`}
       </Agent.Context>
     ) : result.request === null ? (
       <TicketNotKnown daemon={result.daemon} names={names} ticket={result.ticket} />
@@ -215,7 +215,7 @@ export const RequestDocument = ({ argv, lineage, names, result }: RequestDocumen
     <Agent.Text>{result.summary}</Agent.Text>
     {result.ticket === null ? (
       <ErrorState code="submit-failed">
-        {`The daemon did not accept ${argv.join(' ')}; run hauler daemon status or check the daemon log.`}
+        {`The daemon did not accept ${argv.join(' ')}. Run hauler daemon status or check the daemon log.`}
       </ErrorState>
     ) : (
       <>
@@ -233,8 +233,8 @@ export const RequestDocument = ({ argv, lineage, names, result }: RequestDocumen
         />
         <Agent.Context>
           {result.waitingFor === undefined || result.waitingFor.length === 0
-            ? `Ticket ${result.ticket} is running in the background. Continue other work; when the session has a hold-stop ticket the stop hook waits for it. Retrieve with ${names.result} ${result.ticket}, or block with ${names.await} ${result.ticket}.`
-            : `Ticket ${result.ticket} is queued behind ${result.waitingFor.join(', ')} and starts once they finish; it fails with "prerequisite cc-N failed" if one of them fails or is killed. Retrieve with ${names.result} ${result.ticket}, or block with ${names.await} ${result.ticket}.`}
+            ? `Ticket ${result.ticket} is running in the background. Continue other work. When the session has a hold-stop ticket, the stop hook waits for it. Read the result with ${names.result} ${result.ticket}, or block on it with ${names.await} ${result.ticket}.`
+            : `Ticket ${result.ticket} is queued behind ${result.waitingFor.join(', ')} and starts once they finish. It fails with "prerequisite cc-N failed" if one of them fails or is killed. Read the result with ${names.result} ${result.ticket}, or block on it with ${names.await} ${result.ticket}.`}
         </Agent.Context>
       </>
     )}

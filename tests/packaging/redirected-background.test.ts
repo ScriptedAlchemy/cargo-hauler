@@ -64,7 +64,7 @@ describe.skipIf(!existsSync(haulerEntry))('cargo test > out.log auto-backgrounde
       });
       expect(code).toBe(75);
       expect(stderr).toContain(
-        'submitted in background, not run yet (exit 75); your redirected stdout receives no output; once it runs, `hauler result cc-1` names its full log\n',
+        'It runs in the background and has not started yet (exit 75). Your redirected stdout receives no output. Once the ticket runs, `hauler result cc-1` names its full log.\n',
       );
       expect(readFileSync(outLog, 'utf8')).toBe('');
     } finally {

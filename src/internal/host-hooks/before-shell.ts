@@ -17,7 +17,7 @@ export type { HookContext, HookServices };
 export interface BeforeShellEvent {
   readonly cwd?: string;
   readonly sessionId?: string;
-  /** The pending call's input as the host sent it: an object on Claude and Cursor, any JSON on Codex. */
+  /** The pending call's input as the host sent it, an object on Claude and Cursor and any JSON on Codex. */
   readonly toolInput?: unknown;
   readonly toolName?: string;
   readonly toolUseId?: string;
@@ -28,10 +28,10 @@ export interface BeforeShellEvent {
  * no-decision answer for every shell call the hook does not govern (the host's
  * own permission flow applies, exactly as without the plugin). `allow` is
  * returned only when every command in the input has been rewritten onto (or
- * already runs through) the hauler exec path: the daemon governs the whole
+ * already runs through) the hauler exec path. The daemon governs the whole
  * command, so the host is not asked again. A rewrite that leaves ungoverned
- * segments beside cargo is `continue` + `updatedInput`: brokered, but decided
- * by the host. `deny` blocks a destructive cargo command that would race
+ * segments beside cargo returns `continue` with `updatedInput`, so the daemon
+ * brokers it and the host decides. `deny` blocks a destructive cargo command that would race
  * in-flight builds. The hook never returns `ask`.
  */
 export interface BeforeShellResult {
@@ -44,9 +44,9 @@ export interface BeforeShellResult {
 const continueResult = (): BeforeShellResult => ({ outcome: 'continue' });
 
 const denyCleanReason =
-  'cargo clean is blocked while cargo-hauler has in-flight builds; wait for them to finish or run hauler status';
+  'cargo clean is blocked while cargo-hauler has in-flight builds. Wait for them to finish, or run hauler status.';
 
-// Telemetry only: whitespace splitting intentionally does not preserve quoted arguments.
+// Whitespace splitting does not preserve quoted arguments, which telemetry accepts.
 const attemptArgv = (command: string): readonly string[] => command.trim().split(/\s+/u);
 
 interface DenyCleanInput {
@@ -103,8 +103,8 @@ const decideBeforeShell = async (
 
   const prepared = prepareShellCommand(command);
   const inspection = prepared.inspection;
-  // `alreadyWrapped` alone is not a short-circuit: `hauler exec -- cargo build
-  // && cargo test` still has an unbrokered half.
+  // `alreadyWrapped` alone is not a short-circuit, because
+  // `hauler exec -- cargo build && cargo test` still has an unbrokered half.
   if (!inspection.hasCargo) {
     return continueResult();
   }
@@ -130,13 +130,13 @@ const decideBeforeShell = async (
     switch (verdict) {
       case 'idle':
       case 'busy':
-        // Idle: broker it like any other cargo command. Busy: the daemon is
-        // alive but saturated, which is when a raw clean would race its
-        // lanes; the rewrite lets the lane serialize the clean instead.
+        // An idle daemon brokers the clean like any other cargo command. A
+        // busy daemon is alive but saturated, which is when a raw clean would
+        // race its lanes, so the rewrite lets the lane serialize the clean.
         break;
       case 'absent':
-        // No daemon: nothing to race, and brokering would only auto-start one
-        // for a clean.
+        // With no daemon there is nothing to race, and brokering would only
+        // auto-start one for a clean.
         return continueResult();
       case 'active':
         return denyClean({
@@ -169,11 +169,11 @@ const decideBeforeShell = async (
   }
 
   const toolInput = isRecord(event.toolInput) ? { ...event.toolInput, command: rewritten } : { command: rewritten };
-  // Every segment brokered: the daemon governs the whole command, so an
+  // When every segment is brokered, the daemon governs the whole command, so an
   // explicit allow keeps the host from prompting for it (a pass-through result
   // carries no decision since agent-bundle#461). A command that also runs
   // something the daemon does not govern (`cargo test && rm -rf target`) is
-  // still rewritten, but never approved as a whole: `continue` hands the
+  // still rewritten, but never approved as a whole. `continue` hands the
   // rewritten input to the host's own permission flow, exactly as it would
   // have decided the original.
   const outcome = inspection.ungoverned ? 'continue' : 'allow';

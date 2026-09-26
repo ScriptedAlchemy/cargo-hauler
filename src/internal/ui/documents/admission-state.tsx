@@ -11,9 +11,10 @@ export interface AdmissionStateProps {
 }
 
 /**
- * The admission meter: permits in use, machine load, memory clamp, and how
- * much work attachment has saved. A hard memory clamp is called out as a
- * paused admission gate so a stalled queue is read as policy, not a hang.
+ * The admission meter shows permits in use, machine load, memory clamp, and
+ * how much work attachment has saved. The meter names a hard memory clamp as
+ * a paused admission gate, so a reader sees a stalled queue as policy, not a
+ * hang.
  */
 export const AdmissionState = ({ status }: AdmissionStateProps) => {
   const model = admissionModel(status);
@@ -29,7 +30,7 @@ export const AdmissionState = ({ status }: AdmissionStateProps) => {
       />
       {model.paused ? (
         <Agent.Context>
-          Admission is paused by hard memory pressure. Queued tickets resume when MemAvailable recovers; do not kill cargo to free memory.
+          Hard memory pressure has paused admission. Queued tickets resume when MemAvailable recovers. Do not kill cargo to free memory.
         </Agent.Context>
       ) : null}
     </>

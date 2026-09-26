@@ -21,15 +21,15 @@ describe('hauler process entry', () => {
 Commands:
   exec [--session ID] [--host HOST] [--cwd DIR] [--bg] [--after TICKET[,TICKET…]]
        [--allow-shared-target] -- <cargo command>
-      Run cargo through the hauler daemon; --after queues it until those
-      tickets finish (it fails if one of them fails or is killed)
+      Run cargo through the hauler daemon. --after holds the run until those
+      tickets finish, and the run fails if one of them fails or is killed.
   daemon <run|start|stop|status|restart>
-      Control the hauler daemon; restart replaces the running daemon
-      (in-flight tickets end killed: "daemon shutdown")
+      Control the hauler daemon. restart replaces the running daemon and
+      ends in-flight tickets as killed with "daemon shutdown".
   install-shim [--dir DIR] [--real-cargo PATH] [--force]
-      Install an optional PATH cargo shim
+      Install an optional PATH cargo shim.
   status | log | last | await <ticket> | result <ticket> | request [--after TICKET] -- <cargo command>
-      Routed commands; run \`cargo-hauler --help\` for options
+      Routed commands. Run \`cargo-hauler --help\` for their options.
 `);
   });
 

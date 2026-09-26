@@ -12,8 +12,8 @@ export const infraFailure = (error: TicketSocketError): Error => {
     case 'DaemonUnreachable':
       return new Error(
         daemonIsAbsent(error.cause)
-          ? `hauler daemon unreachable at ${error.socketPath}; it starts on demand with any exec, or run: hauler daemon start`
-          : `hauler daemon socket at ${error.socketPath} could not be opened (${socketErrorCode(error.cause) ?? 'no errno'}); the daemon may still be running, check: hauler daemon status`,
+          ? `hauler daemon unreachable at ${error.socketPath}. It starts on demand with any exec, or run hauler daemon start`
+          : `hauler daemon socket at ${error.socketPath} could not be opened (${socketErrorCode(error.cause) ?? 'no errno'}). The daemon may still be running, so check hauler daemon status`,
       );
     case 'ControlTimeout':
       return new Error(

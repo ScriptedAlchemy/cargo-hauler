@@ -2,7 +2,7 @@ import type { AgentRequestContext } from '@agent-bundle/runtime';
 
 /**
  * The same document renders on two surfaces whose follow-up commands are
- * spelled differently: MCP tool names for hosts, `hauler <cmd>` for the CLI.
+ * spelled differently. Hosts get MCP tool names and the CLI gets `hauler <cmd>`.
  */
 export interface SurfaceNames {
   readonly await: string;
@@ -39,6 +39,6 @@ export const cliSurface: SurfaceNames = {
   status: 'hauler status',
 };
 
-/** The names for this request's surface: the routed CLI (a tool's `.cli.ts` projection) or the MCP server. */
+/** The names for this request's surface, either the routed CLI (a tool's `.cli.ts` projection) or the MCP server. */
 export const surfaceNames = ({ invocation }: Pick<AgentRequestContext, 'invocation'>): SurfaceNames =>
   invocation.kind === 'cli' ? cliSurface : mcpSurface;

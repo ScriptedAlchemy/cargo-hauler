@@ -1,5 +1,5 @@
 /**
- * The primitives for replacing a running daemon, shared by the automatic
+ * The building blocks for replacing a running daemon, shared by the automatic
  * replacement in `ensureDaemonRunning` (a daemon of another version answers
  * the socket) and the manual `hauler daemon restart`. A leaf on purpose:
  * `lifecycle.ts` imports `ensure-daemon.ts`, and both import this.
@@ -40,8 +40,8 @@ export const daemonIdentity = (
   );
 
 /**
- * How long a daemon gets to exit after acknowledging a shutdown request —
- * the same window its own signal handler allows before forcing the exit.
+ * How long a daemon gets to exit after acknowledging a shutdown request. It
+ * is the same window its own signal handler allows before forcing the exit.
  */
 export const exitGraceMs = 5_000;
 
@@ -151,7 +151,7 @@ export const requestShutdown = (
 
 /** The one text for a daemon newer than the client that asked it to go. */
 export const newerDaemonMessage = (daemon: DaemonIdentity, clientVersion: string): string =>
-  `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is newer than this client (${clientVersion}); not replaced — upgrade this install, or restart the session so its hooks and MCP server come from the current plugin`;
+  `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is newer than this client (${clientVersion}), so this client did not replace it. Upgrade this install, or restart the session so its hooks and MCP server come from the current plugin.`;
 
 /**
  * The daemon behind the socket is a newer build than this client, or refused
@@ -189,14 +189,14 @@ export class DaemonIncompatibleError extends Data.TaggedError('DaemonIncompatibl
   }) {
     super({
       ...fields,
-      message: `cargo-hauler daemon pid ${fields.daemon.pid} (${fields.daemon.version}) is incompatible with this client (${fields.clientVersion}); not replaced while compatibility cannot be established — stop it with \`hauler daemon stop\` from its install`,
+      message: `cargo-hauler daemon pid ${fields.daemon.pid} (${fields.daemon.version}) is incompatible with this client (${fields.clientVersion}). This client cannot establish compatibility, so it did not replace the daemon. Stop it with \`hauler daemon stop\` from its install.`,
     });
   }
 }
 
 /** The one text for a daemon that outlived the grace after a shutdown request. */
 export const notReplacedMessage = (daemon: DaemonIdentity, graceMs: number): string =>
-  `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is still running ${formatMs(graceMs)} after the shutdown request; not restarted — retry once it has exited, or stop it with \`hauler daemon stop\``;
+  `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is still running ${formatMs(graceMs)} after the shutdown request, so the restart did not start a new daemon. Retry once it has exited, or stop it with \`hauler daemon stop\`.`;
 
 /**
  * A daemon of another version acknowledged the shutdown request but was

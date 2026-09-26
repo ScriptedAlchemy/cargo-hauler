@@ -71,7 +71,7 @@ describe('daemonBadgeModel', () => {
   });
 
   it('names every non-running cause', () => {
-    expect(daemonBadgeModel({ reason: 'socket-missing', state: 'stopped' }, nowMs).detail).toContain('starts on demand');
+    expect(daemonBadgeModel({ reason: 'socket-missing', state: 'stopped' }, nowMs).detail).toBe('no socket');
     expect(daemonBadgeModel({ reason: 'connection-refused', state: 'stopped' }, nowMs).detail).toContain('stale socket');
     expect(daemonBadgeModel({ reason: 'accept-timeout', state: 'unresponsive', timeoutMs: 750 }, nowMs).detail).toContain('did not accept a connection within 750ms');
     expect(daemonBadgeModel({ reason: 'answer-timeout', state: 'unresponsive', timeoutMs: 750 }, nowMs).detail).toContain('accepted the connection but sent no status');
@@ -180,7 +180,7 @@ describe('ticketCardModel', () => {
       }),
       nowMs,
     );
-    expect(model.stalled).toBe('looks stalled: no CPU for 12m and no output — hauler kill cc-7');
+    expect(model.stalled).toBe('looks stalled: no CPU for 12m and no output. Free the lane with hauler kill cc-7');
     expect(model.quiet).toBe('no output for 58m');
 
     const rider = ticketCardModel(
@@ -193,7 +193,7 @@ describe('ticketCardModel', () => {
       nowMs,
     );
     expect(rider.stalled).toBe(
-      'looks stalled: no CPU for 12m and no output; owner disconnected — hauler kill cc-5',
+      'looks stalled: no CPU for 12m and no output, owner disconnected. Free the lane with hauler kill cc-5',
     );
   });
 });

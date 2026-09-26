@@ -91,7 +91,7 @@ describe('stop-hold hook', () => {
     expect(result.outcome).toBe('deny');
     expect(result.reason).toMatch(/cc-7/u);
     expect(result.reason).toMatch(/ETA/u);
-    expect(result.reason).toMatch(/stop again/u);
+    expect(result.reason).toMatch(/Stop again to keep waiting/u);
   });
 
   it('clamps the wait to the daemon await ceiling so an oversized CARGO_HAULER_STOP_WAIT_MS is not rejected', async () => {

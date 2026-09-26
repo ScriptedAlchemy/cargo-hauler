@@ -90,8 +90,8 @@ export const defaultShimDir = (): string => join(homedir(), '.local', 'bin');
 /**
  * Resolves the real cargo to an ABSOLUTE path, skipping anything inside the
  * shim's own directory. Embedding a bare `cargo` would let the broker daemon
- * resolve the shim itself through PATH — the shim would call the broker
- * which spawns the shim: a self-attachment deadlock.
+ * resolve the shim itself through PATH. The shim would call the broker,
+ * which spawns the shim, and the two would deadlock on each other.
  */
 export const resolveRealCargo = (
   realCargo: string,
@@ -110,7 +110,7 @@ export const resolveRealCargo = (
     // is refused.
     if (insideDest(realCargo)) {
       throw new Error(
-        `--real-cargo ${realCargo} points at the shim itself; pass the real cargo binary`,
+        `--real-cargo ${realCargo} points at the shim itself. Pass the real cargo binary`,
       );
     }
     return realCargo;
@@ -129,7 +129,7 @@ export const resolveRealCargo = (
     return resolve(candidate);
   }
   throw new Error(
-    `could not resolve a real ${realCargo} outside ${destDir}; pass --real-cargo /path/to/cargo`,
+    `could not resolve a real ${realCargo} outside ${destDir}. Pass --real-cargo /path/to/cargo`,
   );
 };
 
@@ -168,7 +168,7 @@ export type ShimPathStatus =
 /**
  * Where a fresh PATH lookup of `cargo` lands relative to the installed shim.
  * rustup's `~/.cargo/bin` commonly precedes `~/.local/bin`, in which case
- * the shim never runs — surface that at install time instead of letting the
+ * the shim never runs. The install reports that instead of letting the
  * operator discover it from an idle dashboard.
  */
 export const shimPathStatus = (
@@ -301,14 +301,14 @@ export const installCargoShim = (options: InstallShimOptions): InstallShimResult
   // would produce a file cmd.exe cannot execute. Refuse clearly instead.
   if ((options.platform ?? process.platform) === 'win32') {
     throw new Error(
-      'hauler install-shim is not supported on Windows: the shim is a POSIX shell script. Windows is not yet supported.',
+      'hauler install-shim is not supported on Windows, because the shim is a POSIX shell script.',
     );
   }
   const destDir = options.destDir ?? defaultShimDir();
   mkdirSync(destDir, { recursive: true });
   const path = join(destDir, 'cargo');
   if (lstatSync(path, { throwIfNoEntry: false }) !== undefined && options.force !== true) {
-    throw new Error(`cargo already exists at ${path}; pass --force to replace it`);
+    throw new Error(`cargo already exists at ${path}. Pass --force to replace it`);
   }
   const realCargo = resolveRealCargo(options.realCargo, destDir);
   publishShim(path, renderCargoShim({ ...options, realCargo }), options.force === true);

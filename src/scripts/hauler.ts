@@ -26,26 +26,27 @@ import {
 } from '../internal/shim/entry-location.js';
 
 /**
- * The process-level entry: `exec` owns stdout/stderr byte-for-byte for the
- * cargo stream, `install-shim` embeds the global PATH entry, and `daemon` is
- * what the detached spawn re-enters. Everything else is a routed CLI command
- * (the tools' `.cli.ts` projections) and is forwarded to the generated `cargo-hauler` bin: beside
- * this script in the npm package, or under `bin/` in a host artifact.
+ * The process-level entry. `exec` owns stdout and stderr byte for byte for
+ * the cargo stream, `install-shim` embeds the global PATH entry, and `daemon`
+ * is what the detached spawn re-enters. Every other command is a routed CLI
+ * command (the tools' `.cli.ts` projections), forwarded to the generated
+ * `cargo-hauler` bin. That bin sits beside this script in the npm package and
+ * under `bin/` in a host artifact.
  */
 const usage = `Usage: hauler <command>
 
 Commands:
   exec [--session ID] [--host HOST] [--cwd DIR] [--bg] [--after TICKET[,TICKET…]]
        [--allow-shared-target] -- <cargo command>
-      Run cargo through the hauler daemon; --after queues it until those
-      tickets finish (it fails if one of them fails or is killed)
+      Run cargo through the hauler daemon. --after holds the run until those
+      tickets finish, and the run fails if one of them fails or is killed.
   daemon <run|start|stop|status|restart>
-      Control the hauler daemon; restart replaces the running daemon
-      (in-flight tickets end killed: "daemon shutdown")
+      Control the hauler daemon. restart replaces the running daemon and
+      ends in-flight tickets as killed with "daemon shutdown".
   install-shim [--dir DIR] [--real-cargo PATH] [--force]
-      Install an optional PATH cargo shim
+      Install an optional PATH cargo shim.
   status | log | last | await <ticket> | result <ticket> | request [--after TICKET] -- <cargo command>
-      Routed commands; run \`cargo-hauler --help\` for options
+      Routed commands. Run \`cargo-hauler --help\` for their options.
 `;
 
 export interface ScriptOptions {
@@ -75,18 +76,18 @@ const defaultWriteStderr = (data: string | Uint8Array): void => {
 };
 
 /**
- * PATH honesty at install time: a shim nobody's PATH reaches (rustup's
- * ~/.cargo/bin usually precedes ~/.local/bin) silently bypasses the broker.
+ * A shim that no PATH reaches lets cargo bypass the broker without a warning.
+ * Rustup's ~/.cargo/bin usually precedes ~/.local/bin.
  */
 const describeShimPathStatus = (status: ShimPathStatus, destDir: string): string => {
   const prepend = `export PATH="${destDir}:$PATH"`;
   switch (status.kind) {
     case 'wins':
-      return 'cargo now resolves through the shim; scripted cargo goes through the broker.';
+      return 'cargo now resolves through the shim, so scripted cargo goes through the broker.';
     case 'shadowed':
-      return `warning: PATH resolves cargo to ${status.by} before the shim. Put ${destDir} earlier on PATH (e.g. ${prepend} in your shell profile) or the shim never runs.`;
+      return `warning: PATH resolves cargo to ${status.by} before the shim. Put ${destDir} earlier on PATH, for example with ${prepend} in your shell profile. Otherwise the shim never runs.`;
     case 'not-on-path':
-      return `warning: ${destDir} is not on PATH. Add it ahead of rustup's ~/.cargo/bin (e.g. ${prepend} in your shell profile) so scripted cargo goes through the broker.`;
+      return `warning: ${destDir} is not on PATH. Add it ahead of rustup's ~/.cargo/bin, for example with ${prepend} in your shell profile, so scripted cargo goes through the broker.`;
     default: {
       const exhaustive: never = status;
       throw new Error(`unhandled shim PATH status: ${JSON.stringify(exhaustive)}`);
@@ -120,8 +121,8 @@ const runExecCommand = async (argv: readonly string[], options: ScriptOptions): 
         ? { allowSharedTarget: true }
         : {}),
       argv: parsed.cargoArgv,
-      // Resolved here: the daemon would otherwise resolve a relative --cwd
-      // against its own working directory, not the caller's.
+      // The daemon would otherwise resolve a relative --cwd against its own
+      // working directory, not the caller's.
       cwd: resolve(parsed.cwd ?? process.cwd()),
       env: buildTransportedEnv(env),
       host: parsed.host ?? attributed.host ?? 'cli',
@@ -202,7 +203,7 @@ export const pluginInstallShimRefusal =
   'hauler install-shim cannot run from a host plugin copy. Install the global CLI with `npm i -g cargo-hauler`, then run `hauler install-shim` from PATH.\n';
 
 export const pluginDirectCliRefusal =
-  'This plugin-local scripts/hauler.mjs is for host hooks only. Install the global CLI with `npm i -g cargo-hauler` and use `hauler` on PATH; never run scripts/hauler.mjs directly.\n';
+  'This plugin-local scripts/hauler.mjs is for host hooks only. Install the global CLI with `npm i -g cargo-hauler` and use `hauler` on PATH. Do not run scripts/hauler.mjs directly.\n';
 
 const pluginRootNames = [
   'AGENT_BUNDLE_PLUGIN_ROOT',
@@ -225,8 +226,9 @@ const pluginInvocationAllowed = (
   if (command !== 'exec') {
     return false;
   }
-  // Only flags ahead of `--` belong to hauler; `exec -- cargo --host x` is a
-  // cargo argv, not a hook rewrite (same boundary as `parseExecArgv`).
+  // Only flags ahead of `--` belong to hauler, the same boundary
+  // `parseExecArgv` uses. `exec -- cargo --host x` is a cargo argv, not a hook
+  // rewrite.
   const separator = rest.indexOf('--');
   const flags = separator === -1 ? rest : rest.slice(0, separator);
   const hostIndex = flags.indexOf('--host');
@@ -322,7 +324,7 @@ export const runScript = async (
 
 /**
  * `agent-bundle build` detects the `main` export and generates the process
- * envelope: this module is emitted as `scripts/hauler.mjs` in every host
+ * envelope. The build emits this module as `scripts/hauler.mjs` in every host
  * artifact (the hook rewrite target) and as the package `hauler` bin. The
  * envelope probes the process's terminal once and hands it in as `context`
  * (agent-bundle#511), so `exec` never inspects `process.stdout` itself.

@@ -11,7 +11,7 @@ import { TicketCard } from './ticket-card.js';
 
 /*
  * Progressive documents. Each stream is a valueless `Agent.Result` container
- * holding one Suspense boundary: the fallback is the document the reader sees
+ * that holds one Suspense boundary. The fallback is the document the reader sees
  * while the daemon is still working (a live ticket card, a progress node), and
  * the settled child is the ordinary result document, whose `Agent.Result
  * value` the runtime merges up into the container. The MCP projector emits
@@ -46,7 +46,7 @@ const AwaitSettled = async ({ awaited, maxWaitMs, names }: Pick<AwaitStreamProps
   <AwaitDocument maxWaitMs={maxWaitMs} names={names} nowMs={Date.now()} result={await awaited} />
 );
 
-/** `hauler_await` / `hauler await`: the live ticket now, the settled ticket when the wait ends. */
+/** `hauler_await` and `hauler await` render the live ticket now and the settled ticket when the wait ends. */
 export const AwaitStream = ({ awaited, ...pending }: AwaitStreamProps) => (
   <Agent.Result>
     <Suspense fallback={<AwaitPending {...pending} />}>
@@ -64,7 +64,7 @@ const LogSettled = async ({ loading, names }: LogStreamProps) => (
   <LogDocument names={names} nowMs={Date.now()} result={await loading} />
 );
 
-/** `hauler_log` / `hauler log`: a progress frame while the ledger is read, then the listing. */
+/** `hauler_log` and `hauler log` render a progress frame while the ledger is read, then the listing. */
 export const LogStream = ({ loading, names }: LogStreamProps) => (
   <Agent.Result>
     <Suspense fallback={<Agent.Progress completed={0} message={`${names.log}: reading the ledger`} />}>

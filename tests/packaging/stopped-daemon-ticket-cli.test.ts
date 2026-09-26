@@ -166,7 +166,7 @@ describe.skipIf(!existsSync(haulerEntry))('ticket reads on a stopped daemon', ()
       stderr: `${JSON.stringify({
         error: {
           code: 'render-failed',
-          message: `hauler daemon socket at ${socketPath} could not be opened (EACCES); the daemon may still be running, check: hauler daemon status`,
+          message: `hauler daemon socket at ${socketPath} could not be opened (EACCES). The daemon may still be running, so check hauler daemon status`,
         },
       })}\n`,
     });
@@ -185,7 +185,7 @@ describe.skipIf(!existsSync(haulerEntry))('ticket reads on a stopped daemon', ()
         json: {
           daemon: 'unresponsive',
           operation: 'last',
-          request: { ...seededRecord, error: 'daemon did not answer; ownership unconfirmed', status: 'orphaned' },
+          request: { ...seededRecord, error: 'daemon did not answer, so ownership is unconfirmed', status: 'orphaned' },
           summary: 'cc-1 orphaned',
         },
         stderr: '',

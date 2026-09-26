@@ -4,7 +4,7 @@ import type { HookDiagnostic, HookServices } from './shared.js';
 const recordBudgetMs = 50;
 type RecordingServices = Pick<HookServices, 'diagnostic' | 'signal'>;
 
-/** Fixed codes only: never disclose a command, argument, path, or error payload. */
+/** Report fixed codes only. Never disclose a command, argument, path, or error payload. */
 export const reportHookDiagnostic = (services: RecordingServices, code: HookDiagnostic): void => {
   try {
     const result = services.diagnostic === undefined

@@ -6,19 +6,18 @@ import { environmentAttribution } from '../../../internal/operations/attribution
 
 import type { inputSchema } from './hauler_request.js';
 
-/** `hauler request [--after cc-N] -- cargo check -p foo`: the cargo command as positionals. */
 export const config = {
   command: ['request'],
   confirm: false,
   description:
-    'Submit a background cargo request and print its ticket: hauler request [--after cc-N] -- cargo check -p foo',
+    'Submit a background cargo request and print its ticket, for example with hauler request [--after cc-N] -- cargo check -p foo',
   flags: {
     argv: { description: 'The cargo command, after --' },
     after: {
       description:
-        'Tickets that must finish first (repeatable, or comma-separated); the request fails if one of them fails or is killed',
+        'Tickets that must finish first. Repeat the flag or separate the ids with commas. The request fails if one of them fails or is killed.',
     },
-    cwd: { description: 'Workspace directory (default: current directory)', required: false },
+    cwd: { description: 'Workspace directory (defaults to the current directory)', required: false },
     host: { description: 'Agent host name for attribution' },
     session: { description: 'Agent session id for attribution' },
   },
@@ -28,8 +27,9 @@ export const config = {
 type CliInput = z.input<typeof inputSchema>;
 
 /**
- * Comma-separated `--after` lists split; the caller's shell environment
- * attributes an omitted host or session; request context resolves an omitted cwd.
+ * Splits comma-separated `--after` lists. The caller's shell environment
+ * attributes an omitted host or session, and request context resolves an
+ * omitted cwd.
  */
 export const mapInput = (input: CliInput): z.input<typeof inputSchema> => {
   const after = input.after === undefined ? [] : [...parseTicketList(input.after)];

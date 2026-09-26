@@ -68,7 +68,7 @@ describe('session/start daemon notice', () => {
           expectDocument(rendered)
             .toHaveStatus('success')
             .toContainContext('cargo-hauler daemon running (pid')
-            .toContainContext('never kill cargo by PID');
+            .toContainContext('Never kill cargo by PID');
           expect(rendered.document.value).toEqual({ outcome: 'continue' });
         }));
     }), 20_000);
