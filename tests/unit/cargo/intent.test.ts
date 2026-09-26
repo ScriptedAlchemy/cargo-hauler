@@ -40,6 +40,7 @@ describe('parseCargoArgv', () => {
       'nested/Cargo.toml',
     ]);
     const right = parseCargoArgv([
+      'cargo',
       '+nightly',
       'check',
       '--manifest-path=nested/Cargo.toml',

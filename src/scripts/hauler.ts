@@ -7,6 +7,7 @@ import type { AgentTerminal, ExecutableMainContext } from 'agent-bundle';
 import * as Cause from 'effect/Cause';
 import * as Effect from 'effect/Effect';
 
+import { parseCargoArgv, ProgramNotCargoError } from '../internal/cargo/intent.js';
 import { buildTransportedEnv } from '../internal/client/env.js';
 import { runExecClient, type RunExecOptions, type RunExecResult } from '../internal/client/exec.js';
 import { ExecUsageError, parseExecArgv } from '../internal/client/parse.js';
@@ -111,6 +112,16 @@ const runExecCommand = async (argv: readonly string[], options: ScriptOptions): 
     writeStderr: options.writeStderr ?? defaultWriteStderr,
     writeStdout: options.writeStdout ?? defaultWriteStdout,
   };
+  // Every passthrough runs argv in place, so refuse a non-cargo program
+  // before the client can choose one.
+  try {
+    parseCargoArgv(parsed.cargoArgv);
+  } catch (error) {
+    if (error instanceof ProgramNotCargoError) {
+      io.writeStderr(`[cargo-hauler] ${error.message}\n`);
+      return 2;
+    }
+  }
   const exec = options.runExec ?? runExecClient;
   const env = options.env ?? process.env;
   const attributed = environmentAttribution(env);

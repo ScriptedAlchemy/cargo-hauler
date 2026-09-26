@@ -7773,6 +7773,8 @@ const sortedUnique = (values)=>[
     ].sort((left, right)=>left.localeCompare(right));
 const splitFeatures = (value)=>value.split(/[,\s]+/u).filter((feature)=>feature.length > 0);
 const cargoExecutablePattern = /(?:^|[/\\])cargo(?:\.exe)?$/u;
+class ProgramNotCargoError extends Error {
+}
 const envProgramPattern = /(?:^|[/\\])env$/u;
 const shellProgramPattern = /(?:^|[/\\])(?:bash|sh|zsh|dash)$/u;
 const shellAssignmentPattern = /^([A-Za-z_][A-Za-z0-9_]*)=([\s\S]*)$/u;
@@ -8135,14 +8137,10 @@ const parseCargoArgv = (input)=>{
     }
     if (argv[0] !== undefined && cargoExecutablePattern.test(argv[0])) {
         argv.shift();
-    } else if (prefix.peeled) {
-        throw new Error(`program must be cargo, got ${argv[0] ?? 'nothing'}`);
-    } else if (argv[0] !== undefined && /[/\\]/u.test(argv[0])) {
-        // A path-shaped first argument is a program, and the only program the
-        // broker runs is cargo. A mis-resolved shim once submitted
-        // `~/.cargo/bin/rustup test …`; running it would fail and the path would
-        // be recorded as the "subcommand" in every metrics view.
-        throw new Error(`program must be cargo, got ${argv[0]}`);
+    } else if (wrapper === null || prefix.peeled) {
+        // The executor spawns argv[0], so any other first word would run as a
+        // program rather than be read as a cargo subcommand.
+        throw new ProgramNotCargoError(`program must be cargo, got ${argv[0] ?? 'nothing'}`);
     }
     const toolchainArgument = argv[0]?.startsWith('+') === true ? argv.shift() : undefined;
     const toolchain = toolchainArgument?.slice(1) || null;
@@ -8408,6 +8406,7 @@ const normalizeCargoIntent = (options)=>{
 };
 
 __webpack_require__.d(__webpack_exports__, {
+  oo: () => (ProgramNotCargoError)
 }, {
   R$: cargoExecutablePattern,
   cS: parseCargoArgv,
@@ -23189,16 +23188,18 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var node_fs__rspack_import_1 = __webpack_require__("node:fs");
 /* import */ var node_path__rspack_import_2 = __webpack_require__("node:path");
 /* import */ var node_url__rspack_import_3 = __webpack_require__("node:url");
-/* import */ var effect_Cause__rspack_import_13 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Cause.js");
-/* import */ var effect_Effect__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
-/* import */ var _internal_client_env_js__rspack_import_4 = __webpack_require__("./src/internal/client/env.ts");
-/* import */ var _internal_client_exec_js__rspack_import_5 = __webpack_require__("./src/internal/client/exec.ts");
-/* import */ var _internal_client_parse_js__rspack_import_6 = __webpack_require__("./src/internal/client/parse.ts");
-/* import */ var _internal_daemon_config_js__rspack_import_7 = __webpack_require__("./src/internal/daemon/config.ts");
-/* import */ var _internal_operations_attribution_js__rspack_import_11 = __webpack_require__("./src/internal/operations/attribution.ts");
-/* import */ var _internal_daemon_runtime_lifecycle_js__rspack_import_8 = __webpack_require__("./src/internal/daemon/runtime/lifecycle.ts");
-/* import */ var _internal_shim_install_js__rspack_import_9 = __webpack_require__("./src/internal/shim/install.ts");
-/* import */ var _internal_shim_entry_location_js__rspack_import_10 = __webpack_require__("./src/internal/shim/entry-location.ts");
+/* import */ var effect_Cause__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Cause.js");
+/* import */ var effect_Effect__rspack_import_13 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
+/* import */ var _internal_cargo_intent_js__rspack_import_4 = __webpack_require__("./src/internal/cargo/intent.ts");
+/* import */ var _internal_client_env_js__rspack_import_5 = __webpack_require__("./src/internal/client/env.ts");
+/* import */ var _internal_client_exec_js__rspack_import_6 = __webpack_require__("./src/internal/client/exec.ts");
+/* import */ var _internal_client_parse_js__rspack_import_7 = __webpack_require__("./src/internal/client/parse.ts");
+/* import */ var _internal_daemon_config_js__rspack_import_8 = __webpack_require__("./src/internal/daemon/config.ts");
+/* import */ var _internal_operations_attribution_js__rspack_import_12 = __webpack_require__("./src/internal/operations/attribution.ts");
+/* import */ var _internal_daemon_runtime_lifecycle_js__rspack_import_9 = __webpack_require__("./src/internal/daemon/runtime/lifecycle.ts");
+/* import */ var _internal_shim_install_js__rspack_import_10 = __webpack_require__("./src/internal/shim/install.ts");
+/* import */ var _internal_shim_entry_location_js__rspack_import_11 = __webpack_require__("./src/internal/shim/entry-location.ts");
+
 
 
 
@@ -23267,9 +23268,9 @@ const runExecCommand = async (argv, options)=>{
     const write = options.write ?? defaultWrite;
     let parsed;
     try {
-        parsed = (0,_internal_client_parse_js__rspack_import_6/* .parseExecArgv */.HC)(argv);
+        parsed = (0,_internal_client_parse_js__rspack_import_7/* .parseExecArgv */.HC)(argv);
     } catch (error) {
-        if (error instanceof _internal_client_parse_js__rspack_import_6/* .ExecUsageError */.Ls) {
+        if (error instanceof _internal_client_parse_js__rspack_import_7/* .ExecUsageError */.Ls) {
             write(usage);
             return 2;
         }
@@ -23279,19 +23280,29 @@ const runExecCommand = async (argv, options)=>{
         writeStderr: options.writeStderr ?? defaultWriteStderr,
         writeStdout: options.writeStdout ?? defaultWriteStdout
     };
-    const exec = options.runExec ?? _internal_client_exec_js__rspack_import_5/* .runExecClient */.Qf;
+    // Every passthrough runs argv in place, so refuse a non-cargo program
+    // before the client can choose one.
+    try {
+        (0,_internal_cargo_intent_js__rspack_import_4/* .parseCargoArgv */.cS)(parsed.cargoArgv);
+    } catch (error) {
+        if (error instanceof _internal_cargo_intent_js__rspack_import_4/* .ProgramNotCargoError */.oo) {
+            io.writeStderr(`[cargo-hauler] ${error.message}\n`);
+            return 2;
+        }
+    }
+    const exec = options.runExec ?? _internal_client_exec_js__rspack_import_6/* .runExecClient */.Qf;
     const env = options.env ?? process.env;
-    const attributed = (0,_internal_operations_attribution_js__rspack_import_11/* .environmentAttribution */.Xu)(env);
+    const attributed = (0,_internal_operations_attribution_js__rspack_import_12/* .environmentAttribution */.Xu)(env);
     const session = parsed.session ?? attributed.session;
-    return effect_Effect__rspack_import_12/* .runPromise */.pR5(exec({
-        ...parsed.allowSharedTarget || (0,_internal_daemon_config_js__rspack_import_7/* .isEnabledFlag */.I1)(env.CARGO_HAULER_ALLOW_SHARED_TARGET) ? {
+    return effect_Effect__rspack_import_13/* .runPromise */.pR5(exec({
+        ...parsed.allowSharedTarget || (0,_internal_daemon_config_js__rspack_import_8/* .isEnabledFlag */.I1)(env.CARGO_HAULER_ALLOW_SHARED_TARGET) ? {
             allowSharedTarget: true
         } : {},
         argv: parsed.cargoArgv,
         // The daemon would otherwise resolve a relative --cwd against its own
         // working directory, not the caller's.
         cwd: (0,node_path__rspack_import_2.resolve)(parsed.cwd ?? process.cwd()),
-        env: (0,_internal_client_env_js__rspack_import_4/* .buildTransportedEnv */.o)(env),
+        env: (0,_internal_client_env_js__rspack_import_5/* .buildTransportedEnv */.o)(env),
         host: parsed.host ?? attributed.host ?? 'cli',
         io,
         ...parsed.background ? {
@@ -23306,14 +23317,14 @@ const runExecCommand = async (argv, options)=>{
         ...options.terminal === undefined ? {} : {
             terminal: options.terminal
         }
-    }).pipe(effect_Effect__rspack_import_12/* .map */.TjK((result)=>result.exitCode), effect_Effect__rspack_import_12/* .catchCause */.Tyx((cause)=>effect_Effect__rspack_import_12/* .sync */.OH5(()=>io.writeStderr(`${effect_Cause__rspack_import_13/* .pretty */.j9(cause)}\n`)).pipe(effect_Effect__rspack_import_12.as(1)))), {
+    }).pipe(effect_Effect__rspack_import_13/* .map */.TjK((result)=>result.exitCode), effect_Effect__rspack_import_13/* .catchCause */.Tyx((cause)=>effect_Effect__rspack_import_13/* .sync */.OH5(()=>io.writeStderr(`${effect_Cause__rspack_import_14/* .pretty */.j9(cause)}\n`)).pipe(effect_Effect__rspack_import_13.as(1)))), {
         signal: options.signal
     });
 };
 const installShimUsage = 'Usage: hauler install-shim [--dir DIR] [--real-cargo PATH] [--force]\n';
 const runInstallShim = (rest, write, location, env)=>{
     const destIndex = rest.indexOf('--dir');
-    const destDir = destIndex === -1 ? (0,_internal_shim_install_js__rspack_import_9/* .defaultShimDir */.wi)() : rest[destIndex + 1];
+    const destDir = destIndex === -1 ? (0,_internal_shim_install_js__rspack_import_10/* .defaultShimDir */.wi)() : rest[destIndex + 1];
     const realCargoIndex = rest.indexOf('--real-cargo');
     const realCargo = realCargoIndex === -1 ? 'cargo' : rest[realCargoIndex + 1];
     const consumed = new Set();
@@ -23331,14 +23342,14 @@ const runInstallShim = (rest, write, location, env)=>{
         return 2;
     }
     try {
-        const installed = (0,_internal_shim_install_js__rspack_import_9/* .installCargoShim */.jL)({
-            haulerArgv: (0,_internal_shim_entry_location_js__rspack_import_10/* .globalHaulerArgv */.P3)(location, env),
+        const installed = (0,_internal_shim_install_js__rspack_import_10/* .installCargoShim */.jL)({
+            haulerArgv: (0,_internal_shim_entry_location_js__rspack_import_11/* .globalHaulerArgv */.P3)(location, env),
             destDir,
             force: rest.includes('--force'),
             realCargo
         });
         write(`Installed cargo shim at ${installed.path}\n`);
-        write(`${describeShimPathStatus((0,_internal_shim_install_js__rspack_import_9/* .shimPathStatus */.PR)(installed.path), destDir)}\n`);
+        write(`${describeShimPathStatus((0,_internal_shim_install_js__rspack_import_10/* .shimPathStatus */.PR)(installed.path), destDir)}\n`);
         write(`The shim embeds the hauler entry ${installed.haulerScript}. After an upgrade, \`cargo-hauler-install doctor\` reports a stale entry and \`cargo-hauler-install install <host>\` refreshes it.\n`);
         return 0;
     } catch (error) {
@@ -23349,14 +23360,14 @@ const runInstallShim = (rest, write, location, env)=>{
 const runDaemonCommand = async (rest, write)=>{
     let subcommand;
     try {
-        subcommand = (0,_internal_daemon_runtime_lifecycle_js__rspack_import_8/* .parseDaemonSubcommand */.P)(rest);
+        subcommand = (0,_internal_daemon_runtime_lifecycle_js__rspack_import_9/* .parseDaemonSubcommand */.P)(rest);
     } catch  {
         write(usage);
         return 2;
     }
-    const result = await (0,_internal_daemon_runtime_lifecycle_js__rspack_import_8/* .runDaemonControl */.R1)(subcommand);
+    const result = await (0,_internal_daemon_runtime_lifecycle_js__rspack_import_9/* .runDaemonControl */.R1)(subcommand);
     write(`${JSON.stringify(result)}\n`);
-    return (0,_internal_daemon_runtime_lifecycle_js__rspack_import_8/* .daemonExitCode */.mi)(result);
+    return (0,_internal_daemon_runtime_lifecycle_js__rspack_import_9/* .daemonExitCode */.mi)(result);
 };
 const pluginInstallShimRefusal = 'hauler install-shim cannot run from a host plugin copy. Install the global CLI with `npm i -g cargo-hauler`, then run `hauler install-shim` from PATH.\n';
 const pluginDirectCliRefusal = 'This plugin-local scripts/hauler.mjs is for host hooks only. Install the global CLI with `npm i -g cargo-hauler` and use `hauler` on PATH. Do not run scripts/hauler.mjs directly.\n';
@@ -23444,7 +23455,7 @@ const forwardToRoutedCli = (argv, options)=>{
 const runScript = async (argv, options = {})=>{
     const write = options.write ?? defaultWrite;
     const env = options.env ?? process.env;
-    const location = (0,_internal_shim_entry_location_js__rspack_import_10/* .haulerEntryLocation */.PC)(options.entryPath);
+    const location = (0,_internal_shim_entry_location_js__rspack_import_11/* .haulerEntryLocation */.PC)(options.entryPath);
     const [command, ...rest] = argv;
     if (location.kind === 'host-plugin' && command === 'install-shim') {
         write(pluginInstallShimRefusal);
