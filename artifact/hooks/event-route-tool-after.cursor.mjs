@@ -2208,6 +2208,7 @@ const detachRequestSchema = zod__rspack_import_0/* .object */.Ikc({
     ticket: zod__rspack_import_0/* .string */.YjP().min(1)
 });
 /** Await ceiling (2h) — the single source for daemon wire and operation schemas. */ const awaitCeilingMs = 7200000;
+/** How long one await waits when the caller names no wait. */ const defaultAwaitMs = 30000;
 const awaitRequestSchema = zod__rspack_import_0/* .object */.Ikc({
     type: zod__rspack_import_0/* .literal */.euz('await'),
     id: zod__rspack_import_0/* .string */.YjP().min(1),
@@ -28148,7 +28149,7 @@ const prepareRouteInvocation = async (nativeInput, signal, observer, receipt)=>{
     return withEventState(signal, async (bindings)=>{
         const gate = await (0,_agent_bundle_runtime_request__rspack_import_6/* .runAgentRequest */.iC)({
             invocation: {
-                artifactEpoch: "ebb08d4587a819a6fb8024fbe11c2dbc52c07434021626dede0641693c365056",
+                artifactEpoch: "f08f2c70b35e0629a769f5483e18ec7a9a8b4a83d78a5148b66741455b108ab3",
                 hostContractRevision: capabilityRevision,
                 kind: "event",
                 operationId: `event:${canonicalEvent}`,
