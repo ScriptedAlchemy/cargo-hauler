@@ -3,6 +3,7 @@ import React from 'react';
 
 import {
   awaitCeilingMs,
+  defaultAwaitMs,
   isOrphanedByRestart,
   type DisplayRequestRecord,
   type StatusRowStatus,
@@ -27,7 +28,7 @@ type GuidanceComponent = (props: TicketGuidanceProps) => React.JSX.Element;
 
 const PendingGuidance: GuidanceComponent = ({ names, record }) => (
   <Agent.Context>
-    {`${record.ticket} is still ${record.status}. Do not rerun the same cargo command. Call ${names.await} with ticket ${record.ticket}, or check ${names.result} later. Each call waits up to ${formatMs(awaitCeilingMs)}, so call again to keep waiting.`}
+    {`${record.ticket} is still ${record.status}. Do not rerun the same cargo command. Call ${names.await} with ticket ${record.ticket}, or check ${names.result} later. A plain call waits ${formatMs(defaultAwaitMs)}, and ${names.awaitMaxWait} raises that up to ${formatMs(awaitCeilingMs)}. Call again to keep waiting.`}
   </Agent.Context>
 );
 

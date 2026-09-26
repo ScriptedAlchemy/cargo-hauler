@@ -6,6 +6,8 @@ import type { AgentRequestContext } from '@agent-bundle/runtime';
  */
 export interface SurfaceNames {
   readonly await: string;
+  /** The await input that raises its wait above the default. */
+  readonly awaitMaxWait: string;
   /** The call that opens the dashboard App (MCP) or serves it in a browser (CLI). */
   readonly dashboard: string;
   readonly kill: string;
@@ -19,6 +21,7 @@ export interface SurfaceNames {
 
 export const mcpSurface: SurfaceNames = {
   await: 'hauler_await',
+  awaitMaxWait: 'maxWaitMs',
   dashboard: 'hauler_dashboard',
   kill: 'hauler_kill',
   log: 'hauler_log',
@@ -30,6 +33,7 @@ export const mcpSurface: SurfaceNames = {
 
 export const cliSurface: SurfaceNames = {
   await: 'hauler await',
+  awaitMaxWait: '--max-wait-ms',
   dashboard: 'hauler web',
   kill: 'hauler kill',
   log: 'hauler log',

@@ -11,7 +11,7 @@ import {
 } from '../client/tickets.js';
 import { daemonIsAbsent } from '../client/ensure-daemon.js';
 import type { DaemonConfigShape } from '../daemon/config.js';
-import type { DisplayRequestRecord, RequestRecord } from '../contracts/protocol.js';
+import { defaultAwaitMs, type DisplayRequestRecord, type RequestRecord } from '../contracts/protocol.js';
 import { describeRequestRecord, displayRequestRecord, loadLedgerTicket } from './status.js';
 
 import type { TicketRequestContext } from './attribution.js';
@@ -38,8 +38,6 @@ export interface AwaitOptions extends TicketOptions {
   /** Heartbeats while waiting; the caller decides how (or whether) to surface them. */
   readonly onProgress?: (progress: AwaitProgress) => void;
 }
-
-export const defaultAwaitMs = 30_000;
 
 /** A heartbeat line without the `[cargo-hauler]` prefix, for progress channels that label the source themselves. */
 export const progressMessage = (line: string): string =>
