@@ -16,6 +16,7 @@ import {
   unreachablePassthroughMode,
 } from '../../src/internal/client/exec.js';
 import {
+  ConnectionClosedError,
   ControlTimeoutError,
   DaemonUnreachableError,
   pingDaemon,
@@ -825,6 +826,43 @@ describe('runExecClient', () => {
         expect(collected.stderr()).toContain(
           '[cargo-hauler] brokered run aborted: daemon connection lost; ticket cc-1 killed: orphaned by daemon restart',
         );
+      }));
+
+    it.live('names a daemon that closed the readiness ping during reattach, not a startup failure', () =>
+      Effect.gen(function* () {
+        const fixture = yield* scopedFixture(5);
+        mkdirSync(fixture.config.stateDir, { recursive: true });
+        yield* scriptedDaemon(fixture.config.socketPath, {
+          ack: { etaMs: 1_000, etaSource: 'default' },
+          closeAfterAck: true,
+          reattach: [
+            {
+              id: 'x',
+              outcome: 'terminal',
+              request: record({ error: 'daemon shutdown', signal: 'SIGTERM', status: 'killed', ticket: 'cc-1' }),
+              ticket: 'cc-1',
+              type: 'reattach-result',
+            },
+          ],
+        });
+        let ensures = 0;
+        const collected = collectIo();
+        const result = yield* runExecClient({
+          argv: ['cargo', 'build'],
+          config: fixture.config,
+          cwd: fixture.ws1,
+          ensureDaemon: () =>
+            (ensures += 1) === 1
+              ? Effect.void
+              : Effect.fail(new ConnectionClosedError({ received: [], socketPath: fixture.config.socketPath })),
+          io: collected.io,
+        });
+
+        expect(result).toEqual({ exitCode: connectionLostExitCode, mode: 'brokered', ticket: 'cc-1' });
+        expect(collected.stderr()).toContain(
+          `[cargo-hauler] daemon closed the connection before answering its readiness ping (socket ${fixture.config.socketPath})\n`,
+        );
+        expect(collected.stderr()).not.toContain('daemon startup failed');
       }));
   });
 
