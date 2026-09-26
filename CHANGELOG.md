@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.15
+
+### Patch Changes
+
+- 0d4c30e: Update agent-bundle to 0.3.1 (899755dc6d) so generated executables no longer ship bundled dependencies' comments.
+
 ## 0.9.14
 
 ### Patch Changes

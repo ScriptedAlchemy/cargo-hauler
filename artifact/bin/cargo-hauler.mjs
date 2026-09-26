@@ -13518,7 +13518,7 @@ var __webpack_modules__ = {
             pingDaemon: _control_js__rspack_import_6.LT,
             pollMs: 100,
             processAlive: _shutdown_js__rspack_import_8.FN,
-            requestShutdown: (socketPath)=>(0, _shutdown_js__rspack_import_8.iU)(socketPath, 5000, "0.9.14", true),
+            requestShutdown: (socketPath)=>(0, _shutdown_js__rspack_import_8.iU)(socketPath, 5000, "0.9.15", true),
             spawnDetachedDaemon,
             waitForDaemon
         };
@@ -13530,9 +13530,9 @@ var __webpack_modules__ = {
                     startedAtMs: daemon.startedAtMs,
                     version: daemon.version
                 };
-                if ((0, _contracts_version_order_js__rspack_import_17.M)(daemon.version, "0.9.14")) {
+                if ((0, _contracts_version_order_js__rspack_import_17.M)(daemon.version, "0.9.15")) {
                     return yield* new _shutdown_js__rspack_import_8.gD({
-                        clientVersion: "0.9.14",
+                        clientVersion: "0.9.15",
                         daemon: identity1,
                         socketPath
                     });
@@ -13561,19 +13561,19 @@ var __webpack_modules__ = {
                     startedAtMs: already.startedAtMs,
                     version: already.version
                 };
-                if ((0, _contracts_version_order_js__rspack_import_17.M)(already.version, "0.9.14")) {
+                if ((0, _contracts_version_order_js__rspack_import_17.M)(already.version, "0.9.15")) {
                     if (access === 'read' && (0, _contracts_wire_version_js__rspack_import_18.W)(already)) {
                         return already;
                     }
                     return yield* new _shutdown_js__rspack_import_8.gD({
-                        clientVersion: "0.9.14",
+                        clientVersion: "0.9.15",
                         daemon: identity1,
                         socketPath: config.socketPath
                     });
                 }
                 if (!(0, _contracts_wire_version_js__rspack_import_18.W)(already)) {
                     return yield* new _shutdown_js__rspack_import_8.K9({
-                        clientVersion: "0.9.14",
+                        clientVersion: "0.9.15",
                         daemon: identity1,
                         socketPath: config.socketPath
                     });
@@ -13589,11 +13589,11 @@ var __webpack_modules__ = {
                         return yield* dependencies.waitForDaemon(config.socketPath);
                     });
                 }
-                if (daemon.version === "0.9.14") {
+                if (daemon.version === "0.9.15") {
                     return effect_Effect__rspack_import_15.PyW(daemon);
                 }
                 const deferred = ()=>effect_Effect__rspack_import_15.OH5(()=>{
-                        reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${"0.9.14"} when idle\n`);
+                        reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${"0.9.15"} when idle\n`);
                         return daemon;
                     });
                 return dependencies.daemonIsIdle(config.socketPath).pipe(effect_Effect__rspack_import_15.qIB((idle)=>{
@@ -13852,7 +13852,7 @@ var __webpack_modules__ = {
                 }
                 return true;
             });
-        const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = "0.9.14", ifIdle = false)=>effect_Effect__rspack_import_4.DYE(()=>{
+        const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = "0.9.15", ifIdle = false)=>effect_Effect__rspack_import_4.DYE(()=>{
                 const id = (0, _util_id_js__rspack_import_1.m)();
                 const isResponse = (message)=>message.id === id && (message.type === 'shutting-down' || message.type === 'error');
                 return (0, _control_js__rspack_import_2.Lb)({
@@ -13962,7 +13962,7 @@ var __webpack_modules__ = {
             constructor(fields){
                 super({
                     ...fields,
-                    message: `cargo-hauler daemon at ${fields.socketPath} sent a ticket record this client (${"0.9.14"}) cannot read. The daemon is another release or build, and \`hauler status\` names it with the command that replaces it.`
+                    message: `cargo-hauler daemon at ${fields.socketPath} sent a ticket record this client (${"0.9.15"}) cannot read. The daemon is another release or build, and \`hauler status\` names it with the command that replaces it.`
                 });
             }
         }
@@ -18268,7 +18268,7 @@ var __webpack_modules__ = {
         var _runtime_singleton_js__rspack_import_12 = __webpack_require__("./src/internal/daemon/runtime/singleton.ts");
         var _runtime_socket_ownership_js__rspack_import_13 = __webpack_require__("./src/internal/daemon/runtime/socket-ownership.ts");
         var _cargo_topology_js__rspack_import_14 = __webpack_require__("./src/internal/cargo/topology.ts");
-        const daemonVersion = "0.9.14";
+        const daemonVersion = "0.9.15";
         const appLayer = (config)=>_broker_broker_js__rspack_import_5.Cn.pipe(effect_Layer__rspack_import_15.S5(_scheduling_cost_js__rspack_import_7.jg), effect_Layer__rspack_import_15.S5(_integrations_kache_status_js__rspack_import_8.pS), effect_Layer__rspack_import_15.S5(_cargo_topology_js__rspack_import_14.QW), effect_Layer__rspack_import_15.S5(_storage_ledger_js__rspack_import_9.mX), effect_Layer__rspack_import_15.S5(effect_Layer__rspack_import_15.Py(_config_js__rspack_import_6.FP, config)), effect_Layer__rspack_import_15.S5(_effect_platform_node_NodeServices__rspack_import_16.q));
         const minimumLogLevelLayer = effect_Layer__rspack_import_15.oA(effect_Config__rspack_import_17.$b('CARGO_HAULER_LOG_LEVEL').pipe(effect_Effect__rspack_import_18.DM4(()=>'Info'), effect_Effect__rspack_import_18.TjK((level)=>effect_Layer__rspack_import_15.Py(effect_References__rspack_import_19.zQ, level))));
         const socketListenPath = (socketPath, pid)=>(0, node_path__rspack_import_1.join)((0, node_path__rspack_import_1.dirname)(socketPath), `.${pid}.s`);
@@ -22844,7 +22844,7 @@ var __webpack_modules__ = {
                 system: report.system
             }, report);
         const skewSummary = (daemon)=>{
-            const order1 = (0, _contracts_version_order_js__rspack_import_12.Z)(daemon.version, "0.9.14");
+            const order1 = (0, _contracts_version_order_js__rspack_import_12.Z)(daemon.version, "0.9.15");
             const [release, fix] = (()=>{
                 switch(order1){
                     case -1:
@@ -22869,7 +22869,7 @@ var __webpack_modules__ = {
                         }
                 }
             })();
-            return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${"0.9.14"}) cannot read, so this client shows tickets as the ledger recorded them. ${fix}`;
+            return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${"0.9.15"}) cannot read, so this client shows tickets as the ledger recorded them. ${fix}`;
         };
         const fromLiveReport = (raw, daemon, config, recentLimit)=>{
             const decoded = _contracts_tool_schemas_js__rspack_import_10.qb.safeParse(raw);
@@ -98729,7 +98729,7 @@ ${newlined}
                         execute,
                         name: "cargo-hauler",
                         render,
-                        version: "0.9.14",
+                        version: "0.9.15",
                         web: Object.freeze({
                             run: (argv, context)=>(0, agent_bundle_web_host__rspack_import_2.PP)({
                                     argv,
@@ -98754,8 +98754,8 @@ ${newlined}
     "./.agent-bundle-virtual/meta.mjs" () {
         const name = "cargo-hauler";
         const packageName = "cargo-hauler";
-        const packageVersion = "0.9.14";
-        const version = "0.9.14";
+        const packageVersion = "0.9.15";
+        const version = "0.9.15";
         const meta = Object.freeze({
             name,
             packageName,
