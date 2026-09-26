@@ -114,6 +114,22 @@ describe('routed CLI', () => {
     });
   });
 
+  it('reports kill with the daemon down as a stopped daemon, not a render failure', async () => {
+    const run = await invokeCli(['kill', 'cc-1']);
+    expect(run.exitCode).toBe(0);
+    expect(run.stderr).toBe('');
+    expect(run.stdout.split('\n', 1)).toEqual(['cc-1: nothing to kill (the daemon is stopped)']);
+    expect(run.stdout).toContain('Nothing changed. The daemon is stopped, so no ticket holds a lane.');
+    expect(cliJson(await invokeCli(['kill', 'cc-1', '--json']))).toEqual({
+      daemon: 'stopped',
+      killed: false,
+      operation: 'kill',
+      request: null,
+      summary: 'cc-1: nothing to kill (the daemon is stopped)',
+      ticket: 'cc-1',
+    });
+  });
+
   it('accepts result --full as a flag and still needs the ticket', async () => {
     const help = await invokeCli(['result', '--help']);
     expect(help.exitCode).toBe(0);
