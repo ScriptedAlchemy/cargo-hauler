@@ -9651,15 +9651,15 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var node_fs__rspack_import_0 = __webpack_require__("node:fs");
 /* import */ var node_os__rspack_import_1 = __webpack_require__("node:os");
 /* import */ var node_path__rspack_import_2 = __webpack_require__("node:path");
-/* import */ var _effect_platform_node_NodeServices__rspack_import_19 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodeServices.js");
-/* import */ var _effect_platform_node_NodeSocket__rspack_import_20 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeSocket.js");
-/* import */ var effect_Cause__rspack_import_23 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Cause.js");
-/* import */ var effect_Deferred__rspack_import_16 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Deferred.js");
-/* import */ var effect_Effect__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
-/* import */ var effect_Fiber__rspack_import_18 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Fiber.js");
-/* import */ var effect_Ref__rspack_import_17 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Ref.js");
-/* import */ var effect_Schedule__rspack_import_22 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Schedule.js");
-/* import */ var effect_unstable_socket_Socket__rspack_import_21 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/unstable/socket/Socket.js");
+/* import */ var _effect_platform_node_NodeServices__rspack_import_20 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node@4.0.0-rc.117_effect@4.0.0-rc.117_redis@6.2.1/node_modules/@effect/platform-node/dist/NodeServices.js");
+/* import */ var _effect_platform_node_NodeSocket__rspack_import_21 = __webpack_require__("./node_modules/.pnpm/@effect+platform-node-shared@4.0.0-rc.117_patch_hash=4a91f30c92993fc75800f9dc1483722836_f1e0a69df42f64ca67b2305ac925b366/node_modules/@effect/platform-node-shared/dist/NodeSocket.js");
+/* import */ var effect_Cause__rspack_import_24 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Cause.js");
+/* import */ var effect_Deferred__rspack_import_17 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Deferred.js");
+/* import */ var effect_Effect__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
+/* import */ var effect_Fiber__rspack_import_19 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Fiber.js");
+/* import */ var effect_Ref__rspack_import_18 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Ref.js");
+/* import */ var effect_Schedule__rspack_import_23 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Schedule.js");
+/* import */ var effect_unstable_socket_Socket__rspack_import_22 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/unstable/socket/Socket.js");
 /* import */ var _cargo_execution_executor_js__rspack_import_3 = __webpack_require__("./src/internal/cargo/execution/executor.ts");
 /* import */ var _daemon_config_js__rspack_import_4 = __webpack_require__("./src/internal/daemon/config.ts");
 /* import */ var _control_js__rspack_import_5 = __webpack_require__("./src/internal/client/control.ts");
@@ -9668,10 +9668,12 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var _util_id_js__rspack_import_8 = __webpack_require__("./src/internal/util/id.ts");
 /* import */ var _platform_ndjson_js__rspack_import_9 = __webpack_require__("./src/internal/platform/ndjson.ts");
 /* import */ var _platform_private_state_js__rspack_import_10 = __webpack_require__("./src/internal/platform/private-state.ts");
-/* import */ var _ensure_daemon_js__rspack_import_11 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
-/* import */ var _host_cap_js__rspack_import_12 = __webpack_require__("./src/internal/client/host-cap.ts");
-/* import */ var _local_invocation_js__rspack_import_13 = __webpack_require__("./src/internal/client/local-invocation.ts");
-/* import */ var _progress_js__rspack_import_15 = __webpack_require__("./src/internal/client/progress.ts");
+/* import */ var _platform_socket_errors_js__rspack_import_11 = __webpack_require__("./src/internal/platform/socket-errors.ts");
+/* import */ var _ensure_daemon_js__rspack_import_12 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
+/* import */ var _host_cap_js__rspack_import_13 = __webpack_require__("./src/internal/client/host-cap.ts");
+/* import */ var _local_invocation_js__rspack_import_14 = __webpack_require__("./src/internal/client/local-invocation.ts");
+/* import */ var _progress_js__rspack_import_16 = __webpack_require__("./src/internal/client/progress.ts");
+
 
 
 
@@ -9726,7 +9728,7 @@ const terminationExitCode = (signal)=>signalExitCode(signal) ?? 1;
  * are installed only while a fiber awaits this effect, and resuming or
  * interrupting removes them. Node's default (exit on signal) applies again
  * as soon as the run is over.
- */ const awaitTerminationSignal = effect_Effect__rspack_import_14/* .callback */.E2r((resume)=>{
+ */ const awaitTerminationSignal = effect_Effect__rspack_import_15/* .callback */.E2r((resume)=>{
     const listeners = new Map();
     const remove = ()=>{
         for (const [signal, listener] of listeners){
@@ -9736,13 +9738,13 @@ const terminationExitCode = (signal)=>signalExitCode(signal) ?? 1;
     for (const signal of terminationSignals){
         listeners.set(signal, ()=>{
             remove();
-            resume(effect_Effect__rspack_import_14/* .succeed */.PyW(signal));
+            resume(effect_Effect__rspack_import_15/* .succeed */.PyW(signal));
         });
     }
     for (const [signal, listener] of listeners){
         process.on(signal, listener);
     }
-    return effect_Effect__rspack_import_14/* .sync */.OH5(remove);
+    return effect_Effect__rspack_import_15/* .sync */.OH5(remove);
 });
 const writeChannel = (io, channel, data)=>{
     if (channel === 'stdout') {
@@ -9777,31 +9779,31 @@ const writeChannel = (io, channel, data)=>{
         writeStdout: io.writeStdout
     };
 };
-const passthrough = (options, config, mode)=>effect_Effect__rspack_import_14/* .gen */.JkU(function*() {
+const passthrough = (options, config, mode)=>effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
         const atMs = Date.now();
-        options.io.writeStderr((0,_progress_js__rspack_import_15/* .formatProgressLine */.h)({
+        options.io.writeStderr((0,_progress_js__rspack_import_16/* .formatProgressLine */.h)({
             kind: 'passthrough',
             reason: mode.reason
         }));
-        const killSignal = yield* effect_Deferred__rspack_import_16/* .make */.L8();
-        const interruptedBy = yield* effect_Ref__rspack_import_17/* .make */.L8(null);
+        const killSignal = yield* effect_Deferred__rspack_import_17/* .make */.L8();
+        const interruptedBy = yield* effect_Ref__rspack_import_18/* .make */.L8(null);
         // The child runs in its own process group (so a daemon kill reaches
         // rustc), which also means the terminal's Ctrl-C never reaches it: relay
         // the signal, or the client dies and cargo keeps the build lock. The
         // relay lives in this run's scope so its handlers go with it.
-        const relay = yield* effect_Effect__rspack_import_14/* .forkScoped */.x6Z(awaitTerminationSignal.pipe(effect_Effect__rspack_import_14/* .tap */.Mim((signal)=>effect_Ref__rspack_import_17/* .set */.hZ(interruptedBy, signal)), effect_Effect__rspack_import_14/* .andThen */.hgn(effect_Deferred__rspack_import_16/* .succeed */.Py(killSignal, undefined))));
+        const relay = yield* effect_Effect__rspack_import_15/* .forkScoped */.x6Z(awaitTerminationSignal.pipe(effect_Effect__rspack_import_15/* .tap */.Mim((signal)=>effect_Ref__rspack_import_18/* .set */.hZ(interruptedBy, signal)), effect_Effect__rspack_import_15/* .andThen */.hgn(effect_Deferred__rspack_import_17/* .succeed */.Py(killSignal, undefined))));
         const result = yield* (0,_cargo_execution_executor_js__rspack_import_3/* .executeCargo */.g)({
             argv: options.argv,
             cwd: options.cwd,
             env: options.env,
             killSignal,
             mergeStderr: options.mergeStderr,
-            onOutput: (channel, data)=>effect_Effect__rspack_import_14/* .sync */.OH5(()=>writeChannel(options.io, channel, data)),
+            onOutput: (channel, data)=>effect_Effect__rspack_import_15/* .sync */.OH5(()=>writeChannel(options.io, channel, data)),
             tailBytes: 0
         });
-        yield* effect_Fiber__rspack_import_18/* .interrupt */.G(relay);
+        yield* effect_Fiber__rspack_import_19/* .interrupt */.G(relay);
         if (mode.spool) {
-            yield* effect_Effect__rspack_import_14/* .sync */.OH5(()=>{
+            yield* effect_Effect__rspack_import_15/* .sync */.OH5(()=>{
                 try {
                     const spoolPath = (0,node_path__rspack_import_2.join)(config.stateDir, _contracts_protocol_js__rspack_import_6/* .passthroughSpoolFileName */.ZW);
                     (0,_platform_private_state_js__rspack_import_10/* .ensurePrivateDir */.rh)(config.stateDir);
@@ -9828,12 +9830,12 @@ const passthrough = (options, config, mode)=>effect_Effect__rspack_import_14/* .
         if (result.error !== null) {
             options.io.writeStderr(`[cargo-hauler] ${result.error}\n`);
         }
-        const interrupted = yield* effect_Ref__rspack_import_17/* .get */.Jt(interruptedBy);
+        const interrupted = yield* effect_Ref__rspack_import_18/* .get */.Jt(interruptedBy);
         return {
             exitCode: interrupted === null ? result.exitCode ?? signalExitCode(result.signal) ?? 1 : terminationExitCode(interrupted),
             mode: 'passthrough'
         };
-    }).pipe(effect_Effect__rspack_import_14/* .scoped */.P1j, effect_Effect__rspack_import_14/* .provide */.Gte(_effect_platform_node_NodeServices__rspack_import_19/* .layer */.q));
+    }).pipe(effect_Effect__rspack_import_15/* .scoped */.P1j, effect_Effect__rspack_import_15/* .provide */.Gte(_effect_platform_node_NodeServices__rspack_import_20/* .layer */.q));
 const unreachableMode = {
     reason: 'daemon unreachable',
     spool: true
@@ -9855,31 +9857,31 @@ const describeExit = (message)=>{
     const error = message.error === null ? '' : `: ${message.error}`;
     return `[cargo-hauler] ticket ${message.ticket} ${message.status}${signal}${error}\n`;
 };
-/** The one fail-closed line: the caller learns the run has no result, and why. */ const abortRun = (options, state, ticket, detail)=>effect_Effect__rspack_import_14/* .gen */.JkU(function*() {
+/** The one fail-closed line: the caller learns the run has no result, and why. */ const abortRun = (options, state, ticket, detail)=>effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
         options.io.writeStderr(`[cargo-hauler] brokered run aborted: daemon connection lost; ticket ${ticket} ${detail}\n`);
-        yield* effect_Deferred__rspack_import_16/* .succeed */.Py(state.finished, {
+        yield* effect_Deferred__rspack_import_17/* .succeed */.Py(state.finished, {
             exitCode: connectionLostExitCode,
             mode: 'brokered',
             ticket
         });
     });
-const handleServerMessage = (options, message, state)=>effect_Effect__rspack_import_14/* .gen */.JkU(function*() {
+const handleServerMessage = (options, message, state)=>effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
         switch(message.type){
             case 'ack':
                 {
-                    yield* effect_Ref__rspack_import_17/* .set */.hZ(state.ticket, message.ticket);
+                    yield* effect_Ref__rspack_import_18/* .set */.hZ(state.ticket, message.ticket);
                     if (message.warning !== undefined) {
                         options.io.writeStderr(`[cargo-hauler] ${message.warning}\n`);
                     }
                     const waitEtaMs = message.waitEtaMs ?? 0;
                     // A default prior says "unknown"; showing it as a runtime would be a guess.
                     const measuredEtaMs = message.etaMs !== undefined && message.etaSource !== undefined && message.etaSource !== 'default' ? message.etaMs : undefined;
-                    options.io.writeStderr(message.attachedTo !== undefined ? (0,_progress_js__rspack_import_15/* .formatProgressLine */.h)({
+                    options.io.writeStderr(message.attachedTo !== undefined ? (0,_progress_js__rspack_import_16/* .formatProgressLine */.h)({
                         kind: 'attached',
                         leaderTicket: message.attachedTo,
                         mode: message.attachMode ?? 'identity',
                         ticket: message.ticket
-                    }) : (0,_progress_js__rspack_import_15/* .formatProgressLine */.h)({
+                    }) : (0,_progress_js__rspack_import_16/* .formatProgressLine */.h)({
                         kind: 'queued',
                         laneKey: message.laneKey,
                         position: message.position,
@@ -9897,24 +9899,24 @@ const handleServerMessage = (options, message, state)=>effect_Effect__rspack_imp
                             waitEtaMs
                         } : {}
                     }));
-                    const capHost = (0,_host_cap_js__rspack_import_12/* .shellCapHost */.Jm)(options.host, process.env);
+                    const capHost = (0,_host_cap_js__rspack_import_13/* .shellCapHost */.Jm)(options.host, process.env);
                     // The shell tool waits for the queue plus the run, so
                     // a five-minute build behind six minutes of queued work is killed
                     // just as surely as an eleven-minute build.
                     const totalEtaMs = message.etaMs === undefined ? undefined : message.etaMs + waitEtaMs;
-                    const autoBackground = options.background !== true && totalEtaMs !== undefined && (0,_host_cap_js__rspack_import_12/* .shouldAutoBackground */.vJ)(totalEtaMs, capHost, message.etaSource ?? 'default', {
+                    const autoBackground = options.background !== true && totalEtaMs !== undefined && (0,_host_cap_js__rspack_import_13/* .shouldAutoBackground */.vJ)(totalEtaMs, capHost, message.etaSource ?? 'default', {
                         requestHost: options.host,
                         shimBackground: (0,_daemon_config_js__rspack_import_4/* .isEnabledFlag */.I1)(process.env.CARGO_HAULER_SHIM_BACKGROUND),
                         stdoutIsTty: options.stdoutIsTty
                     });
                     if (options.background === true || autoBackground) {
-                        options.io.writeStderr((0,_progress_js__rspack_import_15/* .formatProgressLine */.h)({
+                        options.io.writeStderr((0,_progress_js__rspack_import_16/* .formatProgressLine */.h)({
                             estimateMs: autoBackground ? totalEtaMs ?? null : message.etaMs ?? null,
                             kind: 'background',
                             ticket: message.ticket,
                             ...autoBackground && capHost !== undefined ? {
                                 auto: {
-                                    capMs: (0,_host_cap_js__rspack_import_12/* .hostShellCapMs */.V8)(capHost),
+                                    capMs: (0,_host_cap_js__rspack_import_13/* .hostShellCapMs */.V8)(capHost),
                                     host: capHost,
                                     stdoutRedirected: !options.stdoutIsTty
                                 }
@@ -9923,10 +9925,10 @@ const handleServerMessage = (options, message, state)=>effect_Effect__rspack_imp
                         if (autoBackground) {
                             // Disconnecting before the daemon reads the detach would make it
                             // kill a still-queued ticket as abandoned client work.
-                            yield* effect_Ref__rspack_import_17/* .set */.hZ(state.handshake.requested, true);
+                            yield* effect_Ref__rspack_import_18/* .set */.hZ(state.handshake.requested, true);
                             yield* state.detach(message.ticket);
                         }
-                        yield* effect_Deferred__rspack_import_16/* .succeed */.Py(state.finished, {
+                        yield* effect_Deferred__rspack_import_17/* .succeed */.Py(state.finished, {
                             exitCode: autoBackground ? (/* inlined export .autoBackgroundExitCode */75) : 0,
                             mode: 'brokered',
                             ticket: message.ticket
@@ -9935,18 +9937,18 @@ const handleServerMessage = (options, message, state)=>effect_Effect__rspack_imp
                     return;
                 }
             case 'requeued':
-                yield* effect_Ref__rspack_import_17/* .set */.hZ(state.phase, 'queued');
-                options.io.writeStderr((0,_progress_js__rspack_import_15/* .formatProgressLine */.h)({
+                yield* effect_Ref__rspack_import_18/* .set */.hZ(state.phase, 'queued');
+                options.io.writeStderr((0,_progress_js__rspack_import_16/* .formatProgressLine */.h)({
                     kind: 'requeued',
                     reason: message.reason,
                     ticket: message.ticket
                 }));
                 return;
             case 'started':
-                yield* effect_Ref__rspack_import_17/* .set */.hZ(state.ticket, message.ticket);
-                yield* effect_Ref__rspack_import_17/* .set */.hZ(state.phase, 'running');
-                yield* effect_Ref__rspack_import_17/* .set */.hZ(state.startedAtMs, Date.now());
-                options.io.writeStderr((0,_progress_js__rspack_import_15/* .formatProgressLine */.h)({
+                yield* effect_Ref__rspack_import_18/* .set */.hZ(state.ticket, message.ticket);
+                yield* effect_Ref__rspack_import_18/* .set */.hZ(state.phase, 'running');
+                yield* effect_Ref__rspack_import_18/* .set */.hZ(state.startedAtMs, Date.now());
+                options.io.writeStderr((0,_progress_js__rspack_import_16/* .formatProgressLine */.h)({
                     kind: 'started',
                     ticket: message.ticket,
                     waitMs: message.waitMs
@@ -9954,7 +9956,7 @@ const handleServerMessage = (options, message, state)=>effect_Effect__rspack_imp
                 return;
             case 'output':
                 {
-                    yield* effect_Ref__rspack_import_17/* .set */.hZ(state.lastOutputAtMs, Date.now());
+                    yield* effect_Ref__rspack_import_18/* .set */.hZ(state.lastOutputAtMs, Date.now());
                     const data = Buffer.from(message.data, 'base64');
                     if (message.cursorBytes === 0) {
                         state.cursor.exact = false;
@@ -9966,7 +9968,7 @@ const handleServerMessage = (options, message, state)=>effect_Effect__rspack_imp
                 }
             case 'exit':
                 {
-                    yield* effect_Ref__rspack_import_17/* .set */.hZ(state.ticket, message.ticket);
+                    yield* effect_Ref__rspack_import_18/* .set */.hZ(state.ticket, message.ticket);
                     if (state.reattaching !== null && !state.cursor.exact) {
                         yield* abortRun(options, state, message.ticket, 'output could not be replayed completely');
                         return;
@@ -9976,8 +9978,8 @@ const handleServerMessage = (options, message, state)=>effect_Effect__rspack_imp
                     if (message.status !== 'done') {
                         options.io.writeStderr(describeExit(message));
                     }
-                    const interrupted = yield* effect_Ref__rspack_import_17/* .get */.Jt(state.interruptedBy);
-                    yield* effect_Deferred__rspack_import_16/* .succeed */.Py(state.finished, {
+                    const interrupted = yield* effect_Ref__rspack_import_18/* .get */.Jt(state.interruptedBy);
+                    yield* effect_Deferred__rspack_import_17/* .succeed */.Py(state.finished, {
                         exitCode: interrupted === null ? message.exitCode ?? signalExitCode(message.signal) ?? 1 : terminationExitCode(interrupted),
                         mode: 'brokered',
                         ticket: message.ticket
@@ -9992,13 +9994,13 @@ const handleServerMessage = (options, message, state)=>effect_Effect__rspack_imp
                     return;
                 }
                 options.io.writeStderr(`[cargo-hauler] ${message.message}\n`);
-                yield* effect_Deferred__rspack_import_16/* .succeed */.Py(state.finished, {
+                yield* effect_Deferred__rspack_import_17/* .succeed */.Py(state.finished, {
                     exitCode: message.code === 'bad-intent' ? 2 : 1,
                     mode: 'brokered'
                 });
                 return;
             case 'reattach-result':
-                yield* effect_Ref__rspack_import_17/* .set */.hZ(state.ticket, message.ticket);
+                yield* effect_Ref__rspack_import_18/* .set */.hZ(state.ticket, message.ticket);
                 switch(message.outcome){
                     case 'active':
                         {
@@ -10008,9 +10010,9 @@ const handleServerMessage = (options, message, state)=>effect_Effect__rspack_imp
                                 return;
                             }
                             const running = message.state === 'running';
-                            yield* effect_Ref__rspack_import_17/* .set */.hZ(state.phase, running ? 'running' : 'queued');
+                            yield* effect_Ref__rspack_import_18/* .set */.hZ(state.phase, running ? 'running' : 'queued');
                             if (running) {
-                                yield* effect_Ref__rspack_import_17/* .set */.hZ(state.startedAtMs, Date.now());
+                                yield* effect_Ref__rspack_import_18/* .set */.hZ(state.startedAtMs, Date.now());
                             }
                             const riding = message.attachedTo === undefined ? '' : `, attached to ${message.attachedTo}`;
                             options.io.writeStderr(`[cargo-hauler] reattached to ticket ${message.ticket} (${message.state ?? 'active'}${riding})\n`);
@@ -10047,10 +10049,10 @@ const handleServerMessage = (options, message, state)=>effect_Effect__rspack_imp
                 if (!message.detached) {
                     options.io.writeStderr(`[cargo-hauler] daemon did not detach ticket ${message.ticket} (not owned by this connection). The daemon may kill it when this client exits.\n`);
                 }
-                yield* effect_Deferred__rspack_import_16/* .succeed */.Py(state.handshake.acknowledged, undefined);
+                yield* effect_Deferred__rspack_import_17/* .succeed */.Py(state.handshake.acknowledged, undefined);
                 return;
             case 'kill-result':
-                yield* effect_Deferred__rspack_import_16/* .succeed */.Py(state.killAcknowledged, undefined);
+                yield* effect_Deferred__rspack_import_17/* .succeed */.Py(state.killAcknowledged, undefined);
                 return;
             case 'pong':
             case 'status-result':
@@ -10068,15 +10070,15 @@ const handleServerMessage = (options, message, state)=>effect_Effect__rspack_imp
                 }
         }
     });
-const streamBrokered = (options, config, request, cursor)=>effect_Effect__rspack_import_14/* .gen */.JkU(function*() {
+const streamBrokered = (options, config, request, cursor)=>effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
         const received = [];
         const lines = new _platform_ndjson_js__rspack_import_9/* .LineBuffer */.F0();
-        const opened = yield* effect_Deferred__rspack_import_16/* .make */.L8();
-        const finished = yield* effect_Deferred__rspack_import_16/* .make */.L8();
-        const ticket = yield* effect_Ref__rspack_import_17/* .make */.L8(request.kind === 'reattach' ? request.ticket : null);
+        const opened = yield* effect_Deferred__rspack_import_17/* .make */.L8();
+        const finished = yield* effect_Deferred__rspack_import_17/* .make */.L8();
+        const ticket = yield* effect_Ref__rspack_import_18/* .make */.L8(request.kind === 'reattach' ? request.ticket : null);
         const submittedAtMs = Date.now();
         const id = (0,_util_id_js__rspack_import_8/* .shortId */.m)();
-        const socket = yield* _effect_platform_node_NodeSocket__rspack_import_20/* .makeNet */.U8({
+        const socket = yield* _effect_platform_node_NodeSocket__rspack_import_21/* .makeNet */.U8({
             openTimeout: (/* inlined export .openTimeoutMs */2000),
             path: config.socketPath
         });
@@ -10087,29 +10089,29 @@ const streamBrokered = (options, config, request, cursor)=>effect_Effect__rspack
                     type: 'detach',
                     id: `${id}-detach`,
                     ticket: target
-                })).pipe(effect_Effect__rspack_import_14/* .ignore */.XeO),
+                })).pipe(effect_Effect__rspack_import_15/* .ignore */.XeO),
             finished,
             handshake: {
-                acknowledged: yield* effect_Deferred__rspack_import_16/* .make */.L8(),
-                requested: yield* effect_Ref__rspack_import_17/* .make */.L8(false)
+                acknowledged: yield* effect_Deferred__rspack_import_17/* .make */.L8(),
+                requested: yield* effect_Ref__rspack_import_18/* .make */.L8(false)
             },
-            interruptedBy: yield* effect_Ref__rspack_import_17/* .make */.L8(null),
-            killAcknowledged: yield* effect_Deferred__rspack_import_16/* .make */.L8(),
-            lastOutputAtMs: yield* effect_Ref__rspack_import_17/* .make */.L8(submittedAtMs),
-            phase: yield* effect_Ref__rspack_import_17/* .make */.L8('queued'),
+            interruptedBy: yield* effect_Ref__rspack_import_18/* .make */.L8(null),
+            killAcknowledged: yield* effect_Deferred__rspack_import_17/* .make */.L8(),
+            lastOutputAtMs: yield* effect_Ref__rspack_import_18/* .make */.L8(submittedAtMs),
+            phase: yield* effect_Ref__rspack_import_18/* .make */.L8('queued'),
             reattaching: request.kind === 'reattach' ? request.ticket : null,
-            startedAtMs: yield* effect_Ref__rspack_import_17/* .make */.L8(null),
+            startedAtMs: yield* effect_Ref__rspack_import_18/* .make */.L8(null),
             ticket
         };
-        const afterDisconnect = ()=>effect_Deferred__rspack_import_16/* .isDone */.$L(finished).pipe(effect_Effect__rspack_import_14/* .flatMap */.qIB((done)=>done ? effect_Deferred__rspack_import_16/* ["await"] */.Tx(finished) : effect_Effect__rspack_import_14/* .fail */.fJG(new _control_js__rspack_import_5/* .ConnectionClosedError */.rb({
+        const afterDisconnect = ()=>effect_Deferred__rspack_import_17/* .isDone */.$L(finished).pipe(effect_Effect__rspack_import_15/* .flatMap */.qIB((done)=>done ? effect_Deferred__rspack_import_17/* ["await"] */.Tx(finished) : effect_Effect__rspack_import_15/* .fail */.fJG(new _control_js__rspack_import_5/* .ConnectionClosedError */.rb({
                     received,
                     socketPath: config.socketPath
                 }))));
         // Acquiring the reader dials, so open failures surface here. Every close,
         // clean or not, fails the pull; the reader's scope is the pump's.
-        const pump = effect_Effect__rspack_import_14/* .gen */.JkU(function*() {
-            const pull = yield* effect_unstable_socket_Socket__rspack_import_21/* .readerBytes */.vt(socket);
-            yield* effect_Deferred__rspack_import_16/* .succeed */.Py(opened, undefined);
+        const pump = effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
+            const pull = yield* effect_unstable_socket_Socket__rspack_import_22/* .readerBytes */.vt(socket);
+            yield* effect_Deferred__rspack_import_17/* .succeed */.Py(opened, undefined);
             while(true){
                 for (const data of yield* pull){
                     for (const line of lines.push(data)){
@@ -10125,12 +10127,12 @@ const streamBrokered = (options, config, request, cursor)=>effect_Effect__rspack
                     }
                 }
             }
-        }).pipe(effect_Effect__rspack_import_14/* .scoped */.P1j, effect_Effect__rspack_import_14/* ["catch"] */.MfU((error)=>{
+        }).pipe(effect_Effect__rspack_import_15/* .scoped */.P1j, effect_Effect__rspack_import_15/* ["catch"] */.MfU((error)=>{
             const mapped = (0,_control_js__rspack_import_5/* .mapSocketFailure */.A6)(error, config.socketPath);
             switch(mapped._tag){
                 case 'DaemonUnreachable':
                 case 'ControlTimeout':
-                    return effect_Effect__rspack_import_14/* .fail */.fJG(mapped);
+                    return effect_Effect__rspack_import_15/* .fail */.fJG(mapped);
                 case 'ConnectionClosed':
                     return afterDisconnect();
                 default:
@@ -10140,16 +10142,16 @@ const streamBrokered = (options, config, request, cursor)=>effect_Effect__rspack
                     }
             }
         }));
-        const pumpFiber = yield* effect_Effect__rspack_import_14/* .forkScoped */.x6Z(pump);
-        const pumpDone = effect_Fiber__rspack_import_18/* .join */.fj(pumpFiber).pipe(effect_Effect__rspack_import_14/* .asVoid */.NLW, effect_Effect__rspack_import_14/* .ignore */.XeO);
+        const pumpFiber = yield* effect_Effect__rspack_import_15/* .forkScoped */.x6Z(pump);
+        const pumpDone = effect_Fiber__rspack_import_19/* .join */.fj(pumpFiber).pipe(effect_Effect__rspack_import_15/* .asVoid */.NLW, effect_Effect__rspack_import_15/* .ignore */.XeO);
         // A foreground ticket outlives its client's disconnect (holdStop), so a
         // terminal's Ctrl-C or a `timeout` wrapper must ask the daemon to stop
         // it and wait for the answer before this process exits. The relay is
         // scoped to this connection attempt, because a failed open must not leave
         // handlers behind for the passthrough that follows.
-        const relay = yield* effect_Effect__rspack_import_14/* .forkScoped */.x6Z(awaitTerminationSignal.pipe(effect_Effect__rspack_import_14/* .flatMap */.qIB((signal)=>effect_Effect__rspack_import_14/* .gen */.JkU(function*() {
-                yield* effect_Ref__rspack_import_17/* .set */.hZ(state.interruptedBy, signal);
-                const owned = yield* effect_Ref__rspack_import_17/* .get */.Jt(ticket);
+        const relay = yield* effect_Effect__rspack_import_15/* .forkScoped */.x6Z(awaitTerminationSignal.pipe(effect_Effect__rspack_import_15/* .flatMap */.qIB((signal)=>effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
+                yield* effect_Ref__rspack_import_18/* .set */.hZ(state.interruptedBy, signal);
+                const owned = yield* effect_Ref__rspack_import_18/* .get */.Jt(ticket);
                 if (owned === null) {
                     options.io.writeStderr(`[cargo-hauler] ${signal}: giving up before the daemon answered\n`);
                 } else {
@@ -10158,10 +10160,10 @@ const streamBrokered = (options, config, request, cursor)=>effect_Effect__rspack
                         type: 'kill',
                         id: `${id}-kill`,
                         ticket: owned
-                    })).pipe(effect_Effect__rspack_import_14/* .ignore */.XeO);
-                    yield* effect_Deferred__rspack_import_16/* ["await"] */.Tx(state.killAcknowledged).pipe(effect_Effect__rspack_import_14/* .raceFirst */.KT6(pumpDone), effect_Effect__rspack_import_14/* .timeout */.wRz(killAckTimeout), effect_Effect__rspack_import_14/* .ignore */.XeO);
+                    })).pipe(effect_Effect__rspack_import_15/* .ignore */.XeO);
+                    yield* effect_Deferred__rspack_import_17/* ["await"] */.Tx(state.killAcknowledged).pipe(effect_Effect__rspack_import_15/* .raceFirst */.KT6(pumpDone), effect_Effect__rspack_import_15/* .timeout */.wRz(killAckTimeout), effect_Effect__rspack_import_15/* .ignore */.XeO);
                 }
-                yield* effect_Deferred__rspack_import_16/* .succeed */.Py(finished, {
+                yield* effect_Deferred__rspack_import_17/* .succeed */.Py(finished, {
                     exitCode: terminationExitCode(signal),
                     mode: 'brokered',
                     ...owned === null ? {} : {
@@ -10169,7 +10171,7 @@ const streamBrokered = (options, config, request, cursor)=>effect_Effect__rspack
                     }
                 });
             }))));
-        yield* effect_Deferred__rspack_import_16/* ["await"] */.Tx(opened).pipe(effect_Effect__rspack_import_14/* .raceFirst */.KT6(effect_Fiber__rspack_import_18/* .join */.fj(pumpFiber)));
+        yield* effect_Deferred__rspack_import_17/* ["await"] */.Tx(opened).pipe(effect_Effect__rspack_import_15/* .raceFirst */.KT6(effect_Fiber__rspack_import_19/* .join */.fj(pumpFiber)));
         yield* write((0,_contracts_protocol_js__rspack_import_6/* .encodeClientMessage */.ni)(request.kind === 'reattach' ? {
             type: 'reattach',
             id,
@@ -10210,39 +10212,39 @@ const streamBrokered = (options, config, request, cursor)=>effect_Effect__rspack
                     ...options.after
                 ]
             }
-        })).pipe(effect_Effect__rspack_import_14/* .mapError */.xm_((error)=>(0,_control_js__rspack_import_5/* .mapSocketFailure */.A6)(error, config.socketPath)), // Once the pump ends, its reader scope closes the writer's latch and
+        })).pipe(effect_Effect__rspack_import_15/* .mapError */.xm_((error)=>(0,_control_js__rspack_import_5/* .mapSocketFailure */.A6)(error, config.socketPath)), // Once the pump ends, its reader scope closes the writer's latch and
         // this write would wait forever.
-        effect_Effect__rspack_import_14/* .raceFirst */.KT6(effect_Fiber__rspack_import_18/* .join */.fj(pumpFiber)));
+        effect_Effect__rspack_import_15/* .raceFirst */.KT6(effect_Fiber__rspack_import_19/* .join */.fj(pumpFiber)));
         const heartbeatMs = options.heartbeatMs ?? defaultHeartbeatMs;
         const heartbeatSilenceThresholdMs = options.silenceThresholdMs ?? silenceThresholdMs;
-        yield* effect_Effect__rspack_import_14/* .forkScoped */.x6Z(effect_Effect__rspack_import_14/* .repeat */.uxO(effect_Effect__rspack_import_14/* .gen */.JkU(function*() {
-            const currentTicket = yield* effect_Ref__rspack_import_17/* .get */.Jt(ticket);
+        yield* effect_Effect__rspack_import_15/* .forkScoped */.x6Z(effect_Effect__rspack_import_15/* .repeat */.uxO(effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
+            const currentTicket = yield* effect_Ref__rspack_import_18/* .get */.Jt(ticket);
             if (currentTicket === null) {
                 return;
             }
             const now = Date.now();
-            const lastOutput = yield* effect_Ref__rspack_import_17/* .get */.Jt(state.lastOutputAtMs);
+            const lastOutput = yield* effect_Ref__rspack_import_18/* .get */.Jt(state.lastOutputAtMs);
             if (now - lastOutput < heartbeatSilenceThresholdMs) {
                 return;
             }
-            const currentPhase = yield* effect_Ref__rspack_import_17/* .get */.Jt(state.phase);
-            const startedAt = yield* effect_Ref__rspack_import_17/* .get */.Jt(state.startedAtMs);
+            const currentPhase = yield* effect_Ref__rspack_import_18/* .get */.Jt(state.phase);
+            const startedAt = yield* effect_Ref__rspack_import_18/* .get */.Jt(state.startedAtMs);
             // "still running (40s)" counts from the start, not from submission:
             // queue time is not run time.
             const since = currentPhase === 'running' && startedAt !== null ? startedAt : submittedAtMs;
-            options.io.writeStderr((0,_progress_js__rspack_import_15/* .formatProgressLine */.h)({
+            options.io.writeStderr((0,_progress_js__rspack_import_16/* .formatProgressLine */.h)({
                 elapsedMs: now - since,
                 kind: 'heartbeat',
                 phase: currentPhase,
                 ticket: currentTicket
             }));
-        }), effect_Schedule__rspack_import_22/* .spaced */.ji(heartbeatMs)));
-        const result = yield* effect_Deferred__rspack_import_16/* ["await"] */.Tx(finished).pipe(effect_Effect__rspack_import_14/* .raceFirst */.KT6(effect_Fiber__rspack_import_18/* .join */.fj(pumpFiber)));
-        yield* effect_Fiber__rspack_import_18/* .interrupt */.G(relay);
-        if (yield* effect_Ref__rspack_import_17/* .get */.Jt(state.handshake.requested)) {
-            const acknowledged = yield* effect_Deferred__rspack_import_16/* ["await"] */.Tx(state.handshake.acknowledged).pipe(effect_Effect__rspack_import_14.as(true), effect_Effect__rspack_import_14/* .raceFirst */.KT6(pumpDone.pipe(effect_Effect__rspack_import_14.as(false))), effect_Effect__rspack_import_14/* .timeoutOrElse */.mgX({
+        }), effect_Schedule__rspack_import_23/* .spaced */.ji(heartbeatMs)));
+        const result = yield* effect_Deferred__rspack_import_17/* ["await"] */.Tx(finished).pipe(effect_Effect__rspack_import_15/* .raceFirst */.KT6(effect_Fiber__rspack_import_19/* .join */.fj(pumpFiber)));
+        yield* effect_Fiber__rspack_import_19/* .interrupt */.G(relay);
+        if (yield* effect_Ref__rspack_import_18/* .get */.Jt(state.handshake.requested)) {
+            const acknowledged = yield* effect_Deferred__rspack_import_17/* ["await"] */.Tx(state.handshake.acknowledged).pipe(effect_Effect__rspack_import_15.as(true), effect_Effect__rspack_import_15/* .raceFirst */.KT6(pumpDone.pipe(effect_Effect__rspack_import_15.as(false))), effect_Effect__rspack_import_15/* .timeoutOrElse */.mgX({
                 duration: detachAckTimeout,
-                orElse: ()=>effect_Effect__rspack_import_14/* .succeed */.PyW(false)
+                orElse: ()=>effect_Effect__rspack_import_15/* .succeed */.PyW(false)
             }));
             if (!acknowledged) {
                 options.io.writeStderr(`[cargo-hauler] daemon did not confirm the detach of ticket ${result.ticket ?? '?'} within ${detachAckTimeout}. Check it with hauler result.\n`);
@@ -10263,24 +10265,24 @@ const brokeredOrUnreachable = (options, config)=>{
         exact: true,
         outputBytes: 0
     };
-    return effect_Effect__rspack_import_14/* .scoped */.P1j(streamBrokered(options, config, {
+    return effect_Effect__rspack_import_15/* .scoped */.P1j(streamBrokered(options, config, {
         kind: 'exec'
     }, cursor)).pipe(// The socket exists but nobody accepted within the open timeout: the
     // daemon is alive and overloaded. Running cargo directly here would put an
     // unbrokered build on an already saturated machine, so keep knocking.
-    effect_Effect__rspack_import_14/* .retry */.L5P({
-        schedule: effect_Schedule__rspack_import_22/* .spaced */.ji('1 second').pipe(effect_Schedule__rspack_import_22/* .upTo */.jB({
+    effect_Effect__rspack_import_15/* .retry */.L5P({
+        schedule: effect_Schedule__rspack_import_23/* .spaced */.ji('1 second').pipe(effect_Schedule__rspack_import_23/* .upTo */.jB({
             duration: slowAcceptBudget
         })),
         while: (error)=>error._tag === 'ControlTimeout'
-    }), effect_Effect__rspack_import_14/* .catchTags */.loE({
+    }), effect_Effect__rspack_import_15/* .catchTags */.loE({
         ConnectionClosed: (closed)=>{
             const exit = exitFromReceived(closed.received);
             if (exit !== null) {
-                return effect_Effect__rspack_import_14/* .succeed */.PyW(exit);
+                return effect_Effect__rspack_import_15/* .succeed */.PyW(exit);
             }
             if (closed.received.length === 0) {
-                return effect_Effect__rspack_import_14/* .fail */.fJG(new _control_js__rspack_import_5/* .DaemonUnreachableError */.Pz({
+                return effect_Effect__rspack_import_15/* .fail */.fJG(new _control_js__rspack_import_5/* .DaemonUnreachableError */.Pz({
                     cause: closed,
                     socketPath: config.socketPath
                 }));
@@ -10295,12 +10297,12 @@ const brokeredOrUnreachable = (options, config)=>{
                 return reattachLoop(options, config, ack.ticket, cursor, 1);
             }
             options.io.writeStderr('[cargo-hauler] connection to daemon lost before it accepted the request\n');
-            return effect_Effect__rspack_import_14/* .succeed */.PyW({
+            return effect_Effect__rspack_import_15/* .succeed */.PyW({
                 exitCode: 1,
                 mode: 'brokered'
             });
         },
-        ControlTimeout: (timeout)=>effect_Effect__rspack_import_14/* .fail */.fJG(new _control_js__rspack_import_5/* .DaemonUnreachableError */.Pz({
+        ControlTimeout: (timeout)=>effect_Effect__rspack_import_15/* .fail */.fJG(new _control_js__rspack_import_5/* .DaemonUnreachableError */.Pz({
                 cause: timeout,
                 socketPath: config.socketPath
             }))
@@ -10312,7 +10314,7 @@ const brokeredOrUnreachable = (options, config)=>{
  * restarted or replaced comes back up first. Never falls open to a direct
  * run: the ticket may still be building, and a second cargo on the same
  * target dir is not what the caller asked for.
- */ const reattachLoop = (options, config, ticket, cursor, attempt)=>effect_Effect__rspack_import_14/* .gen */.JkU(function*() {
+ */ const reattachLoop = (options, config, ticket, cursor, attempt)=>effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
         const abort = (detail)=>{
             options.io.writeStderr(`[cargo-hauler] brokered run aborted: daemon connection lost; ticket ${ticket} ${detail}\n`);
             return {
@@ -10327,10 +10329,10 @@ const brokeredOrUnreachable = (options, config)=>{
                 return abort(`cannot be reattached: ${direct.reason}`);
             }
         }
-        const outcome = yield* effect_Effect__rspack_import_14/* .scoped */.P1j(streamBrokered(options, config, {
+        const outcome = yield* effect_Effect__rspack_import_15/* .scoped */.P1j(streamBrokered(options, config, {
             kind: 'reattach',
             ticket
-        }, cursor)).pipe(effect_Effect__rspack_import_14/* .result */.Ket);
+        }, cursor)).pipe(effect_Effect__rspack_import_15/* .result */.Ket);
         if (outcome._tag === 'Success') {
             return outcome.success;
         }
@@ -10344,7 +10346,7 @@ const brokeredOrUnreachable = (options, config)=>{
         if (attempt >= reattachAttempts) {
             return abort(`could not be reattached: daemon unreachable after ${attempt} attempts`);
         }
-        yield* effect_Effect__rspack_import_14/* .sleep */.yy4(reattachRetryDelay);
+        yield* effect_Effect__rspack_import_15/* .sleep */.yy4(reattachRetryDelay);
         return yield* reattachLoop(options, config, ticket, cursor, attempt + 1);
     });
 /**
@@ -10354,23 +10356,31 @@ const brokeredOrUnreachable = (options, config)=>{
  * newer peers fail open to direct Cargo. A ping timeout is a saturated daemon,
  * so the normal connection retry proceeds silently.
  */ const ensureForExec = (options, config)=>{
-    const ensure = options.ensureDaemon ?? (()=>(0,_ensure_daemon_js__rspack_import_11/* .ensureDaemonRunning */.oE)(config, undefined, options.io.writeStderr).pipe(effect_Effect__rspack_import_14/* .asVoid */.NLW));
-    return ensure().pipe(effect_Effect__rspack_import_14.as(null), effect_Effect__rspack_import_14/* .catchTags */.loE({
-        ControlTimeout: ()=>effect_Effect__rspack_import_14/* .succeed */.PyW(null),
-        DaemonIncompatible: (error)=>effect_Effect__rspack_import_14/* .succeed */.PyW({
+    const ensure = options.ensureDaemon ?? (()=>(0,_ensure_daemon_js__rspack_import_12/* .ensureDaemonRunning */.oE)(config, undefined, options.io.writeStderr).pipe(effect_Effect__rspack_import_15/* .asVoid */.NLW));
+    const report = (line)=>effect_Effect__rspack_import_15/* .sync */.OH5(()=>{
+            options.io.writeStderr(`[cargo-hauler] ${line}\n`);
+            return null;
+        });
+    return ensure().pipe(effect_Effect__rspack_import_15.as(null), effect_Effect__rspack_import_15/* .catchTags */.loE({
+        ConnectionClosed: (error)=>report(`daemon closed the connection before answering its readiness ping (socket ${error.socketPath})`),
+        ControlTimeout: ()=>effect_Effect__rspack_import_15/* .succeed */.PyW(null),
+        DaemonIncompatible: (error)=>effect_Effect__rspack_import_15/* .succeed */.PyW({
                 reason: error.message,
                 spool: true
             }),
-        DaemonNewer: (error)=>effect_Effect__rspack_import_14/* .succeed */.PyW({
+        DaemonNewer: (error)=>effect_Effect__rspack_import_15/* .succeed */.PyW({
                 reason: error.message,
                 spool: true
             }),
-        DaemonNotReplaced: (error)=>effect_Effect__rspack_import_14/* .succeed */.PyW({
+        DaemonNotReplaced: (error)=>effect_Effect__rspack_import_15/* .succeed */.PyW({
                 reason: error.message,
                 spool: true
-            })
-    }), effect_Effect__rspack_import_14/* .catchCause */.Tyx((cause)=>effect_Effect__rspack_import_14/* .sync */.OH5(()=>{
-            const reason = effect_Cause__rspack_import_23/* .pretty */.j9(cause).split('\n')[0] ?? 'unknown error';
+            }),
+        DaemonReplacementFailed: (error)=>report(`replacement daemon failed its version handshake (${error.cause._tag}) at ${error.socketPath}`),
+        DaemonUnreachable: (error)=>report(`daemon socket at ${error.socketPath} could not be opened (${(0,_platform_socket_errors_js__rspack_import_11/* .socketErrorCode */.R)(error.cause) ?? 'no errno'})`),
+        SpawnDaemonError: (error)=>report(`daemon startup failed: ${error.cause instanceof Error ? error.cause.message : String(error.cause)}`)
+    }), effect_Effect__rspack_import_15/* .catchCause */.Tyx((cause)=>effect_Effect__rspack_import_15/* .sync */.OH5(()=>{
+            const reason = effect_Cause__rspack_import_24/* .pretty */.j9(cause).split('\n')[0] ?? 'unknown error';
             options.io.writeStderr(`[cargo-hauler] daemon startup failed: ${reason}\n`);
             return null;
         })));
@@ -10394,33 +10404,33 @@ const runExecClient = (rawOptions)=>{
     let reportedUpgrade = false;
     const configuredOptions = options.ensureDaemon === undefined ? {
         ...options,
-        ensureDaemon: ()=>(0,_ensure_daemon_js__rspack_import_11/* .ensureDaemonRunning */.oE)(config, undefined, (line)=>{
+        ensureDaemon: ()=>(0,_ensure_daemon_js__rspack_import_12/* .ensureDaemonRunning */.oE)(config, undefined, (line)=>{
                 if (!reportedUpgrade) {
                     reportedUpgrade = true;
                     options.io.writeStderr(line);
                 }
-            }).pipe(effect_Effect__rspack_import_14/* .asVoid */.NLW)
+            }).pipe(effect_Effect__rspack_import_15/* .asVoid */.NLW)
     } : options;
     // Help/version and other non-compiling queries never take a ticket: a
     // brokered query would hold a lane slot behind a generic multi-minute
     // estimate and record a spurious job outcome (observed with
     // `cargo hauler --help` ticketed at a ~120s ETA and counted as a
     // failed job). They run in place and stay out of the spool.
-    const localReason = (0,_local_invocation_js__rspack_import_13/* .localQueryReason */.Q)(options.argv);
+    const localReason = (0,_local_invocation_js__rspack_import_14/* .localQueryReason */.Q)(options.argv);
     if (localReason !== null) {
         return passthrough(configuredOptions, config, {
             reason: localReason,
             spool: false
         });
     }
-    return effect_Effect__rspack_import_14/* .gen */.JkU(function*() {
+    return effect_Effect__rspack_import_15/* .gen */.JkU(function*() {
         if (configuredOptions.autoSpawn !== false) {
             const direct = yield* ensureForExec(configuredOptions, config);
             if (direct !== null) {
                 return yield* passthrough(configuredOptions, config, direct);
             }
         }
-        return yield* brokeredOrUnreachable(configuredOptions, config).pipe(effect_Effect__rspack_import_14/* .catchTag */.KuX('DaemonUnreachable', (unreachable)=>passthrough(configuredOptions, config, unreachablePassthroughMode(unreachable) ?? unreachableMode)));
+        return yield* brokeredOrUnreachable(configuredOptions, config).pipe(effect_Effect__rspack_import_15/* .catchTag */.KuX('DaemonUnreachable', (unreachable)=>passthrough(configuredOptions, config, unreachablePassthroughMode(unreachable) ?? unreachableMode)));
     });
 };
 
