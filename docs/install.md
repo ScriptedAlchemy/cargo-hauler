@@ -108,9 +108,10 @@ PLUGIN_ROOT="$(npm root -g)/cargo-hauler/dist" # use PLUGIN_ROOT=artifact in a c
 node "$PLUGIN_ROOT/install.mjs" [--mode local|marketplace] [--replace]
 ```
 
-- `--replace` (alias `--force`) on `cargo-hauler-install` and on the Cursor
-  `install.mjs` replaces a different installed version or adopts a
-  pre-receipt copy. The installer replaces a same-version rebuild in place
+- `--replace` on `cargo-hauler-install` and on the Cursor `install.mjs`
+  replaces a different installed version. A Cursor directory without an
+  install receipt naming the plugin is foreign and refused (`AB7005`). Remove
+  it by hand, then install. The installer replaces a same-version rebuild in place
   (owned files only, and `state/` survives). Claude's `plugin update` is
   version-gated, so a same-version rebuild needs
   `claude plugin uninstall … --keep-data` and then a fresh install. Codex

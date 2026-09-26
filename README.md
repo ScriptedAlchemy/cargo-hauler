@@ -627,8 +627,7 @@ cargo-hauler-install install cursor --mode marketplace  # stage a local marketpl
 
 `cargo-hauler-install` runs the host's own plugin commands for you (below). It
 detects an installed copy with the same version but different content and
-replaces it. It takes `--replace` (alias `--force`) to replace a different
-installed version. `doctor --host <host>` reports the real installed status
+replaces it. It takes `--replace` to replace a different installed version. `doctor --host <host>` reports the real installed status
 without changing anything. `uninstall <host> --plan` reports the exact
 receipt-owned removals. Both accept `--json`.
 
@@ -1103,8 +1102,9 @@ the same App with live rebuilds. The repository ships no dashboard preview
 code of its own.
 
 This repository pins the [pkg.pr.new](https://pkg.pr.new) preview of Agent
-Bundle main commit
-[`b4e3840`](https://github.com/ScriptedAlchemy/agent-bundle/commit/b4e38409f4e2f2f1166dbabc6c40662a9e35c08b)
+Bundle release commit
+[`899755d`](https://github.com/ScriptedAlchemy/agent-bundle/commit/899755dc6db7b742fa4e568f8672c41453d09bbe)
+(agent-bundle 0.3.1)
 for `agent-bundle`, `@agent-bundle/runtime`, and their paired
 `rsc-markdown-stream` preview. This pin emits manifest v6. `inspect` reports
 the `agent` component kind as unavailable on every host (agent-bundle G5
