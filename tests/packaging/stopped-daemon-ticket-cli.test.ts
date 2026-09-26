@@ -179,6 +179,21 @@ describe.skipIf(!existsSync(haulerEntry))('ticket reads on a stopped daemon', ()
       expect(haulerJson('await', 'cc-1')).toEqual(unreachable());
     });
 
+    it('reports status with the errno the socket refused, not a daemon that is up', () => {
+      const summary = [
+        'cargo-hauler daemon socket could not be opened (EACCES); showing ledger data (1 recorded)',
+        'cargo-hauler daemon is unresponsive (showing ledger data); 0 active, 1 recent',
+      ];
+      expect(haulerJson('status')).toMatchObject({
+        code: 0,
+        json: { daemon: 'unresponsive', operation: 'status', summary: summary.join('\n') },
+        stderr: '',
+      });
+      const run = hauler('status');
+      expect(run.code).toBe(0);
+      expect(run.stdout.split('\n', 1)).toEqual(summary.slice(0, 1));
+    });
+
     it('reports last on an unresponsive daemon, not a stopped one', () => {
       expect(haulerJson('last')).toEqual({
         code: 0,
