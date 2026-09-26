@@ -187,9 +187,25 @@ export const killTicketResult = async (
   input: Pick<TicketInput, 'ticket'>,
   options: TicketOptions,
 ): Promise<KillResult> => {
-  const killed = await runTicketEffect(killTicket(input.ticket, options.config), options.signal);
+  const killed = await runTicketEffect(
+    fromLedgerWhenStopped(killTicket(input.ticket, options.config), input.ticket, options.config, (request) => ({
+      request,
+    })),
+    options.signal,
+  );
+  if (typeof killed !== 'boolean') {
+    return {
+      daemon: 'stopped',
+      killed: false,
+      operation: 'kill',
+      request: killed.request,
+      summary: `${input.ticket}: nothing to kill (the daemon is stopped)`,
+      ticket: input.ticket,
+    };
+  }
   const request = await runTicketEffect(fetchTicket(input.ticket, options.config), options.signal);
   return {
+    daemon: 'running',
     killed,
     operation: 'kill',
     request: requestForConsumer(request),

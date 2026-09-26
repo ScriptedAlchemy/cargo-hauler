@@ -169,7 +169,9 @@ export const KillDocument = ({ names, nowMs, result }: DocumentProps<KillResult>
     <Agent.Context>
       {result.killed
         ? `Riders attached to ${result.ticket} return to their lane or fail with it. Confirm with ${names.result} ${result.ticket}, which shows status killed. Resubmit only if you still need the work.`
-        : `Nothing changed. Use ${names.status} to find the ticket that holds the lane.`}
+        : result.daemon === 'stopped'
+          ? 'Nothing changed. The daemon is stopped, so no ticket holds a lane.'
+          : `Nothing changed. Use ${names.status} to find the ticket that holds the lane.`}
     </Agent.Context>
   </Agent.Result>
 );

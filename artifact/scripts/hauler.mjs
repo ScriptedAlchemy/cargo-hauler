@@ -11672,9 +11672,10 @@ const awaitResultSchema = zod__rspack_import_1/* .object */.Ikc({
     timedOut: zod__rspack_import_1/* .boolean */.zMY()
 }).strict();
 const killResultSchema = zod__rspack_import_1/* .object */.Ikc({
+    daemon: daemonStatusSchema,
     killed: zod__rspack_import_1/* .boolean */.zMY(),
     operation: zod__rspack_import_1/* .literal */.euz('kill'),
-    request: requestRecordSchema.nullable(),
+    request: displayRequestRecordSchema.nullable(),
     summary: zod__rspack_import_1/* .string */.YjP(),
     ticket: zod__rspack_import_1/* .string */.YjP()
 }).strict();
