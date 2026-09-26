@@ -27,9 +27,9 @@ export interface InspectOptions {
   readonly signal: AbortSignal;
 }
 
-/** A skewed daemon's rows read as live, so its summary line (what it is, the fix) leads. */
+/** A skewed or unresponsive daemon's summary line (what failed, the fix) leads. */
 const withDaemonLine = (snapshot: HaulerSnapshot, summary: string): string =>
-  snapshot.daemon === 'skewed' ? `${snapshot.summary}\n${summary}` : summary;
+  snapshot.daemon === 'skewed' || snapshot.daemon === 'unresponsive' ? `${snapshot.summary}\n${summary}` : summary;
 
 // Through the ticket boundary runner so MCP/CLI cancellation aborts the
 // socket wait and replacement failures become clear transport diagnostics.

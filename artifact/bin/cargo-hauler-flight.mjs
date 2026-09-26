@@ -20369,7 +20369,8 @@ const savedComputeSourceSchema = zod__rspack_import_1/* ["enum"] */.k5n([
     'estimate'
 ]);
 /**
- * `unresponsive`: the socket exists and a process holds it, but it did not answer in time.
+ * `unresponsive`: the socket exists but did not answer (timed out, closed, or refused the open);
+ * the summary's first line names which.
  * `skewed`: a live daemon of another release or build answered with a status report this
  * client cannot decode; tickets come from the ledger with their recorded status.
  */ const daemonStatusSchema = zod__rspack_import_1/* ["enum"] */.k5n([
@@ -22799,7 +22800,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 
-/** A skewed daemon's rows read as live, so its summary line (what it is, the fix) leads. */ const withDaemonLine = (snapshot, summary)=>snapshot.daemon === 'skewed' ? `${snapshot.summary}\n${summary}` : summary;
+/** A skewed or unresponsive daemon's summary line (what failed, the fix) leads. */ const withDaemonLine = (snapshot, summary)=>snapshot.daemon === 'skewed' || snapshot.daemon === 'unresponsive' ? `${snapshot.summary}\n${summary}` : summary;
 // Through the ticket boundary runner so MCP/CLI cancellation aborts the
 // socket wait and replacement failures become clear transport diagnostics.
 const loadSnapshot = (limit, options)=>(0,_ticket_errors_js__rspack_import_2/* .runTicketEffect */.n)((0,_status_js__rspack_import_1/* .loadHaulerSnapshot */.M3)({
@@ -22912,7 +22913,7 @@ const daemonHeader = (daemon)=>{
         case 'stopped':
             return 'cargo-hauler daemon is not running';
         case 'unresponsive':
-            return 'cargo-hauler daemon is up but did not answer in time (showing ledger data)';
+            return 'cargo-hauler daemon is unresponsive (showing ledger data)';
         case 'skewed':
             return 'cargo-hauler daemon is running but its status report is unreadable (showing ledger data)';
         default:

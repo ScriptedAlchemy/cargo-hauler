@@ -174,8 +174,8 @@ describe('status scoping', () => {
 
   it('distinguishes an unresponsive daemon from a stopped one in the header', () => {
     expect(statusSummary('running', [], [])).toBe('cargo-hauler daemon is running; 0 active, 0 recent');
-    expect(statusSummary('unresponsive', [running], [])).toContain(
-      'daemon is up but did not answer in time',
+    expect(statusSummary('unresponsive', [], [])).toBe(
+      'cargo-hauler daemon is unresponsive (showing ledger data); 0 active, 0 recent',
     );
     expect(statusSummary('stopped', [], [])).toContain('daemon is not running');
   });
