@@ -22121,11 +22121,11 @@ const parsePassthroughSpoolRecord = (line)=>{
          END,
          exit_code = ?,
          signal = ?,
-         output_tail = ?,
+         output_tail = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
          error = ?,
-         error_count = ?,
-         warning_count = ?,
-         diagnostics_json = ?,
+         error_count = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
+         warning_count = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
+         diagnostics_json = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
          saved_compute_ms = ?,
          saved_compute_source = ?,
          saved_latency_ms = ?
@@ -161005,7 +161005,7 @@ const routes = Object.freeze({
         name: "hauler_status"
     })
 });
-const EVENT_ARTIFACT_EPOCH = "ac32996f186ee50baa605c39657ef7b45cd716a65d1c460596b086528b72e2ea";
+const EVENT_ARTIFACT_EPOCH = "502ed577e2fc2110182a9a185970474ea06163ed49e1683d179f38e74288c822";
 const EVENT_ALLOWED_TARGETS = Object.freeze([
     "claude",
     "codex",
