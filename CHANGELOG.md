@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.9.14
+
+### Patch Changes
+
+- 6d587c8: Bump `agent-bundle` and `@agent-bundle/runtime` to the pkg.pr.new preview at `4f62216f30` (agent-bundle 0.3.0, `@agent-bundle/runtime` 0.2.0) and rebuild the committed plugin artifact.
+- 1702562: Ticket ids must now be written exactly as hauler prints them, like `cc-1`. A zero-padded id such as `cc-01` is rejected as unknown instead of queueing an `--after` dependent that never wakes or making `await` sleep its full wait.
+- 13be92e: `hauler --help` now lists the routed `kill` and `web` commands. The await timeout notice and the pending-ticket guidance now say a plain await waits 30s and name the option that raises it up to 2h (`--max-wait-ms` on the CLI, `maxWaitMs` for the MCP tool).
+- 7412c9d: Effect modules are imported by subpath, so `hauler` run from TypeScript source no longer loads every `@effect/platform-node` module at startup, and a lint rejects Effect package-root imports. The bundled binaries are unchanged.
+- 5e7c131: A foreground `hauler exec` that loses its daemon during `hauler daemon restart` now names what failed while it reconnects, for example that the daemon closed the connection before answering its readiness ping. It no longer prints `daemon startup failed: ConnectionClosed: ` with an empty message.
+- e9e60d6: A lane head now folds compatible queued requests when it wins its admission permit instead of when the lane first takes it. Under a saturated permit pool the head could wait half an hour or more for a permit while a sibling `cargo test -p other --lib -- filter` or `cargo check -p other` submitted a second later sat behind it, then waited out a permit of its own; those requests now ride the head's composite run. The fold rules themselves are unchanged.
+- e9e60d6: Batch folding now accepts `--locked`, `--frozen`, and `--offline` when every participant passes the same ones. These flags only assert things about the lockfile and network access for the whole invocation, but until now any of them kept a request out of every compile batch and test composite. In the last day a quarter of brokered `build`/`check`/`clippy`/`test` leaders carried `--locked`. A one-sided flag still refuses the fold, because the composite runs with the leader's flags.
+- 244156c: The shell hook's "cargo ran outside cargo-hauler" notice matches cargo's twelve-column status alignment exactly. Indented prose such as `    Running the kernel constructor` no longer reads as a hidden cargo run, and a wrapped `cargo doc` (` Documenting foo`) now does.
+- af91638: `hauler kill` with no daemon running now exits 0 and reports `nothing to kill (the daemon is stopped)` with the ticket's ledger record, like `result` and `await`, instead of failing with `[render-failed]`. The kill result now carries a `daemon` field.
+- e3e9eec: `hauler exec` and `hauler request` now refuse a program that is not cargo, such as `hauler exec -- ls -la`, with `program must be cargo, got ls` and exit code 2. Before, the daemon or the local passthrough ran it and reported it as a cargo run.
+- 8d3dd0a: `hauler daemon restart` against a daemon that accepts the connection but never answers now reports that its running state is unknown and that it was not restarted. It no longer claims no daemon was serving or tries to start a second one.
+- 89174bd: `hauler status`, `log`, `last`, and the dashboard now lead with why an unresponsive daemon could not be read, such as `socket could not be opened (EACCES)`, instead of claiming the daemon is up but slow.
+- 0e13603: CLI help, MCP tool descriptions, rendered documents, hook notices, and daemon and client messages now use whole sentences instead of semicolons, dashes, and arrows. For example, `hauler daemon restart` prints `restarted from pid 41 (0.4.1) to pid 42 (0.4.4)`, a passthrough prints `running cargo directly: daemon unreachable`, and a finished-ticket notice ends with `Call hauler_result cc-42.`. Status values, exit codes, ticket ids, `prefix: detail` error shapes, and field labels are unchanged.
+- 73dca61: A ticket that ended before cargo started (killed while queued, a failed prerequisite, or daemon shutdown) no longer reports "0 errors, 0 warnings". Its result now shows no diagnostic counts because no cargo ran.
+
 ## 0.9.13
 
 ### Patch Changes
