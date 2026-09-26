@@ -3485,7 +3485,7 @@ __webpack_require__.d(__webpack_exports__, {
  * that never named cargo, they mean cargo ran through a wrapper script, an
  * alias, or a shell variable — the one shape neither the rewrite nor the
  * PATH shim sees (the shim is skipped by an absolute toolchain path).
- */ const cargoStatusLine = /^ {2,}(?:Compiling|Checking|Finished|Running|Doc-tests|Documenting|Blocking) \S/mu;
+ */ const cargoStatusLine = /^(?: {3}Compiling| {4}Checking| {4}Finished| {5}Running| {3}Doc-tests| Documenting| {4}Blocking) \S/mu;
 /**
  * Commands whose output is a file they were asked to show. A saved cargo log
  * read back with one of these looks exactly like a live run.
@@ -28148,7 +28148,7 @@ const prepareRouteInvocation = async (nativeInput, signal, observer, receipt)=>{
     return withEventState(signal, async (bindings)=>{
         const gate = await (0,_agent_bundle_runtime_request__rspack_import_6/* .runAgentRequest */.iC)({
             invocation: {
-                artifactEpoch: "048d0451c62693279731b18f6f8f45e462dfc31881977dc16e12996c46cddce8",
+                artifactEpoch: "53cec059e5931cc853d6bd03cdf47e62383d0a1e46925901b9d845d23d9c8a6e",
                 hostContractRevision: capabilityRevision,
                 kind: "event",
                 operationId: `event:${canonicalEvent}`,

@@ -26251,7 +26251,7 @@ __webpack_require__.d(__webpack_exports__, {
  * that never named cargo, they mean cargo ran through a wrapper script, an
  * alias, or a shell variable — the one shape neither the rewrite nor the
  * PATH shim sees (the shim is skipped by an absolute toolchain path).
- */ const cargoStatusLine = /^ {2,}(?:Compiling|Checking|Finished|Running|Doc-tests|Documenting|Blocking) \S/mu;
+ */ const cargoStatusLine = /^(?: {3}Compiling| {4}Checking| {4}Finished| {5}Running| {3}Doc-tests| Documenting| {4}Blocking) \S/mu;
 /**
  * Commands whose output is a file they were asked to show. A saved cargo log
  * read back with one of these looks exactly like a live run.
