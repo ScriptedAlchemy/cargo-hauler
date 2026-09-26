@@ -2298,7 +2298,7 @@ const encodeClientMessage = (message)=>`${JSON.stringify(message)}\n`;
  */ const orphanedByRestartError = 'orphaned by daemon restart';
 const isOrphanedByRestart = (record)=>record.status === 'killed' && record.error === orphanedByRestartError;
 const formatTicket = (id)=>`cc-${id}`;
-const ticketPattern = /^cc-(\d+)$/u;
+const ticketPattern = /^cc-([1-9]\d*)$/u;
 const parseTicket = (ticket)=>{
     const match = ticketPattern.exec(ticket);
     return match === null ? null : Number(match[1]);
@@ -28148,7 +28148,7 @@ const prepareRouteInvocation = async (nativeInput, signal, observer, receipt)=>{
     return withEventState(signal, async (bindings)=>{
         const gate = await (0,_agent_bundle_runtime_request__rspack_import_6/* .runAgentRequest */.iC)({
             invocation: {
-                artifactEpoch: "f95bb0a6cd75d8eb752f255d57139cfdd021ca0340f405564fc562b21e2ac416",
+                artifactEpoch: "f882c624b8ebe1a91f905f001ec7fec248d570b04b8312bfa982731eb131eb37",
                 hostContractRevision: capabilityRevision,
                 kind: "event",
                 operationId: `event:${canonicalEvent}`,
