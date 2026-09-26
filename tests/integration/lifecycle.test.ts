@@ -12,7 +12,11 @@ import * as Fiber from 'effect/Fiber';
 import * as Schedule from 'effect/Schedule';
 import * as Scope from 'effect/Scope';
 
-import { SpawnDaemonError, type EnsureDaemonDependencies } from '../../src/internal/client/ensure-daemon.js';
+import {
+  daemonIdentity,
+  SpawnDaemonError,
+  type EnsureDaemonDependencies,
+} from '../../src/internal/client/ensure-daemon.js';
 import { resolveDaemonConfig } from '../../src/internal/daemon/config.js';
 import type { DaemonConfigShape } from '../../src/internal/daemon/config.js';
 import { DaemonUnreachableError, pingDaemon } from '../../src/internal/client/control.js';
@@ -29,11 +33,7 @@ import {
   type StopDaemonDependencies,
 } from '../../src/internal/daemon/runtime/lifecycle.js';
 import { bindDaemonSocket, runDaemon, socketListenPath } from '../../src/internal/daemon/main.js';
-import {
-  daemonIdentity,
-  requestShutdown,
-  type DaemonIdentity,
-} from '../../src/internal/client/shutdown.js';
+import { requestShutdown, type DaemonIdentity } from '../../src/internal/client/shutdown.js';
 import { wireProtocol } from '../../src/internal/contracts/wire-version.js';
 import {
   monitorSocketOwnership,

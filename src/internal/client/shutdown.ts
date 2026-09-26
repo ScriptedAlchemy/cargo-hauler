@@ -13,7 +13,7 @@ import { formatMs } from '../ui/shared/format.js';
 import { isRecord } from '../util/guards.js';
 import { shortId } from '../util/id.js';
 
-import { pingDaemon, requestOverSocket } from './control.js';
+import { requestOverSocket } from './control.js';
 import type { ErrorMessage, ServerMessage } from '../contracts/protocol.js';
 
 /** What a `pong` says about the daemon behind the socket. */
@@ -22,22 +22,6 @@ export interface DaemonIdentity {
   readonly startedAtMs: number;
   readonly version: string;
 }
-
-/** Who is behind the socket, or null when nothing answered a ping in time. */
-export const daemonIdentity = (
-  socketPath: string,
-  timeoutMs = 1_000,
-): Effect.Effect<DaemonIdentity | null> =>
-  pingDaemon(socketPath, timeoutMs).pipe(
-    Effect.map(
-      (pong): DaemonIdentity => ({
-        pid: pong.pid,
-        startedAtMs: pong.startedAtMs,
-        version: pong.version,
-      }),
-    ),
-    Effect.orElseSucceed(() => null),
-  );
 
 /**
  * How long a daemon gets to exit after acknowledging a shutdown request. It
