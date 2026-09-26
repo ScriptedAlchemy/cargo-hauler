@@ -80,7 +80,7 @@ describe('ticket summaries', () => {
         warningCount: null,
       }),
     ).toBe(
-      'cc-3518 killed — orphaned by daemon restart: the daemon stopped while it was in flight and does not hand runs over; resubmit if the work is still needed',
+      'cc-3518 killed — orphaned by daemon restart: the daemon stopped while it was in flight and does not hand runs over. Resubmit if you still need the work',
     );
     expect(
       describeRequestRecord('cc-3519', {
@@ -294,7 +294,7 @@ describe('loadHaulerSnapshot', () => {
         expect(snapshot.daemon).toBe('unresponsive');
         expect(snapshot.active).toEqual([]);
         expect(snapshot.recent[1]).toMatchObject({
-          error: 'daemon did not answer; ownership unconfirmed',
+          error: 'daemon did not answer, so ownership is unconfirmed',
           status: 'orphaned',
           ticket: 'cc-2',
         });
@@ -508,7 +508,7 @@ describe('loadHaulerSnapshot', () => {
       expect(result.request?.status).toBe('killed');
       expect(result.request?.error).toBe(orphanedByRestartError);
       expect(result.summary).toContain('cc-1 killed — orphaned by daemon restart');
-      expect(result.summary).toContain('resubmit');
+      expect(result.summary).toContain('Resubmit if you still need the work');
       const queued = yield* Effect.promise((signal) =>
         fetchTicketResult({ ticket: 'cc-2' }, { config, signal }),
       );

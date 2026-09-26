@@ -19636,8 +19636,8 @@ const formatProgressLine = (event)=>{
         case 'queued':
             {
                 const seconds = (ms)=>`~${Math.max(1, Math.round(ms / 1000))}s`;
-                // A blocked dependent has no lane position yet: what holds it is the
-                // prerequisite, not the queue.
+                // A blocked dependent has no lane position yet, because the
+                // prerequisite holds it, not the queue.
                 const blocked = event.waitingFor !== undefined && event.waitingFor.length > 0;
                 const placement = blocked ? ` waiting for ${ticketList(event.waitingFor ?? [])}` : event.ahead === undefined || event.ahead.length === 0 ? '' : ` behind ${ticketList(event.ahead)}`;
                 const parts = [
@@ -19658,7 +19658,7 @@ const formatProgressLine = (event)=>{
             {
                 switch(event.mode){
                     case 'identity':
-                        return `${prefix} ticket ${event.ticket} attached to ${event.leaderTicket} (identical run in flight; replaying its output)\n`;
+                        return `${prefix} ticket ${event.ticket} attached to ${event.leaderTicket} (identical run in flight, replaying its output)\n`;
                     case 'coverage':
                         return `${prefix} ticket ${event.ticket} attached to ${event.leaderTicket} (covered by a larger run in flight)\n`;
                     case 'batch':
@@ -19679,7 +19679,7 @@ const formatProgressLine = (event)=>{
                 if (event.command !== undefined) {
                     const held = event.hold === undefined ? '' : ` · waiting: ${event.hold.detail}`;
                     const prerequisites = event.waitingFor === undefined || event.waitingFor.length === 0 ? '' : ` · waiting for ${event.waitingFor.map(prerequisiteText).join(', ')}`;
-                    const delayed = `${held}${prerequisites}${event.delayed === true ? ' · wait exceeds estimate — lane busy' : ''}`;
+                    const delayed = `${held}${prerequisites}${event.delayed === true ? ' · wait exceeds estimate because the lane is busy' : ''}`;
                     if (event.phase === 'queued' && event.queue !== undefined) {
                         const head = event.queue.headTicket === undefined ? '' : ` (head ${event.queue.headTicket} running${event.queue.headElapsedMs === undefined ? '' : ` ${formatDuration(event.queue.headElapsedMs)}${event.queue.headEstimateMs === undefined ? '' : `/~${formatDuration(event.queue.headEstimateMs)}`}`})`;
                         const lane = event.laneName === undefined ? event.ticket : event.laneName;
@@ -19692,7 +19692,7 @@ const formatProgressLine = (event)=>{
                 return `${prefix} ticket ${event.ticket} still ${event.phase} (${Math.floor(event.elapsedMs / 1000)}s)\n`;
             }
         case 'passthrough':
-            return `${prefix} ${event.reason}; running cargo directly\n`;
+            return `${prefix} running cargo directly: ${event.reason}\n`;
         case 'background':
             {
                 const eta = event.estimateMs === null ? '' : ` (ETA ${Math.max(1, Math.round(event.estimateMs / 1000))}s)`;
@@ -19700,8 +19700,8 @@ const formatProgressLine = (event)=>{
                 if (event.auto === undefined) {
                     return `${prefix} ticket ${event.ticket} submitted in background${eta}\n${retrieve}`;
                 }
-                const redirected = event.auto.stdoutRedirected ? `; your redirected stdout receives no output; once it runs, \`hauler result ${event.ticket}\` names its full log` : '';
-                return `${prefix} ticket ${event.ticket} estimate${eta} exceeds the ${event.auto.host} shell cap (${formatDuration(event.auto.capMs)}); submitted in background, not run yet (exit 75)${redirected}\n${retrieve}`;
+                const redirected = event.auto.stdoutRedirected ? ` Your redirected stdout receives no output. Once the ticket runs, \`hauler result ${event.ticket}\` names its full log.` : '';
+                return `${prefix} ticket ${event.ticket} estimate${eta} exceeds the ${event.auto.host} shell cap (${formatDuration(event.auto.capMs)}). It runs in the background and has not started yet (exit 75).${redirected}\n${retrieve}`;
             }
         default:
             {
@@ -19728,7 +19728,7 @@ __webpack_require__.d(__webpack_exports__, {
 /* import */ var _util_id_js__rspack_import_1 = __webpack_require__("./src/internal/util/id.ts");
 /* import */ var _control_js__rspack_import_2 = __webpack_require__("./src/internal/client/control.ts");
 /**
- * The primitives for replacing a running daemon, shared by the automatic
+ * The building blocks for replacing a running daemon, shared by the automatic
  * replacement in `ensureDaemonRunning` (a daemon of another version answers
  * the socket) and the manual `hauler daemon restart`. A leaf on purpose:
  * `lifecycle.ts` imports `ensure-daemon.ts`, and both import this.
@@ -19745,8 +19745,8 @@ __webpack_require__.d(__webpack_exports__, {
             version: pong.version
         })), Effect.orElseSucceed(()=>null));
 /**
- * How long a daemon gets to exit after acknowledging a shutdown request —
- * the same window its own signal handler allows before forcing the exit.
+ * How long a daemon gets to exit after acknowledging a shutdown request. It
+ * is the same window its own signal handler allows before forcing the exit.
  */ const exitGraceMs = 5000;
 /** `kill -0`: EPERM is another user's live process, ESRCH is gone. */ const processAlive = (pid)=>{
     try {
@@ -19822,7 +19822,7 @@ const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlin
                 kind: 'unreachable'
             })
     }));
-/** The one text for a daemon newer than the client that asked it to go. */ const newerDaemonMessage = (daemon, clientVersion)=>`cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is newer than this client (${clientVersion}); not replaced — upgrade this install, or restart the session so its hooks and MCP server come from the current plugin`;
+/** The one text for a daemon newer than the client that asked it to go. */ const newerDaemonMessage = (daemon, clientVersion)=>`cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is newer than this client (${clientVersion}), so this client did not replace it. Upgrade this install, or restart the session so its hooks and MCP server come from the current plugin.`;
 /**
  * The daemon behind the socket is a newer build than this client, or refused
  * the shutdown as one. Replacement is directional: an older client never
@@ -19841,11 +19841,11 @@ const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = (/* inlin
     constructor(fields){
         super({
             ...fields,
-            message: `cargo-hauler daemon pid ${fields.daemon.pid} (${fields.daemon.version}) is incompatible with this client (${fields.clientVersion}); not replaced while compatibility cannot be established — stop it with \`hauler daemon stop\` from its install`
+            message: `cargo-hauler daemon pid ${fields.daemon.pid} (${fields.daemon.version}) is incompatible with this client (${fields.clientVersion}). This client cannot establish compatibility, so it did not replace the daemon. Stop it with \`hauler daemon stop\` from its install.`
         });
     }
 }
-/** The one text for a daemon that outlived the grace after a shutdown request. */ const notReplacedMessage = (daemon, graceMs)=>`cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is still running ${(0,_ui_shared_format_js__rspack_import_6/* .formatMs */._V)(graceMs)} after the shutdown request; not restarted — retry once it has exited, or stop it with \`hauler daemon stop\``;
+/** The one text for a daemon that outlived the grace after a shutdown request. */ const notReplacedMessage = (daemon, graceMs)=>`cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is still running ${(0,_ui_shared_format_js__rspack_import_6/* .formatMs */._V)(graceMs)} after the shutdown request, so the restart did not start a new daemon. Retry once it has exited, or stop it with \`hauler daemon stop\`.`;
 /**
  * A daemon of another version acknowledged the shutdown request but was
  * still running at the end of the grace, so this build's daemon was not
@@ -19899,7 +19899,7 @@ __webpack_require__.d(__webpack_exports__, {
     constructor(fields){
         super({
             ...fields,
-            message: `cargo-hauler daemon at ${fields.socketPath} sent a ticket record this client (${(/* inlined export .version */"0.9.13")}) cannot read; it is another release or build, and \`hauler status\` names it with the command that replaces it`
+            message: `cargo-hauler daemon at ${fields.socketPath} sent a ticket record this client (${(/* inlined export .version */"0.9.13")}) cannot read. The daemon is another release or build, and \`hauler status\` names it with the command that replaces it.`
         });
     }
 }
@@ -19915,8 +19915,8 @@ const nullableRecordSchema = _contracts_tool_schemas_js__rspack_import_5/* .requ
     }));
 };
 /**
- * One request, one answer: resolves on the reply carrying this request's id,
- * and fails typed when that reply is the daemon's `error` — otherwise an
+ * One request, one answer. It resolves on the reply carrying this request's
+ * id, and fails typed when that reply is the daemon's `error`. Otherwise an
  * `await` with a rejected `maxWaitMs` would sit out its whole timeout waiting
  * for an `await-result` the daemon never sends.
  */ const requestReply = (config, message, timeoutMs, guard, ensure)=>(ensure ?? ((target)=>(0,_ensure_daemon_js__rspack_import_6/* .ensureDaemonVersion */.pk)(target, _ensure_daemon_js__rspack_import_6/* .defaultEnsureDependencies */.R2, Math.min(timeoutMs, 5000), 'read')))(config).pipe(effect_Effect__rspack_import_8/* .andThen */.hgn((0,_control_js__rspack_import_3/* .requestOverSocket */.Lb)({
@@ -19941,9 +19941,10 @@ const fetchTicket = (ticket, config = (0,_daemon_config_js__rspack_import_2/* .r
         type: 'result'
     }, 2000, (message)=>message.type === 'result-result').pipe(effect_Effect__rspack_import_8/* .flatMap */.qIB((result)=>readRecord(result?.request ?? null, config.socketPath)));
 /**
- * Ask the daemon to stop a ticket: a queued job is dropped, a running leader
- * gets SIGTERM (then SIGKILL after the grace period) on its process group.
- * `false` means there was nothing to kill — unknown or already finished.
+ * Ask the daemon to stop a ticket. The daemon drops a queued job and sends a
+ * running leader's process group SIGTERM, then SIGKILL after the grace
+ * period. `false` means there was nothing to kill, because the ticket is
+ * unknown or already finished.
  */ const killTicket = (ticket, config = (0,_daemon_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)())=>requestReply(config, {
         id: (0,_util_id_js__rspack_import_4/* .shortId */.m)(),
         ticket,
@@ -20001,10 +20002,10 @@ const formatAwaitedRecord = (ticket, record)=>{
     }
 };
 /**
- * `awaitTicket` with a heartbeat: while the daemon-side wait blocks, the
- * ticket's live record is polled and reported through `onProgress` so a
+ * `awaitTicket` with a heartbeat. While the daemon-side wait blocks, this
+ * polls the ticket's live record and reports it through `onProgress`, so a
  * terminal wait shows queue phase, elapsed time, and the cost estimate
- * instead of silence. Progress is best-effort — a failed poll never fails
+ * instead of silence. Progress is best-effort, and a failed poll never fails
  * the await.
  */ const awaitTicketWithProgress = (ticket, maxWaitMs, onProgress, config = (0,_daemon_config_js__rspack_import_2/* .resolveDaemonConfig */.bF)(), intervalMs = 5000, fetchStatus = fetchTicket)=>{
     const beat = effect_Effect__rspack_import_8/* .gen */.JkU(function*() {
@@ -20725,7 +20726,7 @@ const statusInputSchema = zod__rspack_import_1/* .object */.Ikc({
     session: zod__rspack_import_1/* .string */.YjP().min(1).optional(),
     laneKey: zod__rspack_import_1/* .string */.YjP().min(1).optional(),
     tickets: zod__rspack_import_1/* .array */.YOg(zod__rspack_import_1/* .string */.YjP().min(1)).max(100).optional(),
-    statuses: zod__rspack_import_1/* .array */.YOg(zod__rspack_import_1/* ["enum"] */.k5n(_protocol_js__rspack_import_0/* .statusRowStatuses */.$K)).max(_protocol_js__rspack_import_0/* .statusRowStatuses.length */.$K.length).optional().describe('Filter by projected status, where stopped-daemon active rows appear as orphaned and running matches nothing'),
+    statuses: zod__rspack_import_1/* .array */.YOg(zod__rspack_import_1/* ["enum"] */.k5n(_protocol_js__rspack_import_0/* .statusRowStatuses */.$K)).max(_protocol_js__rspack_import_0/* .statusRowStatuses.length */.$K.length).optional().describe('Filter by projected status. While the daemon is stopped, active rows appear as orphaned and running matches nothing.'),
     commandContains: zod__rspack_import_1/* .string */.YjP().min(1).optional()
 }).strict();
 const statusResultSchema = zod__rspack_import_1/* .object */.Ikc({
@@ -20818,7 +20819,7 @@ const daemonResultSchema = zod__rspack_import_1/* .object */.Ikc({
  * 2 h): the rendered routes declare a matching `config.render.maxElapsedMs`
  * (agent-bundle#454), so the wire is the only bound. Callers wanting longer
  * call again.
- */ const awaitMaxWaitMessage = `maxWaitMs is capped at ${_protocol_js__rspack_import_0/* .awaitCeilingMs */._K} ms (2 h) per call — the daemon's await ceiling; call await again to keep waiting`;
+ */ const awaitMaxWaitMessage = `maxWaitMs is capped at ${_protocol_js__rspack_import_0/* .awaitCeilingMs */._K} ms (2 h) per call, the daemon's await ceiling. Call await again to keep waiting.`;
 const ticketInputSchema = zod__rspack_import_1/* .object */.Ikc({
     ticket: zod__rspack_import_1/* .string */.YjP().min(1),
     maxWaitMs: zod__rspack_import_1/* .number */.aig().int().min(0).max(_protocol_js__rspack_import_0/* .awaitCeilingMs */._K, {
@@ -20832,7 +20833,7 @@ const ticketInputSchema = zod__rspack_import_1/* .object */.Ikc({
  * rendered-route budget for nothing.
  */ const resultInputSchema = zod__rspack_import_1/* .object */.Ikc({
     ticket: zod__rspack_import_1/* .string */.YjP().min(1),
-    full: zod__rspack_import_1/* .boolean */.zMY().optional().describe('Render the on-disk output log, its last 768 KiB when larger, instead of the stored tail')
+    full: zod__rspack_import_1/* .boolean */.zMY().optional().describe('Render the on-disk output log instead of the stored tail. A log over 768 KiB renders its last 768 KiB.')
 }).strict();
 const awaitResultSchema = zod__rspack_import_1/* .object */.Ikc({
     daemon: daemonStatusSchema,
@@ -20861,7 +20862,7 @@ const requestInputSchema = zod__rspack_import_1/* .object */.Ikc({
     cwd: zod__rspack_import_1/* .string */.YjP().min(1).optional(),
     session: zod__rspack_import_1/* .string */.YjP().optional(),
     host: zod__rspack_import_1/* .string */.YjP().optional(),
-    after: zod__rspack_import_1/* .array */.YOg(zod__rspack_import_1/* .string */.YjP().min(1)).max(50).optional().describe('Tickets (cc-N) that must finish before this request starts; it fails if any of them fails or is killed')
+    after: zod__rspack_import_1/* .array */.YOg(zod__rspack_import_1/* .string */.YjP().min(1)).max(50).optional().describe('Tickets (cc-N) that must finish before this request starts. The request fails if any of them fails or is killed.')
 }).strict();
 /** Where a just-submitted request landed in its lane, from the daemon's acknowledgement. */ const requestQueueSchema = zod__rspack_import_1/* .object */.Ikc({
     ahead: zod__rspack_import_1/* .array */.YOg(zod__rspack_import_1/* .string */.YjP()),
@@ -23003,7 +23004,7 @@ const defaultRecentLimit = 50;
     return (0,_contracts_protocol_js__rspack_import_7/* .isOrphanedByRestart */.oG)({
         error: request.error,
         status: request.status
-    }) ? `${_contracts_protocol_js__rspack_import_7/* .orphanedByRestartError */.Su}: the daemon stopped while it was in flight and does not hand runs over; resubmit if the work is still needed` : null;
+    }) ? `${_contracts_protocol_js__rspack_import_7/* .orphanedByRestartError */.Su}: the daemon stopped while it was in flight and does not hand runs over. Resubmit if you still need the work` : null;
 };
 const describeRequestRecord = (ticket, request)=>{
     if (request === null) {
@@ -23016,8 +23017,8 @@ const describeRequestRecord = (ticket, request)=>{
 /**
  * Projects one stored record onto a structured operation result. Ledger
  * records keep cargo output verbatim (color included), but every operation
- * result is JSON on the wire — the CLI prints `JSON.stringify(result)` and
- * MCP structured content is JSON-RPC — where an ESC byte can only ever
+ * result is JSON on the wire. The CLI prints `JSON.stringify(result)`, and
+ * MCP structured content is JSON-RPC, where an ESC byte can only ever
  * render as literal `\u001b[…` noise. That holds regardless of process
  * stdout: a TTY still sees the escaped JSON form, and an inherited
  * FORCE_COLOR/CLICOLOR_FORCE cannot make JSON paint color. So the
@@ -23036,7 +23037,7 @@ const describeRequestRecord = (ticket, request)=>{
 const displayStatusRows = (rows)=>rows.map(displayStatusRow);
 const strandedReasons = {
     stopped: 'stranded by a stopped daemon',
-    unresponsive: 'daemon did not answer; ownership unconfirmed'
+    unresponsive: 'daemon did not answer, so ownership is unconfirmed'
 };
 const ledgerRequestRecord = (record, daemon)=>{
     // A skewed daemon answered, so it still owns and will finish its in-flight tickets.
@@ -23104,7 +23105,7 @@ const fromReport = (report, config)=>withReport({
             case -1:
                 return [
                     'an older release',
-                    'The next `hauler exec` or `hauler daemon start` replaces it once it is idle; `hauler daemon restart` replaces it now and ends its in-flight tickets.'
+                    'The next `hauler exec` or `hauler daemon start` replaces it once it is idle. `hauler daemon restart` replaces it now and ends its in-flight tickets.'
                 ];
             case 0:
                 return [
@@ -23123,7 +23124,7 @@ const fromReport = (report, config)=>withReport({
                 }
         }
     })();
-    return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${(/* inlined export .version */"0.9.13")}) cannot read; showing tickets as the ledger recorded them. ${fix}`;
+    return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${(/* inlined export .version */"0.9.13")}) cannot read, so this client shows tickets as the ledger recorded them. ${fix}`;
 };
 /**
  * A live daemon's report, decoded with this release's schema. The read gate
@@ -23240,7 +23241,7 @@ const loadHaulerSnapshot = (options = {})=>{
 const unresponsiveSnapshot = (config, recentLimit, what)=>fromLedger(config, recentLimit, 'unresponsive').pipe(effect_Effect__rspack_import_13/* .map */.TjK((snapshot)=>withReport({
             ...snapshot,
             daemon: 'unresponsive',
-            summary: `cargo-hauler daemon ${what}; showing ledger data (${snapshot.recent.length} recorded)`
+            summary: `cargo-hauler daemon ${what}, so status shows ledger data (${snapshot.recent.length} recorded)`
         }, snapshot.report)));
 
 __webpack_require__.d(__webpack_exports__, {
@@ -23271,7 +23272,7 @@ __webpack_require__.d(__webpack_exports__, {
 const infraFailure = (error)=>{
     switch(error._tag){
         case 'DaemonUnreachable':
-            return new Error((0,_client_ensure_daemon_js__rspack_import_0/* .daemonIsAbsent */.Yj)(error.cause) ? `hauler daemon unreachable at ${error.socketPath}; it starts on demand with any exec, or run: hauler daemon start` : `hauler daemon socket at ${error.socketPath} could not be opened (${(0,_platform_socket_errors_js__rspack_import_1/* .socketErrorCode */.R)(error.cause) ?? 'no errno'}); the daemon may still be running, check: hauler daemon status`);
+            return new Error((0,_client_ensure_daemon_js__rspack_import_0/* .daemonIsAbsent */.Yj)(error.cause) ? `hauler daemon unreachable at ${error.socketPath}. It starts on demand with any exec, or run hauler daemon start` : `hauler daemon socket at ${error.socketPath} could not be opened (${(0,_platform_socket_errors_js__rspack_import_1/* .socketErrorCode */.R)(error.cause) ?? 'no errno'}). The daemon may still be running, so check hauler daemon status`);
         case 'ControlTimeout':
             return new Error(`hauler daemon did not answer within ${error.timeoutMs}ms (socket ${error.socketPath})`);
         case 'ConnectionClosed':
@@ -23471,9 +23472,9 @@ const defaultAwaitMs = 30000;
 /** A heartbeat line without the `[cargo-hauler]` prefix, for progress channels that label the source themselves. */ const progressMessage = (line)=>line.replace(/^\[cargo-hauler\]\s*/u, '').trimEnd();
 /**
  * Records cross from storage (ANSI kept) to a structured result here. Both
- * transports serialize the result to JSON — the CLI prints it, the MCP
- * server ships it as structured content — so the projection always strips:
- * an inherited FORCE_COLOR/CLICOLOR_FORCE must not leave ESC bytes to become
+ * transports serialize the result to JSON. The CLI prints it, and the MCP
+ * server ships it as structured content, so the projection always strips.
+ * An inherited FORCE_COLOR/CLICOLOR_FORCE must not leave ESC bytes to become
  * literal `\u001b[…` in the JSON.
  */ const requestForConsumer = (request)=>request === null ? null : (0,_status_js__rspack_import_2/* .displayRequestRecord */.xn)(request);
 /**
@@ -23516,10 +23517,11 @@ const fetchTicketResult = async (input, options)=>{
     };
 };
 /**
- * `hauler result` / `hauler_result`: the structured result plus the view of
- * the full output log — a pointer (path and size) by default, the log text
- * itself under `full`. The log stays out of the JSON result: a 64 MiB run
- * belongs in a file the agent can grep, not in structured content.
+ * `hauler result` and `hauler_result` return the structured result plus the
+ * view of the full output log. The view is a pointer (path and size) by
+ * default and the log text itself under `full`. The log stays out of the
+ * JSON result, because a 64 MiB run belongs in a file the agent can grep,
+ * not in structured content.
  */ const fetchTicketResultView = async (input, options)=>{
     const result = await fetchTicketResult(input, options);
     return {
@@ -23534,19 +23536,19 @@ const acceptedKillSummary = (ticket, request)=>{
     switch(request.status){
         case 'requested':
         case 'queued':
-            return `${ticket} kill requested before it started; it settles killed`;
+            return `${ticket} kill requested before it started, so it settles as killed`;
         case 'running':
-            return `${ticket} kill requested; the daemon stops its cargo process and frees the lane`;
+            return `${ticket} kill requested. The daemon stops its cargo process and frees the lane`;
         case 'killed':
             if (request.attachedTo !== null) {
-                return `${ticket} killed; detached from ${request.attachedTo}`;
+                return `${ticket} killed and detached from ${request.attachedTo}`;
             }
-            return request.startedAtMs === null ? `${ticket} killed before it started; no cargo process ran` : `${ticket} killed`;
+            return request.startedAtMs === null ? `${ticket} killed before it started, so no cargo process ran` : `${ticket} killed`;
         case 'done':
         case 'failed':
         case 'denied':
         case 'passthrough':
-            return `${ticket} kill requested; it settled ${request.status}`;
+            return `${ticket} kill requested, but it had already settled as ${request.status}`;
         default:
             {
                 const exhaustive = request.status;
@@ -25258,9 +25260,10 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 /**
- * The admission meter: permits in use, machine load, memory clamp, and how
- * much work attachment has saved. A hard memory clamp is called out as a
- * paused admission gate so a stalled queue is read as policy, not a hang.
+ * The admission meter shows permits in use, machine load, memory clamp, and
+ * how much work attachment has saved. The meter names a hard memory clamp as
+ * a paused admission gate, so a reader sees a stalled queue as policy, not a
+ * hang.
  */ const AdmissionState = ({ status })=>{
     const model = (0,_view_models_js__rspack_import_3/* .admissionModel */.XC)(status);
     return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
@@ -25286,7 +25289,7 @@ __webpack_require__.d(__webpack_exports__, {
                 ]
             }),
             model.paused ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Context */.g.Context, {
-                children: "Admission is paused by hard memory pressure. Queued tickets resume when MemAvailable recovers; do not kill cargo to free memory."
+                children: "Hard memory pressure has paused admission. Queued tickets resume when MemAvailable recovers. Do not kill cargo to free memory."
             }) : null
         ]
     });
@@ -25313,23 +25316,23 @@ __webpack_require__.d(__webpack_exports__, {
 /** Shared by result, await, and last through TicketCard. No execution policy. */ const BatchTestSummary = async ({ record })=>{
     if (!(0,_operations_batch_test_output_js__rspack_import_2/* .isSharedTestRun */.tI)(record)) return null;
     const output = await (0,_operations_batch_test_output_js__rspack_import_2/* .loadBatchTestOutput */.en)(record.outputPath);
-    const invocation = record.execArgv === null && record.attachedTo !== null ? `${record.attachedTo}'s composite invocation; inspect that ticket's Ran as row for the exact command` : 'the composite invocation shown in Ran as';
+    const invocation = record.execArgv === null && record.attachedTo !== null ? `${record.attachedTo}'s composite invocation. Inspect that ticket's Ran as row for the exact command` : 'the composite invocation shown in Ran as';
     return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
         children: [
             /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_primitives_js__rspack_import_3/* .Heading */.DZ, {
                 children: "Shared test-run summaries (all observed binaries)"
             }),
             /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Context */.g.Context, {
-                children: `This ticket used ${invocation}. Its output and exit are shared, not a separately executed per-package run. Folding may widen packages and apply the union of test filters across binaries; these counts are not counts for this ticket's original filter alone. The trailing output below can belong to another binary.`
+                children: `This ticket used ${invocation}. This ticket shares that run's output and exit, and did not run as a separate per-package run. Folding may widen packages and apply the union of test filters across binaries, so these counts are not counts for this ticket's original filter alone. The trailing output below can belong to another binary.`
             }),
             output.summaries.length === 0 ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Text */.g.Text, {
-                children: output.kind === 'unavailable' ? 'Binary summaries unavailable: the retained log is missing or unreadable. The tail alone cannot establish this package’s result.' : 'No complete binary summaries were observed in the retained log. This is not evidence that this package ran zero tests or passed.'
+                children: output.kind === 'unavailable' ? 'Binary summaries unavailable: the retained log is missing or unreadable. The tail alone cannot establish this package\'s result.' : 'The retained log has no complete binary summaries. That does not show that this package ran zero tests or passed.'
             }) : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_primitives_js__rspack_import_3/* .CodeBlock */.NG, {
                 lang: "text",
                 children: output.summaries.map((entry)=>`${entry.binary}\n${entry.result}`).join('\n\n')
             }),
             output.incomplete || record.status === 'running' ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Context */.g.Context, {
-                children: "The index is partial: the run may still be active, or log retention, a missing heading, or the bounded scan omitted output. No per-ticket test verdict is inferred."
+                children: "The index is partial. The run may still be active, or log retention, a missing heading, or the bounded scan omitted output. The hauler infers no per-ticket test verdict."
             }) : null
         ]
     });
@@ -25352,11 +25355,11 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 /**
- * Cargo diagnostics as structure: an index table with one row per
- * `error[E…]`/`warning:` block (code, message, first `-->` location) so an
- * agent can jump to the file, followed by every captured block verbatim —
- * spans, expected/found types, notes, and suggested fixes — because the index
- * is a way in, not a substitute for what rustc said.
+ * Cargo diagnostics as structure. An index table has one row per
+ * `error[E…]` or `warning:` block (code, message, first `-->` location) so an
+ * agent can jump to the file. Every captured block follows verbatim, with
+ * spans, expected and found types, notes, and suggested fixes, because the
+ * index points into what rustc said and does not replace it.
  */ const BuildDiagnostics = ({ record })=>{
     const model = (0,_view_models_js__rspack_import_3/* .buildDiagnosticsModel */.q3)(record);
     if (model.verbatim.trim() === '') {
@@ -25406,12 +25409,12 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 /**
- * Where the live dashboard is. Deliberately a context line, not an
- * `Agent.Resource` block: the App is attached to `hauler_dashboard` through
+ * Where the live dashboard is. This is a context line, not an
+ * `Agent.Resource` block. The App is attached to `hauler_dashboard` through
  * its `_meta.ui.resourceUri`, and hosts that cannot render MCP Apps must not
  * fail the whole document over a resource link they cannot show.
  */ const DashboardLink = ({ names })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Context */.g.Context, {
-        children: `Dashboard: ${_constants_js__rspack_import_3/* .APP_RESOURCE_URI */.k} — ${names.dashboard} opens it on hosts that render MCP Apps; elsewhere run the browser preview (see the hauler-dashboard skill).`
+        children: `Dashboard: ${_constants_js__rspack_import_3/* .APP_RESOURCE_URI */.k}. ${names.dashboard} opens it on hosts that render MCP Apps. On other hosts, run the browser preview from the hauler-dashboard skill.`
     });
 
 __webpack_require__.d(__webpack_exports__, {
@@ -25466,7 +25469,7 @@ const OrphanedStatus = ({ result })=>{
     }
     const tickets = (0,_util_text_js__rspack_import_13/* .countWord */.M)(count, 'orphaned ticket');
     return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g.Context, {
-        children: result.daemon === 'unresponsive' ? `${tickets} ${count === 1 ? 'has' : 'have'} unconfirmed ownership because the daemon did not answer; check daemon health before resubmitting.` : `${tickets} ${count === 1 ? 'was' : 'were'} stranded by the stopped daemon and will not finish; resubmit the ones still wanted.`
+        children: result.daemon === 'unresponsive' ? `${tickets} ${count === 1 ? 'has' : 'have'} unconfirmed ownership because the daemon did not answer. Check daemon health before you resubmit.` : `The stopped daemon stranded ${tickets}, and ${count === 1 ? 'it' : 'they'} will not finish. Resubmit any you still need.`
     });
 };
 const StatusDocument = ({ filtered, names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g.Result, {
@@ -25505,7 +25508,7 @@ const StatusDocument = ({ filtered, names, nowMs, result })=>/*#__PURE__*/ (0,re
                 result: result
             }),
             result.active.length > 0 ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g.Context, {
-                children: `Do not start a duplicate cargo run for anything listed in flight: submit through ${names.request} or run cargo normally and the hauler attaches you to the existing run. Wait with ${names.await} <ticket>.`
+                children: `Do not start a duplicate cargo run for anything listed in flight. Submit through ${names.request} or run cargo normally, and the hauler attaches you to the existing run. Wait with ${names.await} <ticket>.`
             }) : null,
             /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_dashboard_link_js__rspack_import_4/* .DashboardLink */.j, {
                 names: names
@@ -25513,7 +25516,7 @@ const StatusDocument = ({ filtered, names, nowMs, result })=>/*#__PURE__*/ (0,re
         ]
     });
 /**
- * The `hauler_dashboard` text: the App opens beside it on hosts that render
+ * The `hauler_dashboard` text. The App opens beside it on hosts that render
  * MCP Apps, so the model gets the daemon's summary line and where the text
  * form is, not a second copy of the status document.
  */ const DashboardDocument = ({ names, result })=>/*#__PURE__*/ _jsxs(Agent.Result, {
@@ -25523,7 +25526,7 @@ const StatusDocument = ({ filtered, names, nowMs, result })=>/*#__PURE__*/ (0,re
                 children: result.summary.split('\n', 1)[0] ?? result.summary
             }),
             /*#__PURE__*/ _jsx(Agent.Context, {
-                children: `Dashboard: ${APP_RESOURCE_URI} opens beside this result on hosts that render MCP Apps; elsewhere run the browser preview (see the hauler-dashboard skill). For the queue, lanes, and tickets as text call ${names.status}.`
+                children: `Dashboard: ${APP_RESOURCE_URI}. It opens beside this result on hosts that render MCP Apps. On other hosts, run the browser preview from the hauler-dashboard skill. For the queue, lanes, and tickets as text, call ${names.status}.`
             })
         ]
     });
@@ -25542,7 +25545,7 @@ const LogDocument = ({ nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rsp
     });
 const TicketNotKnown = ({ daemon, names, ticket })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_states_js__rspack_import_9/* .UnavailableState */.yb, {
         what: ticket,
-        children: `${daemon === 'running' ? 'not known to the daemon' : `not in the ledger, and the daemon is ${daemon}`}. Tickets look like cc-123; check ${names.log} for recent ids.`
+        children: `${daemon === 'running' ? 'not known to the daemon' : `not in the ledger, and the daemon is ${daemon}`}. Tickets look like cc-123. Check ${names.log} for recent ids.`
     });
 const LastDocument = ({ names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g.Result, {
         value: (0,_util_json_js__rspack_import_15/* .documentValue */.H)(result),
@@ -25565,8 +25568,8 @@ const LastDocument = ({ names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runt
         ]
     });
 /**
- * `hauler result`: the ticket card with the stored tail, then where the whole
- * output lives. Under `--full` the log replaces the tail as the document body
+ * `hauler result` renders the ticket card with the stored tail, then where the
+ * whole output lives. Under `--full` the log replaces the tail as the document body
  * (the tail would only repeat its last lines).
  */ const ResultDocument = ({ names, nowMs, output, result })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14/* .Agent.Result */.g.Result, {
         value: (0,_util_json_js__rspack_import_15/* .documentValue */.H)(result),
@@ -25609,7 +25612,7 @@ const KillDocument = ({ names, nowMs, result })=>/*#__PURE__*/ (0,react_jsx_runt
                 record: result.request
             }),
             /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g.Context, {
-                children: result.killed ? `Riders attached to ${result.ticket} return to their lane or fail with it. Confirm with ${names.result} ${result.ticket} (status becomes killed) and re-submit only if the work is still wanted.` : `Nothing changed. Use ${names.status} to find the ticket that is actually holding the lane.`
+                children: result.killed ? `Riders attached to ${result.ticket} return to their lane or fail with it. Confirm with ${names.result} ${result.ticket}, which shows status killed. Resubmit only if you still need the work.` : `Nothing changed. Use ${names.status} to find the ticket that holds the lane.`
             })
         ]
     });
@@ -25624,7 +25627,7 @@ const AwaitDocument = ({ maxWaitMs, names, nowMs, result })=>/*#__PURE__*/ (0,re
                 record: result.request
             }),
             result.timedOut ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g.Context, {
-                children: `The ${(0,_shared_format_js__rspack_import_16/* .formatMs */._V)(maxWaitMs)} wait expired before ${result.ticket} finished. Call ${names.await} again (each call waits up to ${(0,_shared_format_js__rspack_import_16/* .formatMs */._V)(_contracts_protocol_js__rspack_import_2/* .awaitCeilingMs */._K)}) rather than polling ${names.result} in a tight loop.`
+                children: `The ${(0,_shared_format_js__rspack_import_16/* .formatMs */._V)(maxWaitMs)} wait expired before ${result.ticket} finished. Call ${names.await} again instead of polling ${names.result} in a tight loop. Each call waits up to ${(0,_shared_format_js__rspack_import_16/* .formatMs */._V)(_contracts_protocol_js__rspack_import_2/* .awaitCeilingMs */._K)}.`
             }) : result.request === null ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(TicketNotKnown, {
                 daemon: result.daemon,
                 names: names,
@@ -25651,7 +25654,7 @@ const RequestDocument = ({ argv, lineage, names, result })=>/*#__PURE__*/ (0,rea
             }),
             result.ticket === null ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_states_js__rspack_import_9/* .ErrorState */.W5, {
                 code: "submit-failed",
-                children: `The daemon did not accept ${argv.join(' ')}; run hauler daemon status or check the daemon log.`
+                children: `The daemon did not accept ${argv.join(' ')}. Run hauler daemon status or check the daemon log.`
             }) : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
                 children: [
                     /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_primitives_js__rspack_import_8/* .DataList */.Tr, {
@@ -25679,7 +25682,7 @@ const RequestDocument = ({ argv, lineage, names, result })=>/*#__PURE__*/ (0,rea
                         ]
                     }),
                     /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14/* .Agent.Context */.g.Context, {
-                        children: result.waitingFor === undefined || result.waitingFor.length === 0 ? `Ticket ${result.ticket} is running in the background. Continue other work; when the session has a hold-stop ticket the stop hook waits for it. Retrieve with ${names.result} ${result.ticket}, or block with ${names.await} ${result.ticket}.` : `Ticket ${result.ticket} is queued behind ${result.waitingFor.join(', ')} and starts once they finish; it fails with "prerequisite cc-N failed" if one of them fails or is killed. Retrieve with ${names.result} ${result.ticket}, or block with ${names.await} ${result.ticket}.`
+                        children: result.waitingFor === undefined || result.waitingFor.length === 0 ? `Ticket ${result.ticket} is running in the background. Continue other work. When the session has a hold-stop ticket, the stop hook waits for it. Read the result with ${names.result} ${result.ticket}, or block on it with ${names.await} ${result.ticket}.` : `Ticket ${result.ticket} is queued behind ${result.waitingFor.join(', ')} and starts once they finish. It fails with "prerequisite cc-N failed" if one of them fails or is killed. Read the result with ${names.result} ${result.ticket}, or block on it with ${names.await} ${result.ticket}.`
                     })
                 ]
             })
@@ -25717,21 +25720,21 @@ __webpack_require__.d(__webpack_exports__, {
 /**
  * The on-disk full output log of a ticket (#68). Without `full` it is one
  * line naming the file and its size, so an agent triaging a red ticket knows
- * the whole run is retrievable without re-running it; with `full` it is the
- * log itself, one code block per chunk, cut from the front when the file
- * would not fit the rendered-document budget.
+ * it can read the whole run without rerunning it. With `full` it is the log
+ * itself, one code block per chunk, cut from the front when the file would
+ * not fit the rendered-document budget.
  */ const FullOutput = ({ names, output, ticket })=>{
     switch(output.kind){
         case 'none':
             return null;
         case 'available':
             return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Text */.g.Text, {
-                children: `Full output: ${output.path} (${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes)}) — ${output.sizeBytes > (/* inlined export .maxRenderedOutputBytes */786432) ? `${names.resultFull(ticket)} shows its last ${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)((/* inlined export .maxRenderedOutputBytes */786432))}` : `read it with ${names.resultFull(ticket)}`}`
+                children: `Full output: ${output.path} (${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes)}). ${output.sizeBytes > (/* inlined export .maxRenderedOutputBytes */786432) ? `${names.resultFull(ticket)} shows its last ${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)((/* inlined export .maxRenderedOutputBytes */786432))}.` : `Read it with ${names.resultFull(ticket)}.`}`
             });
         case 'missing':
             return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_states_js__rspack_import_4/* .UnavailableState */.yb, {
                 what: `full output ${output.path}`,
-                children: "the log file is no longer on disk (ledger retention removed it, or the state directory was cleared); only the stored tail remains."
+                children: "the log file is no longer on disk. Ledger retention removed it, or the state directory was cleared. Only the stored tail remains."
             });
         case 'full':
             {
@@ -25742,10 +25745,10 @@ __webpack_require__.d(__webpack_exports__, {
                             children: `Full output (${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes)}): ${output.path}`
                         }),
                         output.omittedBytes > 0 ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Context */.g.Context, {
-                            children: `Showing the last ${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes - output.omittedBytes)} of ${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes)}; the first ${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.omittedBytes)} are omitted here to fit the document. The whole run is in ${output.path}.`
+                            children: `This document shows the last ${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes - output.omittedBytes)} of ${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.sizeBytes)} and omits the first ${(0,_shared_format_js__rspack_import_6/* .formatBytes */.z3)(output.omittedBytes)} to fit. The whole run is in ${output.path}.`
                         }) : null,
                         chunks.length === 0 ? /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5/* .Agent.Text */.g.Text, {
-                            children: "The log is empty: the run produced no output."
+                            children: "The log is empty because the run produced no output."
                         }) : chunks.map((chunk, index)=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_primitives_js__rspack_import_3/* .CodeBlock */.NG, {
                                 lang: "text",
                                 children: chunk
@@ -25799,8 +25802,9 @@ const elapsedMs = (record, nowMs)=>{
 const diagnosticCounts = (record)=>record.errorCount === null || record.warningCount === null ? null : `${(0,_util_text_js__rspack_import_1/* .countWord */.M)(record.errorCount, 'error')}, ${(0,_util_text_js__rspack_import_1/* .countWord */.M)(record.warningCount, 'warning')}`;
 /**
  * The dependency watcher records `prerequisite cc-N <status>` when it fails
- * a queued job without starting it. Check the lifecycle too: an executed
- * command with similar error text is still a failed run, not a blocked one.
+ * a queued job without starting it. Check the lifecycle too, because an
+ * executed command with similar error text is still a failed run, not a
+ * blocked one.
  */ const failedPrerequisite = (record)=>{
     if (record.status !== 'failed' || record.startedAtMs !== null || record.exitCode !== null) return null;
     return /^prerequisite (cc-\d+) (?:failed|killed|denied|passthrough|unknown)$/u.exec(record.error ?? '')?.[1] ?? null;
@@ -25868,9 +25872,9 @@ __webpack_require__.d(__webpack_exports__, {
         ]
     });
 /**
- * Optional kache index: freshness, coverage, store pressure, and the slowest
- * crates by profile. A daemon that reported no kache field renders nothing; a
- * daemon that looked and found no index says so honestly.
+ * The optional kache index, with freshness, coverage, store pressure, and the
+ * slowest crates by profile. A daemon that reported no kache field renders
+ * nothing. A daemon that looked and found no index says so.
  */ const KacheStats = ({ kache, nowMs, slowestLimit })=>{
     const model = (0,_view_models_js__rspack_import_5/* .kacheModel */.qP)(kache, slowestLimit, nowMs);
     switch(model.kind){
@@ -25879,7 +25883,7 @@ __webpack_require__.d(__webpack_exports__, {
         case 'unavailable':
             return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_states_js__rspack_import_3/* .UnavailableState */.yb, {
                 what: "kache",
-                children: `${model.reason}; cost priors fall back to ledger history.`
+                children: `${model.reason}. Cost priors fall back to ledger history.`
             });
         case 'available':
             return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
@@ -26012,21 +26016,21 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 /**
- * The shell footer: which conversation this document was rendered for. A
- * synchronous component, so it reads the request through `useAgent()` — the
- * same handle `await agent()` returns, under the same lease — and stays
- * silent when the host cannot place the request in a conversation tree
- * (bare stdio, routed CLI, rendered scripts) rather than printing a guess.
+ * The shell footer names the conversation this document was rendered for.
+ * It is a synchronous component, so it reads the request through
+ * `useAgent()`, the same handle `await agent()` returns under the same lease.
+ * It stays silent when the host cannot place the request in a conversation
+ * tree (bare stdio, routed CLI, rendered scripts) rather than print a guess.
  */ const LineageFooter = ()=>{
     const request = (0,_agent_bundle_runtime__rspack_import_2/* .useAgent */.fJ)();
     const lineage = (0,_view_models_js__rspack_import_3/* .lineageModel */.lr)(request.lineage);
     if (lineage === null) {
         return null;
     }
-    // Attribution precedence belongs to `ticketAttribution`: an explicit or
+    // Attribution precedence belongs to `ticketAttribution`. An explicit or
     // native session wins over the lineage conversation, so this footer only
     // places the request. The RequestDocument's `attribution` says what a
-    // ticket was actually recorded under.
+    // ticket was recorded under.
     return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Context */.g.Context, {
         children: `Requested by ${(0,_view_models_js__rspack_import_3/* .lineageLine */.qQ)(lineage)}.`
     });
@@ -26053,10 +26057,10 @@ const lastLines = (text, limit)=>{
     return lines.length <= limit ? lines.join('\n') : `… (${lines.length - limit} earlier lines omitted)\n${lines.slice(-limit).join('\n')}`;
 };
 /**
- * The captured cargo output tail. `live` labels a snapshot of a run still
- * producing output — the shape `hauler_await` streams while it waits and
- * `hauler_result` returns for a running ticket — against the settled tail of
- * a finished one.
+ * The captured cargo output tail. `live` marks a snapshot of a run that still
+ * produces output, as opposed to the settled tail of a finished one.
+ * `hauler_await` streams that snapshot while it waits, and `hauler_result`
+ * returns it for a running ticket.
  */ const LogTail = ({ live, maxLines = 40, text })=>{
     if (text === null || text.trim() === '') {
         return null;
@@ -26144,7 +26148,7 @@ __webpack_require__.d(__webpack_exports__, {
 /** Something we looked for and honestly could not observe. */ const UnavailableState = ({ children, what })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Context */.g.Context, {
         children: `${what} unavailable: ${children}`
     });
-/** A represented failure: the document stays a document, the status flips to error. */ const ErrorState = ({ children, code })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Error */.g.Error, {
+/** A represented failure. The document stays a document, and the status flips to error. */ const ErrorState = ({ children, code })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_2/* .Agent.Error */.g.Error, {
         code: code,
         children: children
     });
@@ -26194,7 +26198,7 @@ const AwaitSettled = async ({ awaited, maxWaitMs, names })=>/*#__PURE__*/ (0,rea
         nowMs: Date.now(),
         result: await awaited
     });
-/** `hauler_await` / `hauler await`: the live ticket now, the settled ticket when the wait ends. */ const AwaitStream = ({ awaited, ...pending })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Result */.g.Result, {
+/** `hauler_await` and `hauler await` render the live ticket now and the settled ticket when the wait ends. */ const AwaitStream = ({ awaited, ...pending })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Result */.g.Result, {
         children: /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(react__rspack_import_1.Suspense, {
             fallback: /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(AwaitPending, {
                 ...pending
@@ -26211,7 +26215,7 @@ const LogSettled = async ({ loading, names })=>/*#__PURE__*/ (0,react_jsx_runtim
         nowMs: Date.now(),
         result: await loading
     });
-/** `hauler_log` / `hauler log`: a progress frame while the ledger is read, then the listing. */ const LogStream = ({ loading, names })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Result */.g.Result, {
+/** `hauler_log` and `hauler log` render a progress frame while the ledger is read, then the listing. */ const LogStream = ({ loading, names })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Result */.g.Result, {
         children: /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(react__rspack_import_1.Suspense, {
             fallback: /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4/* .Agent.Progress */.g.Progress, {
                 completed: 0,
@@ -26253,7 +26257,7 @@ const cliSurface = {
     resultFull: (ticket)=>`hauler result ${ticket} --full`,
     status: 'hauler status'
 };
-/** The names for this request's surface: the routed CLI (a tool's `.cli.ts` projection) or the MCP server. */ const surfaceNames = ({ invocation })=>invocation.kind === 'cli' ? cliSurface : mcpSurface;
+/** The names for this request's surface, either the routed CLI (a tool's `.cli.ts` projection) or the MCP server. */ const surfaceNames = ({ invocation })=>invocation.kind === 'cli' ? cliSurface : mcpSurface;
 
 __webpack_require__.d(__webpack_exports__, {
 }, {
@@ -26280,7 +26284,7 @@ __webpack_require__.d(__webpack_exports__, {
 
 
 /**
- * One ticket, fully: headline, attribution and placement, structured
+ * One ticket in full, with its headline, attribution and placement, structured
  * diagnostics, and the output tail (live while the run is in progress).
  * `hauler_result`, `hauler_last`, and `hauler_await` all render this card, so
  * a ticket reads identically wherever an agent meets it.
@@ -26394,22 +26398,22 @@ __webpack_require__.d(__webpack_exports__, {
 
 /*
  * One component per ticket status. The record keyed by `StatusRowStatus` is
- * exhaustive by construction — adding a status to the daemon protocol fails
+ * exhaustive by construction. Adding a status to the daemon protocol fails
  * this module's type-check until its guidance exists.
  */ const PendingGuidance = ({ names, record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g.Context, {
-        children: `${record.ticket} is still ${record.status}. Do not re-run the same cargo command; call ${names.await} with ticket ${record.ticket} (each call waits up to ${(0,_shared_format_js__rspack_import_4/* .formatMs */._V)(_contracts_protocol_js__rspack_import_2/* .awaitCeilingMs */._K)}; call again to keep waiting) or check ${names.result} later.`
+        children: `${record.ticket} is still ${record.status}. Do not rerun the same cargo command. Call ${names.await} with ticket ${record.ticket}, or check ${names.result} later. Each call waits up to ${(0,_shared_format_js__rspack_import_4/* .formatMs */._V)(_contracts_protocol_js__rspack_import_2/* .awaitCeilingMs */._K)}, so call again to keep waiting.`
     });
 const DoneGuidance = ({ record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g.Context, {
-        children: `${record.ticket} succeeded; its output above is the result of that cargo run.`
+        children: `${record.ticket} succeeded. The output above is the result of that cargo run.`
     });
 const FailedGuidance = ({ record })=>{
     const prerequisite = (0,_headlines_js__rspack_import_5/* .failedPrerequisite */.O9)(record);
     return /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g.Context, {
-        children: prerequisite === null ? `${record.ticket} failed (exit ${record.exitCode ?? 'unknown'}). Fix the diagnostics above before re-running; the hauler dedupes identical requests, so an unchanged retry attaches to the same result.` : `${record.ticket} never ran: ${record.error} — fix or rerun ${prerequisite}, then resubmit after the new ticket.`
+        children: prerequisite === null ? `${record.ticket} failed (exit ${record.exitCode ?? 'unknown'}). Fix the diagnostics above before you rerun it. The hauler dedupes identical requests, so an unchanged retry attaches to the same result.` : `${record.ticket} never ran: ${record.error}. Fix or rerun ${prerequisite}, then resubmit after the new ticket.`
     });
 };
 const KilledGuidance = ({ names, record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g.Context, {
-        children: (0,_contracts_protocol_js__rspack_import_2/* .isOrphanedByRestart */.oG)(record) ? `${record.ticket} did not finish: the daemon restarted while it was in flight, and running cargo processes are not handed over across a restart. Nothing else went wrong with the command; resubmit it through ${names.request} if the work is still needed.` : `${record.ticket} was killed before finishing; resubmit only if the work is still needed.`
+        children: (0,_contracts_protocol_js__rspack_import_2/* .isOrphanedByRestart */.oG)(record) ? `${record.ticket} did not finish because the daemon restarted while it was in flight. A restart does not hand running cargo processes to the new daemon. Nothing else went wrong with the command, so resubmit it through ${names.request} if you still need the work.` : `${record.ticket} was killed before it finished. Resubmit it only if you still need the work.`
     });
 const DeniedGuidance = ({ record })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3/* .Agent.Context */.g.Context, {
         children: `${record.ticket} was denied before cargo ran: ${record.error ?? 'see error above'}.`
@@ -26476,12 +26480,12 @@ const outcome = (record, nowMs)=>{
             {
                 const estimate = record.estimateMs === null ? '' : ` / ~${(0,_shared_format_js__rspack_import_5/* .formatMs */._V)(record.estimateMs)}`;
                 const stalled = record.stall === undefined ? '' : ` · stalled ${(0,_shared_format_js__rspack_import_5/* .formatMs */._V)(record.stall.idleMs)}`;
-                // Past the stall factor but still alive: background it, do not kill it (#91).
+                // A run past the stall factor is still alive. Background it and do not kill it (#91).
                 const overrun = record.estimateState === 'overrun' ? ` · overrun${record.p90Ms === undefined ? '' : ` (p90 ~${(0,_shared_format_js__rspack_import_5/* .formatMs */._V)(record.p90Ms)})`}` : '';
                 return `running${timing}${estimate}${stalled}${overrun}`;
             }
         case 'done':
-            return record.attachedTo === null ? `done${timing}` : `done${timing} · rode ${record.attachedTo}`;
+            return record.attachedTo === null ? `done${timing}` : `done${timing} · attached to ${record.attachedTo}`;
         case 'failed':
             return `failed${timing}${record.exitCode === null ? '' : ` exit=${record.exitCode}`}`;
         case 'requested':
@@ -26503,7 +26507,7 @@ const where = (record)=>[
         record.session,
         (0,_shared_format_js__rspack_import_5/* .shortenPath */.nf)(record.cwd, 30)
     ].filter((part)=>part !== null).join(' · ');
-/** A table of tickets — the in-flight and recent sections of status, and the whole of log. */ const TicketList = ({ empty, heading, nowMs, records })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
+/** A table of tickets. It renders the in-flight and recent sections of status, and the whole of log. */ const TicketList = ({ empty, heading, nowMs, records })=>/*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
         children: [
             heading === undefined ? null : /*#__PURE__*/ (0,react_jsx_runtime__rspack_import_0.jsx)(_primitives_js__rspack_import_2/* .Heading */.DZ, {
                 children: heading
@@ -26550,11 +26554,11 @@ __webpack_require__.d(__webpack_exports__, {
 const unresponsiveDetail = (reason, timeoutMs)=>{
     switch(reason){
         case 'accept-timeout':
-            return `did not accept a connection within ${formatMs(timeoutMs)} (machine saturated); ledger reads still work`;
+            return `did not accept a connection within ${formatMs(timeoutMs)} (machine saturated). Ledger reads still work`;
         case 'answer-timeout':
-            return `accepted the connection but sent no status within ${formatMs(timeoutMs)} (busy fanning out output); ledger reads still work`;
+            return `accepted the connection but sent no status within ${formatMs(timeoutMs)} (busy fanning out output). Ledger reads still work`;
         case 'connection-closed':
-            return 'closed the connection before answering; ledger reads still work';
+            return 'closed the connection before answering. Ledger reads still work';
         default:
             {
                 const exhaustive = reason;
@@ -26576,7 +26580,7 @@ const daemonBadgeModel = (health, nowMs)=>{
             }
         case 'stopped':
             return {
-                detail: health.reason === 'socket-missing' ? 'no socket; it starts on demand with the next cargo request' : 'socket present but connection refused; a stale socket from an earlier daemon',
+                detail: health.reason === 'socket-missing' ? 'no socket' : 'a stale socket from an earlier daemon refused the connection',
                 headline: 'daemon stopped',
                 state: health.state
             };
@@ -26588,7 +26592,7 @@ const daemonBadgeModel = (health, nowMs)=>{
             };
         case 'unreachable':
             return {
-                detail: `socket present but could not be opened (${health.detail}); the daemon may be running — check permissions on the state directory`,
+                detail: `socket present but could not be opened (${health.detail}). The daemon may be running, so check permissions on the state directory`,
                 headline: 'daemon unreachable',
                 state: health.state
             };
@@ -26712,13 +26716,13 @@ const attachText = (record)=>{
     }
     const mode = record.attachMode === null ? '' : ` (${record.attachMode})`;
     const saved = record.savedComputeMs === null || record.savedComputeMs === undefined ? '' : `, saved ~${(0,_shared_format_js__rspack_import_0/* .formatMs */._V)(record.savedComputeMs)} of compute`;
-    return `rode ${record.attachedTo}${mode}${saved}`;
+    return `attached to ${record.attachedTo}${mode}${saved}`;
 };
-/** `cc-3 (running 2m/~5m)` or `cc-4 (queued)`: one unsettled prerequisite. */ const prerequisiteText = (prerequisite)=>{
+/** One unsettled prerequisite, as `cc-3 (running 2m/~5m)` or `cc-4 (queued)`. */ const prerequisiteText = (prerequisite)=>{
     const progress = prerequisite.elapsedMs === undefined ? prerequisite.status : `running ${(0,_shared_format_js__rspack_import_0/* .formatMs */._V)(prerequisite.elapsedMs)}${prerequisite.estimateMs === undefined ? '' : `/~${(0,_shared_format_js__rspack_import_0/* .formatMs */._V)(prerequisite.estimateMs)}`}`;
     return `${prerequisite.ticket} (${progress})`;
 };
-/** What a queued ticket is waiting on: prerequisites first (it has no lane position while blocked), then the lane. */ const waitsForText = (record)=>record.waitingFor === undefined || record.waitingFor.length === 0 ? null : `waits for ${record.waitingFor.map(prerequisiteText).join(', ')}`;
+/** What a queued ticket waits on. Prerequisites come first because a blocked ticket has no lane position, then the lane. */ const waitsForText = (record)=>record.waitingFor === undefined || record.waitingFor.length === 0 ? null : `waits for ${record.waitingFor.map(prerequisiteText).join(', ')}`;
 const queueText = (record)=>{
     const queue = record.queue;
     if (record.status !== 'queued') {
@@ -26729,7 +26733,7 @@ const queueText = (record)=>{
         waitsForText(record),
         queue === undefined ? null : `${queue.position} ahead${head}, wait ~${(0,_shared_format_js__rspack_import_0/* .formatMs */._V)(queue.waitEtaMs)}`,
         record.admissionHold === undefined ? null : `waiting: ${record.admissionHold.detail}`,
-        record.delayed === true ? 'wait exceeds estimate — lane busy' : null,
+        record.delayed === true ? 'wait exceeds estimate because the lane is busy' : null,
         queue?.headEstimateState === 'overrun' ? 'head overrunning its estimate but alive' : null
     ].filter((part)=>part !== null);
     return parts.length === 0 ? null : parts.join('; ');
@@ -26742,8 +26746,8 @@ const queueText = (record)=>{
     if (record.status !== 'running' || record.stall === undefined) {
         return null;
     }
-    const owner = record.orphaned === true ? '; owner disconnected' : '';
-    return `looks stalled: no CPU for ${(0,_shared_format_js__rspack_import_0/* .formatMs */._V)(record.stall.idleMs)} and no output${owner} — hauler kill ${record.attachedTo ?? record.ticket}`;
+    const owner = record.orphaned === true ? ', owner disconnected' : '';
+    return `looks stalled: no CPU for ${(0,_shared_format_js__rspack_import_0/* .formatMs */._V)(record.stall.idleMs)} and no output${owner}. Free the lane with hauler kill ${record.attachedTo ?? record.ticket}`;
 };
 const ranAs = (record)=>{
     if (record.execArgv === null) {
@@ -26886,7 +26890,7 @@ const formatMs = (ms)=>{
     }
     return `${unit === 0 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`;
 };
-/** Hand-rolled rather than `node:path`: this module also runs in the browser dashboard. */ const pathBasename = (path)=>path.split('/').filter(Boolean).at(-1) ?? path;
+/** Hand-rolled rather than `node:path`, because this module also runs in the browser dashboard. */ const pathBasename = (path)=>path.split('/').filter(Boolean).at(-1) ?? path;
 const shortenPath = (path, maxLength = 38)=>{
     const homed = path.replace(/^\/(?:home|Users)\/[^/]+/u, '~');
     if (homed.length <= maxLength) {
@@ -26899,7 +26903,7 @@ const shortenPath = (path, maxLength = 38)=>{
     return `…/${segments.slice(-2).join('/')}`;
 };
 /**
- * A command line for display: the program is shown by basename so a request
+ * A command line for display. The program shows by basename, so a request
  * that arrived as `/home/me/.cargo/bin/cargo check` (the PATH shim passes the
  * real binary to avoid re-entering itself) reads as `cargo check`.
  */ const commandDisplay = (argv)=>{
@@ -26954,8 +26958,8 @@ __webpack_require__.d(__webpack_exports__, {
         ...groups.values()
     ];
 };
-const sharedTargetMechanism = "Cargo's -C metadata hash is relative to the workspace root, so same-layout worktrees write identical artifact filenames there; whichever compiled last may be treated as fresh and run by another worktree. This is a stale-binary problem, not a kache miss.";
-const usedBy = (targetDir, workspaceRoots)=>`shared Cargo target dir ${targetDir} is used by workspace roots ${workspaceRoots.join(' and ')}`;
+const sharedTargetMechanism = "Cargo's -C metadata hash is relative to the workspace root, so same-layout worktrees write identical artifact filenames there. Another worktree may treat whichever build compiled last as fresh and run it. This is a stale-binary problem, not a kache miss.";
+const usedBy = (targetDir, workspaceRoots)=>`workspace roots ${workspaceRoots.join(' and ')} share Cargo target dir ${targetDir}`;
 /** The status-surface line for one flagged group. */ const sharedTargetWarning = (group)=>`WARNING: ${usedBy(group.targetDir, group.workspaceRoots)}. ${sharedTargetMechanism}`;
 /** The `bad-intent` refusal and, when the request was allowed, the ack warning. */ const sharedTargetRefusal = (lane, otherWorkspaceRoots)=>`${usedBy(lane.targetDir, [
         lane.workspaceRoot,
@@ -27177,7 +27181,7 @@ const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .awa
     annotations: {
         readOnlyHint: true
     },
-    description: 'Long-poll a cargo-hauler ticket until it finishes or the wait expires (maxWaitMs default 30000, ceiling 7200000 — the daemon\'s 2 h await ceiling; call again to keep waiting; a host with its own per-call deadline, such as Codex\'s tool_timeout_sec, still bounds one call). The document streams: the live ticket card first, then the settled result; progress notifications carry queue position, elapsed time, and the cost estimate while waiting.',
+    description: 'Long-poll a cargo-hauler ticket until it finishes or the wait expires. maxWaitMs defaults to 30000 and is capped at 7200000, the daemon\'s 2 h await ceiling. Call again to keep waiting. A host with its own per-call deadline, such as Codex\'s tool_timeout_sec, still limits each call. The document streams the live ticket card first and the settled result second. While the wait runs, progress notifications report queue position, elapsed time, and the cost estimate.',
     inputJsonSchema: {
         additionalProperties: false,
         properties: {
@@ -27195,9 +27199,10 @@ const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .awa
     },
     inputSchema,
     // The daemon's 2 h await ceiling (`awaitCeilingMs`) plus a minute for the
-    // snapshot fetch before the wait and the socket round trip after it — a
-    // literal, as route config is read statically; `tests/unit/contracts/await-budget.test.ts`
-    // holds the two together. The host's own tool-call deadline still applies.
+    // snapshot fetch before the wait and the socket round trip after it. Route
+    // config is read statically, so this is a literal, and
+    // `tests/unit/contracts/await-budget.test.ts` keeps the two in step. The
+    // host's own tool-call deadline still applies.
     render: {
         maxElapsedMs: 7260000
     },
@@ -27208,7 +27213,6 @@ const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .awa
     const daemonConfig = await (0,_internal_operations_request_config_js__rspack_import_5/* .requestDaemonConfig */.w)(context);
     const maxWaitMs = input.maxWaitMs ?? (/* inlined export .defaultAwaitMs */30000);
     const startedAt = Date.now();
-    // The shell frame: the ticket as it is right now, before the wait blocks.
     const snapshot = await (0,_internal_operations_tickets_js__rspack_import_6/* .fetchTicketResult */.Em)(input, {
         config: daemonConfig,
         signal
@@ -27218,8 +27222,8 @@ const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .awa
         maxWaitMs
     }, {
         config: daemonConfig,
-        // Heartbeats become MCP progress notifications. Progress is best-effort:
-        // a host that cannot deliver it must not fail the wait.
+        // Progress is best-effort. A host that cannot deliver a notification
+        // must not fail the wait.
         onProgress: ({ line })=>{
             void context.progress.report({
                 completed: Math.min(maxWaitMs, Date.now() - startedAt),
@@ -27280,7 +27284,7 @@ const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .kil
         destructiveHint: true,
         idempotentHint: true
     },
-    description: 'Stop a cargo-hauler ticket: a queued request is dropped, a running one has its cargo process terminated (SIGTERM, then SIGKILL after the grace period) and its lane freed. Use this instead of killing cargo PIDs — the daemon settles riders and the ledger. Returns killed: false when the ticket is unknown or already finished.',
+    description: 'Stop a cargo-hauler ticket. The daemon drops a queued request. For a running request, the daemon sends SIGTERM to its cargo process, sends SIGKILL after the grace period, and frees the lane. Use this tool instead of killing cargo PIDs, because the daemon also settles riders and the ledger. Returns `killed: false` when the ticket is unknown or already finished.',
     inputJsonSchema: {
         additionalProperties: false,
         properties: {
@@ -27456,12 +27460,12 @@ const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .req
     annotations: {
         readOnlyHint: false
     },
-    description: 'Submit a background cargo request and return a durable ticket id. Host and session are inferred from the request (the calling conversation when the host provides lineage); explicit fields override inferred attribution.',
+    description: 'Submit a background cargo request and return a durable ticket id. The tool infers host and session from the request, and uses the calling conversation when the host provides lineage. Explicit fields override the inferred attribution.',
     inputJsonSchema: {
         additionalProperties: false,
         properties: {
             after: {
-                description: 'Tickets (cc-N) that must finish before this request starts; it fails if any of them fails or is killed',
+                description: 'Tickets (cc-N) that must finish before this request starts. The request fails if any of them fails or is killed.',
                 items: {
                     type: 'string'
                 },
@@ -27537,12 +27541,12 @@ const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_4/* .res
     annotations: {
         readOnlyHint: true
     },
-    description: 'Fetch one cargo-hauler ticket. Running tickets include a live output-tail snapshot; terminal tickets include the durable ledger result and the path of the full output log. Pass full: true to read that log (its last 768 KiB when larger, where the test failures and panic sections are) instead of re-running the command.',
+    description: 'Fetch one cargo-hauler ticket. A running ticket includes a snapshot of its live output tail. A terminal ticket includes the durable ledger result and the path of the full output log. Pass `full: true` to read that log instead of rerunning the command. A log over 768 KiB returns its last 768 KiB, where the test failures and panic sections are.',
     inputJsonSchema: {
         additionalProperties: false,
         properties: {
             full: {
-                description: 'Render the on-disk output log, its last 768 KiB when larger, instead of the stored tail',
+                description: 'Render the on-disk output log instead of the stored tail. A log over 768 KiB renders its last 768 KiB.',
                 type: 'boolean'
             },
             ticket: {
@@ -27605,7 +27609,7 @@ const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_5/* .sta
     annotations: {
         readOnlyHint: true
     },
-    description: 'Show cargo-hauler queue and in-flight work as text. Filter by cwd, session, laneKey, tickets, statuses, or commandContains instead of piping CLI JSON through jq. Rows are bounded summaries: no output tail, only a short outputPreview (last 8 lines) on running rows; read one ticket with hauler_result for its whole live tail. To open the visual dashboard (MCP App) call hauler_dashboard.',
+    description: 'Show the cargo-hauler queue and in-flight work as text. Filter by cwd, session, laneKey, tickets, statuses, or commandContains instead of piping CLI JSON through jq. Rows are bounded summaries without an output tail. A running row carries only a short outputPreview of its last 8 lines. Call hauler_result on one ticket for its whole live tail. To open the visual dashboard (an MCP App), call hauler_dashboard.',
     inputJsonSchema: {
         additionalProperties: false,
         properties: {
@@ -27625,7 +27629,7 @@ const resultSchema = _internal_contracts_tool_schemas_js__rspack_import_5/* .sta
                 type: 'string'
             },
             statuses: {
-                description: 'Filter by projected status, where stopped-daemon active rows appear as orphaned and running matches nothing',
+                description: 'Filter by projected status. While the daemon is stopped, active rows appear as orphaned and running matches nothing.',
                 items: {
                     enum: [
                         'requested',

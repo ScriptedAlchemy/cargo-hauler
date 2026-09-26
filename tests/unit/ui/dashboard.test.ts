@@ -169,7 +169,7 @@ describe('shared target lane warning', () => {
     const cell = sharedTargetCell(lane);
     expect(cell?.roots).toEqual(['/work/two']);
     expect(cell?.warning).toMatch(
-      /^WARNING: shared Cargo target dir \/cache\/target is used by workspace roots \/work\/one and \/work\/two\. /u,
+      /^WARNING: workspace roots \/work\/one and \/work\/two share Cargo target dir \/cache\/target\. /u,
     );
     expect(sharedTargetCell({ ...lane, sharedTargetWith: undefined })).toBeNull();
   });

@@ -125,7 +125,7 @@ describe('submitBackgroundAck', () => {
       );
       expect(error._tag).toBe('DaemonNotReplaced');
       expect(infraFailure(error).message).toBe(
-        'cargo-hauler daemon pid 4242 (0.0.0-previous) is still running 5.0s after the shutdown request; not restarted — retry once it has exited, or stop it with `hauler daemon stop`',
+        'cargo-hauler daemon pid 4242 (0.0.0-previous) is still running 5.0s after the shutdown request, so the restart did not start a new daemon. Retry once it has exited, or stop it with `hauler daemon stop`.',
       );
       const report = yield* fetchReport(fixture);
       expect(report.active).toEqual([]);

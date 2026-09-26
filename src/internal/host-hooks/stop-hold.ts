@@ -32,9 +32,9 @@ export interface StopHoldServices {
   ) => Promise<readonly FinishedTicket[]>;
 }
 
-// 30s per hold is deliberately far below the 900s stop-hook budget: Codex's
-// per-hook timeout honoring is unverified, and the re-deny loop already makes
-// the total wait unbounded. Raise via CARGO_HAULER_STOP_WAIT_MS on hosts
+// 30s per hold is far below the 900s stop-hook budget, because nobody has
+// verified that Codex honors per-hook timeouts, and the re-deny loop already
+// makes the total wait unbounded. Raise via CARGO_HAULER_STOP_WAIT_MS on hosts
 // known to honor long hook timeouts; values above the daemon's await ceiling
 // are clamped, since the wire schema rejects a larger `maxWaitMs` outright
 // and every ticket would then read as unfinished.
@@ -109,7 +109,7 @@ const decideStopHold = async (
   if (finished.length > 0) {
     return {
       outcome: 'deny',
-      reason: `${finished.map(formatFinishedTicket).join('; ')}; agent should restart holding these results`,
+      reason: `${finished.map(formatFinishedTicket).join(' ')} Restart with these results in hand.`,
     };
   }
 
@@ -119,7 +119,7 @@ const decideStopHold = async (
   }
   return {
     outcome: 'deny',
-    reason: `results pending: ${pending.map((ticket) => formatPending(ticket, nowMs)).join('; ')}; stop again to keep waiting or call hauler_await`,
+    reason: `results pending: ${pending.map((ticket) => formatPending(ticket, nowMs)).join('; ')}. Stop again to keep waiting, or call hauler_await.`,
   };
 };
 

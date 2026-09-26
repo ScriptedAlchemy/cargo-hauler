@@ -71,7 +71,7 @@ const refreshShim = (): number => {
     const haulerArgv = refreshTarget();
     refreshCargoShim(shim, haulerArgv);
     process.stderr.write(
-      `Refreshed cargo shim ${shim.path}: it ran ${shim.haulerArgv.join(' ')}; it now runs ${haulerArgv.join(' ')}.\n`,
+      `Refreshed cargo shim ${shim.path}. It ran ${shim.haulerArgv.join(' ')} and now runs ${haulerArgv.join(' ')}.\n`,
     );
     return 0;
   } catch (error) {

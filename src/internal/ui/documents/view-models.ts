@@ -20,8 +20,8 @@ import { countWord } from '../../util/text.js';
 import { commandText, diagnosticCounts } from './headlines.js';
 
 /*
- * View-models: pure projections from daemon records and request context onto
- * the fields a component prints. Components render these and nothing else,
+ * View-models are pure projections from daemon records and request context
+ * onto the fields a component prints. Components render these and nothing else,
  * so the same model feeds the MCP document, the CLI Markdown, and a test
  * assertion without re-deriving strings in three places.
  */
@@ -41,11 +41,11 @@ const unresponsiveDetail = (
 ): string => {
   switch (reason) {
     case 'accept-timeout':
-      return `did not accept a connection within ${formatMs(timeoutMs)} (machine saturated); ledger reads still work`;
+      return `did not accept a connection within ${formatMs(timeoutMs)} (machine saturated). Ledger reads still work`;
     case 'answer-timeout':
-      return `accepted the connection but sent no status within ${formatMs(timeoutMs)} (busy fanning out output); ledger reads still work`;
+      return `accepted the connection but sent no status within ${formatMs(timeoutMs)} (busy fanning out output). Ledger reads still work`;
     case 'connection-closed':
-      return 'closed the connection before answering; ledger reads still work';
+      return 'closed the connection before answering. Ledger reads still work';
     default: {
       const exhaustive: never = reason;
       return exhaustive;
@@ -72,8 +72,8 @@ export const daemonBadgeModel = (
     case 'stopped':
       return {
         detail: health.reason === 'socket-missing'
-          ? 'no socket; it starts on demand with the next cargo request'
-          : 'socket present but connection refused; a stale socket from an earlier daemon',
+          ? 'no socket'
+          : 'a stale socket from an earlier daemon refused the connection',
         headline: 'daemon stopped',
         state: health.state,
       };
@@ -85,7 +85,7 @@ export const daemonBadgeModel = (
       };
     case 'unreachable':
       return {
-        detail: `socket present but could not be opened (${health.detail}); the daemon may be running — check permissions on the state directory`,
+        detail: `socket present but could not be opened (${health.detail}). The daemon may be running, so check permissions on the state directory`,
         headline: 'daemon unreachable',
         state: health.state,
       };
@@ -319,10 +319,10 @@ const attachText = (record: TicketSummary): string | null => {
   const saved = record.savedComputeMs === null || record.savedComputeMs === undefined
     ? ''
     : `, saved ~${formatMs(record.savedComputeMs)} of compute`;
-  return `rode ${record.attachedTo}${mode}${saved}`;
+  return `attached to ${record.attachedTo}${mode}${saved}`;
 };
 
-/** `cc-3 (running 2m/~5m)` or `cc-4 (queued)`: one unsettled prerequisite. */
+/** One unsettled prerequisite, as `cc-3 (running 2m/~5m)` or `cc-4 (queued)`. */
 const prerequisiteText = (prerequisite: PrerequisiteContext): string => {
   const progress = prerequisite.elapsedMs === undefined
     ? prerequisite.status
@@ -330,7 +330,7 @@ const prerequisiteText = (prerequisite: PrerequisiteContext): string => {
   return `${prerequisite.ticket} (${progress})`;
 };
 
-/** What a queued ticket is waiting on: prerequisites first (it has no lane position while blocked), then the lane. */
+/** What a queued ticket waits on. Prerequisites come first because a blocked ticket has no lane position, then the lane. */
 export const waitsForText = (record: TicketSummary): string | null =>
   record.waitingFor === undefined || record.waitingFor.length === 0
     ? null
@@ -348,7 +348,7 @@ const queueText = (record: TicketSummary): string | null => {
     waitsForText(record),
     queue === undefined ? null : `${queue.position} ahead${head}, wait ~${formatMs(queue.waitEtaMs)}`,
     record.admissionHold === undefined ? null : `waiting: ${record.admissionHold.detail}`,
-    record.delayed === true ? 'wait exceeds estimate — lane busy' : null,
+    record.delayed === true ? 'wait exceeds estimate because the lane is busy' : null,
     queue?.headEstimateState === 'overrun' ? 'head overrunning its estimate but alive' : null,
   ].filter((part) => part !== null);
   return parts.length === 0 ? null : parts.join('; ');
@@ -363,8 +363,8 @@ const stalledText = (record: TicketSummary): string | null => {
   if (record.status !== 'running' || record.stall === undefined) {
     return null;
   }
-  const owner = record.orphaned === true ? '; owner disconnected' : '';
-  return `looks stalled: no CPU for ${formatMs(record.stall.idleMs)} and no output${owner} — hauler kill ${record.attachedTo ?? record.ticket}`;
+  const owner = record.orphaned === true ? ', owner disconnected' : '';
+  return `looks stalled: no CPU for ${formatMs(record.stall.idleMs)} and no output${owner}. Free the lane with hauler kill ${record.attachedTo ?? record.ticket}`;
 };
 
 const ranAs = (record: TicketSummary): string | null => {
@@ -402,7 +402,7 @@ export const ticketCardModel = (record: TicketSummary, nowMs: number): TicketCar
 };
 
 // ---------------------------------------------------------------------------
-// Build diagnostics (cargo output → structured rows)
+// Build diagnostics (cargo output to structured rows)
 
 export interface DiagnosticRowModel {
   readonly level: 'error' | 'warning';
@@ -417,9 +417,9 @@ export interface BuildDiagnosticsModel {
   readonly errorCount: number | null;
   readonly warningCount: number | null;
   /**
-   * Every captured diagnostic block, verbatim and in order — spans, expected/
-   * found types, notes, and suggested fixes included. The rows above are an
-   * index into this text, never a replacement for it.
+   * Every captured diagnostic block, verbatim and in order, with spans,
+   * expected and found types, notes, and suggested fixes. The rows above are
+   * an index into this text, never a replacement for it.
    */
   readonly verbatim: string;
 }

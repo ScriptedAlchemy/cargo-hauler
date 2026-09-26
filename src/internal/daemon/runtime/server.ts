@@ -575,7 +575,7 @@ export const makeConnectionHandler =
                     type: 'error',
                     id: message.id,
                     code: 'shutdown-refused',
-                    message: `shutdown refused: this daemon is ${options.version} and the requesting client is ${requester ?? 'unversioned (older)'}; only a newer install replaces a daemon — upgrade that client, or stop the daemon with \`hauler daemon stop\` from this install`,
+                    message: `shutdown refused: this daemon is ${options.version} and the requesting client is ${requester ?? 'unversioned (older)'}. Only a newer install replaces a daemon. Upgrade that client, or stop the daemon with \`hauler daemon stop\` from this install.`,
                   });
                 }
                 if (message.ifIdle === true) {

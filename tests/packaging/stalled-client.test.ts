@@ -153,10 +153,10 @@ describe.skipIf(!existsSync(haulerEntry))('a client that stops reading a large b
       expect(logged.filter((line) => line.startsWith('   Compiling crate-'))).toHaveLength(180_000);
       expect(logged.slice(-2)).toEqual(['after-stall', '']);
       expect(summary.stdout).toContain(
-        `Full output: ${logPath} (10.0 MB) — hauler result cc-1 --full shows its last 768.0 KB\n`,
+        `Full output: ${logPath} (10.0 MB). hauler result cc-1 --full shows its last 768.0 KB.\n`,
       );
       expect(full.stdout).toContain(
-        `> Showing the last 768.0 KB of 10.0 MB; the first 9.3 MB are omitted here to fit the document. The whole run is in ${logPath}.\n`,
+        `> This document shows the last 768.0 KB of 10.0 MB and omits the first 9.3 MB to fit. The whole run is in ${logPath}.\n`,
       );
     }), 60_000);
 });

@@ -109,7 +109,7 @@ export const orphanedGuidance = (
     return request.error;
   }
   return isOrphanedByRestart({ error: request.error, status: request.status })
-    ? `${orphanedByRestartError}: the daemon stopped while it was in flight and does not hand runs over; resubmit if the work is still needed`
+    ? `${orphanedByRestartError}: the daemon stopped while it was in flight and does not hand runs over. Resubmit if you still need the work`
     : null;
 };
 
@@ -134,8 +134,8 @@ export const describeRequestRecord = (
 /**
  * Projects one stored record onto a structured operation result. Ledger
  * records keep cargo output verbatim (color included), but every operation
- * result is JSON on the wire — the CLI prints `JSON.stringify(result)` and
- * MCP structured content is JSON-RPC — where an ESC byte can only ever
+ * result is JSON on the wire. The CLI prints `JSON.stringify(result)`, and
+ * MCP structured content is JSON-RPC, where an ESC byte can only ever
  * render as literal `\u001b[…` noise. That holds regardless of process
  * stdout: a TTY still sees the escaped JSON form, and an inherited
  * FORCE_COLOR/CLICOLOR_FORCE cannot make JSON paint color. So the
@@ -162,7 +162,7 @@ type UnavailableDaemonStatus = Exclude<DaemonStatus, 'running'>;
 
 const strandedReasons: Record<Exclude<UnavailableDaemonStatus, 'skewed'>, string> = {
   stopped: 'stranded by a stopped daemon',
-  unresponsive: 'daemon did not answer; ownership unconfirmed',
+  unresponsive: 'daemon did not answer, so ownership is unconfirmed',
 };
 
 export const ledgerRequestRecord = (
@@ -248,7 +248,7 @@ const skewSummary = (daemon: Pick<PongMessage, 'pid' | 'version'>): string => {
       case -1:
         return [
           'an older release',
-          'The next `hauler exec` or `hauler daemon start` replaces it once it is idle; `hauler daemon restart` replaces it now and ends its in-flight tickets.',
+          'The next `hauler exec` or `hauler daemon start` replaces it once it is idle. `hauler daemon restart` replaces it now and ends its in-flight tickets.',
         ];
       case 0:
         return ['another build of this release', '`hauler daemon restart` replaces it and ends its in-flight tickets.'];
@@ -263,7 +263,7 @@ const skewSummary = (daemon: Pick<PongMessage, 'pid' | 'version'>): string => {
       }
     }
   })();
-  return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${version}) cannot read; showing tickets as the ledger recorded them. ${fix}`;
+  return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${version}) cannot read, so this client shows tickets as the ledger recorded them. ${fix}`;
 };
 
 /**
@@ -470,7 +470,7 @@ const unresponsiveSnapshot = (
         {
           ...snapshot,
           daemon: 'unresponsive',
-          summary: `cargo-hauler daemon ${what}; showing ledger data (${snapshot.recent.length} recorded)`,
+          summary: `cargo-hauler daemon ${what}, so status shows ledger data (${snapshot.recent.length} recorded)`,
         },
         snapshot.report,
       ),

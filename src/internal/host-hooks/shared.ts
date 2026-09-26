@@ -34,14 +34,14 @@ export const formatFinishedTicket = (ticket: FinishedTicket): string => {
   const counts = diagnosticCounts(ticket);
   switch (ticket.status) {
     case 'done':
-      return `ticket ${ticket.ticket} finished: success${counts === null ? '' : `, ${counts}`} — call hauler_result ${ticket.ticket}`;
+      return `ticket ${ticket.ticket} finished: success${counts === null ? '' : `, ${counts}`}. Call hauler_result ${ticket.ticket}.`;
     case 'failed': {
       const detail =
         ticket.error === null || ticket.error.length === 0 ? '' : ` (${ticket.error})`;
-      return `ticket ${ticket.ticket} finished: failed${counts === null ? '' : `, ${counts}`}${detail} — call hauler_result ${ticket.ticket}`;
+      return `ticket ${ticket.ticket} finished: failed${counts === null ? '' : `, ${counts}`}${detail}. Call hauler_result ${ticket.ticket}.`;
     }
     case 'killed':
-      return `ticket ${ticket.ticket} finished: killed${counts === null ? '' : `, ${counts}`} — call hauler_result ${ticket.ticket}`;
+      return `ticket ${ticket.ticket} finished: killed${counts === null ? '' : `, ${counts}`}. Call hauler_result ${ticket.ticket}.`;
     default: {
       const exhaustive: never = ticket.status;
       return exhaustive;

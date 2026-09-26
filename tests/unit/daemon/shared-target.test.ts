@@ -33,7 +33,7 @@ describe('sharedTargetGroups', () => {
     const group = { targetDir: '/cache/target', workspaceRoots: ['/work/one', '/work/two'] };
     const warning = sharedTargetWarning(group);
     const refusal = sharedTargetRefusal({ targetDir: '/cache/target', workspaceRoot: '/work/one' }, ['/work/two']);
-    expect(warning).toMatch(/^WARNING: shared Cargo target dir \/cache\/target is used by workspace roots \/work\/one and \/work\/two\. /u);
+    expect(warning).toMatch(/^WARNING: workspace roots \/work\/one and \/work\/two share Cargo target dir \/cache\/target\. /u);
     expect(refusal.startsWith(warning.slice('WARNING: '.length))).toBe(true);
     expect(refusal).toContain('--allow-shared-target');
     expect(warning).not.toContain('--allow-shared-target');

@@ -18,10 +18,10 @@ const lastLines = (text: string, limit: number): string => {
 };
 
 /**
- * The captured cargo output tail. `live` labels a snapshot of a run still
- * producing output — the shape `hauler_await` streams while it waits and
- * `hauler_result` returns for a running ticket — against the settled tail of
- * a finished one.
+ * The captured cargo output tail. `live` marks a snapshot of a run that still
+ * produces output, as opposed to the settled tail of a finished one.
+ * `hauler_await` streams that snapshot while it waits, and `hauler_result`
+ * returns it for a running ticket.
  */
 export const LogTail = ({ live, maxLines = 40, text }: LogTailProps) => {
   if (text === null || text.trim() === '') {

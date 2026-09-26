@@ -18,7 +18,7 @@ const defaultTimeoutMs = 250;
  */
 export type DaemonProbe = 'absent' | 'active' | 'busy' | 'idle';
 
-/** `ENOTSOCK` joins the shared set here: a stale non-socket file at the path is no daemon either. */
+/** `ENOTSOCK` joins the shared set here, because a stale non-socket file at the path is no daemon either. */
 const absent = (code: string): boolean => absentSocketCodes.has(code) || code === 'ENOTSOCK';
 
 const reportHasActive = (report: Readonly<Record<string, unknown>>): boolean => {

@@ -8,10 +8,10 @@ import { ensurePrivateDir, ensurePrivateFile, privateFileMode } from '../platfor
 import { resolveStateDir } from '../platform/state-paths.js';
 
 /**
- * On-disk shape of `hook-state.json`, shared by every session's hooks:
- * `cursors` (session → last event cursor), `denies` (ticket → stop denials),
- * and `denyOwners` (ticket → session) so a session prunes only the counters
- * it created. A file that is missing, unreadable, or not this shape reads as
+ * On-disk shape of `hook-state.json`, shared by every session's hooks.
+ * `cursors` maps a session to its last event cursor, `denies` maps a ticket
+ * to its stop denials, and `denyOwners` maps a ticket to its session, so a
+ * session prunes only the counters it created. A file that is missing, unreadable, or not this shape reads as
  * empty.
  */
 interface HookState {
@@ -36,8 +36,8 @@ const sleepSync = (ms: number): void => {
  * Serializes read-modify-write cycles on the shared state file across the
  * hook processes of every concurrent session (#110). Atomic rename keeps
  * readers from seeing a torn file, but two hooks that both load state,
- * apply their own change, and save would drop each other's: one session's
- * cursor or deny counter silently lost. The lock is a `.lock` directory
+ * apply their own change, and save would drop each other's. One session's
+ * cursor or deny counter would be lost without an error. The lock is a `.lock` directory
  * beside the file (proper-lockfile, the daemon singleton's mechanism);
  * hooks are short-lived, so waiting is bounded and a lock that cannot be
  * taken in time degrades to the previous unlocked update rather than

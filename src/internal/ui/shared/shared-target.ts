@@ -1,11 +1,11 @@
 import type { LaneStatus } from '../../contracts/protocol.js';
 
 /**
- * One target dir used by several workspace roots (#185): the grouping and the
- * text every surface shows — daemon refusal and ack warning, lane board,
- * `hauler status` summary, dashboard — in one place, like
- * `kache-pressure-model.ts`. Browser-safe: no `node:` imports. Detection
- * itself lives in `daemon/broker/shared-target.ts`.
+ * One target dir used by several workspace roots (#185). This module holds
+ * the grouping and the text every surface shows (daemon refusal and ack
+ * warning, lane board, `hauler status` summary, dashboard) in one place, like
+ * `kache-pressure-model.ts`. It is browser-safe, with no `node:` imports.
+ * Detection itself lives in `daemon/broker/shared-target.ts`.
  */
 export interface TargetLane {
   readonly workspaceRoot: string;
@@ -39,10 +39,10 @@ export const sharedTargetGroups = (
 };
 
 export const sharedTargetMechanism =
-  "Cargo's -C metadata hash is relative to the workspace root, so same-layout worktrees write identical artifact filenames there; whichever compiled last may be treated as fresh and run by another worktree. This is a stale-binary problem, not a kache miss.";
+  "Cargo's -C metadata hash is relative to the workspace root, so same-layout worktrees write identical artifact filenames there. Another worktree may treat whichever build compiled last as fresh and run it. This is a stale-binary problem, not a kache miss.";
 
 const usedBy = (targetDir: string, workspaceRoots: readonly string[]): string =>
-  `shared Cargo target dir ${targetDir} is used by workspace roots ${workspaceRoots.join(' and ')}`;
+  `workspace roots ${workspaceRoots.join(' and ')} share Cargo target dir ${targetDir}`;
 
 /** The status-surface line for one flagged group. */
 export const sharedTargetWarning = (group: SharedTargetGroup): string =>

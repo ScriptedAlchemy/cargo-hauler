@@ -4,7 +4,7 @@ import { commandMentionsHauler } from '../../internal/host-hooks/tokens.js';
 import { extractShellCommand } from '../../internal/host-hooks/tool-input.js';
 
 /**
- * The gate every shell tool call pays (#90): commands that name neither cargo
+ * The gate every shell tool call pays (#90). Commands that name neither cargo
  * nor hauler continue before the rendered view, bash parser, and daemon probe
  * load.
  */

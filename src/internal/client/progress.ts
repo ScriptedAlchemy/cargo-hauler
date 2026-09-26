@@ -110,8 +110,8 @@ export const formatProgressLine = (event: ProgressEvent): string => {
   switch (event.kind) {
     case 'queued': {
       const seconds = (ms: number): string => `~${Math.max(1, Math.round(ms / 1000))}s`;
-      // A blocked dependent has no lane position yet: what holds it is the
-      // prerequisite, not the queue.
+      // A blocked dependent has no lane position yet, because the
+      // prerequisite holds it, not the queue.
       const blocked = event.waitingFor !== undefined && event.waitingFor.length > 0;
       const placement = blocked
         ? ` waiting for ${ticketList(event.waitingFor ?? [])}`
@@ -131,7 +131,7 @@ export const formatProgressLine = (event: ProgressEvent): string => {
     case 'attached': {
       switch (event.mode) {
         case 'identity':
-          return `${prefix} ticket ${event.ticket} attached to ${event.leaderTicket} (identical run in flight; replaying its output)\n`;
+          return `${prefix} ticket ${event.ticket} attached to ${event.leaderTicket} (identical run in flight, replaying its output)\n`;
         case 'coverage':
           return `${prefix} ticket ${event.ticket} attached to ${event.leaderTicket} (covered by a larger run in flight)\n`;
         case 'batch':
@@ -153,7 +153,7 @@ export const formatProgressLine = (event: ProgressEvent): string => {
           event.waitingFor === undefined || event.waitingFor.length === 0
             ? ''
             : ` · waiting for ${event.waitingFor.map(prerequisiteText).join(', ')}`;
-        const delayed = `${held}${prerequisites}${event.delayed === true ? ' · wait exceeds estimate — lane busy' : ''}`;
+        const delayed = `${held}${prerequisites}${event.delayed === true ? ' · wait exceeds estimate because the lane is busy' : ''}`;
         if (event.phase === 'queued' && event.queue !== undefined) {
           const head =
             event.queue.headTicket === undefined
@@ -183,7 +183,7 @@ export const formatProgressLine = (event: ProgressEvent): string => {
       return `${prefix} ticket ${event.ticket} still ${event.phase} (${Math.floor(event.elapsedMs / 1000)}s)\n`;
     }
     case 'passthrough':
-      return `${prefix} ${event.reason}; running cargo directly\n`;
+      return `${prefix} running cargo directly: ${event.reason}\n`;
     case 'background': {
       const eta =
         event.estimateMs === null
@@ -194,9 +194,9 @@ export const formatProgressLine = (event: ProgressEvent): string => {
         return `${prefix} ticket ${event.ticket} submitted in background${eta}\n${retrieve}`;
       }
       const redirected = event.auto.stdoutRedirected
-        ? `; your redirected stdout receives no output; once it runs, \`hauler result ${event.ticket}\` names its full log`
+        ? ` Your redirected stdout receives no output. Once the ticket runs, \`hauler result ${event.ticket}\` names its full log.`
         : '';
-      return `${prefix} ticket ${event.ticket} estimate${eta} exceeds the ${event.auto.host} shell cap (${formatDuration(event.auto.capMs)}); submitted in background, not run yet (exit 75)${redirected}\n${retrieve}`;
+      return `${prefix} ticket ${event.ticket} estimate${eta} exceeds the ${event.auto.host} shell cap (${formatDuration(event.auto.capMs)}). It runs in the background and has not started yet (exit 75).${redirected}\n${retrieve}`;
     }
     default: {
       const exhaustive: never = event;

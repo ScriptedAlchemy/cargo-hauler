@@ -114,7 +114,7 @@ describe('tool documents without a daemon', () => {
         .toContainMarkdown('cc-1')
         .toContainMarkdown('orphaned')
         .toContainContext(
-          '2 orphaned tickets were stranded by the stopped daemon and will not finish; resubmit the ones still wanted.',
+          'The stopped daemon stranded 2 orphaned tickets, and they will not finish. Resubmit any you still need.',
         );
       expect(JSON.stringify(rendered.document)).not.toContain('Do not start a duplicate cargo run');
     });
@@ -165,7 +165,7 @@ describe('tool documents without a daemon', () => {
       expectDocument(rendered)
         .toHaveStatus('success')
         .toContainText('daemon is not running')
-        .toContainContext('Dashboard: ui://cargo-hauler/dashboard.html opens beside this result');
+        .toContainContext('Dashboard: ui://cargo-hauler/dashboard.html. It opens beside this result');
       expect(rendered.result).toMatchObject({ active: [], daemon: 'stopped', operation: 'status' });
       expect(JSON.stringify(rendered.document)).not.toContain('Nothing queued or running.');
     });
@@ -378,16 +378,16 @@ describe('tool documents against a live daemon', () => {
 
           const dropped = await kill(queued);
           expect(dropped.result).toMatchObject({ killed: true, request: { status: 'killed' } });
-          expectDocument(dropped).toContainText(`${queued} killed before it started; no cargo process ran`);
+          expectDocument(dropped).toContainText(`${queued} killed before it started, so no cargo process ran`);
 
           const detached = await kill(rider);
           expect(detached.result).toMatchObject({ killed: true, request: { status: 'killed' } });
-          expectDocument(detached).toContainText(`${rider} killed; detached from ${leader}`);
+          expectDocument(detached).toContainText(`${rider} killed and detached from ${leader}`);
 
           const stopping = await kill(leader);
           expect(stopping.result).toMatchObject({ killed: true, request: { status: 'running' } });
           expectDocument(stopping).toContainText(
-            `${leader} kill requested; the daemon stops its cargo process and frees the lane`,
+            `${leader} kill requested. The daemon stops its cargo process and frees the lane`,
           );
         }).pipe(
           Effect.ensuring(Effect.ignore(settleRidersBeforeLeader)),

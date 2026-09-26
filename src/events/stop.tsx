@@ -5,8 +5,8 @@ import React from 'react';
 import { handleStopHold } from '../internal/host-hooks/stop-hold.js';
 import { decisionValue } from '../internal/host-hooks/event-support.js';
 
-// Standalone: stop-hold may block for its bounded wait and must not occupy
-// the shared MCP runtime. Budget mirrors the former 900 s stop hook.
+// Stop-hold may block for its bounded wait, so it runs standalone and does
+// not occupy the shared MCP runtime.
 export const config = {
   requires: ['events.stop.deny'],
   runtime: 'standalone',

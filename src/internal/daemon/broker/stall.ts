@@ -251,7 +251,7 @@ export interface StallSampleInput {
 }
 
 /**
- * One sampling step. Any change in tree CPU time counts as progress — a
+ * One sampling step. Any change in tree CPU time counts as progress, and a
  * drop means a child exited, which is activity too. A stall keeps its
  * original `since` across samples while the idle window keeps growing.
  */
@@ -278,7 +278,7 @@ export const evaluateStall = (
 };
 
 export const stalledKillReason = (idleMs: number): string =>
-  `stalled: no CPU for ${Math.floor(idleMs / 60_000)}m after owner disconnected; killed automatically`;
+  `stalled: no CPU for ${Math.floor(idleMs / 60_000)}m after owner disconnected, so the daemon killed it`;
 
 export interface StallMonitorDeps {
   readonly config: Pick<DaemonConfigShape, 'stallEstimateFactor' | 'stallIdleMs' | 'stallAutoKill'>;

@@ -21,18 +21,18 @@ type GuidanceComponent = (props: TicketGuidanceProps) => React.JSX.Element;
 
 /*
  * One component per ticket status. The record keyed by `StatusRowStatus` is
- * exhaustive by construction — adding a status to the daemon protocol fails
+ * exhaustive by construction. Adding a status to the daemon protocol fails
  * this module's type-check until its guidance exists.
  */
 
 const PendingGuidance: GuidanceComponent = ({ names, record }) => (
   <Agent.Context>
-    {`${record.ticket} is still ${record.status}. Do not re-run the same cargo command; call ${names.await} with ticket ${record.ticket} (each call waits up to ${formatMs(awaitCeilingMs)}; call again to keep waiting) or check ${names.result} later.`}
+    {`${record.ticket} is still ${record.status}. Do not rerun the same cargo command. Call ${names.await} with ticket ${record.ticket}, or check ${names.result} later. Each call waits up to ${formatMs(awaitCeilingMs)}, so call again to keep waiting.`}
   </Agent.Context>
 );
 
 const DoneGuidance: GuidanceComponent = ({ record }) => (
-  <Agent.Context>{`${record.ticket} succeeded; its output above is the result of that cargo run.`}</Agent.Context>
+  <Agent.Context>{`${record.ticket} succeeded. The output above is the result of that cargo run.`}</Agent.Context>
 );
 
 const FailedGuidance: GuidanceComponent = ({ record }) => {
@@ -40,8 +40,8 @@ const FailedGuidance: GuidanceComponent = ({ record }) => {
   return (
     <Agent.Context>
       {prerequisite === null
-        ? `${record.ticket} failed (exit ${record.exitCode ?? 'unknown'}). Fix the diagnostics above before re-running; the hauler dedupes identical requests, so an unchanged retry attaches to the same result.`
-        : `${record.ticket} never ran: ${record.error} — fix or rerun ${prerequisite}, then resubmit after the new ticket.`}
+        ? `${record.ticket} failed (exit ${record.exitCode ?? 'unknown'}). Fix the diagnostics above before you rerun it. The hauler dedupes identical requests, so an unchanged retry attaches to the same result.`
+        : `${record.ticket} never ran: ${record.error}. Fix or rerun ${prerequisite}, then resubmit after the new ticket.`}
     </Agent.Context>
   );
 };
@@ -49,8 +49,8 @@ const FailedGuidance: GuidanceComponent = ({ record }) => {
 const KilledGuidance: GuidanceComponent = ({ names, record }) => (
   <Agent.Context>
     {isOrphanedByRestart(record)
-      ? `${record.ticket} did not finish: the daemon restarted while it was in flight, and running cargo processes are not handed over across a restart. Nothing else went wrong with the command; resubmit it through ${names.request} if the work is still needed.`
-      : `${record.ticket} was killed before finishing; resubmit only if the work is still needed.`}
+      ? `${record.ticket} did not finish because the daemon restarted while it was in flight. A restart does not hand running cargo processes to the new daemon. Nothing else went wrong with the command, so resubmit it through ${names.request} if you still need the work.`
+      : `${record.ticket} was killed before it finished. Resubmit it only if you still need the work.`}
   </Agent.Context>
 );
 

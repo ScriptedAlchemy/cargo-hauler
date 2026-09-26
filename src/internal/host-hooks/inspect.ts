@@ -61,7 +61,7 @@ const isAssignment = (token: string | undefined): token is string =>
 const commandLookupFlag = /^-[A-Za-z]*[vV]/u;
 
 /**
- * No `cwd` here on purpose: the rewritten command runs in the same shell as
+ * No `cwd` here, because the rewritten command runs in the same shell as
  * the original, so `hauler exec` inherits the working directory through
  * `process.cwd()`. Passing the hook envelope's cwd would override an
  * in-command `cd crates/foo && cargo build`.
@@ -78,10 +78,11 @@ export interface InspectedCommand {
   readonly hasCargo: boolean;
   /**
    * At least one simple command is neither a cargo invocation the rewrite
-   * brokers nor an already-brokered `hauler exec` — `cd crates/foo && cargo
-   * build`, `cargo test | tail -20`, `cargo check; rm -rf target`. The daemon
-   * governs only the cargo segments, so such an input is never `allow`ed as a
-   * whole; the host's own permission flow decides the rewritten command.
+   * brokers nor an already-brokered `hauler exec`, as in
+   * `cd crates/foo && cargo build`, `cargo test | tail -20`, or
+   * `cargo check; rm -rf target`. The daemon governs only the cargo segments,
+   * so such an input is never `allow`ed as a whole. The host's own permission
+   * flow decides the rewritten command.
    */
   readonly ungoverned: boolean;
 }
@@ -255,13 +256,13 @@ const wrapWords = (words: readonly BashWord[], cargoIndex: number, options: Rewr
 ];
 
 /**
- * Tokens the round-trip comparison treats as one statement separator: the
+ * Tokens the round-trip comparison treats as one statement separator. The
  * printer emits `;\n` where the source had `;` or a newline.
  */
 const separatorTypes = new Set<string>([T.NEWLINE, T.SEMI]);
 /**
  * Reserved words and grouping tokens the printer pads with newlines (`then\n`,
- * `do\n`, `{ \n`, `\nfi`). Separators next to them carry no meaning: the lexer
+ * `do\n`, `{ \n`, `\nfi`). Separators next to them carry no meaning, because the lexer
  * only produces these token types in command position, so a missing separator
  * would already show up as a different token type.
  */

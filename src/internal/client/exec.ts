@@ -74,7 +74,7 @@ export interface RunExecOptions {
   readonly silenceThresholdMs?: number;
   /**
    * The process's terminal as the generated executable envelope probed it
-   * (agent-bundle#511, `main(argv, { terminal })`) — the client probes
+   * (agent-bundle#511, `main(argv, { terminal })`). The client probes
    * nothing itself. `stdout.kind` decides whether a PATH shim may
    * auto-background (#223) and whether an auto-background notice must say
    * where a redirected stdout's output went; `sharesTarget` (fd 1)
@@ -83,8 +83,8 @@ export interface RunExecOptions {
    * direct cargo; each channel's `color` decides whether cargo's captured
    * `always` color reaches `io` or is stripped first, so a pipe or capture
    * never sees escape bytes (demux-rendered diagnostics keep theirs on the
-   * wire). Absent — a caller outside the envelope — reads as two separate
-   * colorless pipes.
+   * wire). When it is absent, as for a caller outside the envelope, it reads
+   * as two separate colorless pipes.
    */
   readonly terminal?: AgentTerminal;
   readonly workspaceRoot?: string;
@@ -141,9 +141,9 @@ const terminationExitCode = (signal: TerminationSignal): number => signalExitCod
 
 /**
  * Resolves with the first SIGINT/SIGTERM delivered to this process. Handlers
- * are installed only while a fiber awaits this effect — resuming or
- * interrupting removes them — so Node's default (exit on signal) is back in
- * force as soon as the run is over.
+ * are installed only while a fiber awaits this effect, and resuming or
+ * interrupting removes them. Node's default (exit on signal) applies again
+ * as soon as the run is over.
  */
 const awaitTerminationSignal: Effect.Effect<TerminationSignal> = Effect.callback<TerminationSignal>(
   (resume) => {
@@ -404,7 +404,7 @@ const handleServerMessage = (
               }),
         );
         const capHost = shellCapHost(options.host, process.env);
-        // What the shell tool actually waits for is the queue plus the run:
+        // The shell tool waits for the queue plus the run, so
         // a five-minute build behind six minutes of queued work is killed
         // just as surely as an eleven-minute build.
         const totalEtaMs = message.etaMs === undefined ? undefined : message.etaMs + waitEtaMs;
@@ -592,7 +592,7 @@ const handleServerMessage = (
       case 'detach-result':
         if (!message.detached) {
           options.io.writeStderr(
-            `[cargo-hauler] daemon did not detach ticket ${message.ticket} (not owned by this connection); it may be killed when this client exits\n`,
+            `[cargo-hauler] daemon did not detach ticket ${message.ticket} (not owned by this connection). The daemon may kill it when this client exits.\n`,
           );
         }
         yield* Deferred.succeed(state.handshake.acknowledged, undefined);
@@ -729,9 +729,9 @@ const streamBrokered = (
 
     // A foreground ticket outlives its client's disconnect (holdStop), so a
     // terminal's Ctrl-C or a `timeout` wrapper must ask the daemon to stop
-    // it — and wait for the answer — before this process exits. Scoped to
-    // this connection attempt: a failed open must not leave handlers behind
-    // for the passthrough that follows.
+    // it and wait for the answer before this process exits. The relay is
+    // scoped to this connection attempt, because a failed open must not leave
+    // handlers behind for the passthrough that follows.
     const relay = yield* Effect.forkScoped(
       awaitTerminationSignal.pipe(
         Effect.flatMap((signal) =>
@@ -833,7 +833,7 @@ const streamBrokered = (
       );
       if (!acknowledged) {
         options.io.writeStderr(
-          `[cargo-hauler] daemon did not confirm the detach of ticket ${result.ticket ?? '?'} within ${detachAckTimeout}; check it with hauler result\n`,
+          `[cargo-hauler] daemon did not confirm the detach of ticket ${result.ticket ?? '?'} within ${detachAckTimeout}. Check it with hauler result.\n`,
         );
       }
     }

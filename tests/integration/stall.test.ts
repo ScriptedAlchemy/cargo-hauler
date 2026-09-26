@@ -193,7 +193,7 @@ describe('stall detection primitives', () => {
 
   it('words the automatic kill reason in whole minutes', () => {
     expect(stalledKillReason(12 * minute + 30_000)).toBe(
-      'stalled: no CPU for 12m after owner disconnected; killed automatically',
+      'stalled: no CPU for 12m after owner disconnected, so the daemon killed it',
     );
   });
 
@@ -373,12 +373,12 @@ describe('stall detection on running leaders (#46)', () => {
             (record) => record?.status === 'killed',
           );
           expect(settled?.error).toBe(
-            'stalled: no CPU for 60m after owner disconnected; killed automatically',
+            'stalled: no CPU for 60m after owner disconnected, so the daemon killed it',
           );
           const exit = yield* Deferred.await(job.exit).pipe(Effect.timeout('10 seconds'));
           expect(exit.status).toBe('killed');
           expect(exit.error).toBe(
-            'stalled: no CPU for 60m after owner disconnected; killed automatically',
+            'stalled: no CPU for 60m after owner disconnected, so the daemon killed it',
           );
         }),
       ).pipe(Effect.provide(layer.pipe(Layer.provide(fake.layer))));

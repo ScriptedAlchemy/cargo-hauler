@@ -55,7 +55,7 @@ export const formatBytes = (bytes: number): string => {
   return `${unit === 0 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`;
 };
 
-/** Hand-rolled rather than `node:path`: this module also runs in the browser dashboard. */
+/** Hand-rolled rather than `node:path`, because this module also runs in the browser dashboard. */
 export const pathBasename = (path: string): string => path.split('/').filter(Boolean).at(-1) ?? path;
 
 export const shortenPath = (path: string, maxLength = 38): string => {
@@ -71,7 +71,7 @@ export const shortenPath = (path: string, maxLength = 38): string => {
 };
 
 /**
- * A command line for display: the program is shown by basename so a request
+ * A command line for display. The program shows by basename, so a request
  * that arrived as `/home/me/.cargo/bin/cargo check` (the PATH shim passes the
  * real binary to avoid re-entering itself) reads as `cargo check`.
  */

@@ -7,8 +7,8 @@ import { documentValue } from '../util/json.js';
 
 /**
  * The hook libraries' shell event read from the framework's canonical payload
- * (agent-bundle#466): one cross-host reading of the envelope, each field absent
- * when the host did not send it. A `tool/before` payload is the same reading
+ * (agent-bundle#466). It is one cross-host reading of the envelope, with each
+ * field absent when the host did not send it. A `tool/before` payload is the same reading
  * without `toolResponse`, so `handleBeforeShell` takes the result as is.
  */
 export const shellEventFrom = (payload: AgentEventPayload<'tool/before' | 'tool/after'>): AfterShellEvent => ({
@@ -23,7 +23,7 @@ export const shellEventFrom = (payload: AgentEventPayload<'tool/before' | 'tool/
 /**
  * `continue` is the no-decision answer (the host's own flow applies), `allow`
  * is the explicit `tool/before` approval for a hauler-governed rewrite, and
- * `deny` blocks. No route ever returns `ask`: the hauler adds no prompts.
+ * `deny` blocks. No route ever returns `ask`, because the hauler adds no prompts.
  */
 export interface EventDecision {
   readonly outcome: 'continue' | 'allow' | 'deny';

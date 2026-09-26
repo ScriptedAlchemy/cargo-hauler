@@ -376,7 +376,7 @@ describe('daemon restart', () => {
         running: true,
         subcommand: 'restart',
       });
-      expect(result.message).toBe('cargo-hauler daemon restarted: pid 41 (0.4.1) → pid 42 (0.4.4)');
+      expect(result.message).toBe('cargo-hauler daemon restarted from pid 41 (0.4.1) to pid 42 (0.4.4)');
       expect(daemonExitCode(result)).toBe(0);
     }));
 
@@ -390,7 +390,7 @@ describe('daemon restart', () => {
       });
       expect(calls).toEqual(['start']);
       expect(result).toMatchObject({ pid: 42, previousPid: null, running: true, subcommand: 'restart' });
-      expect(result.message).toBe('cargo-hauler daemon was not running; started pid 42 (0.4.4)');
+      expect(result.message).toBe('cargo-hauler daemon was not running, so the restart started pid 42 (0.4.4)');
       expect(daemonExitCode(result)).toBe(0);
     }));
 
@@ -401,7 +401,7 @@ describe('daemon restart', () => {
       expect(calls).toEqual(['stop']);
       expect(result).toMatchObject({ pid: 41, previousPid: 41, running: true, subcommand: 'restart' });
       expect(result.message).toContain('pid 41 (0.4.1) is still running 40ms after the shutdown request');
-      expect(result.message).toContain('not restarted');
+      expect(result.message).toContain('so the restart did not start a new daemon');
       expect(daemonExitCode(result)).toBe(1);
     }));
 
@@ -422,7 +422,7 @@ describe('daemon restart', () => {
       const result = yield* restartDaemon(config, dependencies);
 
       expect(result.message).toContain('identity probe timed out');
-      expect(result.message).toContain('not restarted');
+      expect(result.message).toContain('so the restart did not start a new daemon');
       expect(result.message).not.toContain('after the shutdown request');
       expect(result).toMatchObject({ pid: 41, previousPid: 41, running: true });
       expect(daemonExitCode(result)).toBe(1);

@@ -67,9 +67,9 @@ export const daemonExitCode = (result: DaemonControlResult): number => {
       return result.message === 'completed' || result.message === 'already-running' ? 0 : 1;
     case 'start':
     case 'restart':
-      // Success is a running daemon that is not the one we found: a daemon
-      // that outlived the grace is still serving, but was not restarted —
-      // for `start`, it is a daemon of another version that was not replaced.
+      // Success is a running daemon that is not the one we found. A daemon
+      // that outlived the grace is still serving but was not restarted. For
+      // `start`, it is a daemon of another version that was not replaced.
       return result.running && result.pid !== null && result.pid !== result.previousPid ? 0 : 1;
     case 'status':
       return result.running && result.previousPid === undefined ? 0 : 1;
@@ -190,8 +190,8 @@ const causeMessage = (cause: unknown): string =>
 /**
  * `hauler daemon start`: `ensureDaemonRunning`, so a daemon of another
  * version answering the socket is replaced on the way. One that outlives the
- * grace is reported as running and not replaced — `previousPid` equal to
- * `pid`, the verdict `daemonExitCode` turns into a failure.
+ * grace is reported as running and not replaced, with `previousPid` equal to
+ * `pid`, which `daemonExitCode` turns into a failure.
  */
 export const startDaemon = (
   config: DaemonConfigShape = resolveDaemonConfig(),
@@ -200,7 +200,7 @@ export const startDaemon = (
   const failedStart = (): Effect.Effect<DaemonControlResult> =>
     Effect.succeed(
       result(config, 'start', {
-        message: `cargo-hauler daemon did not come up; check ${config.logPath}`,
+        message: `cargo-hauler daemon did not come up. Check ${config.logPath}`,
         pid: null,
         report: null,
         running: false,
@@ -251,12 +251,12 @@ export const startDaemon = (
         ),
       DaemonUnreachable: failedStart,
       // A refused state path fails before the log is opened, so pointing at
-      // the log alone would send the user to a file that was never written;
-      // the reason names the path they have to fix.
+      // the log alone would send the user to a file that was never written.
+      // The reason names the path they have to fix.
       SpawnDaemonError: (error) =>
         Effect.succeed(
           result(config, 'start', {
-            message: `cargo-hauler daemon did not come up; check ${config.logPath}: ${causeMessage(error.cause)}`,
+            message: `cargo-hauler daemon did not come up: ${causeMessage(error.cause)}. Check ${config.logPath}`,
             pid: null,
             report: null,
             running: false,
@@ -278,12 +278,12 @@ const stopMessage = (
         : 'cargo-hauler daemon stopped';
     case 'connection-closed':
       return running
-        ? `cargo-hauler daemon connection closed before acknowledging shutdown; pid ${pid} is still running`
+        ? `cargo-hauler daemon connection closed before acknowledging shutdown, and pid ${pid} is still running`
         : 'cargo-hauler daemon connection closed before acknowledging shutdown';
     case 'timeout':
       return `cargo-hauler daemon did not acknowledge the shutdown request (${outcome.phase} timeout)`;
     case 'unreachable':
-      return 'cargo-hauler daemon could not be reached; its running state is unknown';
+      return 'cargo-hauler daemon could not be reached, so its running state is unknown';
     case 'absent':
       return 'cargo-hauler daemon is not running';
     case 'refused':
@@ -367,7 +367,7 @@ const stopDaemonAt = (
       ControlTimeout: (error) =>
         Effect.succeed(
           probeFailed(
-            `cargo-hauler daemon identity probe timed out during ${error.phase}; its running state is unknown`,
+            `cargo-hauler daemon identity probe timed out during ${error.phase}, so its running state is unknown`,
           ),
         ),
       DaemonUnreachable: (error) => {
@@ -376,7 +376,7 @@ const stopDaemonAt = (
           absent
             ? stopped({ kind: 'absent' }, false, null)
             : probeFailed(
-                'cargo-hauler daemon identity probe could not reach the process; its running state is unknown',
+                'cargo-hauler daemon identity probe could not reach the process, so its running state is unknown',
               ),
         );
       },
@@ -438,7 +438,7 @@ export const statusDaemon = (
       SpawnDaemonError: (error) =>
         Effect.succeed(
           result(config, 'status', {
-            message: `cargo-hauler daemon could not be started; check ${config.logPath}: ${causeMessage(error.cause)}`,
+            message: `cargo-hauler daemon could not be started: ${causeMessage(error.cause)}. Check ${config.logPath}`,
             pid: null,
             report: null,
             running: false,
@@ -447,7 +447,7 @@ export const statusDaemon = (
       DaemonReplacementFailed: (error) =>
         Effect.succeed(
           result(config, 'status', {
-            message: `cargo-hauler replacement daemon failed its version handshake (${error.cause._tag}); check ${config.logPath}`,
+            message: `cargo-hauler replacement daemon failed its version handshake (${error.cause._tag}). Check ${config.logPath}`,
             pid: null,
             report: null,
             running: false,
@@ -485,11 +485,11 @@ const versionText = (identity: DaemonIdentity | null): string =>
  * for the old pid to exit, then the usual start. A daemon of another version
  * is replaced automatically by `ensureDaemonRunning` on the next call; this
  * command replaces a daemon of any version. In-flight tickets are not handed
- * over: the old daemon settles them itself as it shuts down (`killed`, error
- * `daemon shutdown`); `orphaned by daemon restart` is stamped by the next
- * daemon's first ledger pass only on rows a daemon that died without shutting
- * down never marked. The old daemon is never signalled past the
- * shutdown request; one that does not exit within the grace is reported,
+ * over. The old daemon settles them itself as it shuts down (`killed`, error
+ * `daemon shutdown`). The next daemon's first ledger pass stamps
+ * `orphaned by daemon restart` only on rows that a daemon which died without
+ * shutting down never marked. The old daemon is never signalled past the
+ * shutdown request. One that does not exit within the grace is reported,
  * not killed.
  */
 export const restartDaemon = (
@@ -507,7 +507,7 @@ export const restartDaemon = (
       }
       const after = yield* dependencies.identify(config.socketPath);
       return restart({
-        message: `cargo-hauler daemon was not running; started pid ${started.pid} (${versionText(after)})`,
+        message: `cargo-hauler daemon was not running, so the restart started pid ${started.pid} (${versionText(after)})`,
         pid: started.pid,
         previousPid: null,
         report: null,
@@ -523,7 +523,7 @@ export const restartDaemon = (
       return restart({
         message:
           stopped.shutdown === undefined && stopped.running === null
-            ? `${stopped.message}; cargo-hauler daemon pid ${before.pid} (${before.version}) is still running ${formatMs(dependencies.exitGraceMs)} later; not restarted — retry once it has exited`
+            ? `${stopped.message}. cargo-hauler daemon pid ${before.pid} (${before.version}) is still running ${formatMs(dependencies.exitGraceMs)} later, so the restart did not start a new daemon. Retry once it has exited.`
             : notReplacedMessage(before, dependencies.exitGraceMs),
         pid: before.pid,
         previousPid: before.pid,
@@ -541,7 +541,7 @@ export const restartDaemon = (
     }
     const after = yield* dependencies.identify(config.socketPath);
     return restart({
-      message: `cargo-hauler daemon restarted: pid ${before.pid} (${before.version}) → pid ${started.pid} (${versionText(after)})`,
+      message: `cargo-hauler daemon restarted from pid ${before.pid} (${before.version}) to pid ${started.pid} (${versionText(after)})`,
       pid: started.pid,
       previousPid: before.pid,
       report: null,

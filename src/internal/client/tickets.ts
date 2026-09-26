@@ -48,7 +48,7 @@ export class DaemonRecordUnreadableError extends Data.TaggedError('DaemonRecordU
   constructor(fields: { readonly socketPath: string }) {
     super({
       ...fields,
-      message: `cargo-hauler daemon at ${fields.socketPath} sent a ticket record this client (${version}) cannot read; it is another release or build, and \`hauler status\` names it with the command that replaces it`,
+      message: `cargo-hauler daemon at ${fields.socketPath} sent a ticket record this client (${version}) cannot read. The daemon is another release or build, and \`hauler status\` names it with the command that replaces it.`,
     });
   }
 }
@@ -82,8 +82,8 @@ const readRecord = (
 };
 
 /**
- * One request, one answer: resolves on the reply carrying this request's id,
- * and fails typed when that reply is the daemon's `error` — otherwise an
+ * One request, one answer. It resolves on the reply carrying this request's
+ * id, and fails typed when that reply is the daemon's `error`. Otherwise an
  * `await` with a rejected `maxWaitMs` would sit out its whole timeout waiting
  * for an `await-result` the daemon never sends.
  */
@@ -136,9 +136,10 @@ export const fetchTicket = (
   ).pipe(Effect.flatMap((result) => readRecord(result?.request ?? null, config.socketPath)));
 
 /**
- * Ask the daemon to stop a ticket: a queued job is dropped, a running leader
- * gets SIGTERM (then SIGKILL after the grace period) on its process group.
- * `false` means there was nothing to kill — unknown or already finished.
+ * Ask the daemon to stop a ticket. The daemon drops a queued job and sends a
+ * running leader's process group SIGTERM, then SIGKILL after the grace
+ * period. `false` means there was nothing to kill, because the ticket is
+ * unknown or already finished.
  */
 export const killTicket = (
   ticket: string,
@@ -213,10 +214,10 @@ export interface AwaitProgress {
 }
 
 /**
- * `awaitTicket` with a heartbeat: while the daemon-side wait blocks, the
- * ticket's live record is polled and reported through `onProgress` so a
+ * `awaitTicket` with a heartbeat. While the daemon-side wait blocks, this
+ * polls the ticket's live record and reports it through `onProgress`, so a
  * terminal wait shows queue phase, elapsed time, and the cost estimate
- * instead of silence. Progress is best-effort — a failed poll never fails
+ * instead of silence. Progress is best-effort, and a failed poll never fails
  * the await.
  */
 export const awaitTicketWithProgress = (

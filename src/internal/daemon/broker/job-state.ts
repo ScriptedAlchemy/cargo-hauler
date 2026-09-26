@@ -152,7 +152,7 @@ export interface DiagnosticAccumulator {
 
 /** Per-unit completion state accumulated from the cargo JSON message stream. */
 export interface DemuxState {
-  /** Package name -> target kinds with a completed compiler-artifact. */
+  /** Maps a package name to the target kinds with a completed compiler-artifact. */
   readonly unitKinds: Map<string, Set<string>>;
   /** Packages whose lib-shaped unit produced an error-level diagnostic. */
   readonly libErrors: Set<string>;
@@ -177,7 +177,7 @@ export interface Job {
   readonly attachments: Map<string, Attachment>;
   /** Closed (in the same sync frame as settlement) before exit fan-out begins. */
   readonly attachGate: { open: boolean };
-  /** Argv actually executed (demux appends --message-format; batching may add -p). */
+  /** The argv the daemon executed (demux appends --message-format, and batching may add -p). */
   execArgv: readonly string[];
   /** Non-null when the run is demultiplexed through cargo's JSON stream. */
   readonly demux: DemuxState | null;
@@ -397,8 +397,8 @@ export const guarded = (effect: Effect.Effect<void>): Effect.Effect<void> =>
 
 /**
  * One step of a settlement sequence. A defect (a busy sqlite ledger, a
- * metric registry fault) is logged and swallowed so the steps after it —
- * waiter notification, lane release, exit fan-out — still run; otherwise
+ * metric registry fault) is logged and swallowed so the steps after it
+ * (waiter notification, lane release, exit fan-out) still run. Otherwise
  * the claimed settlement would be lost and the ticket never terminal.
  */
 export const settlementStep = (label: string, effect: Effect.Effect<void>): Effect.Effect<void> =>
@@ -456,7 +456,7 @@ export const quietMsSinceOutput = (
 
 export const requeueReasonFor = (mode: AttachMode, status: FinishedStatus): string =>
   mode === 'identity'
-    ? 'coalesced run was killed; running your request directly'
+    ? 'coalesced run was killed, so the daemon runs your request directly'
     : `${mode === 'batch' ? 'batched' : 'covering'} ${
         status === 'killed' ? 'run was killed' : 'run failed'
-      }; running your request directly`;
+      }, so the daemon runs your request directly`;

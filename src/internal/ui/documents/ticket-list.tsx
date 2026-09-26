@@ -29,7 +29,7 @@ const outcome = (record: TicketSummary, nowMs: number): string => {
     case 'running': {
       const estimate = record.estimateMs === null ? '' : ` / ~${formatMs(record.estimateMs)}`;
       const stalled = record.stall === undefined ? '' : ` · stalled ${formatMs(record.stall.idleMs)}`;
-      // Past the stall factor but still alive: background it, do not kill it (#91).
+      // A run past the stall factor is still alive. Background it and do not kill it (#91).
       const overrun =
         record.estimateState === 'overrun'
           ? ` · overrun${record.p90Ms === undefined ? '' : ` (p90 ~${formatMs(record.p90Ms)})`}`
@@ -37,7 +37,7 @@ const outcome = (record: TicketSummary, nowMs: number): string => {
       return `running${timing}${estimate}${stalled}${overrun}`;
     }
     case 'done':
-      return record.attachedTo === null ? `done${timing}` : `done${timing} · rode ${record.attachedTo}`;
+      return record.attachedTo === null ? `done${timing}` : `done${timing} · attached to ${record.attachedTo}`;
     case 'failed':
       return `failed${timing}${record.exitCode === null ? '' : ` exit=${record.exitCode}`}`;
     case 'requested':
@@ -57,7 +57,7 @@ const outcome = (record: TicketSummary, nowMs: number): string => {
 const where = (record: TicketSummary): string =>
   [record.host, record.session, shortenPath(record.cwd, 30)].filter((part) => part !== null).join(' · ');
 
-/** A table of tickets — the in-flight and recent sections of status, and the whole of log. */
+/** A table of tickets. It renders the in-flight and recent sections of status, and the whole of log. */
 export const TicketList = ({ empty, heading, nowMs, records }: TicketListProps) => (
   <>
     {heading === undefined ? null : <Heading>{heading}</Heading>}

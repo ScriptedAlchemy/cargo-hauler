@@ -391,7 +391,7 @@ export const statusInputSchema = z
       .max(statusRowStatuses.length)
       .optional()
       .describe(
-        'Filter by projected status, where stopped-daemon active rows appear as orphaned and running matches nothing',
+        'Filter by projected status. While the daemon is stopped, active rows appear as orphaned and running matches nothing.',
       ),
     commandContains: z.string().min(1).optional(),
   })
@@ -537,7 +537,7 @@ export const daemonResultSchema = z
  * (agent-bundle#454), so the wire is the only bound. Callers wanting longer
  * call again.
  */
-export const awaitMaxWaitMessage = `maxWaitMs is capped at ${awaitCeilingMs} ms (2 h) per call — the daemon's await ceiling; call await again to keep waiting`;
+export const awaitMaxWaitMessage = `maxWaitMs is capped at ${awaitCeilingMs} ms (2 h) per call, the daemon's await ceiling. Call await again to keep waiting.`;
 
 export const ticketInputSchema = z
   .object({
@@ -558,7 +558,7 @@ export const resultInputSchema = z
     full: z
       .boolean()
       .optional()
-      .describe('Render the on-disk output log, its last 768 KiB when larger, instead of the stored tail'),
+      .describe('Render the on-disk output log instead of the stored tail. A log over 768 KiB renders its last 768 KiB.'),
   })
   .strict();
 
@@ -604,7 +604,7 @@ export const requestInputSchema = z
       .max(50)
       .optional()
       .describe(
-        'Tickets (cc-N) that must finish before this request starts; it fails if any of them fails or is killed',
+        'Tickets (cc-N) that must finish before this request starts. The request fails if any of them fails or is killed.',
       ),
   })
   .strict();

@@ -476,7 +476,7 @@ describe('runExecClient', () => {
       // `cargo test > out.log` auto-backgrounded: out.log holds only this
       // notice, so it must say where the test output actually went.
       expect(redirected.stderr()).toContain(
-        'your redirected stdout receives no output; once it runs, `hauler result cc-1` names its full log',
+        'Your redirected stdout receives no output. Once the ticket runs, `hauler result cc-1` names its full log.',
       );
 
       const terminal = collectIo();
@@ -1057,7 +1057,7 @@ describe('runExecClient', () => {
       expect(result).toEqual({ exitCode: 0, mode: 'passthrough' });
       expect(collected.stdout()).toContain('fake-out:build');
       expect(collected.stderr()).toContain('fake-err:build');
-      expect(collected.stderr()).toContain('daemon unreachable; running cargo directly');
+      expect(collected.stderr()).toContain('running cargo directly: daemon unreachable');
 
       const lines = readFileSync(join(fixture.config.stateDir, passthroughSpoolFileName), 'utf8')
         .trim()
@@ -1231,7 +1231,7 @@ describe('runExecClient', () => {
       });
       expect(result.mode).toBe('passthrough');
       expect(collected.stderr()).toContain('pid 4242 (0.0.0-previous) is still running');
-      expect(collected.stderr()).toContain('not restarted');
+      expect(collected.stderr()).toContain('so the restart did not start a new daemon');
       expect(collected.stderr()).not.toContain('daemon startup failed');
       expect(collected.stdout()).toContain('fake-out:check');
       // The direct run is spooled as a `passthrough` row for the daemon's

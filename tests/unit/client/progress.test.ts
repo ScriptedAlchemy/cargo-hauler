@@ -17,7 +17,7 @@ describe('formatProgressLine', () => {
       '[cargo-hauler] ticket cc-2 still running (30s)\n',
     );
     expect(formatProgressLine({ kind: 'passthrough', reason: 'daemon unreachable' })).toBe(
-      '[cargo-hauler] daemon unreachable; running cargo directly\n',
+      '[cargo-hauler] running cargo directly: daemon unreachable\n',
     );
     expect(
       formatProgressLine({
@@ -89,7 +89,7 @@ describe('formatProgressLine', () => {
         ticket: 'cc-9',
       }),
     ).toBe(
-      '[cargo-hauler] cc-9 queued — 0 ahead in cargo-hauler · wait ~0s · wait exceeds estimate — lane busy — check -p cargo-hauler\n',
+      '[cargo-hauler] cc-9 queued — 0 ahead in cargo-hauler · wait ~0s · wait exceeds estimate because the lane is busy — check -p cargo-hauler\n',
     );
 
     expect(
@@ -170,7 +170,7 @@ describe('formatProgressLine', () => {
         auto: { capMs: 540_000, host: 'claude', stdoutRedirected: true },
       }),
     ).toBe(
-      '[cargo-hauler] ticket cc-7 estimate (ETA 600s) exceeds the claude shell cap (9m); submitted in background, not run yet (exit 75); your redirected stdout receives no output; once it runs, `hauler result cc-7` names its full log\nRetrieve with: hauler result cc-7\nAwait with: hauler await cc-7\n',
+      '[cargo-hauler] ticket cc-7 estimate (ETA 600s) exceeds the claude shell cap (9m). It runs in the background and has not started yet (exit 75). Your redirected stdout receives no output. Once the ticket runs, `hauler result cc-7` names its full log.\nRetrieve with: hauler result cc-7\nAwait with: hauler await cc-7\n',
     );
     expect(
       formatProgressLine({
@@ -178,7 +178,7 @@ describe('formatProgressLine', () => {
         auto: { capMs: 540_000, host: 'claude', stdoutRedirected: false },
       }),
     ).toBe(
-      '[cargo-hauler] ticket cc-7 estimate (ETA 600s) exceeds the claude shell cap (9m); submitted in background, not run yet (exit 75)\nRetrieve with: hauler result cc-7\nAwait with: hauler await cc-7\n',
+      '[cargo-hauler] ticket cc-7 estimate (ETA 600s) exceeds the claude shell cap (9m). It runs in the background and has not started yet (exit 75).\nRetrieve with: hauler result cc-7\nAwait with: hauler await cc-7\n',
     );
     // An explicit --bg is not a conversion; the caller chose it.
     expect(formatProgressLine(base)).toBe(

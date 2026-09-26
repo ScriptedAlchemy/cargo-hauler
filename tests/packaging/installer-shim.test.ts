@@ -112,7 +112,7 @@ describe('cargo-hauler-install and the PATH cargo shim', () => {
     const first = run('install', 'cursor');
     expect(first.code).toBe(0);
     expect(first.stderr).toBe(
-      `Refreshed cargo shim ${shim}: it ran ${oldNode} ${oldHauler}; it now runs ${process.execPath} ${newHauler}.\n`,
+      `Refreshed cargo shim ${shim}. It ran ${oldNode} ${oldHauler} and now runs ${process.execPath} ${newHauler}.\n`,
     );
     const refreshed = readFileSync(shim, 'utf8');
     expect(refreshed).toBe(shimText(process.execPath, newHauler, '/opt/rust/bin/cargo'));
@@ -205,7 +205,7 @@ describe('cargo-hauler-install and the PATH cargo shim', () => {
     const install = run('install', 'cursor');
     expect([install.code, install.stderr]).toEqual([
       0,
-      `Refreshed cargo shim ${target}: it ran ${oldNode} ${oldHauler}; it now runs ${process.execPath} ${newHauler}.\n`,
+      `Refreshed cargo shim ${target}. It ran ${oldNode} ${oldHauler} and now runs ${process.execPath} ${newHauler}.\n`,
     ]);
     expect(lstatSync(shim).isSymbolicLink()).toBe(true);
     expect(readFileSync(target, 'utf8')).toBe(shimText(process.execPath, newHauler, '/opt/rust/bin/cargo'));

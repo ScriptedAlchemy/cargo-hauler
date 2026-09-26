@@ -18,7 +18,7 @@ export interface AfterShellEvent {
   readonly sessionId?: string;
   readonly finishedAsOfMs?: number;
   readonly finishedTickets?: readonly FinishedTicket[];
-  /** The completed call's input as the host sent it: an object on Claude and Cursor, any JSON on Codex. */
+  /** The completed call's input as the host sent it, an object on Claude and Cursor and any JSON on Codex. */
   readonly toolInput?: unknown;
   readonly toolName?: string;
   readonly toolResponse?: unknown;
@@ -32,7 +32,7 @@ export interface AfterShellResult {
 
 const hiddenCargoReason = 'cargo ran outside cargo-hauler (wrapper script, alias, or shell variable)';
 const hiddenCargoContext =
-  'cargo-hauler: this command ran cargo outside the broker — through a wrapper script, alias, or shell variable the hook cannot see — so it skipped lane serialization, attach, and the ledger. Name `cargo` in the command itself (env prefixes are fine: `RUSTC_WRAPPER= cargo test …`) or run `hauler exec -- cargo …` so the daemon brokers it.';
+  'cargo-hauler: this command ran cargo outside the broker, through a wrapper script, alias, or shell variable the hook cannot see. The run skipped lane serialization, attach, and the ledger. Name `cargo` in the command itself, or run `hauler exec -- cargo …` so the daemon brokers it. An env prefix such as `RUSTC_WRAPPER= cargo test …` is fine.';
 
 const extractExitCode = (toolResponse: unknown): number | undefined => {
   if (!isRecord(toolResponse)) {
@@ -86,7 +86,7 @@ const decideAfterShell = async (
   // Only cargo/hauler activity belongs in the telemetry log; every other
   // shell command still flows through so completion notifications inject.
   // A command that never named cargo but printed cargo's status lines ran it
-  // unbrokered; it is recorded with the reason and the agent is told.
+  // unbrokered. The hook records it with the reason and tells the agent.
   const hidden = hiddenCargoRun(command, extractShellOutput(event.toolResponse));
   if (hidden || command.includes('cargo') || command.includes('hauler')) {
     const record = services.record ?? appendHookRecord;

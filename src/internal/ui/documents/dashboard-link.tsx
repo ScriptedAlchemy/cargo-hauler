@@ -10,13 +10,13 @@ export interface DashboardLinkProps {
 }
 
 /**
- * Where the live dashboard is. Deliberately a context line, not an
- * `Agent.Resource` block: the App is attached to `hauler_dashboard` through
+ * Where the live dashboard is. This is a context line, not an
+ * `Agent.Resource` block. The App is attached to `hauler_dashboard` through
  * its `_meta.ui.resourceUri`, and hosts that cannot render MCP Apps must not
  * fail the whole document over a resource link they cannot show.
  */
 export const DashboardLink = ({ names }: DashboardLinkProps) => (
   <Agent.Context>
-    {`Dashboard: ${APP_RESOURCE_URI} — ${names.dashboard} opens it on hosts that render MCP Apps; elsewhere run the browser preview (see the hauler-dashboard skill).`}
+    {`Dashboard: ${APP_RESOURCE_URI}. ${names.dashboard} opens it on hosts that render MCP Apps. On other hosts, run the browser preview from the hauler-dashboard skill.`}
   </Agent.Context>
 );

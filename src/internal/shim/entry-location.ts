@@ -66,7 +66,7 @@ export const globalHaulerArgv = (
     return [process.execPath, location.path];
   }
   throw new Error(
-    'could not resolve `hauler` on PATH; install it with `npm i -g cargo-hauler`',
+    'could not resolve `hauler` on PATH. Install it with `npm i -g cargo-hauler`',
   );
 };
 
@@ -76,7 +76,7 @@ const nodeScript = /\.[cm]?js$/u;
  * The canonical script behind one PATH candidate, or `null` when it is not a
  * regular JavaScript file the shim can hand to `node` (a directory, a dangling
  * link, a version-manager shim that resolves to a native binary), or resolves
- * into a host plugin copy — which is exactly what the shim must not embed.
+ * into a host plugin copy, which is exactly what the shim must not embed.
  */
 const pathHaulerScript = (candidate: string): string | null => {
   let resolved: string;

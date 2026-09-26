@@ -36,9 +36,9 @@ const KachePressure = ({ pressure }: { readonly pressure: KachePressureModel }) 
 );
 
 /**
- * Optional kache index: freshness, coverage, store pressure, and the slowest
- * crates by profile. A daemon that reported no kache field renders nothing; a
- * daemon that looked and found no index says so honestly.
+ * The optional kache index, with freshness, coverage, store pressure, and the
+ * slowest crates by profile. A daemon that reported no kache field renders
+ * nothing. A daemon that looked and found no index says so.
  */
 export const KacheStats = ({ kache, nowMs, slowestLimit }: KacheStatsProps) => {
   const model = kacheModel(kache, slowestLimit, nowMs);
@@ -46,7 +46,7 @@ export const KacheStats = ({ kache, nowMs, slowestLimit }: KacheStatsProps) => {
     case 'unknown':
       return null;
     case 'unavailable':
-      return <UnavailableState what="kache">{`${model.reason}; cost priors fall back to ledger history.`}</UnavailableState>;
+      return <UnavailableState what="kache">{`${model.reason}. Cost priors fall back to ledger history.`}</UnavailableState>;
     case 'available':
       return (
         <>

@@ -35,8 +35,9 @@ export const diagnosticCounts = (
 
 /**
  * The dependency watcher records `prerequisite cc-N <status>` when it fails
- * a queued job without starting it. Check the lifecycle too: an executed
- * command with similar error text is still a failed run, not a blocked one.
+ * a queued job without starting it. Check the lifecycle too, because an
+ * executed command with similar error text is still a failed run, not a
+ * blocked one.
  */
 export const failedPrerequisite = (
   record: Pick<TicketSummary, 'status' | 'startedAtMs' | 'exitCode' | 'error'>,

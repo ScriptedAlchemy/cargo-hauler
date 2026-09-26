@@ -11,19 +11,19 @@ export const BatchTestSummary = async ({ record }: { readonly record: DisplayReq
   if (!isSharedTestRun(record)) return null;
   const output = await loadBatchTestOutput(record.outputPath);
   const invocation = record.execArgv === null && record.attachedTo !== null
-    ? `${record.attachedTo}'s composite invocation; inspect that ticket's Ran as row for the exact command`
+    ? `${record.attachedTo}'s composite invocation. Inspect that ticket's Ran as row for the exact command`
     : 'the composite invocation shown in Ran as';
   return (
     <>
       <Heading>Shared test-run summaries (all observed binaries)</Heading>
       <Agent.Context>
-        {`This ticket used ${invocation}. Its output and exit are shared, not a separately executed per-package run. Folding may widen packages and apply the union of test filters across binaries; these counts are not counts for this ticket's original filter alone. The trailing output below can belong to another binary.`}
+        {`This ticket used ${invocation}. This ticket shares that run's output and exit, and did not run as a separate per-package run. Folding may widen packages and apply the union of test filters across binaries, so these counts are not counts for this ticket's original filter alone. The trailing output below can belong to another binary.`}
       </Agent.Context>
       {output.summaries.length === 0 ? (
         <Agent.Text>
           {output.kind === 'unavailable'
-            ? 'Binary summaries unavailable: the retained log is missing or unreadable. The tail alone cannot establish this package’s result.'
-            : 'No complete binary summaries were observed in the retained log. This is not evidence that this package ran zero tests or passed.'}
+            ? 'Binary summaries unavailable: the retained log is missing or unreadable. The tail alone cannot establish this package\'s result.'
+            : 'The retained log has no complete binary summaries. That does not show that this package ran zero tests or passed.'}
         </Agent.Text>
       ) : (
         <CodeBlock lang="text">
@@ -32,7 +32,7 @@ export const BatchTestSummary = async ({ record }: { readonly record: DisplayReq
       )}
       {output.incomplete || record.status === 'running' ? (
         <Agent.Context>
-          The index is partial: the run may still be active, or log retention, a missing heading, or the bounded scan omitted output. No per-ticket test verdict is inferred.
+          The index is partial. The run may still be active, or log retention, a missing heading, or the bounded scan omitted output. The hauler infers no per-ticket test verdict.
         </Agent.Context>
       ) : null}
     </>
