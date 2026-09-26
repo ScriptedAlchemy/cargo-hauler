@@ -40,6 +40,7 @@ import { AnsiStreamStripper } from '../util/ansi.js';
 import { shortId } from '../util/id.js';
 import { LineBuffer } from '../platform/ndjson.js';
 import { ensurePrivateDir, ensurePrivateFile } from '../platform/private-state.js';
+import { socketErrorCode } from '../platform/socket-errors.js';
 
 import { ensureDaemonRunning, type EnsureDaemonError } from './ensure-daemon.js';
 import {
@@ -959,13 +960,30 @@ const ensureForExec = (
   const ensure =
     options.ensureDaemon ??
     (() => ensureDaemonRunning(config, undefined, options.io.writeStderr).pipe(Effect.asVoid));
+  const report = (line: string) =>
+    Effect.sync(() => {
+      options.io.writeStderr(`[cargo-hauler] ${line}\n`);
+      return null;
+    });
   return ensure().pipe(
     Effect.as<PassthroughMode | null>(null),
     Effect.catchTags({
+      ConnectionClosed: (error) =>
+        report(`daemon closed the connection before answering its readiness ping (socket ${error.socketPath})`),
       ControlTimeout: () => Effect.succeed(null),
       DaemonIncompatible: (error) => Effect.succeed({ reason: error.message, spool: true }),
       DaemonNewer: (error) => Effect.succeed({ reason: error.message, spool: true }),
       DaemonNotReplaced: (error) => Effect.succeed({ reason: error.message, spool: true }),
+      DaemonReplacementFailed: (error) =>
+        report(`replacement daemon failed its version handshake (${error.cause._tag}) at ${error.socketPath}`),
+      DaemonUnreachable: (error) =>
+        report(
+          `daemon socket at ${error.socketPath} could not be opened (${socketErrorCode(error.cause) ?? 'no errno'})`,
+        ),
+      SpawnDaemonError: (error) =>
+        report(
+          `daemon startup failed: ${error.cause instanceof Error ? error.cause.message : String(error.cause)}`,
+        ),
     }),
     Effect.catchCause((cause) =>
       Effect.sync(() => {
