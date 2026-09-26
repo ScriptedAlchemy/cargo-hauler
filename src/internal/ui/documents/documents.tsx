@@ -2,7 +2,7 @@ import { Agent } from '@agent-bundle/runtime';
 import React from 'react';
 
 import { APP_RESOURCE_URI } from '../../../constants.js';
-import { awaitCeilingMs } from '../../contracts/protocol.js';
+import { awaitCeilingMs, defaultAwaitMs } from '../../contracts/protocol.js';
 import { formatMs } from '../shared/format.js';
 import { documentValue } from '../../util/json.js';
 import { countWord } from '../../util/text.js';
@@ -187,7 +187,7 @@ export const AwaitDocument = ({
     {result.request === null ? null : <TicketCard nowMs={nowMs} record={result.request} />}
     {result.timedOut ? (
       <Agent.Context>
-        {`The ${formatMs(maxWaitMs)} wait expired before ${result.ticket} finished. Call ${names.await} again instead of polling ${names.result} in a tight loop. Each call waits up to ${formatMs(awaitCeilingMs)}.`}
+        {`The ${formatMs(maxWaitMs)} wait expired before ${result.ticket} finished. Call ${names.await} again instead of polling ${names.result} in a tight loop. A plain call waits ${formatMs(defaultAwaitMs)}, and ${names.awaitMaxWait} raises that up to ${formatMs(awaitCeilingMs)}.`}
       </Agent.Context>
     ) : result.request === null ? (
       <TicketNotKnown daemon={result.daemon} names={names} ticket={result.ticket} />

@@ -46,7 +46,8 @@ Commands:
       ends in-flight tickets as killed with "daemon shutdown".
   install-shim [--dir DIR] [--real-cargo PATH] [--force]
       Install an optional PATH cargo shim.
-  status | log | last | await <ticket> | result <ticket> | request [--after TICKET] -- <cargo command>
+  status | log | last | await <ticket> | result <ticket> | kill <ticket> | web
+  request [--after TICKET] -- <cargo command>
       Routed commands. Run \`cargo-hauler --help\` for their options.
 `;
 

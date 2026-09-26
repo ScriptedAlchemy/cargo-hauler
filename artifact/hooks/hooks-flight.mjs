@@ -22085,6 +22085,7 @@ const detachRequestSchema = zod__rspack_import_0/* .object */.Ikc({
     ticket: zod__rspack_import_0/* .string */.YjP().min(1)
 });
 /** Await ceiling (2h) — the single source for daemon wire and operation schemas. */ const awaitCeilingMs = 7200000;
+/** How long one await waits when the caller names no wait. */ const defaultAwaitMs = 30000;
 const awaitRequestSchema = zod__rspack_import_0/* .object */.Ikc({
     type: zod__rspack_import_0/* .literal */.euz('await'),
     id: zod__rspack_import_0/* .string */.YjP().min(1),

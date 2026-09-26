@@ -5,7 +5,8 @@ import { AwaitStream } from '../../../internal/ui/documents/streaming.js';
 import { surfaceNames } from '../../../internal/ui/documents/surface.js';
 import { awaitResultSchema, ticketInputSchema } from '../../../internal/contracts/tool-schemas.js';
 import { requestDaemonConfig } from '../../../internal/operations/request-config.js';
-import { awaitTicketResult, defaultAwaitMs, fetchTicketResult, progressMessage } from '../../../internal/operations/tickets.js';
+import { defaultAwaitMs } from '../../../internal/contracts/protocol.js';
+import { awaitTicketResult, fetchTicketResult, progressMessage } from '../../../internal/operations/tickets.js';
 
 export const inputSchema = ticketInputSchema;
 export const resultSchema = awaitResultSchema;

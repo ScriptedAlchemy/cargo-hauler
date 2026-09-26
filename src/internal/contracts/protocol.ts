@@ -347,6 +347,8 @@ export const detachRequestSchema = z.object({
 
 /** Await ceiling (2h) — the single source for daemon wire and operation schemas. */
 export const awaitCeilingMs = 7_200_000;
+/** How long one await waits when the caller names no wait. */
+export const defaultAwaitMs = 30_000;
 
 export const awaitRequestSchema = z.object({
   type: z.literal('await'),
