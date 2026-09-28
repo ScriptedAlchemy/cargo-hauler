@@ -108,6 +108,8 @@ describe('hauler MCP surface', () => {
             };
             expect(statusValue.daemon).toBe('running');
             expect([...statusValue.active, ...statusValue.recent].map((row) => row.ticket)).toContain(value.ticket);
+            const activeTickets = new Set(statusValue.active.map((row) => row.ticket));
+            expect(statusValue.recent.some((row) => activeTickets.has(row.ticket))).toBe(false);
 
             // A background submit carries no job env, so the daemon resolves
             // cargo itself (the real binary, which fails fast in the fixture
@@ -123,6 +125,8 @@ describe('hauler MCP surface', () => {
             };
             expect(awaited.structuredContent).toMatchObject({ operation: 'await', ticket: value.ticket, timedOut: false });
             expect(['done', 'failed']).toContain(awaitedValue.request?.status);
+            expect(awaitedValue.request).not.toHaveProperty('outputTail');
+            expect(awaitedValue.request).not.toHaveProperty('intentJson');
             const text = (awaited.content as readonly { readonly type: string; readonly text?: string }[])
               .map((block) => block.text ?? '')
               .join('\n');

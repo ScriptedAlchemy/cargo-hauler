@@ -20,6 +20,8 @@ is unclear, run `hauler <command> --help`. Paths under plugin caches,
   package answers the question, scope new work with `-p <crate>`.
 - Submit long work with `hauler exec --bg -- cargo …`. Wait with
   `hauler await cc-N` instead of polling or starting another run.
+  Await returns compact state and blockers after up to 60 seconds by default.
+  Read `hauler result cc-N` for output and failure diagnostics.
 - To order a test run after a build, pass `--after cc-N`.
 - Read failures with `hauler result cc-N --full`. A shared run can include
   output from other agents' requests. Identify the failing package or test

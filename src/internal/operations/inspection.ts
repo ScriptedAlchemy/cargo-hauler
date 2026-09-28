@@ -106,7 +106,10 @@ export const loadStatusResult = async (
   const limit = input.limit ?? 20;
   const snapshot = await loadSnapshot(hasStatusFilters(input) ? 500 : limit, options);
   const active = filterStatusRows(snapshot.active, input);
-  const recent = filterStatusRows(snapshot.recent, input).slice(0, limit);
+  const activeTickets = new Set(active.map((row) => row.ticket));
+  const recent = filterStatusRows(snapshot.recent, input)
+    .filter((row) => !activeTickets.has(row.ticket))
+    .slice(0, limit);
   return {
     ...snapshot,
     active: displayStatusRows(active),

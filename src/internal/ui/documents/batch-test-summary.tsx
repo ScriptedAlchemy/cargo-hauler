@@ -6,7 +6,6 @@ import { isSharedTestRun, loadBatchTestOutput } from '../../operations/batch-tes
 
 import { CodeBlock, Heading } from './primitives.js';
 
-/** Shared by result, await, and last through TicketCard. No execution policy. */
 export const BatchTestSummary = async ({ record }: { readonly record: DisplayRequestRecord }) => {
   if (!isSharedTestRun(record)) return null;
   const output = await loadBatchTestOutput(record.outputPath);

@@ -2,7 +2,6 @@ import { Agent } from '@agent-bundle/runtime';
 import React from 'react';
 
 import { APP_RESOURCE_URI } from '../../../constants.js';
-import { awaitCeilingMs, defaultAwaitMs } from '../../contracts/protocol.js';
 import { formatMs } from '../shared/format.js';
 import { documentValue } from '../../util/json.js';
 import { countWord } from '../../util/text.js';
@@ -17,19 +16,21 @@ import type {
   StatusResult,
 } from '../../contracts/tool-schemas.js';
 import type { TicketOutputModel } from '../../operations/ticket-output.js';
+import { isSharedTestRun } from '../../operations/batch-test-output.js';
 
 import { AdmissionState } from './admission-state.js';
 import { DashboardLink } from './dashboard-link.js';
 import { FullOutput } from './full-output.js';
 import { KacheStats } from './kache-stats.js';
 import { LaneBoard } from './lane-board.js';
-import { DataList } from './primitives.js';
+import { DataList, Heading } from './primitives.js';
+import { commandText } from './headlines.js';
 import { ErrorState, UnavailableState } from './states.js';
 import type { SurfaceNames } from './surface.js';
 import { TicketCard } from './ticket-card.js';
 import { TicketGuidance } from './ticket-guidance.js';
 import { TicketList } from './ticket-list.js';
-import { lineageLine, type LineageModel } from './view-models.js';
+import { awaitFields, lineageLine, type LineageModel } from './view-models.js';
 
 /**
  * One document per hauler result, shared by the MCP tool and CLI routes so
@@ -179,20 +180,28 @@ export const KillDocument = ({ names, nowMs, result }: DocumentProps<KillResult>
 export const AwaitDocument = ({
   maxWaitMs,
   names,
-  nowMs,
   result,
 }: DocumentProps<AwaitResult> & { readonly maxWaitMs: number }) => (
   <Agent.Result value={documentValue(result)}>
-    <Agent.Text>{result.summary}</Agent.Text>
-    {result.request === null ? null : <TicketCard nowMs={nowMs} record={result.request} />}
+    {result.request === null ? null : (
+      <>
+        <Heading>{`${result.ticket} ${result.request.status} — ${commandText(result.request)}`}</Heading>
+        <DataList fields={awaitFields(result.request)} />
+        {isSharedTestRun(result.request) ? (
+          <Agent.Context>Shared test output and exit; folded filters may widen the run. Read result for per-binary evidence.</Agent.Context>
+        ) : null}
+      </>
+    )}
     {result.timedOut ? (
       <Agent.Context>
-        {`The ${formatMs(maxWaitMs)} wait expired before ${result.ticket} finished. Call ${names.await} again instead of polling ${names.result} in a tight loop. A plain call waits ${formatMs(defaultAwaitMs)}, and ${names.awaitMaxWait} raises that up to ${formatMs(awaitCeilingMs)}.`}
+        {`Wait expired (${formatMs(maxWaitMs)}). Continue: ${names.await} ${result.ticket}. Longer wait: ${names.awaitMaxWait}. Do not resubmit.`}
       </Agent.Context>
     ) : result.request === null ? (
       <TicketNotKnown daemon={result.daemon} names={names} ticket={result.ticket} />
     ) : (
-      <TicketGuidance names={names} record={result.request} />
+      <Agent.Context>
+        {`${result.request.status === 'done' ? `${result.ticket} succeeded. ` : ''}Output and diagnostics: ${names.result} ${result.ticket}.`}
+      </Agent.Context>
     )}
   </Agent.Result>
 );

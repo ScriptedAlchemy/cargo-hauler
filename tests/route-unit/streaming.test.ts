@@ -11,7 +11,7 @@ import { fakeCargoEnv, withDaemon, withIsolatedStateDir } from './support.js';
 /**
  * Streaming proof: `hauler_await` and `hauler_log` are progressive documents.
  * The Suspense fallback is what a reader sees while the daemon works — the
- * live ticket card and a progress node, or a "reading the ledger" progress
+ * wait message and a progress node, or a "reading the ledger" progress
  * frame — and the settled document replaces it with the ordinary result whose
  * value the runtime merges up through the layout and the stream container.
  */
@@ -72,7 +72,7 @@ describe('progressive documents', () => {
     });
   });
 
-  it.live('streams the live ticket card while awaiting, then the settled ticket with its value', () =>
+  it.live('streams progress without repeating the ticket card, then the compact verdict', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(1);
       const ticket = yield* submitSlowJob(fixture);
@@ -85,14 +85,14 @@ describe('progressive documents', () => {
         const pending = intermediateDocuments(rendered.events).filter((document) =>
           documentText(document).includes(`Waiting up to 20.0s for ${ticket}`));
         expect(pending.length).toBeGreaterThan(0);
-        // The fallback carries the live card and a progress node…
+        // Waiting carries progress without repeating metadata or live output.
         expect(pending.some((document) => documentText(document).includes('"kind":"progress"'))).toBe(true);
-        expect(pending.some((document) => documentText(document).includes(`### ${ticket}`))).toBe(true);
+        expect(pending.some((document) => documentText(document).includes(`### ${ticket}`))).toBe(false);
         // …and the settled document replaces it with the finished ticket and the merged value.
         expectEvents(rendered).toCompleteOnce().toHaveNoErrors();
         expectDocument(rendered)
           .toHaveStatus('success')
-          .toContainText(`${ticket} done`)
+          .toContainMarkdown(`${ticket} done`)
           .toContainContext(`${ticket} succeeded`);
         expect(JSON.stringify(rendered.document.root)).not.toContain('Waiting up to');
         expect(rendered.result).toMatchObject({ operation: 'await', request: { status: 'done' }, ticket, timedOut: false });
@@ -112,8 +112,8 @@ describe('progressive documents', () => {
         });
         expectDocument(rendered)
           .toHaveStatus('success')
-          .toContainText(`${ticket} still pending`)
-          .toContainContext('wait expired');
+          .toContainMarkdown(ticket)
+          .toContainContext('Wait expired');
         expect(rendered.result).toMatchObject({ operation: 'await', ticket, timedOut: true });
       });
     }), 40_000);

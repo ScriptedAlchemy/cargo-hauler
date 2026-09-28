@@ -350,7 +350,7 @@ describe('loadHaulerSnapshot', () => {
       const status = yield* Effect.promise((signal) => loadStatusResult({}, { config, signal }));
       expect(statusResultSchema.parse(status)).toMatchObject({ daemon: 'skewed', pid: fixture.pid });
       expect(status.active).toMatchObject([{ status: 'queued', ticket: 'cc-2' }]);
-      expect(status.recent.map((row) => [row.ticket, row.status])).toEqual([['cc-1', 'done'], ['cc-2', 'queued']]);
+      expect(status.recent.map((row) => [row.ticket, row.status])).toEqual([['cc-1', 'done']]);
       const last = yield* Effect.promise((signal) => loadLastResult({ config, signal }));
       expect(last).toMatchObject({ daemon: 'skewed', request: { outputTail: 'ok\n', status: 'done', ticket: 'cc-1' } });
       expect(yield* statusDaemon(config)).toMatchObject({ pid: fixture.pid, previousPid: fixture.pid, report: null, running: true });

@@ -129,7 +129,11 @@ describe.skipIf(!existsSync(haulerEntry))('ticket reads on a stopped daemon', ()
       json: {
         daemon: 'stopped',
         operation: 'await',
-        request: orphaned,
+        request: {
+          argv: ['cargo', 'check'], attachMode: null, attachedTo: null, cwd: '/repo',
+          error: 'stranded by a stopped daemon', execArgv: ['cargo', 'check'],
+          exitCode: null, runMs: null, signal: null, status: 'orphaned', ticket: 'cc-1',
+        },
         summary: 'cc-1 orphaned — stranded by a stopped daemon',
         ticket: 'cc-1',
         timedOut: false,

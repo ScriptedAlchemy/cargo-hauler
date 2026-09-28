@@ -13844,7 +13844,7 @@ var __webpack_modules__ = {
             ticket: zod__rspack_import_0.YjP().min(1)
         });
         const awaitCeilingMs = 7200000;
-        const defaultAwaitMs = 30000;
+        const defaultAwaitMs = 60000;
         const awaitRequestSchema = zod__rspack_import_0.Ikc({
             type: zod__rspack_import_0.euz('await'),
             id: zod__rspack_import_0.YjP().min(1),
@@ -16637,6 +16637,52 @@ var __webpack_modules__ = {
             const subagent = model.subagent === null ? '' : ` · ${model.subagent}`;
             return `conversation ${model.conversation} (${position}${subagent}; ${model.resolution})`;
         };
+        const awaitFields = (record)=>[
+                {
+                    label: 'Where',
+                    value: record.cwd
+                },
+                {
+                    label: 'Ran as',
+                    value: ranAs(record)
+                },
+                {
+                    label: 'Exit',
+                    value: record.exitCode
+                },
+                {
+                    label: 'Signal',
+                    value: record.signal
+                },
+                {
+                    label: 'Ran',
+                    value: record.runMs === null ? null : formatMs(record.runMs)
+                },
+                {
+                    label: 'Riding',
+                    value: record.attachedTo
+                },
+                {
+                    label: 'After',
+                    value: record.waitingFor?.map(prerequisiteText).join(', ')
+                },
+                {
+                    label: 'Queue',
+                    value: record.queue === undefined ? null : `${record.queue.position} ahead; wait ~${formatMs(record.queue.waitEtaMs)}`
+                },
+                {
+                    label: 'Hold',
+                    value: record.admissionHold?.detail
+                },
+                {
+                    label: 'Stalled',
+                    value: record.stall === undefined ? null : `no CPU/output for ${formatMs(record.stall.idleMs)}; hauler kill ${record.attachedTo ?? record.ticket}`
+                },
+                {
+                    label: 'Error',
+                    value: record.error
+                }
+            ];
         const attachText = (record)=>{
             if (record.attachedTo === null) {
                 return null;

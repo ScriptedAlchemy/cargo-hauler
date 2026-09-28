@@ -333,7 +333,7 @@ describe('status/result contract completeness (issue #16)', () => {
     }
   });
 
-  it('round-trips a diagnosed record through the await handler schema', () => {
+  it('returns the failure verdict from await without repeating logs or internal identity', () => {
     const parsed = awaitResultSchema.parse({
       daemon: 'running',
       operation: 'await',
@@ -342,8 +342,10 @@ describe('status/result contract completeness (issue #16)', () => {
       ticket: 'cc-1',
       timedOut: false,
     });
-    expect(parsed.request?.diagnostics).toHaveLength(1);
-    expect(parsed.request?.errorCount).toBe(1);
+    expect(parsed.request).toMatchObject({ status: 'failed', exitCode: 101 });
+    for (const key of ['diagnostics', 'outputTail', 'intentJson', 'intentKey', 'laneKey']) {
+      expect(parsed.request).not.toHaveProperty(key);
+    }
   });
 
   it('round-trips a diagnosed record through the result handler schema', () => {

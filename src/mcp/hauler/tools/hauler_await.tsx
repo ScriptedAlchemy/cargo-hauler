@@ -15,7 +15,7 @@ export default defineTool(
   {
     annotations: { readOnlyHint: true },
     description:
-      'Long-poll a cargo-hauler ticket until it finishes or the wait expires. maxWaitMs defaults to 30000 and is capped at 7200000, the daemon\'s 2 h await ceiling. Call again to keep waiting. A host with its own per-call deadline, such as Codex\'s tool_timeout_sec, still limits each call. The document streams the live ticket card first and the settled result second. While the wait runs, progress notifications report queue position, elapsed time, and the cost estimate.',
+      'Wait for a ticket (default 60000 ms, max 7200000; host deadlines still apply). Call again on timeout. Returns state, blockers, and outcome; use hauler_result for logs and diagnostics.',
     inputJsonSchema: {
       additionalProperties: false,
       properties: {
@@ -40,7 +40,7 @@ export default defineTool(
     const daemonConfig = await requestDaemonConfig(context);
     const maxWaitMs = input.maxWaitMs ?? defaultAwaitMs;
     const startedAt = Date.now();
-    const snapshot = await fetchTicketResult(input, { config: daemonConfig, signal });
+    await fetchTicketResult(input, { config: daemonConfig, signal });
     const awaited = awaitTicketResult({ ...input, maxWaitMs }, {
       config: daemonConfig,
       // Progress is best-effort. A host that cannot deliver a notification
@@ -64,8 +64,6 @@ export default defineTool(
         awaited={awaited}
         maxWaitMs={maxWaitMs}
         names={surfaceNames(context)}
-        nowMs={startedAt}
-        snapshot={snapshot.request}
         ticket={input.ticket}
       />
     );

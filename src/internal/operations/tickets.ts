@@ -17,6 +17,7 @@ import { describeRequestRecord, displayRequestRecord, loadLedgerTicket } from '.
 import type { TicketRequestContext } from './attribution.js';
 import { enrichTicketRequest, ticketAttribution } from './attribution.js';
 import {
+  awaitRequestSchema,
   type AwaitResult,
   type KillResult,
   type RequestInput,
@@ -98,7 +99,7 @@ export const awaitTicketResult = async (
   return {
     daemon: waited.daemon,
     operation: 'await',
-    request: waited.request,
+    request: waited.request === null ? null : awaitRequestSchema.parse(waited.request),
     summary: waited.timedOut
       ? `${input.ticket} still pending`
       : describeRequestRecord(input.ticket, waited.request),
