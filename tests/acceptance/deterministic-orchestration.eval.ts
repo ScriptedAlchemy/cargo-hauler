@@ -83,6 +83,7 @@ const realCargoEnv = (
   // A host wrapper such as kache replays cached build-script runs, which
   // skips the sleeps and gates the fixtures use to hold a leader running.
   RUSTC_WRAPPER: '',
+  RUSTC_WORKSPACE_WRAPPER: '',
   ...extra,
 });
 

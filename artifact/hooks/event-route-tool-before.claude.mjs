@@ -116,7 +116,7 @@ var __webpack_modules__ = {
             ticket: zod__rspack_import_0.YjP().min(1)
         });
         const awaitCeilingMs = 7200000;
-        const defaultAwaitMs = 30000;
+        const defaultAwaitMs = 60000;
         const awaitRequestSchema = zod__rspack_import_0.Ikc({
             type: zod__rspack_import_0.euz('await'),
             id: zod__rspack_import_0.YjP().min(1),
@@ -20486,7 +20486,7 @@ var __webpack_modules__ = {
                     return withEventState(signal, async (bindings)=>{
                         const gate = await (0, _agent_bundle_runtime_request__rspack_import_6.iC)({
                             invocation: {
-                                artifactEpoch: "e731fa2d0c1ebc883aa63b807f3856fafb7be4ec81505e50fdb1633aa80e492a",
+                                artifactEpoch: "04a486e5de3a0e7ecd6fbcb1b8159b31306d00e2b7073efda06e9c9247479ac4",
                                 hostContractRevision: capabilityRevision,
                                 kind: "event",
                                 operationId: `event:${canonicalEvent}`,

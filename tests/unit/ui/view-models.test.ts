@@ -4,6 +4,7 @@ import { toStatusRow } from '../../../src/internal/contracts/protocol.js';
 import type { KacheStorePressureReport, LaneStatus, RequestRecord } from '../../../src/internal/contracts/protocol.js';
 import {
   admissionModel,
+  awaitFields,
   buildDiagnosticsModel,
   daemonBadgeModel,
   kacheModel,
@@ -12,6 +13,7 @@ import {
   lineageModel,
   ticketCardModel,
 } from '../../../src/internal/ui/documents/view-models.js';
+import { awaitRequestSchema } from '../../../src/internal/contracts/tool-schemas.js';
 
 /**
  * The view-models are the one derivation every component renders from, so
@@ -58,6 +60,26 @@ const record = (overrides: Partial<RequestRecord> = {}): RequestRecord => ({
   warningCount: null,
   workspaceRoot: '/home/me/work/ws',
   ...overrides,
+});
+
+describe('compact await', () => {
+  it('keeps blockers, failed prerequisites, signals, and the leader to cancel', () => {
+    const fields = (overrides: Partial<RequestRecord>) => Object.fromEntries(
+      awaitFields(awaitRequestSchema.parse(record(overrides))).map(({ label, value }) => [label, value]),
+    );
+    expect(fields({
+      status: 'queued',
+      queue: { aheadTickets: ['cc-2', 'cc-3'], position: 2, waitEtaMs: 30_000 },
+      admissionHold: { reason: 'memory-hard', detail: 'memory pressure' },
+      waitingFor: [{ ticket: 'cc-3', status: 'running' }],
+    })).toMatchObject({ After: 'cc-3 (running)', Queue: '2 ahead; wait ~30.0s', Hold: 'memory pressure' });
+    expect(fields({ status: 'failed', error: 'prerequisite cc-3 failed' })).toMatchObject({
+      Error: 'prerequisite cc-3 failed', Exit: null,
+    });
+    expect(fields({ signal: 'SIGTERM', attachedTo: 'cc-3', stall: { cpuMs: 0, idleMs: 60_000, since: 1 } })).toMatchObject({
+      Signal: 'SIGTERM', Stalled: 'no CPU/output for 1m; hauler kill cc-3',
+    });
+  });
 });
 
 describe('daemonBadgeModel', () => {

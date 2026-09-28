@@ -1,18 +1,16 @@
 import { Agent } from '@agent-bundle/runtime';
 import React, { Suspense } from 'react';
 
-import type { DisplayRequestRecord } from '../../contracts/protocol.js';
 import { formatMs } from '../shared/format.js';
 import type { AwaitResult, LogResult } from '../../contracts/tool-schemas.js';
 
 import { AwaitDocument, LogDocument } from './documents.js';
 import type { SurfaceNames } from './surface.js';
-import { TicketCard } from './ticket-card.js';
 
 /*
  * Progressive documents. Each stream is a valueless `Agent.Result` container
  * that holds one Suspense boundary. The fallback is the document the reader sees
- * while the daemon is still working (a live ticket card, a progress node), and
+ * while the daemon is still working (a progress node), and
  * the settled child is the ordinary result document, whose `Agent.Result
  * value` the runtime merges up into the container. The MCP projector emits
  * the fallback's progress as notifications and the merged value as
@@ -24,20 +22,14 @@ export interface AwaitStreamProps {
   readonly awaited: Promise<AwaitResult>;
   readonly maxWaitMs: number;
   readonly names: SurfaceNames;
-  readonly nowMs: number;
-  /** The ticket as it was when the wait began; `null` when the daemon does not know it yet. */
-  readonly snapshot: DisplayRequestRecord | null;
   readonly ticket: string;
 }
 
-const AwaitPending = ({ maxWaitMs, names, nowMs, snapshot, ticket }: Omit<AwaitStreamProps, 'awaited'>) => (
+const AwaitPending = ({ maxWaitMs, names, ticket }: Omit<AwaitStreamProps, 'awaited'>) => (
   <>
     <Agent.Text>
-      {snapshot === null
-        ? `Waiting up to ${formatMs(maxWaitMs)} for ${ticket} (not known to the daemon yet).`
-        : `Waiting up to ${formatMs(maxWaitMs)} for ${ticket} (${snapshot.status}).`}
+      {`Waiting up to ${formatMs(maxWaitMs)} for ${ticket}.`}
     </Agent.Text>
-    {snapshot === null ? null : <TicketCard nowMs={nowMs} record={snapshot} tailLines={20} />}
     <Agent.Progress completed={0} message={`${names.await} ${ticket}: waiting`} total={maxWaitMs} />
   </>
 );
@@ -46,7 +38,6 @@ const AwaitSettled = async ({ awaited, maxWaitMs, names }: Pick<AwaitStreamProps
   <AwaitDocument maxWaitMs={maxWaitMs} names={names} nowMs={Date.now()} result={await awaited} />
 );
 
-/** `hauler_await` and `hauler await` render the live ticket now and the settled ticket when the wait ends. */
 export const AwaitStream = ({ awaited, ...pending }: AwaitStreamProps) => (
   <Agent.Result>
     <Suspense fallback={<AwaitPending {...pending} />}>

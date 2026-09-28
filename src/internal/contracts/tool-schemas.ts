@@ -164,7 +164,7 @@ const histogramMetricSchema = z.object({
  * detail record's `outputTail` / `outputTailLive` are not part of it — a
  * status row never carries a tail, settled or live — and a running row's
  * `outputPreview` is capped at `statusOutputPreviewBytes`. The whole tail is
- * the detail contract: `hauler_result` / `hauler_await` answer a
+ * the detail contract: `hauler_result` answers a
  * `displayRequestRecordSchema` record.
  */
 export const statusRowSchema = displayRequestRecordSchema
@@ -549,9 +549,7 @@ export const ticketInputSchema = z
 
 /**
  * `hauler_result` alone takes `full`: the on-disk output log (its last
- * 768 KiB when larger) as the document body. `hauler_await` keeps
- * `ticketInputSchema` — a wait that ends in a full log would blow the
- * rendered-route budget for nothing.
+ * 768 KiB when larger) as the document body. Await returns compact state.
  */
 export const resultInputSchema = z
   .object({
@@ -563,11 +561,30 @@ export const resultInputSchema = z
   })
   .strict();
 
+/** Await is a state read; full logs and internal scheduling identity belong to result. */
+export const awaitRequestSchema = displayRequestRecordSchema.pick({
+  argv: true,
+  execArgv: true,
+  attachMode: true,
+  cwd: true,
+  ticket: true,
+  status: true,
+  exitCode: true,
+  signal: true,
+  error: true,
+  runMs: true,
+  attachedTo: true,
+  queue: true,
+  waitingFor: true,
+  admissionHold: true,
+  stall: true,
+});
+
 export const awaitResultSchema = z
   .object({
     daemon: daemonStatusSchema,
     operation: z.literal('await'),
-    request: displayRequestRecordSchema.nullable(),
+    request: awaitRequestSchema.nullable(),
     summary: z.string(),
     ticket: z.string(),
     timedOut: z.boolean(),
@@ -656,7 +673,7 @@ export const requestResultSchema = z
 export interface AwaitResult {
   readonly daemon: DaemonStatus;
   readonly operation: 'await';
-  readonly request: DisplayRequestRecord | null;
+  readonly request: z.infer<typeof awaitRequestSchema> | null;
   readonly summary: string;
   readonly ticket: string;
   readonly timedOut: boolean;

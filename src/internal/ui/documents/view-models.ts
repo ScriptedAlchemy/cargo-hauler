@@ -12,7 +12,7 @@ import type { DaemonHealth } from '../../operations/daemon-health.js';
 import { formatBytes, formatMs, heavyCapNote, pathBasename, relativeTime, shortenPath } from '../shared/format.js';
 import { kachePressureModel } from '../../integrations/kache/pressure-model.js';
 import type { KachePressureModel } from '../../integrations/kache/pressure-model.js';
-import type { StatusResult } from '../../contracts/tool-schemas.js';
+import type { AwaitResult, StatusResult } from '../../contracts/tool-schemas.js';
 import { sharedTargetGroups } from '../shared/shared-target.js';
 import type { SharedTargetGroup } from '../shared/shared-target.js';
 import { countWord } from '../../util/text.js';
@@ -291,6 +291,20 @@ export const lineageLine = (model: LineageModel): string => {
 // ---------------------------------------------------------------------------
 // Ticket card
 
+export const awaitFields = (record: NonNullable<AwaitResult['request']>) => [
+  { label: 'Where', value: record.cwd },
+  { label: 'Ran as', value: ranAs(record) },
+  { label: 'Exit', value: record.exitCode },
+  { label: 'Signal', value: record.signal },
+  { label: 'Ran', value: record.runMs === null ? null : formatMs(record.runMs) },
+  { label: 'Riding', value: record.attachedTo },
+  { label: 'After', value: record.waitingFor?.map(prerequisiteText).join(', ') },
+  { label: 'Queue', value: record.queue === undefined ? null : `${record.queue.position} ahead; wait ~${formatMs(record.queue.waitEtaMs)}` },
+  { label: 'Hold', value: record.admissionHold?.detail },
+  { label: 'Stalled', value: record.stall === undefined ? null : `no CPU/output for ${formatMs(record.stall.idleMs)}; hauler kill ${record.attachedTo ?? record.ticket}` },
+  { label: 'Error', value: record.error },
+];
+
 export interface TicketCardModel {
   /** Prerequisites the request was submitted `--after`, e.g. `cc-3, cc-4`. */
   readonly after: string | null;
@@ -367,7 +381,7 @@ const stalledText = (record: TicketSummary): string | null => {
   return `looks stalled: no CPU for ${formatMs(record.stall.idleMs)} and no output${owner}. Free the lane with hauler kill ${record.attachedTo ?? record.ticket}`;
 };
 
-const ranAs = (record: TicketSummary): string | null => {
+const ranAs = (record: Pick<TicketSummary, 'execArgv' | 'argv'>): string | null => {
   if (record.execArgv === null) {
     return null;
   }

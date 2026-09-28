@@ -279,7 +279,8 @@ export const statusOutputPreviewLines = 8;
  * row carries `outputPreview`, the last `statusOutputPreviewLines` lines
  * (at most `statusOutputPreviewBytes`) of its live output, cut at a line
  * boundary; every other row has `null`. The whole tail is the detail
- * contract: `result` / `await` answer a `RequestRecord` (#95).
+ * contract: the daemon's `result` / `await` answer a `RequestRecord` (#95).
+ * The agent-facing await route projects only state and blockers from it.
  */
 export interface StatusRow extends TicketSummary {
   readonly outputPreview: string | null;
@@ -348,7 +349,7 @@ export const detachRequestSchema = z.object({
 /** Await ceiling (2h) — the single source for daemon wire and operation schemas. */
 export const awaitCeilingMs = 7_200_000;
 /** How long one await waits when the caller names no wait. */
-export const defaultAwaitMs = 30_000;
+export const defaultAwaitMs = 60_000;
 
 export const awaitRequestSchema = z.object({
   type: z.literal('await'),

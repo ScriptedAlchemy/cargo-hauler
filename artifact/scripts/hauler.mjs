@@ -7837,7 +7837,7 @@ var __webpack_modules__ = {
             ticket: zod__rspack_import_0.YjP().min(1)
         });
         const awaitCeilingMs = 7200000;
-        const defaultAwaitMs = 30000;
+        const defaultAwaitMs = 60000;
         const awaitRequestSchema = zod__rspack_import_0.Ikc({
             type: zod__rspack_import_0.euz('await'),
             id: zod__rspack_import_0.YjP().min(1),
@@ -8375,10 +8375,27 @@ var __webpack_modules__ = {
             ticket: zod__rspack_import_1.YjP().min(1),
             full: zod__rspack_import_1.zMY().optional().describe('Render the on-disk output log instead of the stored tail. A log over 768 KiB renders its last 768 KiB.')
         }).strict();
+        const awaitRequestSchema = displayRequestRecordSchema.pick({
+            argv: true,
+            execArgv: true,
+            attachMode: true,
+            cwd: true,
+            ticket: true,
+            status: true,
+            exitCode: true,
+            signal: true,
+            error: true,
+            runMs: true,
+            attachedTo: true,
+            queue: true,
+            waitingFor: true,
+            admissionHold: true,
+            stall: true
+        });
         const awaitResultSchema = zod__rspack_import_1.Ikc({
             daemon: daemonStatusSchema,
             operation: zod__rspack_import_1.euz('await'),
-            request: displayRequestRecordSchema.nullable(),
+            request: awaitRequestSchema.nullable(),
             summary: zod__rspack_import_1.YjP(),
             ticket: zod__rspack_import_1.YjP(),
             timedOut: zod__rspack_import_1.zMY()

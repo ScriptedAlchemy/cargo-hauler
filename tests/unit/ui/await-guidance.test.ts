@@ -42,18 +42,18 @@ const pendingGuidance = (names: typeof cliSurface): unknown => {
 };
 
 describe('await wait guidance', () => {
-  it('says a plain await waits the default and names the option that raises it', () => {
+  it('keeps continuation and longer-wait guidance on both surfaces', () => {
     expect(expiredAwait(cliSurface)).toBe(
-      'The 30.0s wait expired before cc-7 finished. Call hauler await again instead of polling hauler result in a tight loop. A plain call waits 30.0s, and --max-wait-ms raises that up to 2h.',
+      'Wait expired (30.0s). Continue: hauler await cc-7. Longer wait: --max-wait-ms. Do not resubmit.',
     );
     expect(expiredAwait(mcpSurface)).toBe(
-      'The 30.0s wait expired before cc-7 finished. Call hauler_await again instead of polling hauler_result in a tight loop. A plain call waits 30.0s, and maxWaitMs raises that up to 2h.',
+      'Wait expired (30.0s). Continue: hauler_await cc-7. Longer wait: maxWaitMs. Do not resubmit.',
     );
     expect(pendingGuidance(cliSurface)).toBe(
-      'cc-7 is still queued. Do not rerun the same cargo command. Call hauler await with ticket cc-7, or check hauler result later. A plain call waits 30.0s, and --max-wait-ms raises that up to 2h. Call again to keep waiting.',
+      'cc-7 is still queued. Do not rerun the same cargo command. Call hauler await with ticket cc-7, or check hauler result later. A plain call waits 1m, and --max-wait-ms raises that up to 2h. Call again to keep waiting.',
     );
     expect(pendingGuidance(mcpSurface)).toBe(
-      'cc-7 is still queued. Do not rerun the same cargo command. Call hauler_await with ticket cc-7, or check hauler_result later. A plain call waits 30.0s, and maxWaitMs raises that up to 2h. Call again to keep waiting.',
+      'cc-7 is still queued. Do not rerun the same cargo command. Call hauler_await with ticket cc-7, or check hauler_result later. A plain call waits 1m, and maxWaitMs raises that up to 2h. Call again to keep waiting.',
     );
   });
 });

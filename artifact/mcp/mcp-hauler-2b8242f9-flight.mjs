@@ -14166,7 +14166,7 @@ var __webpack_modules__ = {
             ticket: zod__rspack_import_0.YjP().min(1)
         });
         const awaitCeilingMs = 7200000;
-        const defaultAwaitMs = 30000;
+        const defaultAwaitMs = 60000;
         const awaitRequestSchema = zod__rspack_import_0.Ikc({
             type: zod__rspack_import_0.euz('await'),
             id: zod__rspack_import_0.YjP().min(1),
@@ -14702,10 +14702,27 @@ var __webpack_modules__ = {
             ticket: zod__rspack_import_1.YjP().min(1),
             full: zod__rspack_import_1.zMY().optional().describe('Render the on-disk output log instead of the stored tail. A log over 768 KiB renders its last 768 KiB.')
         }).strict();
+        const awaitRequestSchema = displayRequestRecordSchema.pick({
+            argv: true,
+            execArgv: true,
+            attachMode: true,
+            cwd: true,
+            ticket: true,
+            status: true,
+            exitCode: true,
+            signal: true,
+            error: true,
+            runMs: true,
+            attachedTo: true,
+            queue: true,
+            waitingFor: true,
+            admissionHold: true,
+            stall: true
+        });
         const awaitResultSchema = zod__rspack_import_1.Ikc({
             daemon: daemonStatusSchema,
             operation: zod__rspack_import_1.euz('await'),
-            request: displayRequestRecordSchema.nullable(),
+            request: awaitRequestSchema.nullable(),
             summary: zod__rspack_import_1.YjP(),
             ticket: zod__rspack_import_1.YjP(),
             timedOut: zod__rspack_import_1.zMY()
@@ -14765,6 +14782,7 @@ var __webpack_modules__ = {
         }).strict();
         __webpack_require__.d(__webpack_exports__, {}, {
             H7: statusResultSchema,
+            Hn: awaitRequestSchema,
             RL: lastResultSchema,
             Rh: awaitResultSchema,
             UM: resultFetchResultSchema,
@@ -17847,7 +17865,8 @@ var __webpack_modules__ = {
             const limit = input.limit ?? 20;
             const snapshot = await loadSnapshot((0, _status_filter_js__rspack_import_4.Gw)(input) ? 500 : limit, options);
             const active = (0, _status_filter_js__rspack_import_4.Gk)(snapshot.active, input);
-            const recent = (0, _status_filter_js__rspack_import_4.Gk)(snapshot.recent, input).slice(0, limit);
+            const activeTickets = new Set(active.map((row)=>row.ticket));
+            const recent = (0, _status_filter_js__rspack_import_4.Gk)(snapshot.recent, input).filter((row)=>!activeTickets.has(row.ticket)).slice(0, limit);
             return {
                 ...snapshot,
                 active: (0, _status_js__rspack_import_1.sY)(active),
@@ -18334,19 +18353,20 @@ var __webpack_modules__ = {
         });
     },
     "./src/internal/operations/tickets.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-        var effect_Effect__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
+        var effect_Effect__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
         var _client_tickets_js__rspack_import_0 = __webpack_require__("./src/internal/client/tickets.ts");
         var _client_ensure_daemon_js__rspack_import_1 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
         var _contracts_protocol_js__rspack_import_2 = __webpack_require__("./src/internal/contracts/protocol.ts");
         var _status_js__rspack_import_3 = __webpack_require__("./src/internal/operations/status.ts");
-        var _attribution_js__rspack_import_7 = __webpack_require__("./src/internal/operations/attribution.ts");
-        var _ticket_errors_js__rspack_import_4 = __webpack_require__("./src/internal/operations/ticket-errors.ts");
-        var _ticket_output_js__rspack_import_5 = __webpack_require__("./src/internal/operations/ticket-output.ts");
+        var _attribution_js__rspack_import_8 = __webpack_require__("./src/internal/operations/attribution.ts");
+        var _contracts_tool_schemas_js__rspack_import_4 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
+        var _ticket_errors_js__rspack_import_5 = __webpack_require__("./src/internal/operations/ticket-errors.ts");
+        var _ticket_output_js__rspack_import_6 = __webpack_require__("./src/internal/operations/ticket-output.ts");
         const progressMessage = (line)=>line.replace(/^\[cargo-hauler\]\s*/u, '').trimEnd();
         const requestForConsumer = (request)=>request === null ? null : (0, _status_js__rspack_import_3.xn)(request);
-        const fromLedgerWhenStopped = (read, ticket, config, answer)=>read.pipe(effect_Effect__rspack_import_6.KuX('DaemonUnreachable', (error)=>(0, _client_ensure_daemon_js__rspack_import_1.Yj)(error.cause) ? (0, _status_js__rspack_import_3.UP)(ticket, 'stopped', config).pipe(effect_Effect__rspack_import_6.TjK(answer)) : effect_Effect__rspack_import_6.fJG(error)));
+        const fromLedgerWhenStopped = (read, ticket, config, answer)=>read.pipe(effect_Effect__rspack_import_7.KuX('DaemonUnreachable', (error)=>(0, _client_ensure_daemon_js__rspack_import_1.Yj)(error.cause) ? (0, _status_js__rspack_import_3.UP)(ticket, 'stopped', config).pipe(effect_Effect__rspack_import_7.TjK(answer)) : effect_Effect__rspack_import_7.fJG(error)));
         const awaitTicketResult = async (input, options)=>{
-            const waited = await (0, _ticket_errors_js__rspack_import_4.n)(fromLedgerWhenStopped((0, _client_tickets_js__rspack_import_0.Ik)(input.ticket, input.maxWaitMs ?? 30000, options.onProgress ?? (()=>undefined), options.config).pipe(effect_Effect__rspack_import_6.TjK(({ request, timedOut })=>({
+            const waited = await (0, _ticket_errors_js__rspack_import_5.n)(fromLedgerWhenStopped((0, _client_tickets_js__rspack_import_0.Ik)(input.ticket, input.maxWaitMs ?? 60000, options.onProgress ?? (()=>undefined), options.config).pipe(effect_Effect__rspack_import_7.TjK(({ request, timedOut })=>({
                     daemon: 'running',
                     request: requestForConsumer(request),
                     timedOut
@@ -18358,14 +18378,14 @@ var __webpack_modules__ = {
             return {
                 daemon: waited.daemon,
                 operation: 'await',
-                request: waited.request,
+                request: waited.request === null ? null : _contracts_tool_schemas_js__rspack_import_4.Hn.parse(waited.request),
                 summary: waited.timedOut ? `${input.ticket} still pending` : (0, _status_js__rspack_import_3.qu)(input.ticket, waited.request),
                 ticket: input.ticket,
                 timedOut: waited.timedOut
             };
         };
         const fetchTicketResult = async (input, options)=>{
-            const { daemon, request } = await (0, _ticket_errors_js__rspack_import_4.n)(fromLedgerWhenStopped((0, _client_tickets_js__rspack_import_0.vA)(input.ticket, options.config).pipe(effect_Effect__rspack_import_6.TjK((record)=>({
+            const { daemon, request } = await (0, _ticket_errors_js__rspack_import_5.n)(fromLedgerWhenStopped((0, _client_tickets_js__rspack_import_0.vA)(input.ticket, options.config).pipe(effect_Effect__rspack_import_7.TjK((record)=>({
                     daemon: 'running',
                     request: requestForConsumer(record)
                 }))), input.ticket, options.config, (found)=>({
@@ -18383,7 +18403,7 @@ var __webpack_modules__ = {
         const fetchTicketResultView = async (input, options)=>{
             const result = await fetchTicketResult(input, options);
             return {
-                output: (0, _ticket_output_js__rspack_import_5.Oy)(result.request, input.full === true),
+                output: (0, _ticket_output_js__rspack_import_6.Oy)(result.request, input.full === true),
                 result
             };
         };
@@ -18415,7 +18435,7 @@ var __webpack_modules__ = {
             }
         };
         const killTicketResult = async (input, options)=>{
-            const killed = await (0, _ticket_errors_js__rspack_import_4.n)(fromLedgerWhenStopped((0, _client_tickets_js__rspack_import_0.N6)(input.ticket, options.config), input.ticket, options.config, (request)=>({
+            const killed = await (0, _ticket_errors_js__rspack_import_5.n)(fromLedgerWhenStopped((0, _client_tickets_js__rspack_import_0.N6)(input.ticket, options.config), input.ticket, options.config, (request)=>({
                     request
                 })), options.signal);
             if (typeof killed !== 'boolean') {
@@ -18428,7 +18448,7 @@ var __webpack_modules__ = {
                     ticket: input.ticket
                 };
             }
-            const request = await (0, _ticket_errors_js__rspack_import_4.n)((0, _client_tickets_js__rspack_import_0.vA)(input.ticket, options.config), options.signal);
+            const request = await (0, _ticket_errors_js__rspack_import_5.n)((0, _client_tickets_js__rspack_import_0.vA)(input.ticket, options.config), options.signal);
             return {
                 daemon: 'running',
                 killed,
@@ -18456,9 +18476,9 @@ var __webpack_modules__ = {
             return null;
         };
         const submitTicketRequest = async (input, requestContext, options)=>{
-            const request = (0, _attribution_js__rspack_import_7.TZ)(input, requestContext);
-            const attribution = (0, _attribution_js__rspack_import_7.YW)(request, requestContext);
-            const ack = await (0, _ticket_errors_js__rspack_import_4.n)((0, _client_tickets_js__rspack_import_0.gK)(request, options.config), options.signal);
+            const request = (0, _attribution_js__rspack_import_8.TZ)(input, requestContext);
+            const attribution = (0, _attribution_js__rspack_import_8.YW)(request, requestContext);
+            const ack = await (0, _ticket_errors_js__rspack_import_5.n)((0, _client_tickets_js__rspack_import_0.gK)(request, options.config), options.signal);
             if (ack === null) {
                 return {
                     attribution,
@@ -19950,16 +19970,17 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
         var _agent_bundle_runtime__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/react.react-server.js");
         var _constants_js__rspack_import_16 = __webpack_require__("./src/constants.ts");
-        var _contracts_protocol_js__rspack_import_2 = __webpack_require__("./src/internal/contracts/protocol.ts");
-        var _shared_format_js__rspack_import_17 = __webpack_require__("./src/internal/ui/shared/format.ts");
+        var _shared_format_js__rspack_import_19 = __webpack_require__("./src/internal/ui/shared/format.ts");
         var _util_json_js__rspack_import_15 = __webpack_require__("./src/internal/util/json.ts");
         var _util_text_js__rspack_import_13 = __webpack_require__("./src/internal/util/text.ts");
+        var _operations_batch_test_output_js__rspack_import_2 = __webpack_require__("./src/internal/operations/batch-test-output.ts");
         var _admission_state_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/admission-state.tsx");
         var _dashboard_link_js__rspack_import_4 = __webpack_require__("./src/internal/ui/documents/dashboard-link.tsx");
         var _full_output_js__rspack_import_5 = __webpack_require__("./src/internal/ui/documents/full-output.tsx");
         var _kache_stats_js__rspack_import_6 = __webpack_require__("./src/internal/ui/documents/kache-stats.tsx");
         var _lane_board_js__rspack_import_7 = __webpack_require__("./src/internal/ui/documents/lane-board.tsx");
         var _primitives_js__rspack_import_8 = __webpack_require__("./src/internal/ui/documents/primitives.tsx");
+        var _headlines_js__rspack_import_17 = __webpack_require__("./src/internal/ui/documents/headlines.ts");
         var _states_js__rspack_import_9 = __webpack_require__("./src/internal/ui/documents/states.tsx");
         var _ticket_card_js__rspack_import_10 = __webpack_require__("./src/internal/ui/documents/ticket-card.tsx");
         var _ticket_guidance_js__rspack_import_11 = __webpack_require__("./src/internal/ui/documents/ticket-guidance.tsx");
@@ -20111,25 +20132,30 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                     })
                 ]
             });
-        const AwaitDocument = ({ maxWaitMs, names, nowMs, result })=>(0, react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14.g.Result, {
+        const AwaitDocument = ({ maxWaitMs, names, result })=>(0, react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14.g.Result, {
                 value: (0, _util_json_js__rspack_import_15.H)(result),
                 children: [
-                    (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14.g.Text, {
-                        children: result.summary
-                    }),
-                    result.request === null ? null : (0, react_jsx_runtime__rspack_import_0.jsx)(_ticket_card_js__rspack_import_10.f, {
-                        nowMs: nowMs,
-                        record: result.request
+                    result.request === null ? null : (0, react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
+                        children: [
+                            (0, react_jsx_runtime__rspack_import_0.jsx)(_primitives_js__rspack_import_8.DZ, {
+                                children: `${result.ticket} ${result.request.status} — ${(0, _headlines_js__rspack_import_17.jt)(result.request)}`
+                            }),
+                            (0, react_jsx_runtime__rspack_import_0.jsx)(_primitives_js__rspack_import_8.Tr, {
+                                fields: (0, _view_models_js__rspack_import_18.mi)(result.request)
+                            }),
+                            (0, _operations_batch_test_output_js__rspack_import_2.tI)(result.request) ? (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14.g.Context, {
+                                children: "Shared test output and exit; folded filters may widen the run. Read result for per-binary evidence."
+                            }) : null
+                        ]
                     }),
                     result.timedOut ? (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14.g.Context, {
-                        children: `The ${(0, _shared_format_js__rspack_import_17._V)(maxWaitMs)} wait expired before ${result.ticket} finished. Call ${names.await} again instead of polling ${names.result} in a tight loop. A plain call waits ${(0, _shared_format_js__rspack_import_17._V)(30000)}, and ${names.awaitMaxWait} raises that up to ${(0, _shared_format_js__rspack_import_17._V)(_contracts_protocol_js__rspack_import_2._K)}.`
+                        children: `Wait expired (${(0, _shared_format_js__rspack_import_19._V)(maxWaitMs)}). Continue: ${names.await} ${result.ticket}. Longer wait: ${names.awaitMaxWait}. Do not resubmit.`
                     }) : result.request === null ? (0, react_jsx_runtime__rspack_import_0.jsx)(TicketNotKnown, {
                         daemon: result.daemon,
                         names: names,
                         ticket: result.ticket
-                    }) : (0, react_jsx_runtime__rspack_import_0.jsx)(_ticket_guidance_js__rspack_import_11.d, {
-                        names: names,
-                        record: result.request
+                    }) : (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_14.g.Context, {
+                        children: `${result.request.status === 'done' ? `${result.ticket} succeeded. ` : ''}Output and diagnostics: ${names.result} ${result.ticket}.`
                     })
                 ]
             });
@@ -20138,7 +20164,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             if (queue === undefined || queue.ahead.length === 0) {
                 return null;
             }
-            const wait = queue.waitEtaMs === undefined ? '' : `, wait ~${(0, _shared_format_js__rspack_import_17._V)(queue.waitEtaMs)}`;
+            const wait = queue.waitEtaMs === undefined ? '' : `, wait ~${(0, _shared_format_js__rspack_import_19._V)(queue.waitEtaMs)}`;
             return `behind ${queue.ahead.join(', ')} (${queue.position} ahead${wait})`;
         };
         const RequestDocument = ({ argv, lineage, names, result })=>(0, react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_14.g.Result, {
@@ -20547,22 +20573,16 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     },
     "./src/internal/ui/documents/streaming.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.react-server.js");
-        var _agent_bundle_runtime__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/react.react-server.js");
-        var _shared_format_js__rspack_import_5 = __webpack_require__("./src/internal/ui/shared/format.ts");
+        var _shared_format_js__rspack_import_4 = __webpack_require__("./src/internal/ui/shared/format.ts");
         var _documents_js__rspack_import_2 = __webpack_require__("./src/internal/ui/documents/documents.tsx");
-        var _ticket_card_js__rspack_import_3 = __webpack_require__("./src/internal/ui/documents/ticket-card.tsx");
-        const AwaitPending = ({ maxWaitMs, names, nowMs, snapshot, ticket })=>(0, react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
+        const AwaitPending = ({ maxWaitMs, names, ticket })=>(0, react_jsx_runtime__rspack_import_0.jsxs)(react_jsx_runtime__rspack_import_0.Fragment, {
                 children: [
-                    (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4.g.Text, {
-                        children: snapshot === null ? `Waiting up to ${(0, _shared_format_js__rspack_import_5._V)(maxWaitMs)} for ${ticket} (not known to the daemon yet).` : `Waiting up to ${(0, _shared_format_js__rspack_import_5._V)(maxWaitMs)} for ${ticket} (${snapshot.status}).`
+                    (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3.g.Text, {
+                        children: `Waiting up to ${(0, _shared_format_js__rspack_import_4._V)(maxWaitMs)} for ${ticket}.`
                     }),
-                    snapshot === null ? null : (0, react_jsx_runtime__rspack_import_0.jsx)(_ticket_card_js__rspack_import_3.f, {
-                        nowMs: nowMs,
-                        record: snapshot,
-                        tailLines: 20
-                    }),
-                    (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4.g.Progress, {
+                    (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3.g.Progress, {
                         completed: 0,
                         message: `${names.await} ${ticket}: waiting`,
                         total: maxWaitMs
@@ -20575,7 +20595,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                 nowMs: Date.now(),
                 result: await awaited
             });
-        const AwaitStream = ({ awaited, ...pending })=>(0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4.g.Result, {
+        const AwaitStream = ({ awaited, ...pending })=>(0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3.g.Result, {
                 children: (0, react_jsx_runtime__rspack_import_0.jsx)(react__rspack_import_1.Suspense, {
                     fallback: (0, react_jsx_runtime__rspack_import_0.jsx)(AwaitPending, {
                         ...pending
@@ -20592,9 +20612,9 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                 nowMs: Date.now(),
                 result: await loading
             });
-        const LogStream = ({ loading, names })=>(0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4.g.Result, {
+        const LogStream = ({ loading, names })=>(0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3.g.Result, {
                 children: (0, react_jsx_runtime__rspack_import_0.jsx)(react__rspack_import_1.Suspense, {
-                    fallback: (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_4.g.Progress, {
+                    fallback: (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3.g.Progress, {
                         completed: 0,
                         message: `${names.log}: reading the ledger`
                     }),
@@ -20745,7 +20765,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
         var _shared_format_js__rspack_import_4 = __webpack_require__("./src/internal/ui/shared/format.ts");
         var _headlines_js__rspack_import_5 = __webpack_require__("./src/internal/ui/documents/headlines.ts");
         const PendingGuidance = ({ names, record })=>(0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3.g.Context, {
-                children: `${record.ticket} is still ${record.status}. Do not rerun the same cargo command. Call ${names.await} with ticket ${record.ticket}, or check ${names.result} later. A plain call waits ${(0, _shared_format_js__rspack_import_4._V)(30000)}, and ${names.awaitMaxWait} raises that up to ${(0, _shared_format_js__rspack_import_4._V)(_contracts_protocol_js__rspack_import_2._K)}. Call again to keep waiting.`
+                children: `${record.ticket} is still ${record.status}. Do not rerun the same cargo command. Call ${names.await} with ticket ${record.ticket}, or check ${names.result} later. A plain call waits ${(0, _shared_format_js__rspack_import_4._V)(60000)}, and ${names.awaitMaxWait} raises that up to ${(0, _shared_format_js__rspack_import_4._V)(_contracts_protocol_js__rspack_import_2._K)}. Call again to keep waiting.`
             });
         const DoneGuidance = ({ record })=>(0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3.g.Context, {
                 children: `${record.ticket} succeeded. The output above is the result of that cargo run.`
@@ -21030,6 +21050,52 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             const subagent = model.subagent === null ? '' : ` · ${model.subagent}`;
             return `conversation ${model.conversation} (${position}${subagent}; ${model.resolution})`;
         };
+        const awaitFields = (record)=>[
+                {
+                    label: 'Where',
+                    value: record.cwd
+                },
+                {
+                    label: 'Ran as',
+                    value: ranAs(record)
+                },
+                {
+                    label: 'Exit',
+                    value: record.exitCode
+                },
+                {
+                    label: 'Signal',
+                    value: record.signal
+                },
+                {
+                    label: 'Ran',
+                    value: record.runMs === null ? null : (0, _shared_format_js__rspack_import_0._V)(record.runMs)
+                },
+                {
+                    label: 'Riding',
+                    value: record.attachedTo
+                },
+                {
+                    label: 'After',
+                    value: record.waitingFor?.map(prerequisiteText).join(', ')
+                },
+                {
+                    label: 'Queue',
+                    value: record.queue === undefined ? null : `${record.queue.position} ahead; wait ~${(0, _shared_format_js__rspack_import_0._V)(record.queue.waitEtaMs)}`
+                },
+                {
+                    label: 'Hold',
+                    value: record.admissionHold?.detail
+                },
+                {
+                    label: 'Stalled',
+                    value: record.stall === undefined ? null : `no CPU/output for ${(0, _shared_format_js__rspack_import_0._V)(record.stall.idleMs)}; hauler kill ${record.attachedTo ?? record.ticket}`
+                },
+                {
+                    label: 'Error',
+                    value: record.error
+                }
+            ];
         const attachText = (record)=>{
             if (record.attachedTo === null) {
                 return null;
@@ -21139,6 +21205,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             Ub: ticketCardModel,
             XC: admissionModel,
             lr: lineageModel,
+            mi: awaitFields,
             q3: buildDiagnosticsModel,
             qP: kacheModel,
             qQ: lineageLine,
@@ -21381,7 +21448,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             annotations: {
                 readOnlyHint: true
             },
-            description: 'Long-poll a cargo-hauler ticket until it finishes or the wait expires. maxWaitMs defaults to 30000 and is capped at 7200000, the daemon\'s 2 h await ceiling. Call again to keep waiting. A host with its own per-call deadline, such as Codex\'s tool_timeout_sec, still limits each call. The document streams the live ticket card first and the settled result second. While the wait runs, progress notifications report queue position, elapsed time, and the cost estimate.',
+            description: 'Wait for a ticket (default 60000 ms, max 7200000; host deadlines still apply). Call again on timeout. Returns state, blockers, and outcome; use hauler_result for logs and diagnostics.',
             inputJsonSchema: {
                 additionalProperties: false,
                 properties: {
@@ -21406,9 +21473,9 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
         }, async (input, context)=>{
             const { signal } = context;
             const daemonConfig = await (0, _internal_operations_request_config_js__rspack_import_5.w)(context);
-            const maxWaitMs = input.maxWaitMs ?? 30000;
+            const maxWaitMs = input.maxWaitMs ?? 60000;
             const startedAt = Date.now();
-            const snapshot = await (0, _internal_operations_tickets_js__rspack_import_7.Em)(input, {
+            await (0, _internal_operations_tickets_js__rspack_import_7.Em)(input, {
                 config: daemonConfig,
                 signal
             });
@@ -21431,8 +21498,6 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                 awaited: awaited,
                 maxWaitMs: maxWaitMs,
                 names: (0, _internal_ui_documents_surface_js__rspack_import_8.SC)(context),
-                nowMs: startedAt,
-                snapshot: snapshot.request,
                 ticket: input.ticket
             });
         });
@@ -57926,7 +57991,7 @@ const routes = Object.freeze({
             "annotations": {
                 "readOnlyHint": true
             },
-            "description": "Long-poll a cargo-hauler ticket until it finishes or the wait expires. maxWaitMs defaults to 30000 and is capped at 7200000, the daemon's 2 h await ceiling. Call again to keep waiting. A host with its own per-call deadline, such as Codex's tool_timeout_sec, still limits each call. The document streams the live ticket card first and the settled result second. While the wait runs, progress notifications report queue position, elapsed time, and the cost estimate.",
+            "description": "Wait for a ticket (default 60000 ms, max 7200000; host deadlines still apply). Call again on timeout. Returns state, blockers, and outcome; use hauler_result for logs and diagnostics.",
             "inputJsonSchema": {
                 "additionalProperties": false,
                 "properties": {
