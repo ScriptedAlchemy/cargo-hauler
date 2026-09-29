@@ -49,23 +49,31 @@ export async function main(env = process.env) {
     if (env.GITHUB_OUTPUT) await appendFile(env.GITHUB_OUTPUT, `decision=${result.decision}\npolicy=${result.policy}\n`);
     return result;
   }
-  if (!['enqueue', 'drain'].includes(mode)) throw new Error('Invalid Action mode');
+  if (!['enqueue', 'plan', 'drain'].includes(mode)) throw new Error('Invalid Action mode');
   const root = await realpath(env.GITHUB_WORKSPACE ?? '.');
   const { stdout } = await exec('git', ['rev-parse', 'HEAD'], { cwd: root });
   assertTrustedContext(env, event, stdout.trim());
   const loaded = await loadPolicy({ ...options, ref: stdout.trim() });
   const { recipe, policy: actionIdentity } = loaded;
   const admissionWorkflow = env.CARGO_HAULER_CI_ADMISSION_WORKFLOW ?? 'ci.yml';
-  const { drain } = await import('./manager.mjs');
-  const { createSandbox } = await import('./sandbox.mjs');
-  const dockerfile = await within(root, recipe.image.dockerfile);
-  const context = await within(root, recipe.image.context);
   const maxMinutes = positiveInteger(env.CARGO_HAULER_CI_MINUTES, 300, 'max-minutes');
   const maxSnapshots = positiveInteger(env.CARGO_HAULER_CI_SNAPSHOTS, 100, 'max-snapshots');
   const onlyPullRequests = env.CARGO_HAULER_CI_PRS?.trim()
     ? env.CARGO_HAULER_CI_PRS.split(',').map(value => positiveInteger(value.trim(), 2 ** 31 - 1, 'PR number'))
     : undefined;
   if (mode === 'enqueue') return enqueue({ ...loaded, repository: options.repository, onlyPullRequests, admissionWorkflow, managerRunId: env.GITHUB_RUN_ID });
+  if (mode === 'plan') {
+    const { plan } = await import('./admission.mjs');
+    const result = await plan({ recipe, repository: options.repository, token: options.token, policy: actionIdentity, admissionWorkflow, onlyPullRequests,
+      manualAdmission: env.GITHUB_EVENT_NAME === 'workflow_dispatch' && Boolean(onlyPullRequests?.length) });
+    if (env.GITHUB_OUTPUT) await appendFile(env.GITHUB_OUTPUT, `lanes=${JSON.stringify(result.lanes)}\ncount=${result.count}\n`);
+    console.log(JSON.stringify(result));
+    return result;
+  }
+  const { drain } = await import('./manager.mjs');
+  const { createSandbox } = await import('./sandbox.mjs');
+  const dockerfile = await within(root, recipe.image.dockerfile);
+  const context = await within(root, recipe.image.context);
   const state = await mkdtemp(join(env.RUNNER_TEMP || tmpdir(), 'hauler-ci-'));
   await chmod(state, 0o700);
   const abort = new AbortController();

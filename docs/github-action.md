@@ -42,15 +42,37 @@ jobs:
           mode: enqueue
           token: ${{ github.token }}
           pull-requests: ${{ github.event.pull_request.number }}
-  worker:
+  plan:
     if: github.event_name != 'pull_request_target'
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
+      actions: read
+    runs-on: ubuntu-24.04
+    outputs:
+      lanes: ${{ steps.plan.outputs.lanes }}
+      count: ${{ steps.plan.outputs.count }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: ScriptedAlchemy/cargo-hauler@<reviewed-commit-sha>
+        id: plan
+        with:
+          mode: plan
+          token: ${{ github.token }}
+  worker:
+    needs: plan
+    if: needs.plan.outputs.count != '0'
     concurrency:
       group: hauler-ci-${{ matrix.lane }}
       cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix:
-        lane: [tests]
+        lane: ${{ fromJSON(needs.plan.outputs.lanes) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
@@ -70,6 +92,15 @@ jobs:
           name: hauler-${{ matrix.lane }}
           path: ${{ steps.hauler.outputs.evidence }}
 ```
+
+The read-only `plan` mode returns `lanes` as a JSON array and `count` as its
+length. It includes execution and queued-check maintenance, so empty pools avoid
+worker allocation while cleanup still runs under each lane's concurrency lock.
+Planning is advisory: each drain rechecks admission after acquiring its lane.
+An in-progress check remains eligible for recovery; the plan does not infer
+whether its prior worker still lives. API errors fail the plan rather than
+reporting an empty pool. Use the same recipe, Action pin and explicit PR
+selection for planning and draining.
 
 The default recipe path is `.github/hauler-ci.json`. Name the manager workflow
 `hauler-ci.yml`, or set `manager-workflow` consistently on all invocations.
