@@ -158,8 +158,10 @@ false for separate snapshots. Forks and unlisted authors are not admitted;
 retain ordinary isolated CI for them.
 
 All Cargo manifests and the listed compatibility inputs participate in the
-cache key. Unchanged source files retain their immediately previous mtime;
-changed or reverted files receive fresh timestamps. Every snapshot gets a new
+cache key. Unchanged source files and identical Git subtrees retain their immediately
+previous mtimes, avoiding rebuilds caused only by a fresh checkout directory.
+Changed or reverted files and subtrees receive fresh timestamps, including
+child additions, deletions, and mode changes. Git metadata is never preserved. Every snapshot gets a new
 container, and all of its descendants are removed before another starts.
 Worker containers never receive the GitHub token. The trusted controller uses
 only the short-lived job token; no personal token or App private key is needed.

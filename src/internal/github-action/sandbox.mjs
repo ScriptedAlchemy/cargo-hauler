@@ -24,15 +24,18 @@ export async function preserveSourceMtimes(staging, tree, previous) {
     if (!entry) continue;
     const tab = entry.indexOf('\t');
     const [mode, , blob] = entry.slice(0, tab).split(' ');
-    if (mode !== '100644' && mode !== '100755') continue;
+    if (mode !== '100644' && mode !== '100755' && mode !== '040000') continue;
     const relative = entry.slice(tab + 1);
     const file = path.join(staging, relative);
     const stat = await lstat(file);
-    if (!stat.isFile()) throw new Error('Invalid staging file');
+    if (mode === '040000' ? !stat.isDirectory() : !stat.isFile()) throw new Error('Invalid staging entry');
     const prior = previous.get(relative);
     const timestamp = prior?.blob === blob && prior.mode === mode ? prior.timestamp : stat.mtime;
-    await utimes(file, timestamp, timestamp);
+    if (mode !== '040000') await utimes(file, timestamp, timestamp);
     current.set(relative, { blob, mode, timestamp });
+  }
+  for (const [relative, { mode, timestamp }] of current) {
+    if (mode === '040000') await utimes(path.join(staging, relative), timestamp, timestamp);
   }
   return current;
 }
@@ -130,7 +133,7 @@ export async function createSandbox({ repository, image, root, sharedBuilds = fa
     staging = await mkdtemp(path.join(directory, 'source-'));
     await git(['clone', '--no-hardlinks', '--no-checkout', mirror, staging]);
     await git(['-C', staging, 'checkout', '--detach', snapshot.merge]);
-    const tree = await git(['--git-dir', mirror, 'ls-tree', '-rz', '--full-tree', snapshot.merge]);
+    const tree = await git(['--git-dir', mirror, 'ls-tree', '-r', '-t', '-z', '--full-tree', snapshot.merge]);
     mtimes = await preserveSourceMtimes(staging, tree, mtimes);
     const volumes = volumeNames(repository, `${compatibilityKey}:${directory}`, snapshot, sharedBuilds);
     for (const volume of volumes) {
