@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { githubClient, receipt } from './github.mjs';
-import { checkIdentity } from './policy.mjs';
+import { checkIdentity, checkMetadata, matchesCheck } from './policy.mjs';
 import { parseRecipe } from './recipe.mjs';
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
@@ -38,9 +38,9 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
       const s = await snapshot(pr.number);
       if (!s || attempted.has(s.head)) continue;
       const checks = await pages(`/commits/${s.head}/check-runs?filter=latest`, 'check_runs');
-      if (checks.some(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && c.external_id === external(s) && c.status === 'completed' && ['success', 'failure'].includes(c.conclusion))) continue;
-      const queued = checks.find(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && c.external_id === external(s) && ['queued', 'in_progress'].includes(c.status));
-      const retry = checks.find(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && c.status === 'completed' && (c.external_id === `${external(s)}:infrastructure` || c.external_id === external(s) && c.conclusion === 'cancelled'));
+      if (checks.some(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && matchesCheck(c, external(s)) && c.status === 'completed' && ['success', 'failure'].includes(c.conclusion))) continue;
+      const queued = checks.find(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && matchesCheck(c, external(s)) && ['queued', 'in_progress'].includes(c.status));
+      const retry = checks.find(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && c.status === 'completed' && (checkMetadata(c.external_id)?.identity === external(s) && checkMetadata(c.external_id)?.infrastructure || matchesCheck(c, external(s)) && c.conclusion === 'cancelled'));
       if (!manualAdmission) {
         const decision = queued || retry ? await receipt(client, { workflow: admissionWorkflow, head: s.head, pr: s.pr, policy: identity }) : null;
         if (decision === 'native' && queued?.status === 'queued') await api(`/check-runs/${queued.id}`, 'PATCH', { status: 'completed', conclusion: 'cancelled', completed_at: new Date().toISOString(), output: { title: 'Native CI owns this head', summary: 'Native CI fallback declined Hauler delegation.' } });
@@ -67,6 +67,8 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
       if (!s) break;
       if (!same(s, await snapshot(s.pr)) || signal?.aborted || Date.now() >= deadline) continue;
       attempted.add(s.head);
+      const runId = checkMetadata(s.queued?.external_id ?? s.retry?.external_id)?.runId;
+      const provenanceIdentity = `${external(s)}${runId ? `:run:${runId}` : ''}`;
       const started = Date.now(), controller = new AbortController();
       const abort = () => controller.abort();
       signal?.addEventListener('abort', abort, { once: true });
@@ -87,14 +89,14 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
       }
       async function report(conclusion) {
         if (!await currentHead(s)) { stale = true; controller.abort(); conclusion = 'cancelled'; }
-        await api(`/check-runs/${check.id}`, 'PATCH', { external_id: record.infrastructureError ? `${external(s)}:infrastructure` : external(s), status: 'completed', conclusion, completed_at: new Date().toISOString(), output: { title: `Hauler ${lane.id}: ${conclusion}`, summary: `${record.tasks.length}/${lane.tasks.length} tasks finished. Stage ${record.stage}. Tested head ${s.head} against pinned base ${s.base}, merge ${s.merge}. Later base changes are not revalidated. Failed tasks: ${record.tasks.filter(t => t.conclusion === 'failure').map(t => `${t.id} (exit ${t.exitCode})`).join(', ') || 'none'}.` } });
+        await api(`/check-runs/${check.id}`, 'PATCH', { external_id: record.infrastructureError ? `${provenanceIdentity}:infrastructure` : provenanceIdentity, status: 'completed', conclusion, completed_at: new Date().toISOString(), output: { title: `Hauler ${lane.id}: ${conclusion}`, summary: `${record.tasks.length}/${lane.tasks.length} tasks finished. Stage ${record.stage}. Tested head ${s.head} against pinned base ${s.base}, merge ${s.merge}. Later base changes are not revalidated. Failed tasks: ${record.tasks.filter(t => t.conclusion === 'failure').map(t => `${t.id} (exit ${t.exitCode})`).join(', ') || 'none'}.` } });
         record.conclusion = conclusion;
       }
       try {
         if (s.queued) {
           check = s.queued;
           await api(`/check-runs/${check.id}`, 'PATCH', { status: 'in_progress', started_at: new Date().toISOString() });
-        } else check = await api('/check-runs', 'POST', { name: lane.checkName, head_sha: s.head, external_id: external(s), ...(s.retry?.details_url ? { details_url: s.retry.details_url } : {}), status: 'in_progress', started_at: new Date().toISOString() });
+        } else check = await api('/check-runs', 'POST', { name: lane.checkName, head_sha: s.head, external_id: provenanceIdentity, ...(s.retry?.details_url ? { details_url: s.retry.details_url } : {}), status: 'in_progress', started_at: new Date().toISOString() });
         await progress('image');
         const key = await compatibility(s);
         if (!sandbox || key !== sandboxKey) {
