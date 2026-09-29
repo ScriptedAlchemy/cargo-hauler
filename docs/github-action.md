@@ -102,8 +102,8 @@ context retain native CI so new validation cannot be skipped by the default
 branch's recipe. Rename sources count too. An incomplete or unreadable PR file
 list also keeps native CI; routing never executes the PR's policy.
 
-Confirmed merge conflicts prevent new admission. Enqueue and normal drains cancel
-only matching queued checks for the current conflicted head. Unknown mergeability
+Confirmed merge conflicts prevent new admission. Enqueue skips these heads;
+serialized lane drains cancel only matching queued checks for the current conflicted head. Unknown mergeability
 is not a confirmed conflict, and later base conflicts do not cancel a snapshot
 already being tested.
 

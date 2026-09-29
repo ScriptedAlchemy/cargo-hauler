@@ -15,7 +15,7 @@ function fixture() {
     else if (path.startsWith('/git/trees/')) data = { tree: [{ path: 'docker', mode: state.contextMode, sha: state.image }, { path: state.recipe.image.dockerfile, mode: '100644', sha: state.image }, { path: 'unrelated', mode: '100644', sha: state.base }] };
     else if (path === '/pulls') data = [{ number: 1 }];
     else if (path === '/pulls/1/files') { state.fileRequests++; if (state.filesError) return { ok: false, status: 403 }; const offset = (Number(new URL(url).searchParams.get('page')) - 1) * 100; data = state.files.slice(offset, offset + 100); }
-    else if (path === '/pulls/1') data = { mergeable: state.mergeable, mergeable_state: 'dirty', changed_files: Object.hasOwn(state, 'changedFiles') ? state.changedFiles : state.files.length, number: 1, state: 'open', draft: false, user: { login: 'owner' }, head: { sha: state.head, repo: { full_name: 'owner/repo' } } };
+    else if (path === '/pulls/1') data = { base: { sha: state.base }, mergeable: state.mergeable, mergeable_state: 'dirty', changed_files: Object.hasOwn(state, 'changedFiles') ? state.changedFiles : state.files.length, number: 1, state: 'open', draft: false, user: { login: 'owner' }, head: { sha: state.head, repo: { full_name: 'owner/repo' } } };
     else if (path.endsWith('/check-runs') && options.method === 'GET') data = { check_runs: state.checks };
     else if (path === '/check-runs') { data = { id: ++state.posts, app: { slug: 'github-actions' }, ...JSON.parse(options.body) }; data.details_url = `https://github.com/owner/repo/runs/${data.id}`; state.checks.push(data); }
     else if (path.startsWith('/check-runs/') && options.method === 'GET') data = state.checks.find(c => c.id === Number(path.split('/').at(-1)));
@@ -139,14 +139,47 @@ test('Dockerfile outside context and repository-root contexts keep native covera
   }
 });
 
-test('confirmed conflicts cancel existing queued checks and prevent new admissions', async () => {
+test('enqueue skips conflicts without touching queued or admitted checks', async () => {
   const f = fixture(), loaded = await loadPolicy(f.options), options = { ...loaded, repository: 'owner/repo', managerRunId: '10' };
   await enqueue(options);
   f.state.mergeable = false;
   assert.equal((await enqueue(options)).queued.length, 0);
-  assert.equal(f.state.checks[0].conclusion, 'cancelled');
+  assert.equal(f.state.checks[0].status, 'queued');
+  f.state.checks[0].status = 'in_progress';
   assert.equal(f.state.posts, 1);
   assert.equal((await enqueue(options)).queued.length, 0);
+  assert.equal(f.state.checks[0].status, 'in_progress');
+  f.state.checks = [];
   f.state.mergeable = null;
   assert.equal((await enqueue(options)).queued.length, 1);
+});
+
+test('route rescans when waiting checks observe a newer base with changed CI files', async () => {
+  const f = fixture(), loaded = await loadPolicy(f.options);
+  await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
+  const original = f.options.fetchImpl;
+  let firstChecks = true;
+  const fetchImpl = async (url, options) => {
+    const response = await original(url, options);
+    if (url.includes('/commits/') && url.includes('/check-runs') && firstChecks) {
+      firstChecks = false;
+      f.state.base = sha(70);
+      f.state.files = [{ filename: '.github/workflows/new-test.yml', status: 'added' }];
+      return { ...response, json: async () => ({ check_runs: [] }) };
+    }
+    return response;
+  };
+  assert.deepEqual(await route({ ...f.options, fetchImpl, waitMilliseconds: 6000 }), { decision: 'native', policy: loaded.policy });
+  assert.equal(f.state.fileRequests, 2);
+});
+test('route keeps native coverage if base changes during the file scan', async () => {
+  const f = fixture(), loaded = await loadPolicy(f.options);
+  await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
+  const original = f.options.fetchImpl;
+  const fetchImpl = async (url, options) => {
+    const response = await original(url, options);
+    if (url.includes('/pulls/1/files')) f.state.base = sha(71);
+    return response;
+  };
+  assert.deepEqual(await route({ ...f.options, fetchImpl }), { decision: 'native', policy: loaded.policy });
 });
