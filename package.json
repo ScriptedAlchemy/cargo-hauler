@@ -40,7 +40,7 @@
   ],
   "scripts": {
     "build": "agent-bundle build",
-    "check": "pnpm check:artifact && pnpm validate && pnpm build && pnpm typecheck && pnpm diagnostics && pnpm test && pnpm test:routes && pnpm test:browser && pnpm validate:artifact",
+    "check": "pnpm check:artifact && pnpm validate && pnpm build && pnpm typecheck && pnpm diagnostics && pnpm test:action && pnpm test && pnpm test:routes && pnpm test:browser && pnpm validate:artifact",
     "check:artifact": "node --test tests/packaging/committed-artifact.test.mjs && pnpm validate:artifact",
     "changeset": "changeset",
     "dev": "agent-bundle dev",
@@ -49,6 +49,7 @@
     "inspect": "agent-bundle inspect",
     "prepack": "agent-bundle prepack",
     "test": "rstest",
+    "test:action": "node --test tests/github-action/*.test.mjs",
     "test:browser": "rstest --config rstest.browser-app.config.ts",
     "test:routes": "rstest --config rstest.route-unit.config.ts",
     "typecheck": "pnpm validate && tsc -p tsconfig.json --noEmit",

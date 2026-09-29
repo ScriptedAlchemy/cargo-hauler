@@ -1,0 +1,42 @@
+name: Cargo Hauler CI
+description: Drain ready pull requests through isolated warm workers and report each tested snapshot.
+inputs:
+  token:
+    description: Short-lived job token with contents/read, pull-requests/read, and checks/write.
+    required: true
+  recipe:
+    description: CI recipe in the checked-out trusted default branch.
+    default: .github/hauler-ci.json
+  lane:
+    description: Recipe lane owned by this worker.
+    required: true
+  max-minutes:
+    description: Drain deadline in minutes. An unfinished snapshot is cancelled at the deadline.
+    default: '120'
+  max-snapshots:
+    description: Maximum snapshots admitted during this worker lifetime.
+    default: '8'
+  pull-requests:
+    description: Optional comma-separated PR numbers for a bounded trial.
+    default: ''
+outputs:
+  evidence:
+    description: Directory containing controller timings and bounded test reports.
+    value: ${{ steps.drain.outputs.evidence }}
+  summary:
+    description: Path to the controller's timing and verdict summary.
+    value: ${{ steps.drain.outputs.summary }}
+runs:
+  using: composite
+  steps:
+    - id: drain
+      shell: bash
+      env:
+        CARGO_HAULER_CI_TOKEN: ${{ inputs.token }}
+        CARGO_HAULER_CI_RECIPE: ${{ inputs.recipe }}
+        CARGO_HAULER_CI_LANE: ${{ inputs.lane }}
+        CARGO_HAULER_CI_MINUTES: ${{ inputs.max-minutes }}
+        CARGO_HAULER_CI_SNAPSHOTS: ${{ inputs.max-snapshots }}
+        CARGO_HAULER_CI_PRS: ${{ inputs.pull-requests }}
+        CARGO_HAULER_ACTION_PATH: ${{ github.action_path }}
+      run: node "$CARGO_HAULER_ACTION_PATH/src/internal/github-action/main.mjs"

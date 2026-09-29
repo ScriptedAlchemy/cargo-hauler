@@ -8,6 +8,10 @@ terminals build the same Rust workspaces at once. It keeps them from blocking
 each other on the build directory, runs the shared work once, and hands every
 requester its own result.
 
+The [GitHub Action](docs/github-action.md) applies warm workers to a repository's
+PR queue. It manages isolated snapshots, per-PR checks, and compiler reuse from
+one trusted CI recipe.
+
 ## The problem
 
 Agents run `cargo check`, `cargo test`, and `cargo build` often and

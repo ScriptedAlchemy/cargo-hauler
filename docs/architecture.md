@@ -31,6 +31,7 @@ to service to repository, and nobody should add one.
 
 | Owner | Holds | Must not import |
 | --- | --- | --- |
+| `internal/github-action/` | the standalone GitHub Action controller, trusted recipe boundary, isolated Docker workers, and snapshot results; the root `action.yml` is its entrypoint | plugin UI or broker internals |
 | `internal/contracts/` | the daemon and client NDJSON vocabulary (`protocol.ts`, with records, messages, and status), the tool input and output schemas (`tool-schemas.ts`), `wire-version.ts`, `version-order.ts` | daemon, client, or UI implementation |
 | `internal/cargo/` | how a cargo command is understood and run, in `argv.ts`, `env.ts` (which variables travel with the request), `intent.ts` (normalization, the coalescing key), `workspace.ts`, `topology.ts` (`cargo metadata` graph), and `execution/` (`executor.ts` spawns cargo, `real-cargo.ts` finds the real binary, `cargo-json.ts`, `build-phase.ts`) | the broker or the ledger |
 | `internal/daemon/` | the daemon process. `main.ts` composes the Effect layers, and `config.ts` resolves them. `runtime/` owns the socket, singleton lock, server connections, and lifecycle. `broker/` owns ticket state (jobs, lanes, riders, dependencies, replay, stall). `scheduling/` is policy (selection, admission pressure, cost estimates, batch folding). `reporting/` builds status-report numbers. | UI |
