@@ -97,6 +97,9 @@ The read-only `plan` mode returns `lanes` as a JSON array and `count` as its
 length. It includes execution and queued-check maintenance, so empty pools avoid
 worker allocation while cleanup still runs under each lane's concurrency lock.
 Planning is advisory: each drain rechecks admission after acquiring its lane.
+A validated native-CI receipt also plans queued checks from prior policy versions
+for retirement. Only serialized drains cancel them after rechecking the current
+head, receipt and queued state; mismatched delegated receipts never admit work.
 An in-progress check remains eligible for recovery; the plan does not infer
 whether its prior worker still lives. API errors fail the plan rather than
 reporting an empty pool. Use the same recipe, Action pin and explicit PR

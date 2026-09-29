@@ -19,11 +19,12 @@ export async function scanAdmission(client, { recipe, repository, policy, lanes 
     const pr = await client.api(`/pulls/${listed.number}`);
     if (!trustedPull(pr, repository, recipe) || attempted.has(pr.head.sha)) continue;
     const checks = await client.pages(`/commits/${pr.head.sha}/check-runs?filter=latest`, 'check_runs');
-    const pending = [];
+    const pending = [], nativeQueued = [];
     for (const lane of lanes) {
       const identity = checkIdentity(pr.head.sha, lane.id, policy);
       const own = checks.filter(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && c.head_sha === pr.head.sha);
       const queued = own.find(c => matchesCheck(c, identity) && ['queued', 'in_progress'].includes(c.status));
+      for (const check of own) if (check.status === 'queued' && checkMetadata(check.external_id)?.identity.startsWith(checkIdentity(pr.head.sha, lane.id, '')) && (pr.mergeable !== false || !matchesCheck(check, identity))) nativeQueued.push({ lane, queued: check });
       if (pr.mergeable === false) {
         if (own.some(c => matchesCheck(c, identity) && c.status === 'queued')) maintenance.push({ kind: 'conflict', lane, pr, checks });
         continue;
@@ -32,14 +33,15 @@ export async function scanAdmission(client, { recipe, repository, policy, lanes 
       const retry = own.find(c => c.status === 'completed' && (checkMetadata(c.external_id)?.identity === identity && checkMetadata(c.external_id)?.infrastructure || matchesCheck(c, identity) && c.conclusion === 'cancelled'));
       if (manualAdmission || queued || retry) pending.push({ lane, queued, retry });
     }
-    if (!pending.length) continue;
+    if (!pending.length && !nativeQueued.length) continue;
     if (!manualAdmission) {
       const decision = await receipt(client, { workflow: admissionWorkflow, head: pr.head.sha, pr: pr.number, policy });
       if (decision !== 'delegated') {
-        if (decision === 'native') for (const item of pending) if (item.queued?.status === 'queued') maintenance.push({ kind: 'native', ...item, pr });
+        if (decision === 'native') for (const item of nativeQueued) maintenance.push({ kind: 'native', ...item, pr });
         continue;
       }
     }
+    if (!pending.length) continue;
     if (!recipe.requiredChecks.every(name => checks.some(c => c.name === name && c.app?.slug === 'github-actions' && c.status === 'completed' && c.conclusion === 'success'))) continue;
     const snapshot = await readSnapshot(client, pr);
     if (!snapshot) continue;

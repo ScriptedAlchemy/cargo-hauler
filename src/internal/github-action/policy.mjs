@@ -85,6 +85,14 @@ export async function route(options) {
   } catch { return { decision: 'native', policy }; }
   finally { clearTimeout(timer); }
 }
+export async function cancelNativeCheck(client, { pr, queued, lane, recipe, repository, policy, admissionWorkflow }) {
+  const current = await client.api(`/pulls/${pr.number}`);
+  if (!trustedPull(current, repository, recipe) || current.head.sha !== pr.head.sha) return;
+  if (await receipt(client, { workflow: admissionWorkflow, head: pr.head.sha, pr: pr.number, policy }) !== 'native') return;
+  const latest = await client.api(`/check-runs/${queued.id}`);
+  if (latest.status !== 'queued' || latest.head_sha !== pr.head.sha || latest.external_id !== queued.external_id || latest.name !== lane.checkName || latest.app?.slug !== 'github-actions' || !checkMetadata(latest.external_id)?.identity.startsWith(checkIdentity(pr.head.sha, lane.id, ''))) return;
+  await client.api(`/check-runs/${queued.id}`, 'PATCH', { status: 'completed', conclusion: 'cancelled', completed_at: new Date().toISOString(), output: { title: 'Native CI owns this head', summary: 'Native CI fallback declined Hauler delegation.' } });
+}
 export async function cancelConflictedChecks(client, { pr, recipe, repository, policy, lanes = recipe.lanes, checks }) {
   if (pr.mergeable !== false) return;
   const queued = checks.filter(check => check.status === 'queued' && check.head_sha === pr.head.sha && check.app?.slug === 'github-actions' && lanes.some(lane => check.name === lane.checkName && matchesCheck(check, checkIdentity(pr.head.sha, lane.id, policy))));
@@ -105,12 +113,7 @@ export async function enqueue({ recipe, policy, client, repository, onlyPullRequ
     const pr = await client.api(`/pulls/${listed.number}`);
     if (!trustedPull(pr, repository, recipe) || pr.mergeable === false) continue;
     const checks = await client.pages(`/commits/${pr.head.sha}/check-runs?filter=latest`, 'check_runs');
-    if (await receipt(client, { workflow: admissionWorkflow, head: pr.head.sha, pr: pr.number, policy }) === 'native') {
-      for (const lane of recipe.lanes) {
-        for (const check of checks.filter(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && matchesCheck(c, checkIdentity(pr.head.sha, lane.id, policy)) && c.status === 'queued')) await client.api(`/check-runs/${check.id}`, 'PATCH', { status: 'completed', conclusion: 'cancelled', completed_at: new Date().toISOString(), output: { title: 'Native CI owns this head', summary: 'Native CI fallback declined Hauler delegation.' } });
-      }
-      continue;
-    }
+    if (await receipt(client, { workflow: admissionWorkflow, head: pr.head.sha, pr: pr.number, policy }) === 'native') continue;
     for (const lane of recipe.lanes) {
       const identity = checkIdentity(pr.head.sha, lane.id, policy);
       const external_id = `${identity}:run:${managerRunId}`;

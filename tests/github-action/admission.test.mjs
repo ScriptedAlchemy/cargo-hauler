@@ -24,7 +24,7 @@ function fixture() {
     else if (path.startsWith('/git/commits/')) data = { committer: { date: '2026-09-28T00:00:00Z' } };
     else if (path.startsWith('/git/trees/')) data = { tree: [] };
     else if (path.includes('/actions/workflows/')) data = { workflow_runs: [{ id: 10, event: 'pull_request', head_sha: state.pr.head.sha, path: '.github/workflows/ci.yml', run_attempt: 1, pull_requests: [{ number: 1 }] }] };
-    else if (path.endsWith('/jobs')) data = { jobs: [{ steps: state.decision ? [{ name: `Hauler route / ${state.decision} / ${policy}`, conclusion: 'success' }] : [] }] };
+    else if (path.endsWith('/jobs')) data = { jobs: [{ steps: state.decision ? [{ name: `Hauler route / ${state.decision} / ${state.receiptPolicy ?? policy}`, conclusion: 'success' }] : [] }] };
     else throw new Error(`Unexpected API path ${path}`);
     return { ok: true, json: async () => structuredClone(data) };
   }
@@ -93,4 +93,52 @@ test('explicit manual planning bypasses receipt but preserves gates and API erro
   f.state.apiFailure = true;
   await assert.rejects(plan(f.options), /GitHub GET returned 403/);
   assert.equal(f.state.writes.length, 0);
+});
+
+test('new-policy native ownership retires old-policy markers only in drain', async () => {
+  const f = fixture();
+  f.state.checks = [f.check('a', { external_id: `hauler:a:${sha(1)}:${'c'.repeat(64)}:run:10` })];
+  f.state.decision = 'native';
+  f.state.receiptPolicy = 'b'.repeat(64);
+  assert.deepEqual(await plan(f.options), { lanes: ['a'], count: 1 });
+  assert.equal(f.state.writes.length, 0);
+  assert.equal(f.state.checks[0].status, 'queued');
+  await drain(f.drainOptions);
+  assert.equal(f.state.checks[0].conclusion, 'cancelled');
+  assert.equal(f.state.builds, 0);
+  assert.deepEqual(await plan(f.options), { lanes: [], count: 0 });
+});
+
+test('native cleanup ignores wrong ownership and old-policy delegation never admits work', async () => {
+  const f = fixture(); f.state.decision = 'native';
+  const old = f.check('a', { external_id: `hauler:a:${sha(1)}:${'c'.repeat(64)}:run:10` });
+  f.state.checks = [
+    { ...old, head_sha: sha(9) }, { ...old, app: { slug: 'other' } },
+    { ...old, name: 'Unknown lane' }, { ...old, external_id: `${old.external_id}:junk` },
+    { ...old, status: 'in_progress' }, { ...old, status: 'completed', conclusion: 'success' },
+  ];
+  assert.deepEqual(await plan(f.options), { lanes: [], count: 0 });
+  f.state.checks = [old]; f.state.decision = 'delegated'; f.state.receiptPolicy = 'c'.repeat(64);
+  assert.deepEqual(await plan(f.options), { lanes: [], count: 0 });
+  await drain(f.drainOptions);
+  assert.equal(f.state.writes.length, 0);
+  assert.equal(f.state.builds, 0);
+});
+test('serialized native cleanup preserves a changed head, receipt or running check', async () => {
+  for (const race of ['head', 'receipt', 'running']) {
+    const f = fixture(); f.state.decision = 'native';
+    f.state.checks = [f.check('a', { external_id: `hauler:a:${sha(1)}:${'c'.repeat(64)}:run:10` })];
+    let pullReads = 0, jobReads = 0;
+    const fetchImpl = async (url, options) => {
+      const response = await f.options.fetchImpl(url, options), data = await response.json();
+      if (url.endsWith('/pulls/1') && ++pullReads === 2 && race === 'head') data.head.sha = sha(9);
+      if (url.includes('/jobs') && ++jobReads === 2 && race === 'receipt') data.jobs[0].steps[0].name = `Hauler route / delegated / ${policy}`;
+      if (url.endsWith('/check-runs/97') && options.method === 'GET' && race === 'running') data.status = 'in_progress';
+      return { ...response, json: async () => data };
+    };
+    await drain({ ...f.drainOptions, fetchImpl });
+    assert.equal(f.state.writes.length, 0);
+    assert.equal(f.state.checks[0].status, 'queued');
+    assert.equal(f.state.builds, 0);
+  }
 });
