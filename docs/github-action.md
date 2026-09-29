@@ -12,6 +12,8 @@ because PR code must not control the process holding check-writing credentials.
 ```yaml
 name: Hauler CI
 on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_run:
     workflows: [CI]
     types: [completed]
@@ -22,11 +24,29 @@ permissions:
   contents: read
   pull-requests: read
   checks: write
-concurrency:
-  group: hauler-ci-pool
-  cancel-in-progress: false
+  actions: read
 jobs:
+  enqueue:
+    if: github.event_name == 'pull_request_target'
+    concurrency:
+      group: hauler-enqueue-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: ScriptedAlchemy/cargo-hauler@<reviewed-commit-sha>
+        with:
+          mode: enqueue
+          token: ${{ github.token }}
+          pull-requests: ${{ github.event.pull_request.number }}
   worker:
+    if: github.event_name != 'pull_request_target'
+    concurrency:
+      group: hauler-ci-${{ matrix.lane }}
+      cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix:
@@ -51,7 +71,34 @@ jobs:
           path: ${{ steps.hauler.outputs.evidence }}
 ```
 
-The default recipe path is `.github/hauler-ci.json`.
+The default recipe path is `.github/hauler-ci.json`. Name the manager workflow
+`hauler-ci.yml`, or set `manager-workflow` consistently on all invocations.
+
+In the existing `ci.yml` scope job, call the same immutable Action before any
+PR checkout. Give that job read permissions for contents, PRs, checks, and
+Actions. Keep cheap repository gates unconditional. Run native heavy jobs
+unless routing succeeds and returns `delegated`.
+
+```yaml
+- uses: ScriptedAlchemy/cargo-hauler@<reviewed-commit-sha>
+  id: route
+  continue-on-error: true
+  with:
+    mode: route
+    token: ${{ github.token }}
+- name: Hauler route / ${{ steps.route.outputs.decision || 'native' }} / ${{ steps.route.outputs.policy || 'unavailable' }}
+  run: ':'
+```
+
+The named step records ownership in GitHub's job metadata. The controller
+requires that successful receipt from the configured `admission-workflow`
+(default `ci.yml`) before draining automatic work. If routing times out or
+policy validation fails, native CI remains responsible; a late enqueue cannot
+start duplicate managed work. Enqueue creates pending lane checks before a
+PR waits for a worker. It runs outside worker concurrency limits.
+
+A manual dispatch with an explicit `pull-requests` selection permits a bounded
+trial alongside native CI. Automatic drains require the ownership receipt.
 
 ```json
 {
@@ -111,6 +158,7 @@ changed or reverted files receive fresh timestamps. Every snapshot gets a new
 container, and all of its descendants are removed before another starts.
 Worker containers never receive the GitHub token. The trusted controller uses
 only the short-lived job token; no personal token or App private key is needed.
+Read-only routing receives no check-writing permission.
 
 The host summary records queue time, execution time, task outcomes, and exact
 snapshot identities. `evidence` contains that summary and bounded regular XML

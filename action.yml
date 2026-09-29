@@ -1,6 +1,15 @@
 name: Cargo Hauler CI
 description: Drain ready pull requests through isolated warm workers and report each tested snapshot.
 inputs:
+  mode:
+    description: route decides PR delegation; enqueue reserves checks; drain tests delegated PRs.
+    default: drain
+  manager-workflow:
+    description: Trusted workflow owning admission check creation.
+    default: hauler-ci.yml
+  admission-workflow:
+    description: Native PR workflow whose exact-head delegation receipt admits work.
+    default: ci.yml
   token:
     description: Short-lived job token with contents/read, pull-requests/read, and checks/write.
     required: true
@@ -9,7 +18,7 @@ inputs:
     default: .github/hauler-ci.json
   lane:
     description: Recipe lane owned by this worker.
-    required: true
+    required: false
   max-minutes:
     description: Drain deadline in minutes. An unfinished snapshot is cancelled at the deadline.
     default: '120'
@@ -20,6 +29,12 @@ inputs:
     description: Optional comma-separated PR numbers for a bounded trial.
     default: ''
 outputs:
+  decision:
+    description: delegated or native, from route mode.
+    value: ${{ steps.drain.outputs.decision }}
+  policy:
+    description: Trusted policy digest or unavailable on native fallback.
+    value: ${{ steps.drain.outputs.policy }}
   evidence:
     description: Directory containing controller timings and bounded test reports.
     value: ${{ steps.drain.outputs.evidence }}
@@ -32,6 +47,10 @@ runs:
     - id: drain
       shell: bash
       env:
+        CARGO_HAULER_CI_MODE: ${{ inputs.mode }}
+        CARGO_HAULER_CI_MANAGER_WORKFLOW: ${{ inputs.manager-workflow }}
+        CARGO_HAULER_CI_ADMISSION_WORKFLOW: ${{ inputs.admission-workflow }}
+        CARGO_HAULER_ACTION_REF: ${{ github.action_ref }}
         CARGO_HAULER_CI_TOKEN: ${{ inputs.token }}
         CARGO_HAULER_CI_RECIPE: ${{ inputs.recipe }}
         CARGO_HAULER_CI_LANE: ${{ inputs.lane }}

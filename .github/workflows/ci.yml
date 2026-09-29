@@ -71,3 +71,11 @@ jobs:
 
       - name: Run checks
         run: pnpm check
+
+      - name: Verify the GitHub worker boundary with Docker
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '24'
+        env:
+          HAULER_SANDBOX_TEST_IMAGE: node:22-bookworm-slim
+          HAULER_SANDBOX_TEST_SNAPSHOT: >-
+            {"repository":"octocat/Hello-World","snapshot":{"pr":11301,"base":"7fd1a60b01f91b314f59955a4e4d4e80d8edf11d","head":"4657431aec0fec59a58e13cd90054fb4e8bcfcd3","merge":"b08ed73837f427d56d8cfc7e05f6944096f2766c"}}
+        run: node --test tests/github-action/sandbox.test.mjs

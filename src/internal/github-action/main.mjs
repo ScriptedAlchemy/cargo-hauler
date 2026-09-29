@@ -1,13 +1,11 @@
-import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { readFile, writeFile, appendFile, mkdtemp, realpath, chmod, mkdir, cp } from 'node:fs/promises';
-import { resolve, relative, isAbsolute, dirname, join } from 'node:path';
+import { resolve, relative, isAbsolute, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const exec = promisify(execFile);
-const directory = dirname(fileURLToPath(import.meta.url));
 
 export function assertTrustedContext(env, event, checkout) {
   const allowed = new Set(['pull_request_target', 'workflow_run', 'schedule', 'workflow_dispatch', 'push']);
@@ -38,30 +36,36 @@ export async function within(root, path) {
 }
 
 export async function main(env = process.env) {
-  const root = await realpath(env.GITHUB_WORKSPACE ?? '.');
   const event = JSON.parse(await readFile(env.GITHUB_EVENT_PATH, 'utf8'));
+  const { loadPolicy, route, enqueue } = await import('./policy.mjs');
+  const mode = env.CARGO_HAULER_CI_MODE ?? 'drain';
+  const options = { repository: env.GITHUB_REPOSITORY, token: env.CARGO_HAULER_CI_TOKEN,
+    managerWorkflow: env.CARGO_HAULER_CI_MANAGER_WORKFLOW ?? 'hauler-ci.yml',
+    actionRef: env.CARGO_HAULER_ACTION_REF, recipePath: env.CARGO_HAULER_CI_RECIPE };
+  if (mode === 'route') {
+    const result = env.GITHUB_EVENT_NAME === 'pull_request' && env.GITHUB_SERVER_URL === 'https://github.com'
+      ? await route({ ...options, pr: event.pull_request?.number, head: event.pull_request?.head?.sha })
+      : { decision: 'native', policy: 'unavailable' };
+    if (env.GITHUB_OUTPUT) await appendFile(env.GITHUB_OUTPUT, `decision=${result.decision}\npolicy=${result.policy}\n`);
+    return result;
+  }
+  if (!['enqueue', 'drain'].includes(mode)) throw new Error('Invalid Action mode');
+  const root = await realpath(env.GITHUB_WORKSPACE ?? '.');
   const { stdout } = await exec('git', ['rev-parse', 'HEAD'], { cwd: root });
   assertTrustedContext(env, event, stdout.trim());
-  if (!env.CARGO_HAULER_CI_TOKEN) throw new Error('A scoped job token is required.');
-  const { parseRecipe } = await import('./recipe.mjs');
+  const loaded = await loadPolicy({ ...options, ref: stdout.trim() });
+  const { recipe, policy: actionIdentity } = loaded;
+  const admissionWorkflow = env.CARGO_HAULER_CI_ADMISSION_WORKFLOW ?? 'ci.yml';
   const { drain } = await import('./manager.mjs');
   const { createSandbox } = await import('./sandbox.mjs');
-  const recipePath = await within(root, env.CARGO_HAULER_CI_RECIPE);
-  const recipe = parseRecipe(JSON.parse(await readFile(recipePath, 'utf8')));
   const dockerfile = await within(root, recipe.image.dockerfile);
   const context = await within(root, recipe.image.context);
-  const hash = createHash('sha256');
-  for (const name of ['main.mjs', 'manager.mjs', 'recipe.mjs', 'sandbox.mjs']) hash.update(await readFile(join(directory, name)));
-  hash.update(await readFile(dockerfile));
-  const contextRelative = relative(root, context) || '.';
-  const { stdout: imageTree } = await exec('git', ['ls-tree', '-rz', 'HEAD', '--', contextRelative], { cwd: root });
-  hash.update(imageTree);
-  const actionIdentity = hash.digest('hex');
   const maxMinutes = positiveInteger(env.CARGO_HAULER_CI_MINUTES, 300, 'max-minutes');
   const maxSnapshots = positiveInteger(env.CARGO_HAULER_CI_SNAPSHOTS, 100, 'max-snapshots');
   const onlyPullRequests = env.CARGO_HAULER_CI_PRS?.trim()
     ? env.CARGO_HAULER_CI_PRS.split(',').map(value => positiveInteger(value.trim(), 2 ** 31 - 1, 'PR number'))
     : undefined;
+  if (mode === 'enqueue') return enqueue({ ...loaded, repository: options.repository, onlyPullRequests, admissionWorkflow, managerRunId: env.GITHUB_RUN_ID });
   const state = await mkdtemp(join(env.RUNNER_TEMP || tmpdir(), 'hauler-ci-'));
   await chmod(state, 0o700);
   const abort = new AbortController();
@@ -80,7 +84,8 @@ export async function main(env = process.env) {
   };
   try {
     const result = await drain({ recipe, lane: env.CARGO_HAULER_CI_LANE, repository: env.GITHUB_REPOSITORY,
-      token: env.CARGO_HAULER_CI_TOKEN, root: state, image, actionIdentity, maxMinutes, maxSnapshots,
+      token: env.CARGO_HAULER_CI_TOKEN, root: state, image, actionIdentity, policy: actionIdentity, admissionWorkflow,
+      manualAdmission: env.GITHUB_EVENT_NAME === 'workflow_dispatch' && Boolean(onlyPullRequests?.length), maxMinutes, maxSnapshots,
       onlyPullRequests, sandboxFactory, signal: abort.signal });
     const evidence = join(state, 'evidence');
     await mkdir(evidence, { mode: 0o700 });

@@ -1,42 +1,19 @@
 import { createHash } from 'node:crypto';
-import { setTimeout as delay } from 'node:timers/promises';
+import { githubClient, receipt } from './github.mjs';
+import { checkIdentity } from './policy.mjs';
 import { parseRecipe } from './recipe.mjs';
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
 
-export async function drain({ recipe: input, lane: laneId, repository, token, root, actionIdentity, image, maxMinutes = 45, maxSnapshots = 8, onlyPullRequests, sandboxFactory, fetchImpl = fetch, signal, pollMilliseconds = 20000 }) {
+export async function drain({ recipe: input, lane: laneId, repository, token, root, actionIdentity, policy, admissionWorkflow = 'ci.yml', manualAdmission = false, image, maxMinutes = 45, maxSnapshots = 8, onlyPullRequests, sandboxFactory, fetchImpl = fetch, signal, pollMilliseconds = 60000 }) {
   const recipe = parseRecipe(input), lane = recipe.lanes.find(l => l.id === laneId);
   if (!lane || !/^[\w.-]+\/[\w.-]+$/.test(repository) || !token || !actionIdentity || !Number.isFinite(maxMinutes) || maxMinutes <= 0 || maxMinutes > 350 || !Number.isInteger(maxSnapshots) || maxSnapshots < 1 || maxSnapshots > 100) throw new TypeError('Invalid Hauler drain options');
   if (onlyPullRequests && (!Array.isArray(onlyPullRequests) || onlyPullRequests.some(n => !Number.isSafeInteger(n) || n < 1))) throw new TypeError('Invalid pull request selection');
-  const deadline = Date.now() + maxMinutes * 60000, identity = digest({ recipe, actionIdentity, lane: lane.id });
+  const deadline = Date.now() + maxMinutes * 60000, identity = policy ?? digest({ recipe, actionIdentity });
   const summary = { lane: lane.id, snapshots: [] }, attempted = new Set();
   let sandbox, sandboxKey;
-  async function api(path, method = 'GET', body) {
-    for (let attempt = 0; ; attempt++) {
-      let response;
-      try {
-        response = await fetchImpl(`https://api.github.com/repos/${repository}${path}`, { method, headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(15000), redirect: 'error' });
-      } catch {
-        if (method === 'GET' && attempt < 2) { await delay(250 * (attempt + 1)); continue; }
-        throw new Error(`GitHub ${method} request failed`);
-      }
-      if (!response.ok) {
-        if (method === 'GET' && attempt < 2 && (response.status === 429 || response.status >= 500)) { await delay(250 * (attempt + 1)); continue; }
-        throw new Error(`GitHub ${method} returned ${response.status}`);
-      }
-      return response.json();
-    }
-  }
-  async function pages(path, field) {
-    const rows = [];
-    for (let page = 1; page <= 100; page++) {
-      const data = await api(`${path}${path.includes('?') ? '&' : '?'}per_page=100&page=${page}`), batch = field ? data[field] : data;
-      if (!Array.isArray(batch)) throw new Error('Malformed GitHub list');
-      rows.push(...batch);
-      if (batch.length < 100) return rows;
-    }
-    throw new Error('GitHub listing exceeded limit');
-  }
+  const client = githubClient({ repository, token, fetchImpl });
+  const { api, pages } = client;
   async function currentPull(number) {
     const pr = await api(`/pulls/${number}`);
     if (pr.state !== 'open' || pr.draft || pr.head?.repo?.full_name !== repository || !recipe.trustedAuthors.some(a => a.toLowerCase() === pr.user?.login?.toLowerCase()) || !sha(pr.head?.sha)) return null;
@@ -51,7 +28,7 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
   }
   const same = (a, b) => b && a.head === b.head && a.base === b.base && a.merge === b.merge;
   const currentHead = async s => (await currentPull(s.pr))?.head.sha === s.head;
-  const external = s => `hauler:${lane.id}:${s.head}:${identity}`;
+  const external = s => checkIdentity(s.head, lane.id, identity);
   async function eligible() {
     const pulls = await pages('/pulls?state=open&sort=created&direction=asc');
     const candidates = [];
@@ -62,12 +39,19 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
       if (!s || attempted.has(s.head)) continue;
       const checks = await pages(`/commits/${s.head}/check-runs?filter=latest`, 'check_runs');
       if (checks.some(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && c.external_id === external(s) && c.status === 'completed' && ['success', 'failure'].includes(c.conclusion))) continue;
+      const queued = checks.find(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && c.external_id === external(s) && ['queued', 'in_progress'].includes(c.status));
+      const retry = checks.find(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && c.status === 'completed' && (c.external_id === `${external(s)}:infrastructure` || c.external_id === external(s) && c.conclusion === 'cancelled'));
+      if (!manualAdmission) {
+        const decision = queued || retry ? await receipt(client, { workflow: admissionWorkflow, head: s.head, pr: s.pr, policy: identity }) : null;
+        if (decision === 'native' && queued?.status === 'queued') await api(`/check-runs/${queued.id}`, 'PATCH', { status: 'completed', conclusion: 'cancelled', completed_at: new Date().toISOString(), output: { title: 'Native CI owns this head', summary: 'Native CI fallback declined Hauler delegation.' } });
+        if ((!queued && !retry) || decision !== 'delegated') continue;
+      }
       if (!recipe.requiredChecks.every(name => checks.some(c => c.name === name && c.app?.slug === 'github-actions' && c.status === 'completed' && c.conclusion === 'success'))) continue;
       const commit = await api(`/git/commits/${s.head}`);
       const readyAt = recipe.requiredChecks.length
         ? Math.max(Date.parse(commit.committer?.date) || 0, ...checks.filter(c => recipe.requiredChecks.includes(c.name)).map(c => Date.parse(c.completed_at) || 0))
         : Date.parse(s.updatedAt) || Date.parse(commit.committer?.date) || Date.now();
-      candidates.push({ ...s, readyAt });
+      candidates.push({ ...s, readyAt, queued, retry });
     }
     return candidates.sort((a, b) => a.readyAt - b.readyAt || a.pr - b.pr)[0];
   }
@@ -97,13 +81,21 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
         catch { stale = true; controller.abort(); }
         finally { polling = false; }
       }, pollMilliseconds);
+      async function progress(stage) {
+        record.stage = stage;
+        await api(`/check-runs/${check.id}`, 'PATCH', { output: { title: `Hauler ${lane.id}: ${stage}`, summary: `${record.tasks.length}/${lane.tasks.length} tasks finished. Stage ${stage}. Failed tasks: ${record.tasks.filter(t => t.conclusion === 'failure').map(t => `${t.id} (exit ${t.exitCode})`).join(', ') || 'none'}. Pinned base ${s.base}, merge ${s.merge}.` } });
+      }
       async function report(conclusion) {
         if (!await currentHead(s)) { stale = true; controller.abort(); conclusion = 'cancelled'; }
-        await api(`/check-runs/${check.id}`, 'PATCH', { external_id: record.infrastructureError ? `${external(s)}:infrastructure` : external(s), status: 'completed', conclusion, completed_at: new Date().toISOString(), output: { title: `Hauler ${lane.id}: ${conclusion}`, summary: `${record.tasks.length}/${lane.tasks.length} tasks finished. Tested head ${s.head} against pinned base ${s.base}, merge ${s.merge}. Later base changes are not revalidated. Failed tasks: ${record.tasks.filter(t => t.conclusion === 'failure').map(t => `${t.id} (exit ${t.exitCode})`).join(', ') || 'none'}.` } });
+        await api(`/check-runs/${check.id}`, 'PATCH', { external_id: record.infrastructureError ? `${external(s)}:infrastructure` : external(s), status: 'completed', conclusion, completed_at: new Date().toISOString(), output: { title: `Hauler ${lane.id}: ${conclusion}`, summary: `${record.tasks.length}/${lane.tasks.length} tasks finished. Stage ${record.stage}. Tested head ${s.head} against pinned base ${s.base}, merge ${s.merge}. Later base changes are not revalidated. Failed tasks: ${record.tasks.filter(t => t.conclusion === 'failure').map(t => `${t.id} (exit ${t.exitCode})`).join(', ') || 'none'}.` } });
         record.conclusion = conclusion;
       }
       try {
-        check = await api('/check-runs', 'POST', { name: lane.checkName, head_sha: s.head, external_id: external(s), status: 'in_progress', started_at: new Date().toISOString() });
+        if (s.queued) {
+          check = s.queued;
+          await api(`/check-runs/${check.id}`, 'PATCH', { status: 'in_progress', started_at: new Date().toISOString() });
+        } else check = await api('/check-runs', 'POST', { name: lane.checkName, head_sha: s.head, external_id: external(s), ...(s.retry?.details_url ? { details_url: s.retry.details_url } : {}), status: 'in_progress', started_at: new Date().toISOString() });
+        await progress('image');
         const key = await compatibility(s);
         if (!sandbox || key !== sandboxKey) {
           if (sandbox) await sandbox.close();
@@ -111,20 +103,26 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
           sandbox = await sandboxFactory({ repository, image, root, sharedBuilds: recipe.sharedBuilds, compatibilityKey: key, signal, preparationSignal: controller.signal });
           sandboxKey = key;
         }
+        await progress('checkout');
         await sandbox.prepare({ pr: s.pr, head: s.head, base: s.base, merge: s.merge, signal: controller.signal });
-        for (const command of recipe.prepare) {
+        for (const [index, command] of recipe.prepare.entries()) {
+          await progress(`prepare-${index + 1}`);
           const result = await sandbox.run(command, { timeoutSeconds: Math.min(1800, Math.max(1, Math.ceil((deadline - Date.now()) / 1000))), signal: controller.signal });
           if (result.exitCode !== 0) throw new Error('Snapshot preparation failed');
         }
         for (const task of lane.tasks) {
           if (controller.signal.aborted) break;
+          await progress(`task-${task.id}`);
           const taskStart = Date.now();
           const result = await sandbox.run(task.run, { timeoutSeconds: task.timeoutSeconds, signal: controller.signal });
           const conclusion = result.exitCode === 0 ? 'success' : 'failure';
           record.tasks.push({ id: task.id, conclusion, exitCode: Number.isInteger(result.exitCode) ? result.exitCode : null, durationSeconds: (Date.now() - taskStart) / 1000 });
           if (conclusion === 'failure' && !failed) { failed = true; await report('failure'); }
         }
-        if (!controller.signal.aborted && recipe.reports.length) record.reportsPath = await sandbox.exportReports(recipe.reports);
+        if (!controller.signal.aborted && recipe.reports.length) {
+          await progress('reports');
+          record.reportsPath = await sandbox.exportReports(recipe.reports);
+        }
         await report(controller.signal.aborted || stale ? 'cancelled' : failed || record.tasks.length !== lane.tasks.length ? 'failure' : 'success');
       } catch {
         record.infrastructureError = !controller.signal.aborted && !stale;

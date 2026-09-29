@@ -19,7 +19,7 @@ function fixture({ authors = ['owner'], fail = false, change = false, prepareFai
       result = { check_runs: [{ name: 'Gates', app: { slug: 'github-actions' }, status: 'completed', conclusion: 'success' }, ...[...checks.values()].filter(c => c.head_sha === head)] };
     } else if (path.startsWith('/git/trees/')) result = { tree: [{ path: 'Cargo.lock', sha: hex(200), mode: '100644' }] };
     else if (path === '/check-runs' && options.method === 'POST') { result = { ...body, id: ++counter, app: { slug: 'github-actions' } }; checks.set(counter, result); events.push(['create', body.head_sha]); }
-    else if (path.startsWith('/check-runs/') && options.method === 'PATCH') { result = Object.assign(checks.get(Number(path.split('/').at(-1))), body); events.push(['report', body.conclusion]); }
+    else if (path.startsWith('/check-runs/') && options.method === 'PATCH') { result = Object.assign(checks.get(Number(path.split('/').at(-1))), body); if (body.conclusion) events.push(['report', body.conclusion]); }
     else throw new Error(`Unexpected route ${path}`);
     return { ok: true, json: async () => structuredClone(result) };
   }
@@ -28,7 +28,7 @@ function fixture({ authors = ['owner'], fail = false, change = false, prepareFai
     builds++;
     return { async prepare() { if (prepareFail) throw new Error('private worker diagnostic'); }, async run(command) { events.push(['run', command]); if (change) prs[0].head.sha = hex(500); return { exitCode: fail && command === 'first' ? 1 : 0 }; }, async close() { events.push(['close']); } };
   }
-  const options = { recipe, lane: 'linux', repository: 'owner/repo', token: 'not-logged', root: '/tmp', image: 'trusted', actionIdentity: 'abc', maxMinutes: 1, maxSnapshots: 3, fetchImpl, sandboxFactory };
+  const options = { recipe, lane: 'linux', repository: 'owner/repo', token: 'not-logged', root: '/tmp', image: 'trusted', actionIdentity: 'abc', manualAdmission: true, maxMinutes: 1, maxSnapshots: 3, fetchImpl, sandboxFactory };
   return { options, events, checks, prs, builds: () => builds };
 }
 test('publishes first failure before running remaining task and preserves failure', async () => {
@@ -147,4 +147,41 @@ test('infrastructure failure retries the same head while task failure remains te
   const failure = fixture({ fail: true });
   await drain(failure.options);
   assert.equal((await drain(failure.options)).snapshots.length, 0);
+});
+test('delegated drain updates queued check ID and rejects absent or native receipts', async () => {
+  const f = fixture(), policy = 'a'.repeat(64), original = f.options.fetchImpl;
+  const queued = { id: 99, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}`, app: { slug: 'github-actions' }, status: 'queued' };
+  f.checks.set(99, queued);
+  let decision = null;
+  const fetchImpl = async (url, options) => {
+    if (url.includes('/actions/workflows/')) return { ok: true, json: async () => ({ workflow_runs: [{ id: 10, event: 'pull_request', head_sha: hex(1), path: '.github/workflows/ci.yml', run_attempt: 1, pull_requests: [{ number: 1 }] }] }) };
+    if (url.includes('/actions/runs/10/')) return { ok: true, json: async () => ({ jobs: [{ steps: decision ? [{ name: `Hauler route / ${decision} / ${policy}`, conclusion: 'success' }] : [] }] }) };
+    return original(url, options);
+  };
+  const options = { ...f.options, manualAdmission: false, policy, fetchImpl };
+  assert.equal((await drain(options)).snapshots.length, 0);
+  decision = 'delegated';
+  assert.equal((await drain(options)).snapshots[0].conclusion, 'success');
+  assert.equal(f.checks.get(99).conclusion, 'success');
+  assert.ok(!f.events.some(e => e[0] === 'create'));
+});
+
+test('automatic delegated recovery retries infrastructure failure and cancels native queued markers', async () => {
+  const f = fixture({ prepareFail: true }), policy = 'b'.repeat(64), original = f.options.fetchImpl;
+  f.checks.set(99, { id: 99, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}`, app: { slug: 'github-actions' }, status: 'queued' });
+  let decision = 'delegated';
+  const fetchImpl = async (url, options) => {
+    if (url.includes('/actions/workflows/')) return { ok: true, json: async () => ({ workflow_runs: [{ id: 10, event: 'pull_request', head_sha: hex(1), path: '.github/workflows/ci.yml', run_attempt: 1, pull_requests: [{ number: 1 }] }] }) };
+    if (url.includes('/actions/runs/10/')) return { ok: true, json: async () => ({ jobs: [{ steps: [{ name: `Hauler route / ${decision} / ${policy}`, conclusion: 'success' }] }] }) };
+    return original(url, options);
+  };
+  const options = { ...f.options, manualAdmission: false, policy, fetchImpl };
+  assert.equal((await drain(options)).snapshots[0].infrastructureError, true);
+  const sandboxFactory = async () => ({ async prepare() {}, async run() { return { exitCode: 0 }; }, async close() {} });
+  assert.equal((await drain({ ...options, sandboxFactory })).snapshots[0].conclusion, 'success');
+  f.checks.clear();
+  f.checks.set(98, { id: 98, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}`, app: { slug: 'github-actions' }, status: 'queued' });
+  decision = 'native';
+  assert.equal((await drain({ ...options, sandboxFactory })).snapshots.length, 0);
+  assert.equal(f.checks.get(98).conclusion, 'cancelled');
 });
