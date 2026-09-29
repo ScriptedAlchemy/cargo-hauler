@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtemp, readFile, rm, writeFile, utimes, stat } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile, utimes, stat, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -73,5 +73,36 @@ test('source mtime reuse only follows the immediately previous snapshot, includi
       previous = await preserveSourceMtimes(root, `100644 blob ${blob}\tsource.rs\0`, previous);
       assert.equal((await stat(file)).mtimeMs, expected * 1000);
     }
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('Git subtree timestamps preserve identical directories but invalidate content, additions, deletions and modes', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'hauler-tree-mtimes-'));
+  const source = path.join(root, 'src');
+  const file = path.join(source, 'value.rs');
+  const git = args => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' }).trim();
+  let previous = new Map();
+  try {
+    git(['init', '--quiet']);
+    await mkdir(source);
+    for (const [index, [step, expected]] of [['initial', 1000], ['unchanged', 1000], ['changed', 3000], ['reverted', 4000], ['added', 5000], ['deleted', 6000], ['mode', 7000], ['mode-unchanged', 7000]].entries()) {
+      const created = (index + 1) * 1000;
+      await writeFile(file, step === 'changed' ? 'B' : 'A');
+      if (step === 'added') await writeFile(path.join(source, 'added.rs'), 'new');
+      if (step === 'deleted') await rm(path.join(source, 'added.rs'));
+      git(['add', '.']);
+      if (step.startsWith('mode')) git(['update-index', '--chmod=+x', 'src/value.rs']);
+      const tree = git(['ls-tree', '-r', '-t', '-z', git(['write-tree'])]);
+      await utimes(source, created, created);
+      await utimes(file, created, created);
+      await utimes(path.join(root, '.git'), created, created);
+      previous = await preserveSourceMtimes(root, tree, previous);
+      assert.equal((await stat(source)).mtimeMs, expected * 1000, step);
+      assert.equal((await stat(path.join(root, '.git'))).mtimeMs, created * 1000, 'Git metadata stays fresh');
+    }
+    const tree = git(['ls-tree', '-r', '-t', '-z', git(['write-tree'])]);
+    await rm(source, { recursive: true });
+    await writeFile(source, 'not a directory');
+    await assert.rejects(preserveSourceMtimes(root, tree, previous), /Invalid staging entry/);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
