@@ -150,7 +150,7 @@ test('infrastructure failure retries the same head while task failure remains te
 });
 test('delegated drain updates queued check ID and rejects absent or native receipts', async () => {
   const f = fixture(), policy = 'a'.repeat(64), original = f.options.fetchImpl;
-  const queued = { id: 99, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}`, app: { slug: 'github-actions' }, status: 'queued' };
+  const queued = { id: 99, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'queued' };
   f.checks.set(99, queued);
   let decision = null;
   const fetchImpl = async (url, options) => {
@@ -163,12 +163,13 @@ test('delegated drain updates queued check ID and rejects absent or native recei
   decision = 'delegated';
   assert.equal((await drain(options)).snapshots[0].conclusion, 'success');
   assert.equal(f.checks.get(99).conclusion, 'success');
+  assert.ok(f.checks.get(99).external_id.endsWith(':run:10'));
   assert.ok(!f.events.some(e => e[0] === 'create'));
 });
 
 test('automatic delegated recovery retries infrastructure failure and cancels native queued markers', async () => {
   const f = fixture({ prepareFail: true }), policy = 'b'.repeat(64), original = f.options.fetchImpl;
-  f.checks.set(99, { id: 99, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}`, app: { slug: 'github-actions' }, status: 'queued' });
+  f.checks.set(99, { id: 99, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'queued' });
   let decision = 'delegated';
   const fetchImpl = async (url, options) => {
     if (url.includes('/actions/workflows/')) return { ok: true, json: async () => ({ workflow_runs: [{ id: 10, event: 'pull_request', head_sha: hex(1), path: '.github/workflows/ci.yml', run_attempt: 1, pull_requests: [{ number: 1 }] }] }) };
@@ -177,10 +178,12 @@ test('automatic delegated recovery retries infrastructure failure and cancels na
   };
   const options = { ...f.options, manualAdmission: false, policy, fetchImpl };
   assert.equal((await drain(options)).snapshots[0].infrastructureError, true);
+  assert.ok(f.checks.get(99).external_id.endsWith(':run:10:infrastructure'));
   const sandboxFactory = async () => ({ async prepare() {}, async run() { return { exitCode: 0 }; }, async close() {} });
   assert.equal((await drain({ ...options, sandboxFactory })).snapshots[0].conclusion, 'success');
+  assert.ok([...f.checks.values()].some(c => c.conclusion === 'success' && c.external_id.endsWith(':run:10')));
   f.checks.clear();
-  f.checks.set(98, { id: 98, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}`, app: { slug: 'github-actions' }, status: 'queued' });
+  f.checks.set(98, { id: 98, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'queued' });
   decision = 'native';
   assert.equal((await drain({ ...options, sandboxFactory })).snapshots.length, 0);
   assert.equal(f.checks.get(98).conclusion, 'cancelled');

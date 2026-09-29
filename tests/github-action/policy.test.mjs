@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadPolicy, route, enqueue, checkIdentity } from '../../src/internal/github-action/policy.mjs';
+import { loadPolicy, route, enqueue, checkIdentity, checkMetadata } from '../../src/internal/github-action/policy.mjs';
 import { receipt } from '../../src/internal/github-action/github.mjs';
 const sha = n => n.toString(16).padStart(40, '0');
 const recipe = { version: 1, trustedAuthors: ['owner'], sharedBuilds: false, requiredChecks: ['Gates'], image: { dockerfile: 'docker/Dockerfile', context: 'docker' }, prepare: [], compatibilityPaths: [], lanes: [{ id: 'linux', checkName: 'Hauler Linux', tasks: [{ id: 'test', run: 'true', timeoutSeconds: 60 }] }] };
@@ -16,7 +16,7 @@ function fixture() {
     else if (path === '/pulls') data = [{ number: 1 }];
     else if (path === '/pulls/1') data = { number: 1, state: 'open', draft: false, user: { login: 'owner' }, head: { sha: state.head, repo: { full_name: 'owner/repo' } } };
     else if (path.endsWith('/check-runs') && options.method === 'GET') data = { check_runs: state.checks };
-    else if (path === '/check-runs') { data = { id: ++state.posts, app: { slug: 'github-actions' }, ...JSON.parse(options.body) }; state.checks.push(data); }
+    else if (path === '/check-runs') { data = { id: ++state.posts, app: { slug: 'github-actions' }, ...JSON.parse(options.body) }; data.details_url = `https://github.com/owner/repo/runs/${data.id}`; state.checks.push(data); }
     else if (path.includes('/actions/workflows/')) data = { workflow_runs: [{ id: 20, event: state.event, path: state.path, head_sha: state.runHead, run_attempt: 1, pull_requests: [{ number: 1 }] }] };
     else if (path.endsWith('/jobs')) data = { jobs: [{ steps: state.decision ? [{ name: state.decision, conclusion: 'success' }] : [] }] };
     else if (path === '/actions/runs/10') data = { event: 'pull_request_target', path: '.github/workflows/hauler-ci.yml', head_repository: { full_name: 'owner/repo' }, head_branch: 'master' };
@@ -48,7 +48,9 @@ test('enqueue precedes cheap gates, reuses queued checks, and route verifies the
   assert.equal((await enqueue(opts)).queued.length, 1);
   assert.equal((await enqueue(opts)).queued.length, 0);
   assert.deepEqual(await route(f.options), { decision: 'delegated', policy: loaded.policy });
-  f.state.checks[0].details_url = 'https://attacker.invalid';
+  assert.equal(f.state.checks[0].details_url, 'https://github.com/owner/repo/runs/1');
+  assert.ok(f.state.checks[0].external_id.endsWith(':run:10'));
+  f.state.checks[0].external_id += ':junk';
   assert.equal((await route(f.options)).decision, 'native');
 });
 test('native receipt blocks late enqueue; delegated receipt requires exact workflow and head', async () => {
@@ -72,4 +74,15 @@ test('route falls back to native when image context is missing or not a real dir
     assert.deepEqual(await route(f.options), { decision: 'native', policy: 'unavailable' });
     assert.equal(f.state.posts, 0);
   }
+});
+
+test('check provenance parses exactly and cannot fall back to a display URL', async () => {
+  const identity = checkIdentity(sha(3), 'linux', 'a'.repeat(64));
+  assert.deepEqual(checkMetadata(`${identity}:run:10:infrastructure`), { identity, runId: '10', infrastructure: true });
+  for (const suffix of [':run:0', ':run:01', ':run:10:junk', ':run:10:infrastructure:junk', ':run:10\n', ':run:123456789012345678901']) assert.equal(checkMetadata(`${identity}${suffix}`), null);
+  const f = fixture(), loaded = await loadPolicy(f.options);
+  await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
+  f.state.checks[0].external_id = checkIdentity(f.state.head, 'linux', loaded.policy);
+  f.state.checks[0].details_url = 'https://github.com/owner/repo/actions/runs/10';
+  assert.equal((await route(f.options)).decision, 'native');
 });

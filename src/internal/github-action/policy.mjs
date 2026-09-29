@@ -4,6 +4,15 @@ import { parseRecipe } from './recipe.mjs';
 import { githubClient, receipt } from './github.mjs';
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export const checkIdentity = (head, lane, policy) => `hauler:${lane}:${head}:${policy}`;
+export function checkMetadata(externalId) {
+  if (typeof externalId !== 'string') return null;
+  const match = /^(hauler:[a-z][a-z0-9-]{0,47}:[a-f0-9]{40}:[a-f0-9]{64})(?::run:([1-9][0-9]{0,19}))?(:infrastructure)?$/.exec(externalId);
+  return match && match[0] === externalId ? { identity: match[1], runId: match[2], infrastructure: Boolean(match[3]) } : null;
+}
+export const matchesCheck = (check, identity) => {
+  const metadata = checkMetadata(check.external_id);
+  return metadata?.identity === identity && !metadata.infrastructure;
+};
 export const trustedPull = (pr, repository, recipe) => pr.state === 'open' && !pr.draft && pr.head?.repo?.full_name === repository && /^[a-f0-9]{40}$/.test(pr.head?.sha ?? '') && recipe.trustedAuthors.some(a => a.toLowerCase() === pr.user?.login?.toLowerCase());
 export async function loadPolicy({ repository, token, actionRef, recipePath = '.github/hauler-ci.json', ref, fetchImpl, signal }) {
   if (!/^[a-f0-9]{40}$/.test(actionRef ?? '') || !/^[\w./-]+$/.test(recipePath) || recipePath.startsWith('/') || recipePath.split('/').some(p => p === '..' || !p)) throw new TypeError('Invalid trusted policy reference');
@@ -32,14 +41,15 @@ export async function route(options) {
     const deadline = Date.now() + Math.min(30000, Math.max(0, options.waitMilliseconds ?? 30000));
     const provenance = new Map();
     function managerOwns(check) {
-      if (!provenance.has(check.details_url)) provenance.set(check.details_url, queuedByManager(client, check, options.repository, options.managerWorkflow ?? 'hauler-ci.yml', defaultBranch));
-      return provenance.get(check.details_url);
+      const runId = checkMetadata(check.external_id)?.runId;
+      if (!provenance.has(runId)) provenance.set(runId, queuedByManager(client, check, options.repository, options.managerWorkflow ?? 'hauler-ci.yml', defaultBranch));
+      return provenance.get(runId);
     }
     do {
       const pr = await client.api(`/pulls/${options.pr}`);
       if (!trustedPull(pr, options.repository, recipe) || pr.head.sha !== options.head) return { decision: 'native', policy };
       const checks = await client.pages(`/commits/${options.head}/check-runs?filter=latest`, 'check_runs');
-      const owned = recipe.lanes.map(l => checks.find(c => c.name === l.checkName && c.app?.slug === 'github-actions' && c.external_id === checkIdentity(options.head, l.id, policy) && (['queued', 'in_progress'].includes(c.status) || c.status === 'completed' && ['success', 'failure'].includes(c.conclusion))));
+      const owned = recipe.lanes.map(l => checks.find(c => c.name === l.checkName && c.app?.slug === 'github-actions' && matchesCheck(c, checkIdentity(options.head, l.id, policy)) && (['queued', 'in_progress'].includes(c.status) || c.status === 'completed' && ['success', 'failure'].includes(c.conclusion))));
       if (owned.every(Boolean) && (await Promise.all(owned.map(managerOwns))).every(Boolean)) return { decision: 'delegated', policy };
       if (Date.now() >= deadline) break;
       await delay(Math.min(5000, deadline - Date.now()));
@@ -49,7 +59,7 @@ export async function route(options) {
   finally { clearTimeout(timer); }
 }
 export async function enqueue({ recipe, policy, client, repository, onlyPullRequests, admissionWorkflow = 'ci.yml', managerRunId }) {
-  if (!/^[1-9][0-9]*$/.test(String(managerRunId))) throw new TypeError('Manager run identity required');
+  if (!/^[1-9][0-9]{0,19}$/.test(String(managerRunId))) throw new TypeError('Manager run identity required');
   const queued = [];
   for (const listed of await client.pages('/pulls?state=open&sort=created&direction=asc')) {
     if (onlyPullRequests && !onlyPullRequests.includes(listed.number)) continue;
@@ -58,13 +68,14 @@ export async function enqueue({ recipe, policy, client, repository, onlyPullRequ
     const checks = await client.pages(`/commits/${pr.head.sha}/check-runs?filter=latest`, 'check_runs');
     if (await receipt(client, { workflow: admissionWorkflow, head: pr.head.sha, pr: pr.number, policy }) === 'native') {
       for (const lane of recipe.lanes) {
-        for (const check of checks.filter(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && c.external_id === checkIdentity(pr.head.sha, lane.id, policy) && c.status === 'queued')) await client.api(`/check-runs/${check.id}`, 'PATCH', { status: 'completed', conclusion: 'cancelled', completed_at: new Date().toISOString(), output: { title: 'Native CI owns this head', summary: 'Native CI fallback declined Hauler delegation.' } });
+        for (const check of checks.filter(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && matchesCheck(c, checkIdentity(pr.head.sha, lane.id, policy)) && c.status === 'queued')) await client.api(`/check-runs/${check.id}`, 'PATCH', { status: 'completed', conclusion: 'cancelled', completed_at: new Date().toISOString(), output: { title: 'Native CI owns this head', summary: 'Native CI fallback declined Hauler delegation.' } });
       }
       continue;
     }
     for (const lane of recipe.lanes) {
-      const external_id = checkIdentity(pr.head.sha, lane.id, policy);
-      if (checks.some(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && c.external_id === external_id && (c.status !== 'completed' || ['success', 'failure'].includes(c.conclusion)))) continue;
+      const identity = checkIdentity(pr.head.sha, lane.id, policy);
+      const external_id = `${identity}:run:${managerRunId}`;
+      if (checks.some(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && matchesCheck(c, identity) && (c.status !== 'completed' || ['success', 'failure'].includes(c.conclusion)))) continue;
       const result = await client.api('/check-runs', 'POST', { name: lane.checkName, head_sha: pr.head.sha, external_id, details_url: `https://github.com/${repository}/actions/runs/${managerRunId}`, status: 'queued', output: { title: 'Hauler admission queued', summary: 'Waiting for native CI delegation and repository gates.' } });
       queued.push({ pr: pr.number, lane: lane.id, check: result.id });
     }
@@ -74,10 +85,8 @@ export async function enqueue({ recipe, policy, client, repository, onlyPullRequ
 
 async function queuedByManager(client, check, repository, workflow, defaultBranch) {
   if (!/^[\w.-]+\.ya?ml$/.test(workflow)) return false;
-  const prefix = `https://github.com/${repository}/actions/runs/`;
-  if (!check.details_url?.startsWith(prefix)) return false;
-  const id = check.details_url.slice(prefix.length);
-  if (!/^[1-9][0-9]*$/.test(id)) return false;
+  const id = checkMetadata(check.external_id)?.runId;
+  if (!id) return false;
   const run = await client.api(`/actions/runs/${id}`);
   const trustedEvent = ['pull_request_target', 'workflow_run', 'schedule', 'workflow_dispatch', 'push'].includes(run.event);
   return trustedEvent && run.path?.split('@')[0] === `.github/workflows/${workflow}` && run.head_repository?.full_name === repository && (run.event === 'pull_request_target' || run.head_branch === defaultBranch);
