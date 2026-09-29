@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, symlink, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, symlink, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { assertTrustedContext, positiveInteger, within } from '../../src/internal/github-action/main.mjs';
@@ -27,7 +27,7 @@ test('work budgets reject empty, negative, fractional, and excessive inputs', ()
 });
 
 test('trusted build paths cannot escape through a symlink', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'hauler-action-boundary-'));
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'hauler-action-boundary-')));
   try {
     await mkdir(join(root, 'checkout'));
     await mkdir(join(root, 'outside'));
