@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
-import { githubClient, receipt } from './github.mjs';
-import { checkIdentity, checkMetadata, matchesCheck, cancelConflictedChecks } from './policy.mjs';
+import { githubClient } from './github.mjs';
+import { checkIdentity, checkMetadata, cancelConflictedChecks } from './policy.mjs';
+import { readSnapshot, scanAdmission } from './admission.mjs';
 import { parseRecipe } from './recipe.mjs';
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
@@ -13,54 +14,23 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
   const summary = { lane: lane.id, snapshots: [] }, attempted = new Set();
   let sandbox, sandboxKey;
   const client = githubClient({ repository, token, fetchImpl });
-  const { api, pages } = client;
+  const { api } = client;
   async function currentPull(number) {
     const pr = await api(`/pulls/${number}`);
     if (pr.state !== 'open' || pr.draft || pr.head?.repo?.full_name !== repository || !recipe.trustedAuthors.some(a => a.toLowerCase() === pr.user?.login?.toLowerCase()) || !sha(pr.head?.sha)) return null;
     return pr;
   }
-  async function snapshot(number, pull) {
-    const pr = pull ?? await currentPull(number);
-    if (!pr || pr.mergeable === false || !sha(pr.base?.sha) || !sha(pr.merge_commit_sha)) return null;
-    const merge = await api(`/git/commits/${pr.merge_commit_sha}`);
-    if (merge.parents?.length !== 2 || merge.parents[0].sha !== pr.base.sha || merge.parents[1].sha !== pr.head.sha) return null;
-    return { pr: number, head: pr.head.sha, base: pr.base.sha, merge: pr.merge_commit_sha, tree: merge.tree.sha, updatedAt: pr.updated_at };
-  }
+  async function snapshot(number) { return readSnapshot(client, await currentPull(number)); }
   const same = (a, b) => b && a.head === b.head && a.base === b.base && a.merge === b.merge;
   const currentHead = async s => (await currentPull(s.pr))?.head.sha === s.head;
   const external = s => checkIdentity(s.head, lane.id, identity);
   async function eligible() {
-    const pulls = await pages('/pulls?state=open&sort=created&direction=asc');
-    const candidates = [];
-    for (const pr of pulls) {
-      if (onlyPullRequests && !onlyPullRequests.includes(pr.number)) continue;
-      if (Date.now() >= deadline || signal?.aborted) break;
-      const current = await currentPull(pr.number);
-      if (!current) continue;
-      if (current.mergeable === false) {
-        const checks = await pages(`/commits/${current.head.sha}/check-runs?filter=latest`, 'check_runs');
-        await cancelConflictedChecks(client, { pr: current, recipe, repository, policy: identity, lanes: [lane], checks });
-        continue;
-      }
-      const s = await snapshot(pr.number, current);
-      if (!s || attempted.has(s.head)) continue;
-      const checks = await pages(`/commits/${s.head}/check-runs?filter=latest`, 'check_runs');
-      if (checks.some(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && matchesCheck(c, external(s)) && c.status === 'completed' && ['success', 'failure'].includes(c.conclusion))) continue;
-      const queued = checks.find(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && matchesCheck(c, external(s)) && ['queued', 'in_progress'].includes(c.status));
-      const retry = checks.find(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && c.status === 'completed' && (checkMetadata(c.external_id)?.identity === external(s) && checkMetadata(c.external_id)?.infrastructure || matchesCheck(c, external(s)) && c.conclusion === 'cancelled'));
-      if (!manualAdmission) {
-        const decision = queued || retry ? await receipt(client, { workflow: admissionWorkflow, head: s.head, pr: s.pr, policy: identity }) : null;
-        if (decision === 'native' && queued?.status === 'queued') await api(`/check-runs/${queued.id}`, 'PATCH', { status: 'completed', conclusion: 'cancelled', completed_at: new Date().toISOString(), output: { title: 'Native CI owns this head', summary: 'Native CI fallback declined Hauler delegation.' } });
-        if ((!queued && !retry) || decision !== 'delegated') continue;
-      }
-      if (!recipe.requiredChecks.every(name => checks.some(c => c.name === name && c.app?.slug === 'github-actions' && c.status === 'completed' && c.conclusion === 'success'))) continue;
-      const commit = await api(`/git/commits/${s.head}`);
-      const readyAt = recipe.requiredChecks.length
-        ? Math.max(Date.parse(commit.committer?.date) || 0, ...checks.filter(c => recipe.requiredChecks.includes(c.name)).map(c => Date.parse(c.completed_at) || 0))
-        : Date.parse(s.updatedAt) || Date.parse(commit.committer?.date) || Date.now();
-      candidates.push({ ...s, readyAt, queued, retry });
+    const scan = await scanAdmission(client, { recipe, repository, policy: identity, lanes: [lane], admissionWorkflow, manualAdmission, onlyPullRequests, attempted, deadline, signal });
+    for (const item of scan.maintenance) {
+      if (item.kind === 'conflict') await cancelConflictedChecks(client, { pr: item.pr, recipe, repository, policy: identity, lanes: [lane], checks: item.checks });
+      else await api(`/check-runs/${item.queued.id}`, 'PATCH', { status: 'completed', conclusion: 'cancelled', completed_at: new Date().toISOString(), output: { title: 'Native CI owns this head', summary: 'Native CI fallback declined Hauler delegation.' } });
     }
-    return candidates.sort((a, b) => a.readyAt - b.readyAt || a.pr - b.pr)[0];
+    return scan.candidates[0]?.snapshot;
   }
   async function compatibility(s) {
     const tree = await api(`/git/trees/${s.tree}?recursive=1`);

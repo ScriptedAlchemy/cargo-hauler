@@ -2,7 +2,7 @@ name: Cargo Hauler CI
 description: Drain ready pull requests through isolated warm workers and report each tested snapshot.
 inputs:
   mode:
-    description: route decides PR delegation; enqueue reserves checks; drain tests delegated PRs.
+    description: route decides delegation; enqueue reserves checks; plan lists needed lanes; drain tests PRs.
     default: drain
   manager-workflow:
     description: Trusted workflow owning admission check creation.
@@ -11,7 +11,7 @@ inputs:
     description: Native PR workflow whose exact-head delegation receipt admits work.
     default: ci.yml
   token:
-    description: Short-lived job token with contents/read, pull-requests/read, and checks/write.
+    description: Short-lived job token. Plan needs contents, pull-requests, checks and actions read; enqueue/drain need checks write.
     required: true
   recipe:
     description: CI recipe in the checked-out trusted default branch.
@@ -29,6 +29,12 @@ inputs:
     description: Optional comma-separated PR numbers for a bounded trial.
     default: ''
 outputs:
+  lanes:
+    description: JSON array of recipe lane IDs needing execution or queued-check maintenance (plan mode).
+    value: ${{ steps.drain.outputs.lanes }}
+  count:
+    description: Number of lanes in the plan. Planning is read-only and advisory.
+    value: ${{ steps.drain.outputs.count }}
   decision:
     description: delegated or native, from route mode.
     value: ${{ steps.drain.outputs.decision }}
