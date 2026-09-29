@@ -21,6 +21,7 @@ function fixture({ authors = ['owner'], fail = false, change = false, prepareFai
     } else if (path.startsWith('/git/trees/')) result = { tree: [{ path: 'Cargo.lock', sha: hex(200), mode: '100644' }] };
     else if (path === '/check-runs' && options.method === 'POST') { result = { ...body, id: ++counter, app: { slug: 'github-actions' } }; checks.set(counter, result); events.push(['create', body.head_sha]); }
     else if (path.startsWith('/check-runs/') && options.method === 'PATCH') { result = Object.assign(checks.get(Number(path.split('/').at(-1))), body); if (body.conclusion) events.push(['report', body.conclusion]); }
+    else if (path.includes('/actions/workflows/')) result = { workflow_runs: [] };
     else throw new Error(`Unexpected route ${path}`);
     return { ok: true, json: async () => structuredClone(result) };
   }

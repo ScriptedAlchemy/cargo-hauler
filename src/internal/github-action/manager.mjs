@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { githubClient } from './github.mjs';
-import { checkIdentity, checkMetadata, cancelConflictedChecks } from './policy.mjs';
+import { checkIdentity, checkMetadata, cancelConflictedChecks, cancelNativeCheck } from './policy.mjs';
 import { readSnapshot, scanAdmission } from './admission.mjs';
 import { parseRecipe } from './recipe.mjs';
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -28,7 +28,7 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
     const scan = await scanAdmission(client, { recipe, repository, policy: identity, lanes: [lane], admissionWorkflow, manualAdmission, onlyPullRequests, attempted, deadline, signal });
     for (const item of scan.maintenance) {
       if (item.kind === 'conflict') await cancelConflictedChecks(client, { pr: item.pr, recipe, repository, policy: identity, lanes: [lane], checks: item.checks });
-      else await api(`/check-runs/${item.queued.id}`, 'PATCH', { status: 'completed', conclusion: 'cancelled', completed_at: new Date().toISOString(), output: { title: 'Native CI owns this head', summary: 'Native CI fallback declined Hauler delegation.' } });
+      else await cancelNativeCheck(client, { ...item, recipe, repository, policy: identity, admissionWorkflow });
     }
     return scan.candidates[0]?.snapshot;
   }

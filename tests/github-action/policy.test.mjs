@@ -183,3 +183,16 @@ test('route keeps native coverage if base changes during the file scan', async (
   };
   assert.deepEqual(await route({ ...f.options, fetchImpl }), { decision: 'native', policy: loaded.policy });
 });
+
+test('native ownership crosses policy versions but delegation and malformed receipts do not', async () => {
+  const f = fixture(), loaded = await loadPolicy(f.options);
+  const options = { workflow: 'ci.yml', head: f.state.head, pr: 1, policy: loaded.policy };
+  for (const policy of ['b'.repeat(64), 'unavailable']) {
+    f.state.decision = `Hauler route / native / ${policy}`;
+    assert.equal(await receipt(loaded.client, options), 'native');
+  }
+  for (const name of [`Hauler route / delegated / ${'b'.repeat(64)}`, 'Hauler route / native / invalid', `Hauler route / native / ${'b'.repeat(64)} trailing`]) {
+    f.state.decision = name;
+    assert.equal(await receipt(loaded.client, options), null);
+  }
+});

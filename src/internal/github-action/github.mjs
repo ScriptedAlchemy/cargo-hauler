@@ -37,6 +37,6 @@ export async function receipt(client, { workflow, head, pr, policy }) {
   if (!latest) return null;
   const jobs = await client.pages(`/actions/runs/${latest.id}/attempts/${latest.run_attempt}/jobs`, 'jobs');
   const steps = jobs.flatMap(j => j.steps ?? []).filter(s => s.conclusion === 'success');
-  if (steps.some(s => s.name === `Hauler route / native / ${policy}` || s.name === 'Hauler route / native / unavailable')) return 'native';
+  if (steps.some(s => /^Hauler route \/ native \/ (?:[a-f0-9]{64}|unavailable)$/.test(s.name))) return 'native';
   return steps.some(s => s.name === `Hauler route / delegated / ${policy}`) ? 'delegated' : null;
 }
