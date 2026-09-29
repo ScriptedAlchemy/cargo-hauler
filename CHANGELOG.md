@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.0
+
+### Minor Changes
+
+- 6cc7629: Add a GitHub Action that drains ready PR snapshots through isolated warm workers, reports each PR independently, and keeps GitHub credentials outside PR execution.
+
+### Patch Changes
+
+- 511cf1e: Keep GitHub Action admission provenance in check metadata so GitHub's rewritten check links do not force every PR back to native CI.
+- a637ebd: Validate CI delegation through trusted policy and queued checks before native jobs hand work to warm workers. Preserve native fallback, retry infrastructure failures, and report safe worker progress.
+
 ## 0.10.0
 
 ### Minor Changes
