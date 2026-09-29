@@ -29,8 +29,9 @@ export default () => (
       <li>
         <strong>In an MCP App host.</strong> Call <code>{mcpSurface.dashboard}</code>. Hosts that render MCP Apps
         attach <code>{APP_RESOURCE_URI}</code> beside its result. The text result is one summary line. To read the
-        queue as text, call <code>{mcpSurface.status}</code>. It returns the daemon badge, admission meter, lane
-        board, in-flight and recent tickets, and kache summary, and it never opens the App.
+        queue as text, call <code>{mcpSurface.status}</code>. It returns the daemon badge, relevant lanes, and
+        in-flight and recent tickets. Set <code>metrics: true</code> (CLI <code>--metrics</code>) for machine
+        telemetry, admission, and kache; these remain global when tickets are filtered. It never opens the App.
       </li>
       <li>
         <strong>In a plain browser.</strong> Run the installed plugin's <code>web</code> command,{' '}

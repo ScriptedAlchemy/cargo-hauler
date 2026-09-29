@@ -87,6 +87,8 @@ export interface QueueContext {
   /** Number of running or queued leaders expected to run before this request. */
   readonly position: number;
   readonly aheadTickets: readonly string[];
+  /** Original length when a public status row truncates its ahead-ticket preview. */
+  readonly aheadTicketsTotal?: number;
   /** The currently running lane head, when the lane is occupied. */
   readonly headTicket?: string;
   readonly headElapsedMs?: number;
@@ -404,10 +406,23 @@ export const killRequestSchema = z.object({
   ticket: z.string().min(1),
 });
 
-export const statusRequestSchema = z.object({
+export const statusQuerySchema = z.object({
+  limit: z.number().int().min(1).max(500).optional(),
+  cwd: z.string().min(1).optional(),
+  session: z.string().min(1).optional(),
+  laneKey: z.string().min(1).optional(),
+  tickets: z.array(z.string().min(1)).max(100).optional(),
+  statuses: z.array(z.enum(statusRowStatuses)).max(statusRowStatuses.length).optional(),
+  commandContains: z.string().min(1).optional(),
+  /** Global telemetry is independent of the row filters. */
+  telemetry: z.boolean().optional(),
+});
+
+export type StatusQuery = z.infer<typeof statusQuerySchema>;
+
+export const statusRequestSchema = statusQuerySchema.extend({
   type: z.literal('status'),
   id: z.string().min(1),
-  limit: z.number().int().min(1).max(500).optional(),
 });
 
 export const pingRequestSchema = z.object({
@@ -693,6 +708,8 @@ export interface AttachmentSavingsReport {
 }
 
 export interface StatusReport {
+  /** Absent on older daemons whose reports have not applied the query. */
+  readonly scope?: 'global' | 'filtered';
   readonly pid: number;
   readonly startedAtMs: number;
   readonly socketPath: string;
@@ -701,14 +718,14 @@ export interface StatusReport {
   /** In-flight requests as bounded summary rows; the whole tail is behind `result` / `await`. */
   readonly active: readonly StatusRow[];
   readonly recent: readonly StatusRow[];
-  readonly metrics: StatusMetrics;
-  readonly savings: AttachmentSavingsReport;
+  readonly metrics?: StatusMetrics;
+  readonly savings?: AttachmentSavingsReport;
   /**
    * Null when kache is not configured (no index path) or before the first
    * index read has completed.
    */
-  readonly kache: KacheStatusReport | null;
-  readonly system: SystemLoadReport;
+  readonly kache?: KacheStatusReport | null;
+  readonly system?: SystemLoadReport;
   /**
    * The daemon's release version. A client may use an older daemon that
    * advertises the same wire-protocol identity.

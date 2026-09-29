@@ -2,7 +2,7 @@ import { appendFileSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { dirname } from 'node:path';
 
-const [socketPath, logPath, mode] = process.argv.slice(2);
+const [socketPath, logPath, mode, activeRowsPath] = process.argv.slice(2);
 if (
   socketPath === undefined ||
   logPath === undefined ||
@@ -58,7 +58,7 @@ const emptyHistogram = {
   sum: 0,
 };
 const statusReport = () => ({
-  active: [],
+  active: activeRowsPath === undefined ? [] : JSON.parse(readFileSync(activeRowsPath, 'utf8')),
   kache: mode.startsWith('skewed') ? olderKache : null,
   lanes:
     mode === 'busy-older'

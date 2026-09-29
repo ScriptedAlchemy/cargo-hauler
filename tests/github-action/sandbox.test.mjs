@@ -20,14 +20,19 @@ test('real Docker isolates credentials, preserves warm outputs and kills descend
   const root = await mkdtemp(path.join(tmpdir(), 'hauler-sandbox-test-'));
   const compatibilityKey = `test-${Date.now()}`;
   const previous = process.env.GH_TOKEN;
+  const previousDockerConfig = process.env.DOCKER_CONFIG;
+  const dockerConfig = path.join(root, 'host-docker-auth');
+  await mkdir(dockerConfig);
+  await writeFile(path.join(dockerConfig, 'config.json'), JSON.stringify({ auths: {}, canary: 'host-registry-auth-must-never-enter-worker' }));
   process.env.GH_TOKEN = 'host-canary-must-never-enter-worker';
+  process.env.DOCKER_CONFIG = dockerConfig;
   const sandbox = await createSandbox({ repository: fixture.repository, image: process.env.HAULER_SANDBOX_TEST_IMAGE || 'node:22-bookworm-slim', root, compatibilityKey });
   try {
     await sandbox.prepare(fixture.snapshot);
     const executable = await sandbox.run("printf '#!/bin/sh\\nprintf temporary-fixture-ok\\n' > /tmp/probe && chmod +x /tmp/probe && /tmp/probe");
     assert.equal(executable.exitCode, 0);
     assert.equal(await readFile(executable.logPath, 'utf8'), 'temporary-fixture-ok');
-    const first = await sandbox.run('test "$(id -u)" = 10001 && test -z "$GH_TOKEN$GITHUB_TOKEN$ACTIONS_RUNTIME_TOKEN" && test ! -e /var/run/docker.sock && test ! -e /opt/controller && touch /workspace/target/warm-proof && stat -c %Y README*');
+    const first = await sandbox.run(`test "$(id -u)" = 10001 && test -z "$GH_TOKEN$GITHUB_TOKEN$ACTIONS_RUNTIME_TOKEN$DOCKER_CONFIG" && test ! -e ${dockerConfig}/config.json && test ! -e /var/run/docker.sock && test ! -e /opt/controller && touch /workspace/target/warm-proof && stat -c %Y README*`);
     assert.equal(first.exitCode, 0);
     const before = await readFile(first.logPath, 'utf8');
     assert(!before.includes('host-canary'));
@@ -57,6 +62,7 @@ test('real Docker isolates credentials, preserves warm outputs and kills descend
     await assert.rejects(sandbox.run('true'), /not ready/);
   } finally {
     if (previous === undefined) delete process.env.GH_TOKEN; else process.env.GH_TOKEN = previous;
+    if (previousDockerConfig === undefined) delete process.env.DOCKER_CONFIG; else process.env.DOCKER_CONFIG = previousDockerConfig;
     await sandbox.close();
     await rm(root, { recursive: true, force: true });
   }

@@ -12529,10 +12529,19 @@ var __webpack_modules__ = {
             id: zod__rspack_import_0.YjP().min(1),
             ticket: zod__rspack_import_0.YjP().min(1)
         });
-        const statusRequestSchema = zod__rspack_import_0.Ikc({
+        const statusQuerySchema = zod__rspack_import_0.Ikc({
+            limit: zod__rspack_import_0.aig().int().min(1).max(500).optional(),
+            cwd: zod__rspack_import_0.YjP().min(1).optional(),
+            session: zod__rspack_import_0.YjP().min(1).optional(),
+            laneKey: zod__rspack_import_0.YjP().min(1).optional(),
+            tickets: zod__rspack_import_0.YOg(zod__rspack_import_0.YjP().min(1)).max(100).optional(),
+            statuses: zod__rspack_import_0.YOg(zod__rspack_import_0.k5n(statusRowStatuses)).max(statusRowStatuses.length).optional(),
+            commandContains: zod__rspack_import_0.YjP().min(1).optional(),
+            telemetry: zod__rspack_import_0.zMY().optional()
+        });
+        const statusRequestSchema = statusQuerySchema.extend({
             type: zod__rspack_import_0.euz('status'),
-            id: zod__rspack_import_0.YjP().min(1),
-            limit: zod__rspack_import_0.aig().int().min(1).max(500).optional()
+            id: zod__rspack_import_0.YjP().min(1)
         });
         const pingRequestSchema = zod__rspack_import_0.Ikc({
             type: zod__rspack_import_0.euz('ping'),
@@ -12574,6 +12583,7 @@ var __webpack_modules__ = {
         __webpack_require__.d(__webpack_exports__, {}, {
             $K: statusRowStatuses,
             AZ: parseServerMessageLine,
+            Ew: statusQuerySchema,
             Qf: requestStatuses,
             RM: activeStatuses,
             Su: orphanedByRestartError,
@@ -12606,6 +12616,7 @@ var __webpack_modules__ = {
         ]);
         const queueContextSchema = zod__rspack_import_1.Ikc({
             aheadTickets: zod__rspack_import_1.YOg(zod__rspack_import_1.YjP()),
+            aheadTicketsTotal: zod__rspack_import_1.aig().int().nonnegative().optional(),
             headElapsedMs: zod__rspack_import_1.aig().nonnegative().optional(),
             headEstimateMs: zod__rspack_import_1.aig().nonnegative().optional(),
             headEstimateState: zod__rspack_import_1.euz('overrun').optional(),
@@ -12910,13 +12921,17 @@ var __webpack_modules__ = {
             totals: savingsTotalsSchema
         });
         const statusReportSchema = zod__rspack_import_1.Ikc({
+            scope: zod__rspack_import_1.k5n([
+                'global',
+                'filtered'
+            ]).optional(),
             active: zod__rspack_import_1.YOg(statusRowSchema),
-            kache: kacheStatusSchema.nullable(),
-            savings: savingsSchema,
-            system: systemLoadSchema,
+            kache: kacheStatusSchema.nullable().optional(),
+            savings: savingsSchema.optional(),
+            system: systemLoadSchema.optional(),
             lanes: zod__rspack_import_1.YOg(laneStatusSchema),
             maxConcurrent: zod__rspack_import_1.aig().int(),
-            metrics: statusMetricsSchema,
+            metrics: statusMetricsSchema.optional(),
             pid: zod__rspack_import_1.aig().int(),
             recent: zod__rspack_import_1.YOg(statusRowSchema),
             socketPath: zod__rspack_import_1.YjP(),
@@ -12926,16 +12941,17 @@ var __webpack_modules__ = {
         const limitInputSchema = zod__rspack_import_1.Ikc({
             limit: zod__rspack_import_1.aig().int().min(1).max(500).optional()
         }).strict();
-        const statusInputSchema = zod__rspack_import_1.Ikc({
-            limit: zod__rspack_import_1.aig().int().min(1).max(500).optional(),
-            cwd: zod__rspack_import_1.YjP().min(1).optional(),
-            session: zod__rspack_import_1.YjP().min(1).optional(),
-            laneKey: zod__rspack_import_1.YjP().min(1).optional(),
-            tickets: zod__rspack_import_1.YOg(zod__rspack_import_1.YjP().min(1)).max(100).optional(),
-            statuses: zod__rspack_import_1.YOg(zod__rspack_import_1.k5n(_protocol_js__rspack_import_0.$K)).max(_protocol_js__rspack_import_0.$K.length).optional().describe('Filter by projected status. While the daemon is stopped, active rows appear as orphaned and running matches nothing.'),
-            commandContains: zod__rspack_import_1.YjP().min(1).optional()
+        const statusInputSchema = _protocol_js__rspack_import_0.Ew.omit({
+            telemetry: true
+        }).extend({
+            statuses: _protocol_js__rspack_import_0.Ew.shape.statuses.describe('Filter by projected status. While the daemon is stopped, active rows appear as orphaned and running matches nothing.'),
+            metrics: zod__rspack_import_1.zMY().optional().describe('Include daemon-wide metrics, savings, kache, and system telemetry, independent of filters.')
         }).strict();
         const statusResultSchema = zod__rspack_import_1.Ikc({
+            scope: zod__rspack_import_1.k5n([
+                'global',
+                'filtered'
+            ]).optional(),
             active: zod__rspack_import_1.YOg(statusRowSchema),
             daemon: daemonStatusSchema,
             kache: kacheStatusSchema.nullable().optional(),
@@ -14618,15 +14634,27 @@ var __webpack_modules__ = {
         var _status_filter_js__rspack_import_4 = __webpack_require__("./src/internal/operations/status-filter.ts");
         var _ticket_errors_js__rspack_import_2 = __webpack_require__("./src/internal/operations/ticket-errors.ts");
         const withDaemonLine = (snapshot, summary)=>snapshot.daemon === 'skewed' || snapshot.daemon === 'unresponsive' ? `${snapshot.summary}\n${summary}` : summary;
-        const loadSnapshot = (limit, options)=>(0, _ticket_errors_js__rspack_import_2.n)((0, _status_js__rspack_import_1.M3)({
-                recentLimit: limit,
+        const loadSnapshot = (query, options)=>(0, _ticket_errors_js__rspack_import_2.n)((0, _status_js__rspack_import_1.M3)({
+                query: typeof query === 'number' ? {
+                    limit: query,
+                    telemetry: false
+                } : query,
                 ...options.config === undefined ? {} : {
                     config: options.config
                 }
             }), options.signal);
+        const recentSnapshotRows = (snapshot, limit)=>[
+                ...new Map([
+                    ...snapshot.recent,
+                    ...snapshot.active
+                ].map((row)=>[
+                        row.ticket,
+                        row
+                    ])).values()
+            ].sort((left, right)=>right.createdAtMs - left.createdAtMs || right.id - left.id).slice(0, limit);
         const loadLastResult = async (options)=>{
             const snapshot = await loadSnapshot(1, options);
-            const latest = snapshot.recent[0] ?? null;
+            const latest = recentSnapshotRows(snapshot, 1)[0] ?? null;
             const detailOf = (ticket)=>snapshot.daemon === 'running' ? (0, _client_tickets_js__rspack_import_0.vA)(ticket, options.config).pipe(effect_Effect__rspack_import_3.MfU(()=>(0, _status_js__rspack_import_1.ho)(ticket, options.config)), effect_Effect__rspack_import_3.TjK((record)=>record === null ? null : (0, _status_js__rspack_import_1.xn)(record))) : (0, _status_js__rspack_import_1.UP)(ticket, snapshot.daemon, options.config);
             const request = latest === null ? null : await (0, _ticket_errors_js__rspack_import_2.n)(detailOf(latest.ticket), options.signal);
             return {
@@ -14638,16 +14666,22 @@ var __webpack_modules__ = {
         };
         const loadLogResult = async (input, options)=>{
             const snapshot = await loadSnapshot(input.limit ?? 50, options);
+            const requests = recentSnapshotRows(snapshot, input.limit ?? 50);
             return {
                 daemon: snapshot.daemon,
                 operation: 'log',
-                requests: (0, _status_js__rspack_import_1.sY)(snapshot.recent),
-                summary: withDaemonLine(snapshot, snapshot.recent.length === 0 ? 'no hauler requests recorded' : `${snapshot.recent.length} recent request${snapshot.recent.length === 1 ? '' : 's'}`)
+                requests: (0, _status_js__rspack_import_1.sY)(requests),
+                summary: withDaemonLine(snapshot, requests.length === 0 ? 'no hauler requests recorded' : `${requests.length} recent request${requests.length === 1 ? '' : 's'}`)
             };
         };
         const loadStatusResult = async (input, options)=>{
             const limit = input.limit ?? 20;
-            const snapshot = await loadSnapshot((0, _status_filter_js__rspack_import_4.Gw)(input) ? 500 : limit, options);
+            const { metrics, ...query } = input;
+            const snapshot = await loadSnapshot({
+                ...query,
+                limit,
+                telemetry: metrics === true
+            }, options);
             const active = (0, _status_filter_js__rspack_import_4.Gk)(snapshot.active, input);
             const activeTickets = new Set(active.map((row)=>row.ticket));
             const recent = (0, _status_filter_js__rspack_import_4.Gk)(snapshot.recent, input).filter((row)=>!activeTickets.has(row.ticket)).slice(0, limit);
@@ -14692,6 +14726,32 @@ var __webpack_modules__ = {
             const statuses = input.statuses === undefined ? null : new Set(input.statuses);
             return rows.filter((row)=>(input.cwd === undefined || row.cwd === input.cwd) && (input.session === undefined || row.session === input.session) && (input.laneKey === undefined || row.laneKey === input.laneKey) && (tickets === null || tickets.has(row.ticket)) && (statuses === null || statuses.has(row.status)) && (input.commandContains === undefined || row.argv.join(' ').includes(input.commandContains)));
         };
+        const filterStatusLanes = (lanes, rows, blockers = [])=>{
+            const keys = new Set([
+                ...rows,
+                ...blockers
+            ].map((row)=>row.laneKey));
+            return lanes.filter((lane)=>keys.has(lane.key));
+        };
+        const statusBlockerTickets = (rows)=>[
+                ...new Set(rows.flatMap((row)=>[
+                        ...row.queue?.headTicket === undefined ? [] : [
+                            row.queue.headTicket
+                        ],
+                        ...row.waitingFor?.map((prerequisite)=>prerequisite.ticket) ?? [],
+                        ...row.attachedTo === null ? [] : [
+                            row.attachedTo
+                        ]
+                    ]))
+            ];
+        const boundedStatusQueue = (row)=>row.queue === undefined || row.queue.aheadTickets.length <= 20 ? row : {
+                ...row,
+                queue: {
+                    ...row.queue,
+                    aheadTickets: row.queue.aheadTickets.slice(0, 20),
+                    aheadTicketsTotal: row.queue.aheadTicketsTotal ?? row.queue.aheadTickets.length
+                }
+            };
         const daemonHeader = (daemon)=>{
             switch(daemon){
                 case 'running':
@@ -14728,13 +14788,16 @@ var __webpack_modules__ = {
         __webpack_require__.d(__webpack_exports__, {}, {
             Gk: filterStatusRows,
             Gw: hasStatusFilters,
-            HN: statusSummary
+            HN: statusSummary,
+            g1: statusBlockerTickets,
+            q: filterStatusLanes,
+            x3: boundedStatusQueue
         });
     },
     "./src/internal/operations/status.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var node_fs__rspack_import_0 = __webpack_require__("node:fs");
         var agent_bundle_meta__rspack_import_1 = __webpack_require__("./.agent-bundle-virtual/meta.mjs");
-        var effect_Effect__rspack_import_13 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
+        var effect_Effect__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
         var _client_ensure_daemon_js__rspack_import_2 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
         var _daemon_config_js__rspack_import_3 = __webpack_require__("./src/internal/daemon/config.ts");
         var _client_control_js__rspack_import_4 = __webpack_require__("./src/internal/client/control.ts");
@@ -14745,7 +14808,8 @@ var __webpack_modules__ = {
         var _util_id_js__rspack_import_9 = __webpack_require__("./src/internal/util/id.ts");
         var _contracts_tool_schemas_js__rspack_import_10 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
         var _util_text_js__rspack_import_11 = __webpack_require__("./src/internal/util/text.ts");
-        var _contracts_version_order_js__rspack_import_12 = __webpack_require__("./src/internal/contracts/version-order.ts");
+        var _contracts_version_order_js__rspack_import_13 = __webpack_require__("./src/internal/contracts/version-order.ts");
+        var _status_filter_js__rspack_import_12 = __webpack_require__("./src/internal/operations/status-filter.ts");
         const defaultRecentLimit = 50;
         const statusTimeoutMs = 5000;
         const stalledGuidance = (request)=>request.status === 'running' && request.stall !== undefined ? `ticket looks stalled (no CPU for ${Math.floor(request.stall.idleMs / 60000)}m) — hauler kill ${request.attachedTo ?? request.ticket}` : null;
@@ -14826,24 +14890,39 @@ var __webpack_modules__ = {
                 enumerable: false,
                 value: report
             });
-        const fromReport = (report, config)=>withReport({
-                active: report.active,
+        const fromReport = (report, config, query)=>{
+            const { kache, metrics, savings, system, ...base } = report;
+            const selected = {
+                ...query.telemetry === true ? report : base,
+                active: report.active.map(_status_filter_js__rspack_import_12.x3),
+                recent: report.recent.map(_status_filter_js__rspack_import_12.x3),
+                lanes: report.scope === undefined && query.telemetry !== true ? (0, _status_filter_js__rspack_import_12.q)(report.lanes, [
+                    ...report.active,
+                    ...report.recent
+                ]) : report.lanes
+            };
+            return withReport({
+                scope: selected.scope,
+                active: selected.active,
                 daemon: 'running',
-                kache: report.kache,
-                lanes: report.lanes,
-                maxConcurrent: report.maxConcurrent,
-                metrics: report.metrics,
-                pid: report.pid,
-                recent: report.recent,
-                savings: report.savings,
-                socketPath: report.socketPath,
-                startedAtMs: report.startedAtMs,
+                ...query.telemetry === true ? {
+                    kache,
+                    metrics,
+                    savings,
+                    system
+                } : {},
+                lanes: selected.lanes,
+                maxConcurrent: selected.maxConcurrent,
+                pid: selected.pid,
+                recent: selected.recent,
+                socketPath: selected.socketPath,
+                startedAtMs: selected.startedAtMs,
                 stateRoot: config.stateDir,
-                summary: runningSummary(report),
-                system: report.system
-            }, report);
+                summary: runningSummary(selected)
+            }, selected);
+        };
         const skewSummary = (daemon)=>{
-            const order1 = (0, _contracts_version_order_js__rspack_import_12.Z)(daemon.version, "0.11.2");
+            const order1 = (0, _contracts_version_order_js__rspack_import_13.Z)(daemon.version, "0.11.2");
             const [release, fix] = (()=>{
                 switch(order1){
                     case -1:
@@ -14870,12 +14949,39 @@ var __webpack_modules__ = {
             })();
             return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${"0.11.2"}) cannot read, so this client shows tickets as the ledger recorded them. ${fix}`;
         };
-        const fromLiveReport = (raw, daemon, config, recentLimit)=>{
+        const fromLiveReport = (raw, daemon, config, query)=>{
             const decoded = _contracts_tool_schemas_js__rspack_import_10.qb.safeParse(raw);
             if (decoded.success) {
-                return effect_Effect__rspack_import_13.PyW(fromReport(decoded.data, config));
+                const report = decoded.data;
+                if (!(0, _status_filter_js__rspack_import_12.Gw)(query) || report.scope === 'filtered') {
+                    return effect_Effect__rspack_import_14.PyW(fromReport(report, config, query));
+                }
+                return effect_Effect__rspack_import_14.P1j(effect_Effect__rspack_import_14.JkU(function*() {
+                    const ledger = yield* acquireSnapshotLedger(config.databasePath);
+                    const live = new Map(report.active.map((row)=>[
+                            row.ticket,
+                            row
+                        ]));
+                    const active = (yield* ledger.activeStatusRequests(query)).map((record)=>live.get(record.ticket) ?? (0, _contracts_protocol_js__rspack_import_7.el)(record));
+                    const recent = (yield* ledger.recentStatusRequests(query, true)).map((record)=>(0, _contracts_protocol_js__rspack_import_7.el)(record));
+                    const blockers = yield* ledger.activeStatusRequests({
+                        tickets: [
+                            ...(0, _status_filter_js__rspack_import_12.g1)(active)
+                        ]
+                    });
+                    return fromReport({
+                        ...report,
+                        scope: 'filtered',
+                        active,
+                        recent,
+                        lanes: (0, _status_filter_js__rspack_import_12.q)(report.lanes, [
+                            ...active,
+                            ...recent
+                        ], blockers)
+                    }, config, query);
+                }));
             }
-            return fromLedger(config, recentLimit, 'skewed').pipe(effect_Effect__rspack_import_13.TjK((snapshot)=>withReport({
+            return fromLedger(config, query, 'skewed').pipe(effect_Effect__rspack_import_14.TjK((snapshot)=>withReport({
                     ...snapshot,
                     daemon: 'skewed',
                     pid: daemon.pid,
@@ -14885,15 +14991,16 @@ var __webpack_modules__ = {
         };
         const loadLedgerRequest = (ticket, config = (0, _daemon_config_js__rspack_import_3.bF)())=>{
             if (!(0, node_fs__rspack_import_0.existsSync)(config.databasePath)) {
-                return effect_Effect__rspack_import_13.PyW(null);
+                return effect_Effect__rspack_import_14.PyW(null);
             }
-            return effect_Effect__rspack_import_13.P1j(effect_Effect__rspack_import_13.JkU(function*() {
+            return effect_Effect__rspack_import_14.P1j(effect_Effect__rspack_import_14.JkU(function*() {
                 const ledger = yield* acquireSnapshotLedger(config.databasePath);
                 return yield* ledger.getRequestByTicket(ticket);
             }));
         };
-        const loadLedgerTicket = (ticket, daemon, config)=>loadLedgerRequest(ticket, config).pipe(effect_Effect__rspack_import_13.TjK((record)=>record === null ? null : ledgerRequestRecord(displayRequestRecord(record), daemon)));
-        const emptyStopped = (config)=>withReport({
+        const loadLedgerTicket = (ticket, daemon, config)=>loadLedgerRequest(ticket, config).pipe(effect_Effect__rspack_import_14.TjK((record)=>record === null ? null : ledgerRequestRecord(displayRequestRecord(record), daemon)));
+        const emptyStopped = (config, query)=>withReport({
+                scope: (0, _status_filter_js__rspack_import_12.Gw)(query) ? 'filtered' : 'global',
                 active: [],
                 daemon: 'stopped',
                 lanes: [],
@@ -14917,24 +15024,31 @@ var __webpack_modules__ = {
                 throw error;
             }
         };
-        const acquireSnapshotLedger = (databasePath)=>effect_Effect__rspack_import_13.Q56(effect_Effect__rspack_import_13.SvU(()=>openSnapshotLedger(_storage_ledger_js__rspack_import_6.Xo, databasePath)).pipe(effect_Effect__rspack_import_13.MfU(()=>effect_Effect__rspack_import_13.OH5(()=>openSnapshotLedger(_storage_ledger_js__rspack_import_6.p, databasePath)))), ({ db })=>effect_Effect__rspack_import_13.OH5(()=>db.close())).pipe(effect_Effect__rspack_import_13.TjK(({ ledger })=>ledger));
-        const fromLedger = (config, recentLimit, daemon = 'stopped')=>{
+        const acquireSnapshotLedger = (databasePath)=>effect_Effect__rspack_import_14.Q56(effect_Effect__rspack_import_14.SvU(()=>openSnapshotLedger(_storage_ledger_js__rspack_import_6.Xo, databasePath)).pipe(effect_Effect__rspack_import_14.MfU(()=>effect_Effect__rspack_import_14.OH5(()=>openSnapshotLedger(_storage_ledger_js__rspack_import_6.p, databasePath)))), ({ db })=>effect_Effect__rspack_import_14.OH5(()=>db.close())).pipe(effect_Effect__rspack_import_14.TjK(({ ledger })=>ledger));
+        const fromLedger = (config, query, daemon = 'stopped')=>{
             if (!(0, node_fs__rspack_import_0.existsSync)(config.databasePath)) {
-                return effect_Effect__rspack_import_13.PyW(emptyStopped(config));
+                return effect_Effect__rspack_import_14.PyW(emptyStopped(config, query));
             }
-            return effect_Effect__rspack_import_13.P1j(effect_Effect__rspack_import_13.JkU(function*() {
+            return effect_Effect__rspack_import_14.P1j(effect_Effect__rspack_import_14.JkU(function*() {
                 const ledger = yield* acquireSnapshotLedger(config.databasePath);
-                const recent = (yield* ledger.recentRequests(recentLimit)).map((record)=>ledgerStatusRow(record, daemon));
-                const active = daemon === 'skewed' ? (yield* ledger.activeStatusRequests()).map((record)=>ledgerStatusRow(record, daemon)) : [];
-                const savings = yield* ledger.attachmentSavings();
+                const ledgerQuery = daemon === 'skewed' || query.statuses === undefined ? query : {
+                    ...query,
+                    statuses: query.statuses.flatMap((status)=>status === 'orphaned' ? [
+                            ..._contracts_protocol_js__rspack_import_7.RM
+                        ] : _contracts_protocol_js__rspack_import_7.RM.some((active)=>active === status) ? [] : [
+                            status
+                        ])
+                };
+                const recent = (yield* ledger.recentStatusRequests(ledgerQuery, daemon === 'skewed')).map((record)=>ledgerStatusRow(record, daemon));
+                const active = daemon === 'skewed' ? (yield* ledger.activeStatusRequests(ledgerQuery)).map((record)=>ledgerStatusRow(record, daemon)) : [];
                 return withReport({
+                    scope: (0, _status_filter_js__rspack_import_12.Gw)(query) ? 'filtered' : 'global',
                     active,
                     daemon: 'stopped',
                     lanes: [],
                     maxConcurrent: null,
                     pid: null,
                     recent,
-                    savings,
                     socketPath: config.socketPath,
                     startedAtMs: null,
                     stateRoot: config.stateDir,
@@ -14944,27 +15058,31 @@ var __webpack_modules__ = {
         };
         const loadHaulerSnapshot = (options = {})=>{
             const config = options.config ?? (0, _daemon_config_js__rspack_import_3.bF)();
-            const recentLimit = options.recentLimit ?? defaultRecentLimit;
-            const unreachable = (error)=>(0, _client_ensure_daemon_js__rspack_import_2.Yj)(error.cause) ? fromLedger(config, recentLimit) : unresponsiveSnapshot(config, recentLimit, `socket could not be opened (${(0, _platform_socket_errors_js__rspack_import_5.R)(error.cause) ?? 'no errno'})`);
-            return (0, _client_ensure_daemon_js__rspack_import_2.pk)(config, _client_ensure_daemon_js__rspack_import_2.R2, statusTimeoutMs, 'read').pipe(effect_Effect__rspack_import_13.qIB((daemon)=>daemon === null ? fromLedger(config, recentLimit) : (0, _client_control_js__rspack_import_4.dG)({
+            const query = {
+                limit: options.recentLimit ?? defaultRecentLimit,
+                telemetry: false,
+                ...options.query
+            };
+            const unreachable = (error)=>(0, _client_ensure_daemon_js__rspack_import_2.Yj)(error.cause) ? fromLedger(config, query) : unresponsiveSnapshot(config, query, `socket could not be opened (${(0, _platform_socket_errors_js__rspack_import_5.R)(error.cause) ?? 'no errno'})`);
+            return (0, _client_ensure_daemon_js__rspack_import_2.pk)(config, _client_ensure_daemon_js__rspack_import_2.R2, statusTimeoutMs, 'read').pipe(effect_Effect__rspack_import_14.qIB((daemon)=>daemon === null ? fromLedger(config, query) : (0, _client_control_js__rspack_import_4.dG)({
                     message: {
+                        ...query,
                         id: (0, _util_id_js__rspack_import_9.m)(),
-                        limit: recentLimit,
                         type: 'status'
                     },
                     socketPath: config.socketPath,
                     timeoutMs: statusTimeoutMs
-                }, (message)=>message.type === 'status-result').pipe(effect_Effect__rspack_import_13.qIB((result)=>result === undefined ? fromLedger(config, recentLimit) : fromLiveReport(result.report, daemon, config, recentLimit)), effect_Effect__rspack_import_13.loE({
-                    ControlTimeout: ()=>unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
-                    ConnectionClosed: ()=>unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
+                }, (message)=>message.type === 'status-result').pipe(effect_Effect__rspack_import_14.qIB((result)=>result === undefined ? fromLedger(config, query) : fromLiveReport(result.report, daemon, config, query)), effect_Effect__rspack_import_14.loE({
+                    ControlTimeout: ()=>unresponsiveSnapshot(config, query, `did not answer within ${statusTimeoutMs / 1000}s`),
+                    ConnectionClosed: ()=>unresponsiveSnapshot(config, query, 'closed the connection mid-status'),
                     DaemonUnreachable: unreachable
-                }))), effect_Effect__rspack_import_13.loE({
-                ControlTimeout: ()=>unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
-                ConnectionClosed: ()=>unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
+                }))), effect_Effect__rspack_import_14.loE({
+                ControlTimeout: ()=>unresponsiveSnapshot(config, query, `did not answer within ${statusTimeoutMs / 1000}s`),
+                ConnectionClosed: ()=>unresponsiveSnapshot(config, query, 'closed the connection mid-status'),
                 DaemonUnreachable: unreachable
             }));
         };
-        const unresponsiveSnapshot = (config, recentLimit, what)=>fromLedger(config, recentLimit, 'unresponsive').pipe(effect_Effect__rspack_import_13.TjK((snapshot)=>withReport({
+        const unresponsiveSnapshot = (config, query, what)=>fromLedger(config, query, 'unresponsive').pipe(effect_Effect__rspack_import_14.TjK((snapshot)=>withReport({
                     ...snapshot,
                     daemon: 'unresponsive',
                     summary: `cargo-hauler daemon ${what}, so status shows ledger data (${snapshot.recent.length} recorded)`
@@ -15701,6 +15819,9 @@ CREATE TABLE IF NOT EXISTS transitions (
 );
 CREATE INDEX IF NOT EXISTS requests_status_idx ON requests (status);
 CREATE INDEX IF NOT EXISTS requests_created_at_ms_idx ON requests (created_at_ms);
+CREATE INDEX IF NOT EXISTS requests_cwd_created_idx ON requests (cwd, created_at_ms DESC, id DESC);
+CREATE INDEX IF NOT EXISTS requests_session_created_idx ON requests (session, created_at_ms DESC, id DESC);
+CREATE INDEX IF NOT EXISTS requests_lane_created_idx ON requests (lane_key, created_at_ms DESC, id DESC);
 CREATE INDEX IF NOT EXISTS requests_session_finished_idx ON requests (session, finished_at_ms);
 CREATE INDEX IF NOT EXISTS requests_intent_status_id_idx ON requests (intent_key, status, id);
 CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id);
@@ -16074,7 +16195,6 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
      ORDER BY created_at_ms DESC, id DESC`);
             const updateDetached = db.prepare('UPDATE requests SET background = 1 WHERE id = ?');
             const selectRecentRequests = db.prepare(`SELECT ${requestColumns} FROM requests ORDER BY created_at_ms DESC, id DESC LIMIT ?`);
-            const selectRecentStatusRequests = db.prepare(`SELECT ${statusRequestColumns} FROM requests ORDER BY created_at_ms DESC, id DESC LIMIT ?`);
             const metricsWindowColumns = `id,
        lane_key,
        status,
@@ -16107,9 +16227,54 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             const selectActiveRequests = db.prepare(`SELECT ${requestColumns} FROM requests
      WHERE ${activeStatusFilter}
      ORDER BY created_at_ms ASC, id ASC`);
-            const selectActiveStatusRequests = db.prepare(`SELECT ${statusRequestColumns} FROM requests
-     WHERE ${activeStatusFilter}
-     ORDER BY created_at_ms ASC, id ASC`);
+            const readStatusRequests = (query, activeOnly, excludeActive = false)=>{
+                const filters = [];
+                const values = [];
+                if (activeOnly) filters.push(activeStatusFilter);
+                if (excludeActive) filters.push(`NOT (${activeStatusFilter})`);
+                for (const [column, value] of [
+                    [
+                        'cwd',
+                        query.cwd
+                    ],
+                    [
+                        'session',
+                        query.session
+                    ],
+                    [
+                        'lane_key',
+                        query.laneKey
+                    ]
+                ]){
+                    if (value !== undefined) {
+                        filters.push(`${column} = ?`);
+                        values.push(value);
+                    }
+                }
+                if (query.tickets !== undefined) {
+                    const ids = query.tickets.flatMap((ticket)=>{
+                        const id = (0, _contracts_protocol_js__rspack_import_6.sH)(ticket);
+                        return id === null || (0, _contracts_protocol_js__rspack_import_6.aJ)(id) !== ticket ? [] : [
+                            id
+                        ];
+                    });
+                    filters.push(ids.length === 0 ? '0' : `id IN (${ids.map(()=>'?').join(',')})`);
+                    values.push(...ids);
+                }
+                if (query.statuses !== undefined) {
+                    filters.push(query.statuses.length === 0 ? '0' : `status IN (${query.statuses.map(()=>'?').join(',')})`);
+                    values.push(...query.statuses);
+                }
+                if (query.commandContains !== undefined) {
+                    filters.push("instr((SELECT group_concat(value, ' ') FROM json_each(argv_json)), ?) > 0");
+                    values.push(query.commandContains);
+                }
+                if (!activeOnly) values.push(query.limit ?? 50);
+                return db.prepare(`SELECT ${statusRequestColumns} FROM requests
+       ${filters.length === 0 ? '' : `WHERE ${filters.join(' AND ')}`}
+       ORDER BY created_at_ms ${activeOnly ? 'ASC' : 'DESC'}, id ${activeOnly ? 'ASC' : 'DESC'}
+       ${activeOnly ? '' : 'LIMIT ?'}`).all(...values).map(toRequestRecord);
+            };
             const selectTransitions = db.prepare(`SELECT request_id, at_ms, from_status, to_status FROM transitions
      WHERE request_id = ?
      ORDER BY id ASC`);
@@ -16472,8 +16637,10 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                         })),
                 recentRequests: (limit)=>effect_Effect__rspack_import_12.OH5(()=>selectRecentRequests.all(limit).map(toRequestRecord)),
                 activeRequests: ()=>effect_Effect__rspack_import_12.OH5(()=>selectActiveRequests.all().map(toRequestRecord)),
-                recentStatusRequests: (limit)=>effect_Effect__rspack_import_12.OH5(()=>selectRecentStatusRequests.all(limit).map(toRequestRecord)),
-                activeStatusRequests: ()=>effect_Effect__rspack_import_12.OH5(()=>selectActiveStatusRequests.all().map(toRequestRecord)),
+                recentStatusRequests: (query, excludeActive)=>effect_Effect__rspack_import_12.OH5(()=>readStatusRequests(typeof query === 'number' ? {
+                            limit: query
+                        } : query, false, excludeActive)),
+                activeStatusRequests: (query = {})=>effect_Effect__rspack_import_12.OH5(()=>readStatusRequests(query, true)),
                 transitionsFor: (id)=>effect_Effect__rspack_import_12.OH5(()=>selectTransitions.all(id).map(toTransitionRecord)),
                 reapOrphans: (atMs, error)=>effect_Effect__rspack_import_12.OH5(()=>inTransaction(db, ()=>{
                             const orphans = selectOrphans.all();
@@ -17773,7 +17940,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                 load: status.system === undefined ? null : loadLine(status.system),
                 memory: status.system === undefined ? null : memoryLine(status.system),
                 paused: status.system?.memClamp === 'hard',
-                permits: status.maxConcurrent === null ? null : `${leaders} running of ${status.maxConcurrent} permits${heavy === null ? '' : ` (${heavy})`}${riders === 0 ? '' : `, ${riders} riding shared builds`}, ${queued} queued`
+                permits: status.maxConcurrent === null ? null : status.scope === 'filtered' ? `Selected work: ${leaders} running${riders === 0 ? '' : `, ${riders} riding shared builds`}, ${queued} queued; global limit ${status.maxConcurrent} permits${heavy === null ? '' : ` (${heavy})`}` : `${leaders} running of ${status.maxConcurrent} permits${heavy === null ? '' : ` (${heavy})`}${riders === 0 ? '' : `, ${riders} riding shared builds`}, ${queued} queued`
             };
         };
         const kacheIndexUnavailableReasons = {
@@ -18567,7 +18734,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             annotations: {
                 readOnlyHint: true
             },
-            description: 'Show the cargo-hauler queue and in-flight work as text. Filter by cwd, session, laneKey, tickets, statuses, or commandContains instead of piping CLI JSON through jq. Rows are bounded summaries without an output tail. A running row carries only a short outputPreview of its last 8 lines. Call hauler_result on one ticket for its whole live tail. To open the visual dashboard (an MCP App), call hauler_dashboard.',
+            description: 'Show the cargo-hauler queue and in-flight work as text. Filters run before the recent-row limit and include only relevant lanes and blockers. Filter by cwd, session, laneKey, tickets, statuses, or commandContains. Set metrics to include daemon-wide telemetry, independent of filters. Rows have no output tail; a running row carries a short outputPreview of its last 8 lines. Call hauler_result for the whole live tail or hauler_dashboard for the visual dashboard.',
             inputJsonSchema: {
                 additionalProperties: false,
                 properties: {
@@ -18582,6 +18749,10 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                     },
                     limit: {
                         type: 'number'
+                    },
+                    metrics: {
+                        type: 'boolean',
+                        description: 'Include daemon-wide metrics, savings, kache, and system telemetry, independent of filters.'
                     },
                     session: {
                         type: 'string'

@@ -263,11 +263,13 @@ describe('status report contract', () => {
     expect(statusReportSchema.safeParse(reportBody).success).toBe(false);
   });
 
-  it('rejects a report missing any of its sections', () => {
+  it('accepts omitted telemetry but rejects missing queue sections', () => {
     for (const section of ['kache', 'metrics', 'savings', 'system'] as const) {
       const { [section]: _omitted, ...withoutSection } = report;
-      expect(statusReportSchema.safeParse(withoutSection).success).toBe(false);
+      expect(statusReportSchema.safeParse(withoutSection).success).toBe(true);
     }
+    const { active: _active, ...withoutActive } = report;
+    expect(statusReportSchema.safeParse(withoutActive).success).toBe(false);
   });
 
   it('carries a null kache while kache is disabled or unread', () => {

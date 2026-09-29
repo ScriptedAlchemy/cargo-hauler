@@ -85,7 +85,7 @@ The CLI is `hauler` on PATH from `npm i -g cargo-hauler`. Never run
 | Command | Behavior |
 | --- | --- |
 | `hauler exec [--session ID] [--host HOST] [--cwd DIR] [--bg] [--after TICKET[,TICKET…]] [--allow-shared-target] -- <cargo …>` | Submit Cargo through the daemon and stream output. Hooks rewrite commands to this form. The client resolves a relative `--cwd` against the caller's directory. `--after` (repeatable or comma-separated) keeps the request queued until every named ticket has finished. It fails with `prerequisite cc-N <status>` if one of them fails or is killed, and the daemon rejects an unknown ticket as a bad intent. `--allow-shared-target` accepts the stale-artifact risk described below and prints a warning. The command exits with cargo's code, with `130` or `143` after a SIGINT or SIGTERM (the client kills the ticket first), with `75` when auto-backgrounded, and with `69` when the daemon connection was lost and the client could not reattach the ticket (see below). |
-| `hauler status [--limit N] [--cwd DIR] [--session ID] [--lane KEY] [--ticket ID …] [--status S …] [--command-contains TEXT]` | Queue, active runs, lanes, admission, and kache, optionally filtered. Lanes that share one external target directory across workspace roots carry `sharedTargetWith` and render a warning that names the target and roots. Rows are bounded summaries, and no row carries an output tail. A running row carries `outputPreview`, the last 8 lines (at most 512 bytes) of its live output, cut at a line boundary. Every other row has `outputPreview: null`. Read a ticket's whole tail with `hauler result`. |
+| `hauler status [--limit N] [--cwd DIR] [--session ID] [--lane KEY] [--ticket ID …] [--status S …] [--command-contains TEXT] [--metrics]` | Queue, active runs, and relevant lanes. Filters run in the ledger before the recent-row limit, so exact ticket lookups include older history. Lanes include the selected work and its direct blockers; `sharedTargetWith` still names any workspace sharing the target. `--metrics` adds daemon-wide metrics, savings, admission, and kache telemetry, independent of the filters. Rows carry no output tail. A running row carries `outputPreview`, its last 8 lines (at most 512 bytes); other rows carry `null`. Queued rows preview up to 20 `aheadTickets`, with `aheadTicketsTotal` when truncated and `position` retaining the full count. Read a ticket's whole tail with `hauler result`. |
 | `hauler log [--limit N]` | Recent requests from the ledger, as the same bounded summary rows. |
 | `hauler last` | The most recent request as a detail record, including its output tail. The record comes from the daemon while the daemon is running, otherwise from the ledger. |
 | `hauler await <ticket> [--max-wait-ms N]` | Long-poll until the ticket finishes or the wait expires. The default wait is 30 s, and the ceiling is 2 h per call, which is the daemon's await ceiling. Call again to keep waiting. A host with its own per-call deadline still bounds one call. Codex stops a tool call at `tool_timeout_sec` (60 s unless raised). |
@@ -111,13 +111,13 @@ treat its own process directory as the caller's workspace.
 ## Dashboard
 
 The dashboard is an MCP App (`ui://cargo-hauler/dashboard.html`) attached to
-`hauler_dashboard`. `hauler_status` returns the same data as text for the
-model and never opens it. The dashboard shows contention and admission,
+`hauler_dashboard`. `hauler_status` returns queue data as text for the
+model and accepts `metrics: true` for global telemetry. The dashboard shows contention and admission,
 in-flight and queued work, metrics over one-hour, 24-hour, and all-time
 windows, per-command timings, optional kache data, lanes, and history. Each
 running row shows the last line of its output preview, and each ticket's
 drawer shows the whole tail fetched through `hauler_result`. The dashboard
-polls `hauler_status` every 5 s while open. Outside an MCP host, the installed
+polls `hauler_status` with `metrics: true` every 5 s while open. Outside an MCP host, the installed
 plugin's own `web` command serves the same App in a plain browser tab against
 the running daemon:
 
@@ -238,7 +238,7 @@ that script, because the rest of the script is opaque.
 The daemon logs a request that could not attach at debug level, with the gate
 that refused it (`subcommand`, `opaque-arguments`, `passthrough`,
 `compile-surface`, `packages`, `targets`, `channels`,
-`leader-build-finished`) and both tickets. `hauler status --json` counts
+`leader-build-finished`) and both tickets. `hauler status --metrics --json` counts
 refusals per gate under `metrics.attach_rejections` (the nearest miss when the
 daemon considered several leaders).
 
@@ -1002,7 +1002,7 @@ conversation.
 
 | Route | Surface | Document |
 | --- | --- | --- |
-| `tool:hauler/hauler_status` (`hauler status`) | queue, lanes, admission, kache, and filters, as bounded summary rows (`StatusRow`) with `outputPreview` on running rows and never a tail | `StatusDocument`, text for the model |
+| `tool:hauler/hauler_status` (`hauler status`) | queue, relevant lanes, and filters before the row limit; `metrics: true` opts into global telemetry. Bounded summary rows (`StatusRow`) have `outputPreview` on running rows and never a tail | `StatusDocument`, text for the model |
 | `tool:hauler/hauler_dashboard` (`hauler web`) | the same `StatusResult`, `limit` only. The tool advertises the dashboard App (`_meta.ui.resourceUri`) so hosts open it beside the result. | `DashboardDocument`, one summary line plus where the App and the text form are |
 | `tool:hauler/hauler_log` (`hauler log`) | recent requests, as summary rows | `LogStream`, then `LogDocument` |
 | `tool:hauler/hauler_last` (`hauler last`) | most recent request, as a detail record with its tail | `LastDocument` |

@@ -1,9 +1,9 @@
-import type { TicketSummary } from '../contracts/protocol.js';
+import type { LaneStatus, StatusQuery, TicketSummary } from '../contracts/protocol.js';
 import { commandDisplay } from '../ui/shared/format.js';
 
-import type { StatusInput, DaemonStatus } from '../contracts/tool-schemas.js';
+import type { DaemonStatus } from '../contracts/tool-schemas.js';
 
-export const hasStatusFilters = (input: StatusInput): boolean =>
+export const hasStatusFilters = (input: StatusQuery): boolean =>
   input.cwd !== undefined ||
   input.session !== undefined ||
   input.laneKey !== undefined ||
@@ -13,7 +13,7 @@ export const hasStatusFilters = (input: StatusInput): boolean =>
 
 export const filterStatusRows = <Row extends TicketSummary>(
   rows: readonly Row[],
-  input: StatusInput,
+  input: StatusQuery,
 ): readonly Row[] => {
   const tickets = input.tickets === undefined ? null : new Set(input.tickets);
   const statuses = input.statuses === undefined ? null : new Set(input.statuses);
@@ -28,6 +28,28 @@ export const filterStatusRows = <Row extends TicketSummary>(
         row.argv.join(' ').includes(input.commandContains)),
   );
 };
+
+export const filterStatusLanes = (
+  lanes: readonly LaneStatus[],
+  rows: readonly TicketSummary[],
+  blockers: readonly TicketSummary[] = [],
+): readonly LaneStatus[] => {
+  const keys = new Set([...rows, ...blockers].map((row) => row.laneKey));
+  return lanes.filter((lane) => keys.has(lane.key));
+};
+
+export const statusBlockerTickets = (rows: readonly TicketSummary[]): readonly string[] =>
+  [...new Set(rows.flatMap((row) => [
+    ...(row.queue?.headTicket === undefined ? [] : [row.queue.headTicket]),
+    ...(row.waitingFor?.map((prerequisite) => prerequisite.ticket) ?? []),
+    ...(row.attachedTo === null ? [] : [row.attachedTo]),
+  ]))];
+
+export const boundedStatusQueue = <Row extends TicketSummary>(row: Row): Row =>
+  row.queue === undefined || row.queue.aheadTickets.length <= 20 ? row : {
+    ...row,
+    queue: { ...row.queue, aheadTickets: row.queue.aheadTickets.slice(0, 20), aheadTicketsTotal: row.queue.aheadTicketsTotal ?? row.queue.aheadTickets.length },
+  };
 
 const daemonHeader = (daemon: DaemonStatus): string => {
   switch (daemon) {

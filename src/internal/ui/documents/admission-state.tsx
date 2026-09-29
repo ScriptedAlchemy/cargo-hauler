@@ -7,7 +7,7 @@ import { DataList } from './primitives.js';
 import { admissionModel, savingsLine } from './view-models.js';
 
 export interface AdmissionStateProps {
-  readonly status: Pick<StatusResult, 'active' | 'maxConcurrent' | 'savings' | 'system'>;
+  readonly status: Pick<StatusResult, 'active' | 'maxConcurrent' | 'savings' | 'scope' | 'system'>;
 }
 
 /**

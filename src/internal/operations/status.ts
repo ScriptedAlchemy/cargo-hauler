@@ -27,7 +27,7 @@ import {
   openLedgerDatabase,
   openLedgerDatabaseReadOnly,
 } from '../storage/ledger.js';
-import { isOrphanedByRestart, orphanedByRestartError, toStatusRow } from '../contracts/protocol.js';
+import { activeStatuses, isOrphanedByRestart, orphanedByRestartError, toStatusRow } from '../contracts/protocol.js';
 import type {
   AttachmentSavingsReport,
   DisplayRequestRecord,
@@ -37,6 +37,7 @@ import type {
   RequestRecord,
   StatusMetrics,
   StatusReport,
+  StatusQuery,
   StatusResultMessage,
   StatusRow,
   SystemLoadReport,
@@ -47,8 +48,10 @@ import { shortId } from '../util/id.js';
 import { statusReportSchema, type DaemonStatus } from '../contracts/tool-schemas.js';
 import { countWord } from '../util/text.js';
 import { compareVersions } from '../contracts/version-order.js';
+import { boundedStatusQueue, filterStatusLanes, hasStatusFilters, statusBlockerTickets } from './status-filter.js';
 
 export interface HaulerSnapshot {
+  readonly scope?: 'global' | 'filtered';
   readonly active: readonly StatusRow[];
   readonly daemon: DaemonStatus;
   readonly kache?: KacheStatusReport | null;
@@ -69,6 +72,7 @@ export interface HaulerSnapshot {
 export interface LoadSnapshotOptions {
   readonly config?: DaemonConfigShape;
   readonly recentLimit?: number;
+  readonly query?: StatusQuery;
 }
 
 const defaultRecentLimit = 50;
@@ -219,26 +223,34 @@ const withReport = (
     value: report,
   }) as HaulerSnapshot;
 
-const fromReport = (report: StatusReport, config: DaemonConfigShape): HaulerSnapshot =>
-  withReport(
+const fromReport = (report: StatusReport, config: DaemonConfigShape, query: StatusQuery): HaulerSnapshot => {
+  const { kache, metrics, savings, system, ...base } = report;
+  const selected = {
+    ...(query.telemetry === true ? report : base),
+    active: report.active.map(boundedStatusQueue),
+    recent: report.recent.map(boundedStatusQueue),
+    lanes: report.scope === undefined && query.telemetry !== true
+      ? filterStatusLanes(report.lanes, [...report.active, ...report.recent])
+      : report.lanes,
+  };
+  return withReport(
     {
-      active: report.active,
+      scope: selected.scope,
+      active: selected.active,
       daemon: 'running',
-      kache: report.kache,
-      lanes: report.lanes,
-      maxConcurrent: report.maxConcurrent,
-      metrics: report.metrics,
-      pid: report.pid,
-      recent: report.recent,
-      savings: report.savings,
-      socketPath: report.socketPath,
-      startedAtMs: report.startedAtMs,
+      ...(query.telemetry === true ? { kache, metrics, savings, system } : {}),
+      lanes: selected.lanes,
+      maxConcurrent: selected.maxConcurrent,
+      pid: selected.pid,
+      recent: selected.recent,
+      socketPath: selected.socketPath,
+      startedAtMs: selected.startedAtMs,
       stateRoot: config.stateDir,
-      summary: runningSummary(report),
-      system: report.system,
+      summary: runningSummary(selected),
     },
-    report,
+    selected,
   );
+};
 
 /** What a skewed daemon is relative to this client, and the one fix that applies to it. */
 const skewSummary = (daemon: Pick<PongMessage, 'pid' | 'version'>): string => {
@@ -276,13 +288,26 @@ const fromLiveReport = (
   raw: unknown,
   daemon: PongMessage,
   config: DaemonConfigShape,
-  recentLimit: number,
+  query: StatusQuery,
 ): Effect.Effect<HaulerSnapshot> => {
   const decoded = statusReportSchema.safeParse(raw);
   if (decoded.success) {
-    return Effect.succeed(fromReport(decoded.data, config));
+    const report = decoded.data;
+    if (!hasStatusFilters(query) || report.scope === 'filtered') {
+      return Effect.succeed(fromReport(report, config, query));
+    }
+    // An older daemon ignores query fields. Read the exact ledger selection,
+    // then retain its live overlays for the tickets it did return.
+    return Effect.scoped(Effect.gen(function* () {
+      const ledger = yield* acquireSnapshotLedger(config.databasePath);
+      const live = new Map(report.active.map((row) => [row.ticket, row]));
+      const active = (yield* ledger.activeStatusRequests(query)).map((record) => live.get(record.ticket) ?? toStatusRow(record));
+      const recent = (yield* ledger.recentStatusRequests(query, true)).map((record) => toStatusRow(record));
+      const blockers = yield* ledger.activeStatusRequests({ tickets: [...statusBlockerTickets(active)] });
+      return fromReport({ ...report, scope: 'filtered', active, recent, lanes: filterStatusLanes(report.lanes, [...active, ...recent], blockers) }, config, query);
+    }));
   }
-  return fromLedger(config, recentLimit, 'skewed').pipe(
+  return fromLedger(config, query, 'skewed').pipe(
     Effect.map((snapshot) =>
       withReport(
         { ...snapshot, daemon: 'skewed', pid: daemon.pid, startedAtMs: daemon.startedAtMs, summary: skewSummary(daemon) },
@@ -322,9 +347,10 @@ export const loadLedgerTicket = (
     Effect.map((record) => (record === null ? null : ledgerRequestRecord(displayRequestRecord(record), daemon))),
   );
 
-const emptyStopped = (config: DaemonConfigShape): HaulerSnapshot =>
+const emptyStopped = (config: DaemonConfigShape, query: StatusQuery): HaulerSnapshot =>
   withReport(
     {
+      scope: hasStatusFilters(query) ? 'filtered' : 'global',
       active: [],
       daemon: 'stopped',
       lanes: [],
@@ -365,31 +391,36 @@ const acquireSnapshotLedger = (databasePath: string): Effect.Effect<LedgerApi, n
 
 const fromLedger = (
   config: DaemonConfigShape,
-  recentLimit: number,
+  query: StatusQuery,
   daemon: UnavailableDaemonStatus = 'stopped',
 ): Effect.Effect<HaulerSnapshot> => {
   if (!existsSync(config.databasePath)) {
-    return Effect.succeed(emptyStopped(config));
+    return Effect.succeed(emptyStopped(config, query));
   }
   return Effect.scoped(
     Effect.gen(function* () {
       const ledger = yield* acquireSnapshotLedger(config.databasePath);
-      const recent = (yield* ledger.recentRequests(recentLimit)).map((record) =>
+      const ledgerQuery = daemon === 'skewed' || query.statuses === undefined ? query : {
+        ...query,
+        statuses: query.statuses.flatMap((status) => status === 'orphaned'
+          ? [...activeStatuses]
+          : activeStatuses.some((active) => active === status) ? [] : [status]),
+      };
+      const recent = (yield* ledger.recentStatusRequests(ledgerQuery, daemon === 'skewed')).map((record) =>
         ledgerStatusRow(record, daemon));
       const active =
         daemon === 'skewed'
-          ? (yield* ledger.activeStatusRequests()).map((record) => ledgerStatusRow(record, daemon))
+          ? (yield* ledger.activeStatusRequests(ledgerQuery)).map((record) => ledgerStatusRow(record, daemon))
           : [];
-      const savings = yield* ledger.attachmentSavings();
       return withReport(
         {
+          scope: hasStatusFilters(query) ? 'filtered' : 'global',
           active,
           daemon: 'stopped' as const,
           lanes: [],
           maxConcurrent: null,
           pid: null,
           recent,
-          savings,
           socketPath: config.socketPath,
           startedAtMs: null,
           stateRoot: config.stateDir,
@@ -412,22 +443,22 @@ export const loadHaulerSnapshot = (
   | DaemonReplacementFailedError
 > => {
   const config = options.config ?? resolveDaemonConfig();
-  const recentLimit = options.recentLimit ?? defaultRecentLimit;
+  const query = { limit: options.recentLimit ?? defaultRecentLimit, telemetry: false, ...options.query };
   const unreachable = (error: DaemonUnreachableError) =>
     daemonIsAbsent(error.cause)
-      ? fromLedger(config, recentLimit)
+      ? fromLedger(config, query)
       : unresponsiveSnapshot(
           config,
-          recentLimit,
+          query,
           `socket could not be opened (${socketErrorCode(error.cause) ?? 'no errno'})`,
         );
   return ensureDaemonVersion(config, defaultEnsureDependencies, statusTimeoutMs, 'read').pipe(
     Effect.flatMap((daemon) =>
       daemon === null
-        ? fromLedger(config, recentLimit)
+        ? fromLedger(config, query)
         : requestExpecting(
             {
-              message: { id: shortId(), limit: recentLimit, type: 'status' },
+              message: { ...query, id: shortId(), type: 'status' },
               socketPath: config.socketPath,
               timeoutMs: statusTimeoutMs,
             },
@@ -435,16 +466,16 @@ export const loadHaulerSnapshot = (
           ).pipe(
             Effect.flatMap((result) =>
               result === undefined
-                ? fromLedger(config, recentLimit)
-                : fromLiveReport(result.report, daemon, config, recentLimit),
+                ? fromLedger(config, query)
+                : fromLiveReport(result.report, daemon, config, query),
             ),
             // Once the version gate has succeeded, ordinary read failures keep
             // the historical ledger fallback.
             Effect.catchTags({
               ControlTimeout: () =>
-                unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
+                unresponsiveSnapshot(config, query, `did not answer within ${statusTimeoutMs / 1000}s`),
               ConnectionClosed: () =>
-                unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
+                unresponsiveSnapshot(config, query, 'closed the connection mid-status'),
               DaemonUnreachable: unreachable,
             }),
           ),
@@ -452,8 +483,8 @@ export const loadHaulerSnapshot = (
     // A ping that never establishes a protocol identity is unresponsive.
     Effect.catchTags({
       ControlTimeout: () =>
-        unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
-      ConnectionClosed: () => unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
+        unresponsiveSnapshot(config, query, `did not answer within ${statusTimeoutMs / 1000}s`),
+      ConnectionClosed: () => unresponsiveSnapshot(config, query, 'closed the connection mid-status'),
       DaemonUnreachable: unreachable,
     }),
   );
@@ -461,10 +492,10 @@ export const loadHaulerSnapshot = (
 
 const unresponsiveSnapshot = (
   config: DaemonConfigShape,
-  recentLimit: number,
+  query: StatusQuery,
   what: string,
 ): Effect.Effect<HaulerSnapshot> =>
-  fromLedger(config, recentLimit, 'unresponsive').pipe(
+  fromLedger(config, query, 'unresponsive').pipe(
     Effect.map((snapshot) =>
       withReport(
         {

@@ -11,6 +11,7 @@ export const config = {
     cwd: { description: 'Only requests from this workspace' },
     laneKey: { description: 'Only requests in this lane key', name: 'lane' },
     limit: { description: 'Recent rows to show' },
+    metrics: { description: 'Include daemon-wide metrics, savings, kache, and system telemetry' },
     session: { description: 'Only requests from this agent session' },
     statuses: { description: 'Only these statuses (repeatable)', name: 'status' },
     tickets: { description: 'Only these tickets (repeatable)', name: 'ticket' },

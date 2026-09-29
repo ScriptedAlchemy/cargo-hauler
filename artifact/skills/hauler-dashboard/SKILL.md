@@ -12,7 +12,7 @@ The dashboard shows machine-wide state for cargo-hauler 0.11.2. To submit, scope
 
 ## Open it
 
-- **In an MCP App host.** Call `hauler_dashboard`. Hosts that render MCP Apps attach `ui://cargo-hauler/dashboard.html` beside its result. The text result is one summary line. To read the queue as text, call `hauler_status`. It returns the daemon badge, admission meter, lane board, in-flight and recent tickets, and kache summary, and it never opens the App.
+- **In an MCP App host.** Call `hauler_dashboard`. Hosts that render MCP Apps attach `ui://cargo-hauler/dashboard.html` beside its result. The text result is one summary line. To read the queue as text, call `hauler_status`. It returns the daemon badge, relevant lanes, and in-flight and recent tickets. Set `metrics: true` (CLI `--metrics`) for machine telemetry, admission, and kache; these remain global when tickets are filtered. It never opens the App.
 - **In a plain browser.** Run the installed plugin's `web` command, `node <plugin root>/bin/cargo-hauler.mjs web`. The plugin root is the directory that holds `agent-bundle.manifest.json`. In a checkout, the root is `artifact/`. The command serves the App standalone against the plugin's own `hauler` server, opens it, and stays in the foreground until Ctrl-C. The panels show the daemon's data and poll every five seconds. In the plugin checkout, `pnpm run dev` and the Workbench's MCP page preview `ui://cargo-hauler/dashboard.html` the same way.
 
 ## Read the panels

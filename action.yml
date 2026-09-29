@@ -42,7 +42,7 @@ outputs:
     description: Trusted policy digest or unavailable on native fallback.
     value: ${{ steps.drain.outputs.policy }}
   evidence:
-    description: Directory containing controller timings and bounded test reports.
+    description: Directory containing per-snapshot timings and numeric JUnit evidence, persisted during draining.
     value: ${{ steps.drain.outputs.evidence }}
   summary:
     description: Path to the controller's timing and verdict summary.

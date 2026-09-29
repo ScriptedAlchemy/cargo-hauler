@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile, writeFile, appendFile, mkdtemp, realpath, chmod, mkdir, cp } from 'node:fs/promises';
+import { readFile, writeFile, appendFile, mkdtemp, realpath, chmod, mkdir } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -35,6 +35,13 @@ export async function within(root, path) {
   return result;
 }
 
+export function imageLoader({ reference, image, dockerfile, context, env, execute = exec }) {
+  let loading;
+  return signal => loading ??= execute('docker', reference ? ['pull', reference] : ['build', '--tag', image, '--file', dockerfile, context], {
+    env, signal, timeout: 20 * 60_000, maxBuffer: 20 * 1024 * 1024,
+  }).catch(error => { loading = undefined; throw error; });
+}
+
 export async function main(env = process.env) {
   const event = JSON.parse(await readFile(env.GITHUB_EVENT_PATH, 'utf8'));
   const { loadPolicy, route, enqueue } = await import('./policy.mjs');
@@ -65,6 +72,7 @@ export async function main(env = process.env) {
   if (mode === 'plan') {
     const { plan } = await import('./admission.mjs');
     const result = await plan({ recipe, repository: options.repository, token: options.token, policy: actionIdentity, admissionWorkflow, onlyPullRequests,
+      managerWorkflow: options.managerWorkflow, defaultBranch: loaded.defaultBranch,
       manualAdmission: env.GITHUB_EVENT_NAME === 'workflow_dispatch' && Boolean(onlyPullRequests?.length) });
     if (env.GITHUB_OUTPUT) await appendFile(env.GITHUB_OUTPUT, `lanes=${JSON.stringify(result.lanes)}\ncount=${result.count}\n`);
     console.log(JSON.stringify(result));
@@ -80,33 +88,31 @@ export async function main(env = process.env) {
   const stop = () => abort.abort(new Error('Workflow cancelled.'));
   process.once('SIGTERM', stop);
   process.once('SIGINT', stop);
-  const image = `hauler-ci:${actionIdentity.slice(0, 16)}`;
-  let build;
+  const { workerIdentity } = await import('./ownership.mjs');
+  const worker = await workerIdentity(loaded.client, { runId: env.GITHUB_RUN_ID, attempt: env.GITHUB_RUN_ATTEMPT, lane: env.CARGO_HAULER_CI_LANE,
+    repository: options.repository, workflow: options.managerWorkflow, defaultBranch: loaded.defaultBranch });
+  const image = recipe.image.reference ?? `hauler-ci:${actionIdentity.slice(0, 16)}`;
+  const dockerEnv = { PATH: env.PATH, HOME: state };
+  if (env.DOCKER_CONFIG) dockerEnv.DOCKER_CONFIG = await within(env.RUNNER_TEMP || tmpdir(), env.DOCKER_CONFIG);
+  const loadImage = imageLoader({ reference: recipe.image.reference, image, dockerfile, context, env: dockerEnv });
   const sandboxFactory = async options => {
-    build ??= exec('docker', ['build', '--tag', image, '--file', dockerfile, context], {
-      env: { PATH: env.PATH, HOME: state }, signal: options.preparationSignal ?? abort.signal, timeout: 20 * 60_000, maxBuffer: 20 * 1024 * 1024,
-    });
-    try { await build; }
-    catch (error) { build = undefined; throw error; }
+    await loadImage(options.preparationSignal ?? abort.signal);
     return createSandbox({ ...options, image, root: state, signal: abort.signal });
+  };
+  const evidence = join(state, 'evidence'), summary = join(evidence, 'summary.json');
+  await mkdir(evidence, { mode: 0o700 });
+  if (env.GITHUB_OUTPUT) await appendFile(env.GITHUB_OUTPUT, `summary=${summary}\nevidence=${evidence}\n`);
+  const persistSnapshot = async (snapshot, result) => {
+    await writeFile(join(evidence, `pr-${snapshot.pr}-${snapshot.merge}.json`), `${JSON.stringify(snapshot, null, 2)}\n`, { mode: 0o600 });
+    await writeFile(summary, `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 });
   };
   try {
     const result = await drain({ recipe, lane: env.CARGO_HAULER_CI_LANE, repository: env.GITHUB_REPOSITORY,
       token: env.CARGO_HAULER_CI_TOKEN, root: state, image, actionIdentity, policy: actionIdentity, admissionWorkflow,
+      managerWorkflow: options.managerWorkflow, defaultBranch: loaded.defaultBranch, worker, persistSnapshot,
       manualAdmission: env.GITHUB_EVENT_NAME === 'workflow_dispatch' && Boolean(onlyPullRequests?.length), maxMinutes, maxSnapshots,
       onlyPullRequests, sandboxFactory, signal: abort.signal });
-    const evidence = join(state, 'evidence');
-    await mkdir(evidence, { mode: 0o700 });
-    for (const snapshot of result.snapshots) {
-      if (snapshot.reportsPath) {
-        const destination = `pr-${snapshot.pr}-${snapshot.merge}`;
-        await cp(snapshot.reportsPath, join(evidence, destination), { recursive: true });
-        snapshot.reportsPath = destination;
-      }
-    }
-    const summary = join(evidence, 'summary.json');
     await writeFile(summary, `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 });
-    if (env.GITHUB_OUTPUT) await appendFile(env.GITHUB_OUTPUT, `summary=${summary}\nevidence=${evidence}\n`);
     console.log(JSON.stringify(result));
     if (result.snapshots.some(snapshot => snapshot.infrastructureError)) process.exitCode = 1;
     return result;

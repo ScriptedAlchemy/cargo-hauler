@@ -124,7 +124,7 @@ class StatusRpcError extends Data.TaggedError('StatusRpcError')<{
 }
 
 const fetchStatus = Effect.tryPromise({
-  try: async () => client.call('tool:hauler/hauler_status', { limit: 40 }),
+  try: async () => client.call('tool:hauler/hauler_status', { limit: 40, metrics: true }),
   catch: (cause) => new StatusRpcError({ cause }),
 });
 
