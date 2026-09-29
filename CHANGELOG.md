@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.1
+
+### Patch Changes
+
+- 62efb13: Prevent admission for PRs with confirmed merge conflicts and cancel their owned queued checks without interrupting admitted snapshots.
+- eb2d4be: Keep native CI responsible for pull requests that change workflow, recipe, or worker image inputs, including renames and incomplete change lists.
+- c95c170: Preserve timestamps for unchanged Git subtrees between managed CI snapshots so Cargo directory watchers do not rebuild solely because checkout directories are fresh. Changed and reverted subtrees retain fresh timestamps.
+
 ## 0.11.0
 
 ### Minor Changes
