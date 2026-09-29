@@ -97,6 +97,11 @@ policy validation fails, native CI remains responsible; a late enqueue cannot
 start duplicate managed work. Enqueue creates pending lane checks before a
 PR waits for a worker. It runs outside worker concurrency limits.
 
+PRs that change `.github/`, the configured recipe, or its Dockerfile or build
+context retain native CI so new validation cannot be skipped by the default
+branch's recipe. Rename sources count too. An incomplete or unreadable PR file
+list also keeps native CI; routing never executes the PR's policy.
+
 A manual dispatch with an explicit `pull-requests` selection permits a bounded
 trial alongside native CI. Automatic drains require the ownership receipt.
 
