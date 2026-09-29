@@ -84,6 +84,18 @@ export async function route(options) {
   } catch { return { decision: 'native', policy }; }
   finally { clearTimeout(timer); }
 }
+export async function cancelConflictedChecks(client, { pr, recipe, repository, policy, lanes = recipe.lanes, checks }) {
+  if (pr.mergeable !== false) return;
+  const queued = checks.filter(check => check.status === 'queued' && check.head_sha === pr.head.sha && check.app?.slug === 'github-actions' && lanes.some(lane => check.name === lane.checkName && matchesCheck(check, checkIdentity(pr.head.sha, lane.id, policy))));
+  if (!queued.length) return;
+  const current = await client.api(`/pulls/${pr.number}`);
+  if (!trustedPull(current, repository, recipe) || current.head.sha !== pr.head.sha || current.mergeable !== false) return;
+  for (const check of queued) {
+    const latest = await client.api(`/check-runs/${check.id}`);
+    if (latest.status !== 'queued' || latest.head_sha !== check.head_sha || latest.external_id !== check.external_id || latest.name !== check.name || latest.app?.slug !== 'github-actions') continue;
+    await client.api(`/check-runs/${check.id}`, 'PATCH', { status: 'completed', conclusion: 'cancelled', completed_at: new Date().toISOString(), output: { title: 'Merge conflicts block admission', summary: 'Resolve this PR head’s merge conflicts before Hauler can admit a test snapshot.' } });
+  }
+}
 export async function enqueue({ recipe, policy, client, repository, onlyPullRequests, admissionWorkflow = 'ci.yml', managerRunId }) {
   if (!/^[1-9][0-9]{0,19}$/.test(String(managerRunId))) throw new TypeError('Manager run identity required');
   const queued = [];
@@ -92,6 +104,10 @@ export async function enqueue({ recipe, policy, client, repository, onlyPullRequ
     const pr = await client.api(`/pulls/${listed.number}`);
     if (!trustedPull(pr, repository, recipe)) continue;
     const checks = await client.pages(`/commits/${pr.head.sha}/check-runs?filter=latest`, 'check_runs');
+    if (pr.mergeable === false) {
+      await cancelConflictedChecks(client, { pr, recipe, repository, policy, checks });
+      continue;
+    }
     if (await receipt(client, { workflow: admissionWorkflow, head: pr.head.sha, pr: pr.number, policy }) === 'native') {
       for (const lane of recipe.lanes) {
         for (const check of checks.filter(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && matchesCheck(c, checkIdentity(pr.head.sha, lane.id, policy)) && c.status === 'queued')) await client.api(`/check-runs/${check.id}`, 'PATCH', { status: 'completed', conclusion: 'cancelled', completed_at: new Date().toISOString(), output: { title: 'Native CI owns this head', summary: 'Native CI fallback declined Hauler delegation.' } });

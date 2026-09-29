@@ -14,7 +14,8 @@ function fixture({ authors = ['owner'], fail = false, change = false, prepareFai
     else if (path.startsWith('/git/commits/')) {
       const id = path.split('/').at(-1), pr = prs.find(p => p.merge_commit_sha === id);
       result = pr ? { parents: [{ sha: pr.base.sha }, { sha: pr.head.sha }], tree: { sha: hex(100) } } : { committer: { date: id === hex(1) ? '2026-09-28T00:00:00Z' : '2026-09-27T00:00:00Z' } };
-    } else if (path.includes('/check-runs') && options.method === 'GET') {
+    } else if (path.startsWith('/check-runs/') && options.method === 'GET') result = checks.get(Number(path.split('/').at(-1)));
+    else if (path.includes('/check-runs') && options.method === 'GET') {
       const head = path.split('/')[2];
       result = { check_runs: [{ name: 'Gates', app: { slug: 'github-actions' }, status: 'completed', conclusion: 'success' }, ...[...checks.values()].filter(c => c.head_sha === head)] };
     } else if (path.startsWith('/git/trees/')) result = { tree: [{ path: 'Cargo.lock', sha: hex(200), mode: '100644' }] };
@@ -108,6 +109,7 @@ test('base advancement finishes the admitted snapshot and does not retest unchan
   f.options.sandboxFactory = async (...args) => {
     const sandbox = await original(...args);
     return { ...sandbox, async prepare(snapshot) { admitted = snapshot; }, async run(command, options) {
+      f.prs[0].mergeable = false;
       f.prs[0].base.sha = hex(800);
       f.prs[0].merge_commit_sha = hex(801);
       return sandbox.run(command, options);
@@ -187,4 +189,33 @@ test('automatic delegated recovery retries infrastructure failure and cancels na
   decision = 'native';
   assert.equal((await drain({ ...options, sandboxFactory })).snapshots.length, 0);
   assert.equal(f.checks.get(98).conclusion, 'cancelled');
+});
+
+test('drain cleans only its queued conflicted-head markers without a merge or receipt', async () => {
+  const f = fixture(), policy = 'c'.repeat(64);
+  f.prs[0].mergeable = false; f.prs[0].merge_commit_sha = null;
+  const queued = { id: 90, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'queued' };
+  for (const [index, override] of [{}, { status: 'in_progress' }, { status: 'completed', conclusion: 'success' }, { external_id: `hauler:linux:${hex(1)}:${'d'.repeat(64)}:run:10` }, { app: { slug: 'another-app' } }, { head_sha: hex(9), external_id: `hauler:linux:${hex(9)}:${policy}:run:10` }, { name: 'Other lane', external_id: `hauler:other:${hex(1)}:${policy}:run:10` }].entries()) f.checks.set(90 + index, { ...queued, ...override, id: 90 + index });
+  assert.equal((await drain({ ...f.options, manualAdmission: false, policy })).snapshots.length, 0);
+  assert.equal(f.checks.get(90).conclusion, 'cancelled');
+  assert.equal(f.checks.get(91).status, 'in_progress');
+  assert.equal(f.checks.get(92).conclusion, 'success');
+  for (const id of [93, 94, 95, 96]) assert.equal(f.checks.get(id).status, 'queued');
+  assert.equal(f.builds(), 0);
+});
+test('cleanup rechecks conflict, head and queued state before cancellation', async () => {
+  for (const race of ['head', 'conflict', 'running']) {
+    const f = fixture(), policy = 'e'.repeat(64), original = f.options.fetchImpl;
+    f.prs[0].mergeable = false; f.prs[0].merge_commit_sha = null;
+    f.checks.set(90, { id: 90, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'queued' });
+    let reads = 0;
+    const fetchImpl = async (url, options) => {
+      const response = await original(url, options), data = await response.json();
+      if (url.endsWith('/pulls/1') && ++reads === 2) { if (race === 'head') data.head.sha = hex(99); if (race === 'conflict') data.mergeable = true; }
+      if (race === 'running' && url.endsWith('/check-runs/90') && options.method === 'GET') data.status = 'in_progress';
+      return { ...response, json: async () => data };
+    };
+    assert.equal((await drain({ ...f.options, manualAdmission: false, policy, fetchImpl })).snapshots.length, 0);
+    assert.equal(f.checks.get(90).status, 'queued');
+  }
 });

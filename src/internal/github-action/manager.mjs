@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { githubClient, receipt } from './github.mjs';
-import { checkIdentity, checkMetadata, matchesCheck } from './policy.mjs';
+import { checkIdentity, checkMetadata, matchesCheck, cancelConflictedChecks } from './policy.mjs';
 import { parseRecipe } from './recipe.mjs';
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
@@ -19,9 +19,9 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
     if (pr.state !== 'open' || pr.draft || pr.head?.repo?.full_name !== repository || !recipe.trustedAuthors.some(a => a.toLowerCase() === pr.user?.login?.toLowerCase()) || !sha(pr.head?.sha)) return null;
     return pr;
   }
-  async function snapshot(number) {
-    const pr = await currentPull(number);
-    if (!pr || !sha(pr.base?.sha) || !sha(pr.merge_commit_sha)) return null;
+  async function snapshot(number, pull) {
+    const pr = pull ?? await currentPull(number);
+    if (!pr || pr.mergeable === false || !sha(pr.base?.sha) || !sha(pr.merge_commit_sha)) return null;
     const merge = await api(`/git/commits/${pr.merge_commit_sha}`);
     if (merge.parents?.length !== 2 || merge.parents[0].sha !== pr.base.sha || merge.parents[1].sha !== pr.head.sha) return null;
     return { pr: number, head: pr.head.sha, base: pr.base.sha, merge: pr.merge_commit_sha, tree: merge.tree.sha, updatedAt: pr.updated_at };
@@ -35,7 +35,14 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
     for (const pr of pulls) {
       if (onlyPullRequests && !onlyPullRequests.includes(pr.number)) continue;
       if (Date.now() >= deadline || signal?.aborted) break;
-      const s = await snapshot(pr.number);
+      const current = await currentPull(pr.number);
+      if (!current) continue;
+      if (current.mergeable === false) {
+        const checks = await pages(`/commits/${current.head.sha}/check-runs?filter=latest`, 'check_runs');
+        await cancelConflictedChecks(client, { pr: current, recipe, repository, policy: identity, lanes: [lane], checks });
+        continue;
+      }
+      const s = await snapshot(pr.number, current);
       if (!s || attempted.has(s.head)) continue;
       const checks = await pages(`/commits/${s.head}/check-runs?filter=latest`, 'check_runs');
       if (checks.some(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && matchesCheck(c, external(s)) && c.status === 'completed' && ['success', 'failure'].includes(c.conclusion))) continue;
