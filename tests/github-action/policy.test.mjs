@@ -5,16 +5,17 @@ import { receipt } from '../../src/internal/github-action/github.mjs';
 const sha = n => n.toString(16).padStart(40, '0');
 const recipe = { version: 1, trustedAuthors: ['owner'], sharedBuilds: false, requiredChecks: ['Gates'], image: { dockerfile: 'docker/Dockerfile', context: 'docker' }, prepare: [], compatibilityPaths: [], lanes: [{ id: 'linux', checkName: 'Hauler Linux', tasks: [{ id: 'test', run: 'true', timeoutSeconds: 60 }] }] };
 function fixture() {
-  const state = { recipe, base: sha(1), image: sha(2), contextMode: '040000', checks: [], decision: null, posts: 0, head: sha(3), runHead: sha(3), event: 'pull_request', path: '.github/workflows/ci.yml' };
+  const state = { files: [{ filename: 'src/lib.rs', status: 'modified' }], fileRequests: 0, recipe, base: sha(1), image: sha(2), contextMode: '040000', checks: [], decision: null, posts: 0, head: sha(3), runHead: sha(3), event: 'pull_request', path: '.github/workflows/ci.yml' };
   const fetchImpl = async (url, options) => {
     const path = new URL(url).pathname.replace('/repos/owner/repo', '');
     let data;
     if (path === '') data = { private: false, full_name: 'owner/repo', default_branch: 'master' };
     else if (path.startsWith('/commits/') && !path.endsWith('/check-runs')) data = { sha: state.base, commit: { tree: { sha: sha(4) } } };
     else if (path.startsWith('/contents/')) data = { type: 'file', encoding: 'base64', size: 1000, content: Buffer.from(JSON.stringify(state.recipe)).toString('base64') };
-    else if (path.startsWith('/git/trees/')) data = { tree: [{ path: 'docker', mode: state.contextMode, sha: state.image }, { path: 'docker/Dockerfile', mode: '100644', sha: state.image }, { path: 'unrelated', mode: '100644', sha: state.base }] };
+    else if (path.startsWith('/git/trees/')) data = { tree: [{ path: 'docker', mode: state.contextMode, sha: state.image }, { path: state.recipe.image.dockerfile, mode: '100644', sha: state.image }, { path: 'unrelated', mode: '100644', sha: state.base }] };
     else if (path === '/pulls') data = [{ number: 1 }];
-    else if (path === '/pulls/1') data = { number: 1, state: 'open', draft: false, user: { login: 'owner' }, head: { sha: state.head, repo: { full_name: 'owner/repo' } } };
+    else if (path === '/pulls/1/files') { state.fileRequests++; if (state.filesError) return { ok: false, status: 403 }; const offset = (Number(new URL(url).searchParams.get('page')) - 1) * 100; data = state.files.slice(offset, offset + 100); }
+    else if (path === '/pulls/1') data = { changed_files: Object.hasOwn(state, 'changedFiles') ? state.changedFiles : state.files.length, number: 1, state: 'open', draft: false, user: { login: 'owner' }, head: { sha: state.head, repo: { full_name: 'owner/repo' } } };
     else if (path.endsWith('/check-runs') && options.method === 'GET') data = { check_runs: state.checks };
     else if (path === '/check-runs') { data = { id: ++state.posts, app: { slug: 'github-actions' }, ...JSON.parse(options.body) }; data.details_url = `https://github.com/owner/repo/runs/${data.id}`; state.checks.push(data); }
     else if (path.includes('/actions/workflows/')) data = { workflow_runs: [{ id: 20, event: state.event, path: state.path, head_sha: state.runHead, run_attempt: 1, pull_requests: [{ number: 1 }] }] };
@@ -85,4 +86,53 @@ test('check provenance parses exactly and cannot fall back to a display URL', as
   f.state.checks[0].external_id = checkIdentity(f.state.head, 'linux', loaded.policy);
   f.state.checks[0].details_url = 'https://github.com/owner/repo/actions/runs/10';
   assert.equal((await route(f.options)).decision, 'native');
+});
+
+test('CI, recipe, image and renamed-out changes retain native validation', async () => {
+  const cases = [
+    [{ filename: '.github/workflows/ci.yml', status: 'modified' }],
+    [{ filename: '.github/workflows/new-test.yml', status: 'added' }],
+    [{ filename: 'ci/custom-recipe.json', status: 'modified' }],
+    [{ filename: 'docker/Dockerfile', status: 'modified' }],
+    [{ filename: 'docker/toolchain.txt', status: 'added' }],
+    [{ filename: 'docs/old-ci.yml', previous_filename: '.github/workflows/ci.yml', status: 'renamed' }],
+    [{ filename: 'docs/old-context', previous_filename: 'docker/toolchain.txt', status: 'renamed' }],
+  ];
+  for (const files of cases) {
+    const f = fixture(); f.state.files = files;
+    const options = { ...f.options, recipePath: './ci/custom-recipe.json' }, loaded = await loadPolicy(options);
+    await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
+    assert.deepEqual(await route(options), { decision: 'native', policy: loaded.policy });
+    assert.equal(f.state.fileRequests, 1);
+  }
+});
+test('incomplete change lists and API errors fail closed with the validated policy', async () => {
+  for (const changedFiles of [undefined, -1, 1.5, '1', 3001, 2, 0]) {
+    const f = fixture(); f.state.changedFiles = changedFiles;
+    if (changedFiles === 0) { f.state.changedFiles = 101; f.state.files = Array.from({ length: 100 }, (_, i) => ({ filename: `src/${i}.rs` })); }
+    const loaded = await loadPolicy(f.options);
+    await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
+    assert.deepEqual(await route(f.options), { decision: 'native', policy: loaded.policy });
+  }
+  const f = fixture(); f.state.filesError = true;
+  const loaded = await loadPolicy(f.options);
+  await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
+  assert.deepEqual(await route(f.options), { decision: 'native', policy: loaded.policy });
+});
+test('ordinary Rust and documentation edits still delegate with one change scan', async () => {
+  const f = fixture(); f.state.files = [{ filename: 'src/lib.rs' }, { filename: 'docs/design.md' }];
+  const loaded = await loadPolicy(f.options);
+  await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
+  assert.deepEqual(await route(f.options), { decision: 'delegated', policy: loaded.policy });
+  assert.equal(f.state.fileRequests, 1);
+});
+
+test('Dockerfile outside context and repository-root contexts keep native coverage', async () => {
+  for (const image of [{ dockerfile: 'tools/Worker.Dockerfile', context: 'docker' }, { dockerfile: 'docker/Dockerfile', context: '.' }]) {
+    const f = fixture(); f.state.recipe = { ...recipe, image };
+    f.state.files = [{ filename: image.context === '.' ? 'src/lib.rs' : image.dockerfile }];
+    const loaded = await loadPolicy(f.options);
+    await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
+    assert.deepEqual(await route(f.options), { decision: 'native', policy: loaded.policy });
+  }
 });

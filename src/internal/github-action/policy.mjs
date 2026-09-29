@@ -33,11 +33,31 @@ export async function loadPolicy({ repository, token, actionRef, recipePath = '.
   if (!dockerfile || !['100644', '100755'].includes(dockerfile.mode) || !entries.length) throw new Error('Invalid trusted image');
   return { recipe, policy: hash({ actionRef, recipe, entries }), ref: commit.sha, defaultBranch: repo.default_branch, client };
 }
+async function changesPolicy(client, pr, recipePath, recipe) {
+  if (!Number.isSafeInteger(pr.changed_files) || pr.changed_files < 0 || pr.changed_files > 3000) throw new Error('Incomplete PR change list');
+  const context = recipe.image.context.replace(/\/$/, '');
+  const policyPath = recipePath.split('/').filter(part => part !== '.').join('/');
+  const protectedPath = path => path === '.github' || path.startsWith('.github/') || path === policyPath || path === recipe.image.dockerfile || context === '.' || path === context || path.startsWith(`${context}/`);
+  const seen = new Set();
+  for (let offset = 0; offset < pr.changed_files; offset += 100) {
+    const files = await client.api(`/pulls/${pr.number}/files?per_page=100&page=${offset / 100 + 1}`);
+    if (!Array.isArray(files) || files.length !== Math.min(100, pr.changed_files - offset)) throw new Error('Incomplete PR change list');
+    for (const file of files) {
+      if (typeof file.filename !== 'string' || !file.filename || seen.has(file.filename) || (file.status === 'renamed' && typeof file.previous_filename !== 'string') || (file.previous_filename !== undefined && typeof file.previous_filename !== 'string')) throw new Error('Invalid PR change list');
+      seen.add(file.filename);
+      if (protectedPath(file.filename) || file.previous_filename !== undefined && protectedPath(file.previous_filename)) return true;
+    }
+  }
+  return false;
+}
 export async function route(options) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30000);
+  let policy = 'unavailable';
   try {
-    const loaded = await loadPolicy({ ...options, signal: controller.signal }), { recipe, policy, client, defaultBranch } = loaded;
+    const loaded = await loadPolicy({ ...options, signal: controller.signal }), { recipe, client, defaultBranch } = loaded;
+    policy = loaded.policy;
+    let changesChecked = false;
     const deadline = Date.now() + Math.min(30000, Math.max(0, options.waitMilliseconds ?? 30000));
     const provenance = new Map();
     function managerOwns(check) {
@@ -48,6 +68,12 @@ export async function route(options) {
     do {
       const pr = await client.api(`/pulls/${options.pr}`);
       if (!trustedPull(pr, options.repository, recipe) || pr.head.sha !== options.head) return { decision: 'native', policy };
+      if (!changesChecked) {
+        if (await changesPolicy(client, pr, options.recipePath ?? '.github/hauler-ci.json', recipe)) return { decision: 'native', policy };
+        const confirmed = await client.api(`/pulls/${options.pr}`);
+        if (!trustedPull(confirmed, options.repository, recipe) || confirmed.head.sha !== options.head || confirmed.changed_files !== pr.changed_files) return { decision: 'native', policy };
+        changesChecked = true;
+      }
       const checks = await client.pages(`/commits/${options.head}/check-runs?filter=latest`, 'check_runs');
       const owned = recipe.lanes.map(l => checks.find(c => c.name === l.checkName && c.app?.slug === 'github-actions' && matchesCheck(c, checkIdentity(options.head, l.id, policy)) && (['queued', 'in_progress'].includes(c.status) || c.status === 'completed' && ['success', 'failure'].includes(c.conclusion))));
       if (owned.every(Boolean) && (await Promise.all(owned.map(managerOwns))).every(Boolean)) return { decision: 'delegated', policy };
@@ -55,7 +81,7 @@ export async function route(options) {
       await delay(Math.min(5000, deadline - Date.now()));
     } while (Date.now() <= deadline);
     return { decision: 'native', policy };
-  } catch { return { decision: 'native', policy: 'unavailable' }; }
+  } catch { return { decision: 'native', policy }; }
   finally { clearTimeout(timer); }
 }
 export async function enqueue({ recipe, policy, client, repository, onlyPullRequests, admissionWorkflow = 'ci.yml', managerRunId }) {
