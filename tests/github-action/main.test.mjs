@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, symlink, rm, realpath, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { main, assertTrustedContext, positiveInteger, within } from '../../src/internal/github-action/main.mjs';
+import { main, assertTrustedContext, positiveInteger, within, imageLoader } from '../../src/internal/github-action/main.mjs';
 
 test('only the exact public default-branch checkout may hold reporting credentials', () => {
   const sha = 'a'.repeat(40);
@@ -26,6 +26,27 @@ test('work budgets reject empty, negative, fractional, and excessive inputs', ()
   for (const value of ['', '-1', '1.5', '301', '1e2', '2\n']) {
     assert.throws(() => positiveInteger(value, 300, 'minutes'));
   }
+});
+test('digest images pull once; failed and cancelled pulls never fall back to builds', async () => {
+  for (const fail of [false, true]) {
+    const calls = [], reference = `ghcr.io/owner/ci@sha256:${'a'.repeat(64)}`;
+    const load = imageLoader({ reference, image: reference, env: { PATH: '/bin', HOME: '/private', DOCKER_CONFIG: '/private/auth' }, execute: async (...args) => {
+      calls.push(args); if (fail && calls.length === 1) throw new Error('pull failed');
+    } });
+    if (fail) { await assert.rejects(load(), /pull failed/); await load(); await load(); }
+    else { await load(); await load(); }
+    assert.equal(calls.length, fail ? 2 : 1);
+    assert.deepEqual(calls[0].slice(0, 2), ['docker', ['pull', reference]]);
+    assert.deepEqual(Object.keys(calls[0][2].env), ['PATH', 'HOME', 'DOCKER_CONFIG']);
+  }
+  let attempts = 0;
+  const controller = new AbortController();
+  const load = imageLoader({ reference: 'immutable', env: {}, execute: async (...args) => {
+    if (++attempts === 1) { controller.abort(); args[2].signal.throwIfAborted(); }
+  } });
+  await assert.rejects(load(controller.signal));
+  await load(new AbortController().signal);
+  assert.equal(attempts, 2);
 });
 
 test('trusted build paths cannot escape through a symlink', async () => {

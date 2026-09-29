@@ -2,7 +2,7 @@ import * as Effect from 'effect/Effect';
 
 import { fetchTicket } from '../client/tickets.js';
 import type { DaemonConfigShape } from '../daemon/config.js';
-import type { DisplayRequestRecord } from '../contracts/protocol.js';
+import type { DisplayRequestRecord, StatusQuery } from '../contracts/protocol.js';
 import {
   type HaulerSnapshot,
   displayRequestRecord,
@@ -19,7 +19,7 @@ import type {
   StatusInput,
   StatusResult,
 } from '../contracts/tool-schemas.js';
-import { filterStatusRows, hasStatusFilters, statusSummary } from './status-filter.js';
+import { filterStatusRows, statusSummary } from './status-filter.js';
 import { runTicketEffect } from './ticket-errors.js';
 
 export interface InspectOptions {
@@ -33,14 +33,20 @@ const withDaemonLine = (snapshot: HaulerSnapshot, summary: string): string =>
 
 // Through the ticket boundary runner so MCP/CLI cancellation aborts the
 // socket wait and replacement failures become clear transport diagnostics.
-const loadSnapshot = (limit: number, options: InspectOptions) =>
+const loadSnapshot = (query: number | StatusQuery, options: InspectOptions) =>
   runTicketEffect(
     loadHaulerSnapshot({
-      recentLimit: limit,
+      query: typeof query === 'number' ? { limit: query, telemetry: false } : query,
       ...(options.config === undefined ? {} : { config: options.config }),
     }),
     options.signal,
   );
+
+/** Last and log include active work; status keeps its two lists disjoint. */
+const recentSnapshotRows = (snapshot: HaulerSnapshot, limit: number) =>
+  [...new Map([...snapshot.recent, ...snapshot.active].map((row) => [row.ticket, row])).values()]
+    .sort((left, right) => right.createdAtMs - left.createdAtMs || right.id - left.id)
+    .slice(0, limit);
 
 /**
  * `hauler last`: the newest ticket named by the status listing, read as a
@@ -51,7 +57,7 @@ const loadSnapshot = (limit: number, options: InspectOptions) =>
  */
 export const loadLastResult = async (options: InspectOptions): Promise<LastResult> => {
   const snapshot = await loadSnapshot(1, options);
-  const latest = snapshot.recent[0] ?? null;
+  const latest = recentSnapshotRows(snapshot, 1)[0] ?? null;
   const detailOf = (ticket: string): Effect.Effect<DisplayRequestRecord | null> =>
     snapshot.daemon === 'running'
       ? fetchTicket(ticket, options.config).pipe(
@@ -80,22 +86,22 @@ export const loadLogResult = async (
   options: InspectOptions,
 ): Promise<LogResult> => {
   const snapshot = await loadSnapshot(input.limit ?? 50, options);
+  const requests = recentSnapshotRows(snapshot, input.limit ?? 50);
   return {
     daemon: snapshot.daemon,
     operation: 'log',
-    requests: displayStatusRows(snapshot.recent),
+    requests: displayStatusRows(requests),
     summary: withDaemonLine(
       snapshot,
-      snapshot.recent.length === 0
+      requests.length === 0
         ? 'no hauler requests recorded'
-        : `${snapshot.recent.length} recent request${snapshot.recent.length === 1 ? '' : 's'}`,
+        : `${requests.length} recent request${requests.length === 1 ? '' : 's'}`,
     ),
   };
 };
 
 /**
- * Filtered reads fetch a deep window (500) before filtering so a busy ledger
- * still answers "show me my session" instead of the newest N rows overall.
+ * Filters reach the daemon and ledger before the recent-row limit.
  * Rows are the bounded status contract: no tail, a short `outputPreview` on
  * running rows; `result` reads a ticket's whole tail (#95).
  */
@@ -104,7 +110,8 @@ export const loadStatusResult = async (
   options: InspectOptions,
 ): Promise<StatusResult> => {
   const limit = input.limit ?? 20;
-  const snapshot = await loadSnapshot(hasStatusFilters(input) ? 500 : limit, options);
+  const { metrics, ...query } = input;
+  const snapshot = await loadSnapshot({ ...query, limit, telemetry: metrics === true }, options);
   const active = filterStatusRows(snapshot.active, input);
   const activeTickets = new Set(active.map((row) => row.ticket));
   const recent = filterStatusRows(snapshot.recent, input)

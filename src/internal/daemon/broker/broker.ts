@@ -55,6 +55,7 @@ import type {
   SessionCompletedRecord,
   SessionPendingRecord,
   StatusReport,
+  StatusQuery,
   StatusRow,
 } from '../../contracts/protocol.js';
 import { replaySince } from './replay.js';
@@ -66,6 +67,7 @@ import { statusTailPreviewLimits, tailPreview } from '../reporting/tail-preview.
 import { makeTicketDirectory } from './ticket-directory.js';
 import { Topology } from '../../cargo/topology.js';
 import { findConfiguredTargetDir, locateWorkspaceRoot } from '../../cargo/workspace.js';
+import { boundedStatusQueue, filterStatusLanes, hasStatusFilters, statusBlockerTickets } from '../../operations/status-filter.js';
 
 export type {
   ExitInfo,
@@ -183,7 +185,7 @@ export interface BrokerApi {
   /** Record that the submitting client stopped streaming the ticket; false when the ticket is unknown. */
   readonly detach: (ticket: string) => Effect.Effect<boolean>;
   /** The status report minus `version`, which the server stamps from its own build. */
-  readonly report: (recentLimit?: number) => Effect.Effect<BrokerStatusReport>;
+  readonly report: (query?: number | StatusQuery) => Effect.Effect<BrokerStatusReport>;
   readonly getTicket: (ticket: string) => Effect.Effect<RequestRecord | null>;
   readonly awaitTicket: (ticket: string, maxWaitMs: number) => Effect.Effect<AwaitTicketResult>;
   /** Test-only visibility for interruption cleanup assertions. */
@@ -839,8 +841,10 @@ export const BrokerLive: Layer.Layer<
       daemonScope,
     );
 
-    const report = (recentLimit = 50): Effect.Effect<BrokerStatusReport> =>
+    const report = (input: number | StatusQuery = 50): Effect.Effect<BrokerStatusReport> =>
       Effect.gen(function* () {
+        const query = typeof input === 'number' ? { limit: input, telemetry: true } : input;
+        const scoped = hasStatusFilters(query);
         const histogramSnapshot = (snapshot: {
           readonly buckets: ReadonlyArray<readonly [number, number]>;
           readonly count: number;
@@ -858,15 +862,33 @@ export const BrokerLive: Layer.Layer<
           sum: snapshot.sum,
         });
         yield* ledger.ingestPassthroughSpool(config.stateDir);
-        const laneStatuses: readonly LaneStatus[] = yield* lanesRuntime.laneStatuses();
         const reportAtMs = Date.now();
-        const activeRecords = yield* ledger.activeStatusRequests();
-        const active = yield* Effect.forEach(activeRecords, (record) =>
+        const activeRecords = yield* ledger.activeStatusRequests(query);
+        const activeRows = yield* Effect.forEach(activeRecords, (record) =>
           withLiveStatus(record, reportAtMs, false).pipe(Effect.map((live) => statusRow(live ?? record))),
         );
-        const recent = (yield* ledger.recentStatusRequests(recentLimit)).map((record) =>
+        const active = typeof input === 'number' ? activeRows : activeRows.map(boundedStatusQueue);
+        const recent = (yield* ledger.recentStatusRequests(query, typeof input !== 'number')).map((record) =>
           toStatusRow(record),
         );
+        const selectLanes = scoped || query.telemetry !== true;
+        const blockers = selectLanes
+          ? yield* ledger.activeStatusRequests({ tickets: [...statusBlockerTickets(active)] })
+          : [];
+        const selectedKeys = new Set([...active, ...recent, ...blockers].map((row) => row.laneKey));
+        const allLanes = yield* lanesRuntime.laneStatuses(query.telemetry === true ? undefined : selectedKeys);
+        const laneStatuses = selectLanes ? filterStatusLanes(allLanes, [...active, ...recent], blockers) : allLanes;
+        const base: BrokerStatusReport = {
+          scope: scoped ? 'filtered' : 'global',
+          pid: process.pid,
+          startedAtMs,
+          socketPath: config.socketPath,
+          maxConcurrent: config.maxConcurrent,
+          lanes: laneStatuses,
+          active,
+          recent,
+        };
+        if (query.telemetry !== true) return base;
         const cargoRun = yield* Metric.value(cargoRunMetric);
         const cargoRunByKind = yield* Effect.forEach(
           cargoRunKinds,
@@ -888,7 +910,7 @@ export const BrokerLive: Layer.Layer<
         const ioSample = yield* Effect.sync(() =>
           systemIo.sample([
             config.stateDir,
-            ...laneStatuses
+            ...allLanes
               .filter(
                 (lane) =>
                   lane.runningTicket !== null || (lane.executingTickets?.length ?? 0) > 0,
@@ -918,13 +940,7 @@ export const BrokerLive: Layer.Layer<
         });
         const heavy = yield* lanesRuntime.heavyAdmission(memorySample.availableBytes);
         return {
-          pid: process.pid,
-          startedAtMs,
-          socketPath: config.socketPath,
-          maxConcurrent: config.maxConcurrent,
-          lanes: laneStatuses,
-          active,
-          recent,
+          ...base,
           kache,
           system: {
             loadAvg1: loadavg()[0],

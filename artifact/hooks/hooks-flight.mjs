@@ -13878,10 +13878,19 @@ var __webpack_modules__ = {
             id: zod__rspack_import_0.YjP().min(1),
             ticket: zod__rspack_import_0.YjP().min(1)
         });
-        const statusRequestSchema = zod__rspack_import_0.Ikc({
+        const statusQuerySchema = zod__rspack_import_0.Ikc({
+            limit: zod__rspack_import_0.aig().int().min(1).max(500).optional(),
+            cwd: zod__rspack_import_0.YjP().min(1).optional(),
+            session: zod__rspack_import_0.YjP().min(1).optional(),
+            laneKey: zod__rspack_import_0.YjP().min(1).optional(),
+            tickets: zod__rspack_import_0.YOg(zod__rspack_import_0.YjP().min(1)).max(100).optional(),
+            statuses: zod__rspack_import_0.YOg(zod__rspack_import_0.k5n(statusRowStatuses)).max(statusRowStatuses.length).optional(),
+            commandContains: zod__rspack_import_0.YjP().min(1).optional(),
+            telemetry: zod__rspack_import_0.zMY().optional()
+        });
+        const statusRequestSchema = statusQuerySchema.extend({
             type: zod__rspack_import_0.euz('status'),
-            id: zod__rspack_import_0.YjP().min(1),
-            limit: zod__rspack_import_0.aig().int().min(1).max(500).optional()
+            id: zod__rspack_import_0.YjP().min(1)
         });
         const pingRequestSchema = zod__rspack_import_0.Ikc({
             type: zod__rspack_import_0.euz('ping'),
@@ -16579,7 +16588,7 @@ var __webpack_modules__ = {
                 load: status.system === undefined ? null : loadLine(status.system),
                 memory: status.system === undefined ? null : memoryLine(status.system),
                 paused: status.system?.memClamp === 'hard',
-                permits: status.maxConcurrent === null ? null : `${leaders} running of ${status.maxConcurrent} permits${heavy === null ? '' : ` (${heavy})`}${riders === 0 ? '' : `, ${riders} riding shared builds`}, ${queued} queued`
+                permits: status.maxConcurrent === null ? null : status.scope === 'filtered' ? `Selected work: ${leaders} running${riders === 0 ? '' : `, ${riders} riding shared builds`}, ${queued} queued; global limit ${status.maxConcurrent} permits${heavy === null ? '' : ` (${heavy})`}` : `${leaders} running of ${status.maxConcurrent} permits${heavy === null ? '' : ` (${heavy})`}${riders === 0 ? '' : `, ${riders} riding shared builds`}, ${queued} queued`
             };
         };
         const kacheIndexUnavailableReasons = null && {
@@ -44557,6 +44566,7 @@ var __webpack_modules__ = {
             euz: ()=>literal,
             g1P: ()=>record,
             gMt: ()=>discriminatedUnion,
+            k5n: ()=>_enum,
             zMY: ()=>boolean
         });
     },

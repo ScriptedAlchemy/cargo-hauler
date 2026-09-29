@@ -23,6 +23,7 @@ import type {
 } from '../../contracts/protocol.js';
 import { clientMessageSchema, encodeServerMessage } from '../../contracts/protocol.js';
 import { wireProtocol } from '../../contracts/wire-version.js';
+import { hasStatusFilters } from '../../operations/status-filter.js';
 import { LineBuffer } from '../../platform/ndjson.js';
 
 export interface ConnectionHandlerOptions {
@@ -480,7 +481,9 @@ export const makeConnectionHandler =
               });
             case 'status':
               return Effect.gen(function* () {
-                const report = yield* options.broker.report(message.limit);
+                const report = yield* options.broker.report(message.telemetry === undefined && !hasStatusFilters(message)
+                  ? message.limit
+                  : { ...message, telemetry: message.telemetry ?? true });
                 yield* send({
                   type: 'status-result',
                   id: message.id,

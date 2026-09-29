@@ -287,6 +287,23 @@ describe('laneBoardModel and admissionModel', () => {
     });
     expect(model.permits).toBe('1 running of 5 permits, 2 riding shared builds, 1 queued');
   });
+
+  it('labels filtered counts as selected work while keeping requested machine telemetry global', () => {
+    const model = admissionModel({
+      scope: 'filtered',
+      active: [
+        toStatusRow(record()),
+        toStatusRow(record({ attachedTo: 'cc-7', ticket: 'cc-8' })),
+        toStatusRow(record({ status: 'queued', ticket: 'cc-9' })),
+      ],
+      maxConcurrent: 5,
+      system: { clampThresholdPerCore: null, cores: 8, loadAvg1: 12.5, memClamp: 'hard' },
+    });
+    expect(model.permits).toBe('Selected work: 1 running, 1 riding shared builds, 1 queued; global limit 5 permits');
+    expect(model.load).toBe('load 12.5 on 8 cores');
+    expect(model.memory).toBe('pressure hard (admission paused)');
+    expect(model.paused).toBe(true);
+  });
 });
 
 describe('kacheModel and lineageModel', () => {

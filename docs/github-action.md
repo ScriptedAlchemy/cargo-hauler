@@ -64,6 +64,7 @@ jobs:
           mode: plan
           token: ${{ github.token }}
   worker:
+    name: Hauler pool / ${{ matrix.lane }}
     needs: plan
     if: needs.plan.outputs.count != '0'
     concurrency:
@@ -100,9 +101,17 @@ Planning is advisory: each drain rechecks admission after acquiring its lane.
 A validated native-CI receipt also plans queued checks from prior policy versions
 for retirement. Only serialized drains cancel them after rechecking the current
 head, receipt and queued state; mismatched delegated receipts never admit work.
-An in-progress check remains eligible for recovery; the plan does not infer
-whether its prior worker still lives. API errors fail the plan rather than
-reporting an empty pool. Use the same recipe, Action pin and explicit PR
+Checks carry a bounded controller ownership block with the worker's native run,
+attempt, lane job, snapshot ordinal, finish state, remaining admissions and deadline.
+The planner verifies the current run attempt, repository, default branch, manager
+workflow and unique `Hauler pool / <lane>` job through GitHub. Live owners suppress
+their active snapshots and cover ready work within their remaining capacity.
+One worker is counted once using its latest ordinal, even when several checks
+carry its evidence. Completed early failure checks remain owned until independent
+tasks finish. Finished, expired, deleted or superseded owners release work for
+recovery; exhausted owners reserve no future admissions. Unknown API failures
+fail the plan visibly. Enqueue provenance in `external_id` remains intact, while
+`details_url` links to the actual worker job. Use the same recipe, Action pin and explicit PR
 selection for planning and draining.
 
 The default recipe path is `.github/hauler-ci.json`. Name the manager workflow
@@ -169,6 +178,16 @@ UID 10001 with a private home and temporary directory. Writable mounts contain
 only the snapshot and its compiler/package caches. The Docker socket, host
 process tree, host home, Actions command files, and host credentials are absent.
 
+For an image built by a trusted workflow, optionally set `image.reference` to
+`ghcr.io/<owner>/<image>@sha256:<64 lowercase hex digits>`. Floating tags and other
+registries are rejected. Each worker pulls that digest lazily once instead of
+building; failed pulls fail the snapshot with no build fallback. A later snapshot
+may retry the same digest after a failed or cancelled pull. The trusted Dockerfile
+and context still participate in policy validation and hashing. Private GHCR
+images require a separate host login step with a job-scoped token and a private
+`DOCKER_CONFIG` directory under `RUNNER_TEMP`; only image pull/build receives that
+directory. It never enters the PR container or its mounts.
+
 Only ready same-repository PRs from the recipe's authors are admitted, after
 their named GitHub Actions checks pass. A lane finishes one snapshot before
 selecting the next eligible head. Each lane has exactly one worker under the
@@ -206,10 +225,17 @@ Worker containers never receive the GitHub token. The trusted controller uses
 only the short-lived job token; no personal token or App private key is needed.
 Read-only routing receives no check-writing permission.
 
-The host summary records queue time, execution time, task outcomes, and exact
-snapshot identities. `evidence` contains that summary and bounded regular XML
-or JSON reports. Raw worker output remains in private controller logs and is
-never interpreted as GitHub workflow commands.
+The host summary records queue time, exact snapshot and image identities,
+compatibility hashes, compatible sandbox reuse, task outcomes, and monotonic
+stage durations, including failed and aborted stages. `compatibility` measures
+compatibility metadata reads; `image` includes image pull/build and sandbox
+creation or cleanup; `checkout`, preparation, tasks and report collection have
+separate timings. Each check publishes this sanitized evidence as work progresses.
+Final per-snapshot JSON and the current summary are persisted before admitting
+the next snapshot. `evidence` contains those JSON files and numeric JUnit totals;
+raw XML/JSON reports, test names, errors and worker output stay private. The caller's
+final artifact upload still happens after the drain step ends. Checks therefore
+provide evidence during long drains and interrupted jobs without an artifact SDK.
 
 Workers and caches last only for the hosted job. The schedule recovers missed
 demand; normal admission follows the cheap CI workflow's completion. When

@@ -108,7 +108,8 @@ export interface Lane {
   /**
    * The job the worker took from `pending`, from the batch window through
    * settlement. While it is parked at the load gate or on the permit it is
-   * in neither `pending` nor `running`, yet it still runs ahead of the queue.
+   * in neither `pending` nor `running`; admission re-scores it with the queue
+   * once a permit becomes available.
    */
   head: Job | null;
 }
@@ -185,7 +186,7 @@ export interface LaneRuntime {
   /** Settles a killed job still in the lane's pending list; once the lane takes it, the head race owns settlement. */
   readonly settleKilledPending: (job: Job) => Effect.Effect<void>;
   readonly settleInterruptedJob: (job: Job) => Effect.Effect<void>;
-  readonly laneStatuses: () => Effect.Effect<readonly LaneStatus[]>;
+  readonly laneStatuses: (keys?: ReadonlySet<string>) => Effect.Effect<readonly LaneStatus[]>;
   readonly requestStatusFields: (
     ticket: string,
     atMs: number,
@@ -335,6 +336,28 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
           lane.pending.splice(lane.pending.indexOf(next), 1);
         }
         return next;
+      });
+
+    const yieldToQueuedJob = (lane: Lane, job: Job): Effect.Effect<boolean> =>
+      Effect.sync(() => {
+        if (Ref.getUnsafe(job.state) !== 'queued') {
+          return false;
+        }
+        const pending = [job, ...lane.pending];
+        const ready = pending.filter(
+          (candidate) => Ref.getUnsafe(candidate.state) === 'queued' && isSchedulable(candidate),
+        );
+        const nowMs = Date.now();
+        const index = selectNextIndex(
+          ready.map((candidate) =>
+            scheduleCandidate(candidate, pending, nowMs, lane.lastSurfaceKey),
+          ),
+        );
+        if (index === -1 || ready[index] === job) {
+          return false;
+        }
+        lane.pending.push(job);
+        return true;
       });
 
     /**
@@ -980,21 +1003,26 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
         const admitAndRun = waitForLoadHeadroom(job, heavy, claimed).pipe(
           Effect.andThen(
             admission.withPermits(1)(
-              Ref.update(admittedCount, (count) => count + 1).pipe(
-                // Uninterruptible so a racing kill settles a fully folded
-                // composite (requeueing its followers), never a half-folded one.
-                Effect.andThen(
-                  Effect.uninterruptible(
-                    Effect.gen(function* () {
-                      if (yield* stillQueued(job)) {
-                        yield* foldBatch(lane, job);
-                      }
-                    }),
+              Effect.gen(function* () {
+                if (yield* yieldToQueuedJob(lane, job)) {
+                  return;
+                }
+                yield* Ref.update(admittedCount, (count) => count + 1).pipe(
+                  // Uninterruptible so a racing kill settles a fully folded
+                  // composite (requeueing its followers), never a half-folded one.
+                  Effect.andThen(
+                    Effect.uninterruptible(
+                      Effect.gen(function* () {
+                        if (yield* stillQueued(job)) {
+                          yield* foldBatch(lane, job);
+                        }
+                      }),
+                    ),
                   ),
-                ),
-                Effect.andThen(runAdmitted(lane, job)),
-                Effect.ensuring(Ref.update(admittedCount, (count) => count - 1)),
-              ),
+                  Effect.andThen(runAdmitted(lane, job)),
+                  Effect.ensuring(Ref.update(admittedCount, (count) => count - 1)),
+                );
+              }),
             ),
           ),
         );
@@ -1055,7 +1083,7 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
           // The job runs as a child of the lane worker, so shutdown still
           // interrupts it, while the worker waits only until the lane is free
           // again: settlement, or the hand-back at the end of the build.
-          yield* Effect.forkChild(
+          const attempt = yield* Effect.forkChild(
             processLaneJob(lane, job).pipe(
               Effect.annotateLogs({ ticket: job.ticket, lane: lane.key }),
               Effect.ensuring(
@@ -1065,10 +1093,16 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
                   }
                 }),
               ),
-              Effect.ensuring(Deferred.succeed(job.laneReleased, undefined)),
+              Effect.ensuring(
+                Effect.suspend(() =>
+                  lane.pending.includes(job)
+                    ? Effect.void
+                    : Deferred.succeed(job.laneReleased, undefined),
+                ),
+              ),
             ),
           );
-          yield* Deferred.await(job.laneReleased);
+          yield* Effect.raceFirst(Deferred.await(job.laneReleased), Fiber.await(attempt));
         }
       });
 
@@ -1113,10 +1147,11 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
         }),
       );
 
-    const laneStatuses = (): Effect.Effect<readonly LaneStatus[]> =>
+    const laneStatuses = (keys?: ReadonlySet<string>): Effect.Effect<readonly LaneStatus[]> =>
       Effect.sync(() => {
         const knownLanes = [...lanes.values()];
-        return knownLanes.map((lane) => {
+        const selected = keys === undefined ? knownLanes : knownLanes.filter((lane) => keys.has(lane.key));
+        return selected.map((lane) => {
           const sharedWith = sharedTargetWith(lane, knownLanes);
           return {
             key: lane.key,
@@ -1311,11 +1346,6 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
         const aheadTickets = ahead.map((job) => job.ticket);
         let position = ahead.length;
         let headFields: Partial<QueueContext> = {};
-        // The lane head — running, or parked at the gate before its permit —
-        // runs before everything pending. An overrun-but-alive head contributes
-        // p90 remaining, never a negative that cancels queued work. A head
-        // already executing contributes only remaining execute time, or 0
-        // once overlap has handed the lane back.
         const head = lane.head;
         if (head !== null && head !== leader && Ref.getUnsafe(head.state) !== 'finished') {
           aheadTickets.unshift(head.ticket);

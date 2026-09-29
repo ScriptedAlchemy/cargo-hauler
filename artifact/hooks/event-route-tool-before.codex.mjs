@@ -150,10 +150,19 @@ var __webpack_modules__ = {
             id: zod__rspack_import_0.YjP().min(1),
             ticket: zod__rspack_import_0.YjP().min(1)
         });
-        const statusRequestSchema = zod__rspack_import_0.Ikc({
+        const statusQuerySchema = zod__rspack_import_0.Ikc({
+            limit: zod__rspack_import_0.aig().int().min(1).max(500).optional(),
+            cwd: zod__rspack_import_0.YjP().min(1).optional(),
+            session: zod__rspack_import_0.YjP().min(1).optional(),
+            laneKey: zod__rspack_import_0.YjP().min(1).optional(),
+            tickets: zod__rspack_import_0.YOg(zod__rspack_import_0.YjP().min(1)).max(100).optional(),
+            statuses: zod__rspack_import_0.YOg(zod__rspack_import_0.k5n(statusRowStatuses)).max(statusRowStatuses.length).optional(),
+            commandContains: zod__rspack_import_0.YjP().min(1).optional(),
+            telemetry: zod__rspack_import_0.zMY().optional()
+        });
+        const statusRequestSchema = statusQuerySchema.extend({
             type: zod__rspack_import_0.euz('status'),
-            id: zod__rspack_import_0.YjP().min(1),
-            limit: zod__rspack_import_0.aig().int().min(1).max(500).optional()
+            id: zod__rspack_import_0.YjP().min(1)
         });
         const pingRequestSchema = zod__rspack_import_0.Ikc({
             type: zod__rspack_import_0.euz('ping'),
@@ -12780,6 +12789,7 @@ var __webpack_modules__ = {
             euz: ()=>literal,
             g1P: ()=>record,
             gMt: ()=>discriminatedUnion,
+            k5n: ()=>_enum,
             zMY: ()=>boolean
         });
     },
@@ -20486,7 +20496,7 @@ var __webpack_modules__ = {
                     return withEventState(signal, async (bindings)=>{
                         const gate = await (0, _agent_bundle_runtime_request__rspack_import_6.iC)({
                             invocation: {
-                                artifactEpoch: "f4a6c38e7656382ca5aed69269e151667327d74b7077d1af63e9d650f3da369b",
+                                artifactEpoch: "625a22c3a675fb20dddef8b66b9a138f52143455660a7890ed6ebe95307327be",
                                 hostContractRevision: capabilityRevision,
                                 kind: "event",
                                 operationId: `event:${canonicalEvent}`,

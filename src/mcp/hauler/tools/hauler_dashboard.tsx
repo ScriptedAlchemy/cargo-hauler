@@ -29,7 +29,7 @@ export default defineTool(
     title: 'Hauler dashboard',
   },
   async (input, context) => {
-    const status = await loadStatusResult(input, {
+    const status = await loadStatusResult({ ...input, metrics: true }, {
       config: await requestDaemonConfig(context),
       signal: context.signal,
     });

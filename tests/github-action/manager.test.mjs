@@ -220,3 +220,92 @@ test('cleanup rechecks conflict, head and queued state before cancellation', asy
     assert.equal(f.checks.get(90).status, 'queued');
   }
 });
+
+test('snapshot evidence persists before next admission and records compatible reuse', async () => {
+  const f = fixture({ authors: ['owner', 'owner'] }), persisted = [];
+  const original = f.options.sandboxFactory;
+  f.options.sandboxFactory = async (...args) => {
+    const sandbox = await original(...args);
+    return { ...sandbox, async prepare(snapshot) {
+      if (snapshot.pr === 1) assert.equal(persisted.length, 1);
+      return sandbox.prepare(snapshot);
+    } };
+  };
+  const result = await drain({ ...f.options, persistSnapshot: async record => {
+    assert.ok(record.completedAt);
+    assert.equal(record.tasks.length, 2);
+    assert.equal(record.stages[0].id, 'compatibility');
+    assert.equal(record.stages[1].id, 'image');
+    assert.ok(record.stages.every(stage => stage.durationSeconds >= 0));
+    persisted.push(record);
+  } });
+  assert.equal(persisted.length, 2);
+  assert.equal(result.snapshots[0].compatibleSandboxReuse, false);
+  assert.equal(result.snapshots[1].compatibleSandboxReuse, true);
+});
+test('completed early failures keep ownership unfinished until remaining tasks finish', async () => {
+  const f = fixture({ fail: true }), original = f.options.fetchImpl, failureBodies = [];
+  const fetchImpl = async (url, options) => {
+    const body = options.body && JSON.parse(options.body);
+    if (body?.conclusion === 'failure') failureBodies.push(body);
+    return original(url, options);
+  };
+  const worker = { runId: '20', jobId: '30', attempt: 2 };
+  await drain({ ...f.options, worker, fetchImpl });
+  const parse = body => JSON.parse(body.output.text.split('\n')[0].split('hauler-owner-v1:')[1]);
+  assert.equal(parse(failureBodies[0]).finished, false);
+  assert.equal(parse(failureBodies[1]).finished, true);
+  assert.equal([...f.checks.values()][0].details_url, 'https://github.com/owner/repo/actions/runs/20/job/30');
+});
+test('aborted image, checkout, preparation, task and report stages retain monotonic timings', async () => {
+  for (const stage of ['image', 'checkout', 'prepare-1', 'task-first', 'reports']) {
+    const f = fixture(), controller = new AbortController();
+    const cancel = () => { controller.abort(); throw new Error('private cancellation'); };
+    f.options.sandboxFactory = async () => {
+      if (stage === 'image') cancel();
+      return { async prepare() { if (stage === 'checkout') cancel(); }, async run(command) {
+        if (stage === 'prepare-1' && command === 'prepare' || stage === 'task-first' && command === 'first') cancel();
+        return { exitCode: 0 };
+      }, async exportReports() { cancel(); }, async close() {} };
+    };
+    const result = await drain({ ...f.options, signal: controller.signal, maxSnapshots: 1,
+      recipe: { ...recipe, prepare: ['prepare'], reports: stage === 'reports' ? ['reports'] : [] } });
+    const timing = result.snapshots[0].stages.find(timing => timing.id === stage);
+    assert.equal(timing.conclusion, 'cancelled', stage);
+    assert.ok(timing.durationSeconds >= 0, stage);
+    assert.equal(result.snapshots[0].conclusion, 'cancelled');
+    assert.ok(!f.events.some(e => e[1] === 'success'));
+  }
+});
+test('claim rechecks another live owner before admitting selected queued work', async () => {
+  const f = fixture(), original = f.options.fetchImpl, policy = 'a'.repeat(64);
+  const owner = { runId: '20', jobId: '30', attempt: 2, lane: 'linux', ordinal: 1, remaining: 0, finished: false, deadline: Date.now() + 60000 };
+  f.checks.set(99, { id: 99, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'queued' });
+  const fetchImpl = async (url, options) => {
+    if (url.endsWith('/actions/runs/20')) return { ok: true, json: async () => ({ id: 20, run_attempt: 2, status: 'in_progress', event: 'schedule', path: '.github/workflows/hauler-ci.yml', head_repository: { full_name: 'owner/repo' }, head_branch: 'master' }) };
+    if (url.includes('/actions/runs/20/attempts/2/jobs')) return { ok: true, json: async () => ({ jobs: [{ id: 30, name: 'Hauler pool / linux', status: 'in_progress' }] }) };
+    if (url.endsWith('/check-runs/99') && options.method === 'GET') f.checks.get(99).output = { text: `hauler-owner-v1:${JSON.stringify(owner)}` };
+    return original(url, options);
+  };
+  const result = await drain({ ...f.options, policy, defaultBranch: 'master', fetchImpl });
+  assert.equal(result.snapshots.length, 0);
+  assert.equal(f.builds(), 0);
+});
+test('an unreadable head during polling stays a visible infrastructure failure', async () => {
+  const f = fixture(), original = f.options.fetchImpl;
+  let running = false, failedPoll = false;
+  const fetchImpl = async (url, options) => {
+    if (running && !failedPoll && url.endsWith('/pulls/1')) { failedPoll = true; return { ok: false, status: 403 }; }
+    return original(url, options);
+  };
+  f.options.sandboxFactory = async () => ({ async prepare() {}, async close() {}, async run(command, { signal }) {
+    running = true;
+    await new Promise(resolve => signal.addEventListener('abort', resolve, { once: true }));
+    return { exitCode: 130 };
+  } });
+  const result = await drain({ ...f.options, fetchImpl, maxSnapshots: 1, pollMilliseconds: 5 });
+  assert.equal(result.snapshots[0].infrastructureError, true);
+  assert.equal(result.snapshots[0].conclusion, 'cancelled');
+  assert.ok([...f.checks.values()][0].external_id.endsWith(':infrastructure'));
+  assert.ok(!f.events.some(e => e[1] === 'success'));
+});

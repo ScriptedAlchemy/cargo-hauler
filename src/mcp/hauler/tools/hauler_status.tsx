@@ -15,7 +15,7 @@ export default defineTool(
   {
     annotations: { readOnlyHint: true },
     description:
-      'Show the cargo-hauler queue and in-flight work as text. Filter by cwd, session, laneKey, tickets, statuses, or commandContains instead of piping CLI JSON through jq. Rows are bounded summaries without an output tail. A running row carries only a short outputPreview of its last 8 lines. Call hauler_result on one ticket for its whole live tail. To open the visual dashboard (an MCP App), call hauler_dashboard.',
+      'Show the cargo-hauler queue and in-flight work as text. Filters run before the recent-row limit and include only relevant lanes and blockers. Filter by cwd, session, laneKey, tickets, statuses, or commandContains. Set metrics to include daemon-wide telemetry, independent of filters. Rows have no output tail; a running row carries a short outputPreview of its last 8 lines. Call hauler_result for the whole live tail or hauler_dashboard for the visual dashboard.',
     inputJsonSchema: {
       additionalProperties: false,
       properties: {
@@ -23,6 +23,7 @@ export default defineTool(
         cwd: { type: 'string' },
         laneKey: { type: 'string' },
         limit: { type: 'number' },
+        metrics: { type: 'boolean', description: 'Include daemon-wide metrics, savings, kache, and system telemetry, independent of filters.' },
         session: { type: 'string' },
         statuses: {
           description:

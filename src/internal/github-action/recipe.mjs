@@ -1,4 +1,5 @@
 const ID = /^[a-z][a-z0-9-]{0,47}$/;
+const IMAGE_REFERENCE = /^ghcr\.io\/[a-z0-9]+(?:[._-][a-z0-9]+)*(?:\/[a-z0-9]+(?:[._-][a-z0-9]+)*)+@sha256:[a-f0-9]{64}$/;
 const LOGIN = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38})$/;
 function fail(message) { throw new TypeError(`Invalid Hauler recipe: ${message}`); }
 function strings(value, label, max = 100) {
@@ -20,6 +21,10 @@ export function parseRecipe(value) {
   const compatibilityPaths = strings(value.compatibilityPaths, 'compatibilityPaths').map(v => path(v, 'compatibilityPaths', true));
   if (!value.image || typeof value.image !== 'object') fail('image');
   const image = { dockerfile: path(value.image.dockerfile, 'image.dockerfile'), context: value.image.context === '.' ? '.' : path(value.image.context, 'image.context', true) };
+  if (value.image.reference !== undefined) {
+    if (typeof value.image.reference !== 'string' || value.image.reference.length > 1024 || IMAGE_REFERENCE.exec(value.image.reference)?.[0] !== value.image.reference) fail('image.reference must be a ghcr.io sha256 digest');
+    image.reference = value.image.reference;
+  }
   if (!Array.isArray(value.lanes) || !value.lanes.length || value.lanes.length > 32) fail('lanes');
   const ids = new Set(), checks = new Set(), taskIds = new Set();
   const lanes = value.lanes.map(lane => {

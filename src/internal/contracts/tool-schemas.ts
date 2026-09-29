@@ -6,6 +6,7 @@ import {
   requestStatuses,
   statusOutputPreviewBytes,
   statusRowStatuses,
+  statusQuerySchema,
 } from './protocol.js';
 import type {
   AdmissionHold,
@@ -46,6 +47,7 @@ export type DaemonStatus = z.infer<typeof daemonStatusSchema>;
 
 const queueContextSchema = z.object({
   aheadTickets: z.array(z.string()),
+  aheadTicketsTotal: z.number().int().nonnegative().optional(),
   headElapsedMs: z.number().nonnegative().optional(),
   headEstimateMs: z.number().nonnegative().optional(),
   headEstimateState: z.literal('overrun').optional(),
@@ -356,16 +358,17 @@ const savingsSchema = z.object({
   totals: savingsTotalsSchema,
 });
 
-/** The daemon's `status-result` report: every section is present on every reply. */
+/** Global telemetry sections are present only when requested. */
 export const statusReportSchema = z.object({
+  scope: z.enum(['global', 'filtered']).optional(),
   active: z.array(statusRowSchema),
   // Null when kache is not configured or its index has not been read yet.
-  kache: kacheStatusSchema.nullable(),
-  savings: savingsSchema,
-  system: systemLoadSchema,
+  kache: kacheStatusSchema.nullable().optional(),
+  savings: savingsSchema.optional(),
+  system: systemLoadSchema.optional(),
   lanes: z.array(laneStatusSchema),
   maxConcurrent: z.number().int(),
-  metrics: statusMetricsSchema,
+  metrics: statusMetricsSchema.optional(),
   pid: z.number().int(),
   recent: z.array(statusRowSchema),
   socketPath: z.string(),
@@ -380,21 +383,13 @@ export const limitInputSchema = z
   })
   .strict();
 
-export const statusInputSchema = z
-  .object({
-    limit: z.number().int().min(1).max(500).optional(),
-    cwd: z.string().min(1).optional(),
-    session: z.string().min(1).optional(),
-    laneKey: z.string().min(1).optional(),
-    tickets: z.array(z.string().min(1)).max(100).optional(),
-    statuses: z
-      .array(z.enum(statusRowStatuses))
-      .max(statusRowStatuses.length)
-      .optional()
-      .describe(
+export const statusInputSchema = statusQuerySchema
+  .omit({ telemetry: true })
+  .extend({
+    statuses: statusQuerySchema.shape.statuses.describe(
         'Filter by projected status. While the daemon is stopped, active rows appear as orphaned and running matches nothing.',
       ),
-    commandContains: z.string().min(1).optional(),
+    metrics: z.boolean().optional().describe('Include daemon-wide metrics, savings, kache, and system telemetry, independent of filters.'),
   })
   .strict();
 
@@ -404,6 +399,7 @@ export const statusInputSchema = z
  * a `stopped` or `unresponsive` daemon yields none of them.
  */
 export interface StatusResult {
+  readonly scope?: 'global' | 'filtered';
   /** Bounded summary rows (`statusRowSchema`); read a ticket's tail with `result`. */
   readonly active: readonly StatusRow[];
   readonly daemon: DaemonStatus;
@@ -456,6 +452,7 @@ export interface DaemonResult {
 
 export const statusResultSchema = z
   .object({
+    scope: z.enum(['global', 'filtered']).optional(),
     active: z.array(statusRowSchema),
     daemon: daemonStatusSchema,
     kache: kacheStatusSchema.nullable().optional(),

@@ -178,7 +178,7 @@ const memoryLine = (system: SystemLoadReport): string | null => {
   return system.memAvailableBytes === undefined ? null : `${formatBytes(system.memAvailableBytes)} available`;
 };
 
-export const admissionModel = (status: Pick<StatusResult, 'active' | 'maxConcurrent' | 'system'>): AdmissionModel => {
+export const admissionModel = (status: Pick<StatusResult, 'active' | 'maxConcurrent' | 'scope' | 'system'>): AdmissionModel => {
   const running = status.active.filter((record) => record.status === 'running');
   // Riders share a leader's cargo process and hold no permit of their own.
   const leaders = running.filter((record) => record.attachedTo === null).length;
@@ -191,7 +191,9 @@ export const admissionModel = (status: Pick<StatusResult, 'active' | 'maxConcurr
     paused: status.system?.memClamp === 'hard',
     permits: status.maxConcurrent === null
       ? null
-      : `${leaders} running of ${status.maxConcurrent} permits${heavy === null ? '' : ` (${heavy})`}${riders === 0 ? '' : `, ${riders} riding shared builds`}, ${queued} queued`,
+      : status.scope === 'filtered'
+        ? `Selected work: ${leaders} running${riders === 0 ? '' : `, ${riders} riding shared builds`}, ${queued} queued; global limit ${status.maxConcurrent} permits${heavy === null ? '' : ` (${heavy})`}`
+        : `${leaders} running of ${status.maxConcurrent} permits${heavy === null ? '' : ` (${heavy})`}${riders === 0 ? '' : `, ${riders} riding shared builds`}, ${queued} queued`,
   };
 };
 

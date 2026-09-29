@@ -28,6 +28,7 @@ import type {
   StatusMetricsHandBack,
   StatusMetricsPhaseSplit,
   StatusMetricsWaitSplit,
+  StatusQuery,
   TransitionRecord,
 } from '../contracts/protocol.js';
 import { passthroughSpoolFileName } from '../contracts/protocol.js';
@@ -220,8 +221,8 @@ export interface LedgerApi {
   readonly recentRequests: (limit: number) => Effect.Effect<readonly RequestRecord[]>;
   readonly activeRequests: () => Effect.Effect<readonly RequestRecord[]>;
   /** Dashboard status rows deliberately omit captured output blobs. */
-  readonly recentStatusRequests: (limit: number) => Effect.Effect<readonly RequestRecord[]>;
-  readonly activeStatusRequests: () => Effect.Effect<readonly RequestRecord[]>;
+  readonly recentStatusRequests: (query: number | StatusQuery, excludeActive?: boolean) => Effect.Effect<readonly RequestRecord[]>;
+  readonly activeStatusRequests: (query?: StatusQuery) => Effect.Effect<readonly RequestRecord[]>;
   readonly transitionsFor: (id: number) => Effect.Effect<readonly TransitionRecord[]>;
   readonly reapOrphans: (atMs: number, error: string) => Effect.Effect<number>;
   /**
@@ -286,6 +287,9 @@ CREATE TABLE IF NOT EXISTS transitions (
 );
 CREATE INDEX IF NOT EXISTS requests_status_idx ON requests (status);
 CREATE INDEX IF NOT EXISTS requests_created_at_ms_idx ON requests (created_at_ms);
+CREATE INDEX IF NOT EXISTS requests_cwd_created_idx ON requests (cwd, created_at_ms DESC, id DESC);
+CREATE INDEX IF NOT EXISTS requests_session_created_idx ON requests (session, created_at_ms DESC, id DESC);
+CREATE INDEX IF NOT EXISTS requests_lane_created_idx ON requests (lane_key, created_at_ms DESC, id DESC);
 CREATE INDEX IF NOT EXISTS requests_session_finished_idx ON requests (session, finished_at_ms);
 CREATE INDEX IF NOT EXISTS requests_intent_status_id_idx ON requests (intent_key, status, id);
 CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id);
@@ -749,9 +753,6 @@ export const createLedgerApi = (db: DatabaseSync, options: CreateLedgerApiOption
   const selectRecentRequests = db.prepare(
     `SELECT ${requestColumns} FROM requests ORDER BY created_at_ms DESC, id DESC LIMIT ?`,
   );
-  const selectRecentStatusRequests = db.prepare(
-    `SELECT ${statusRequestColumns} FROM requests ORDER BY created_at_ms DESC, id DESC LIMIT ?`,
-  );
   // The wait-split classification needs each leader's lane and its queued,
   // started, build-finished, and finished stamps beside the run summary.
   const metricsWindowColumns = `id,
@@ -797,11 +798,45 @@ export const createLedgerApi = (db: DatabaseSync, options: CreateLedgerApiOption
      WHERE ${activeStatusFilter}
      ORDER BY created_at_ms ASC, id ASC`,
   );
-  const selectActiveStatusRequests = db.prepare(
-    `SELECT ${statusRequestColumns} FROM requests
-     WHERE ${activeStatusFilter}
-     ORDER BY created_at_ms ASC, id ASC`,
-  );
+  const readStatusRequests = (query: StatusQuery, activeOnly: boolean, excludeActive = false): readonly RequestRecord[] => {
+    const filters: string[] = [];
+    const values: (string | number)[] = [];
+    if (activeOnly) filters.push(activeStatusFilter);
+    if (excludeActive) filters.push(`NOT (${activeStatusFilter})`);
+    for (const [column, value] of [
+      ['cwd', query.cwd], ['session', query.session], ['lane_key', query.laneKey],
+    ] as const) {
+      if (value !== undefined) {
+        filters.push(`${column} = ?`);
+        values.push(value);
+      }
+    }
+    if (query.tickets !== undefined) {
+      // Match the public spelling as well as the primary key: malformed or
+      // noncanonical tickets must not accidentally name another request.
+      const ids = query.tickets.flatMap((ticket) => {
+        const id = parseTicket(ticket);
+        return id === null || formatTicket(id) !== ticket ? [] : [id];
+      });
+      filters.push(ids.length === 0 ? '0' : `id IN (${ids.map(() => '?').join(',')})`);
+      values.push(...ids);
+    }
+    if (query.statuses !== undefined) {
+      filters.push(query.statuses.length === 0 ? '0' : `status IN (${query.statuses.map(() => '?').join(',')})`);
+      values.push(...query.statuses);
+    }
+    if (query.commandContains !== undefined) {
+      filters.push("instr((SELECT group_concat(value, ' ') FROM json_each(argv_json)), ?) > 0");
+      values.push(query.commandContains);
+    }
+    if (!activeOnly) values.push(query.limit ?? 50);
+    return db.prepare(
+      `SELECT ${statusRequestColumns} FROM requests
+       ${filters.length === 0 ? '' : `WHERE ${filters.join(' AND ')}`}
+       ORDER BY created_at_ms ${activeOnly ? 'ASC' : 'DESC'}, id ${activeOnly ? 'ASC' : 'DESC'}
+       ${activeOnly ? '' : 'LIMIT ?'}`,
+    ).all(...values).map(toRequestRecord);
+  };
   const selectTransitions = db.prepare(
     `SELECT request_id, at_ms, from_status, to_status FROM transitions
      WHERE request_id = ?
@@ -1320,11 +1355,11 @@ export const createLedgerApi = (db: DatabaseSync, options: CreateLedgerApiOption
     activeRequests: () =>
       Effect.sync(() => selectActiveRequests.all().map(toRequestRecord)),
 
-    recentStatusRequests: (limit) =>
-      Effect.sync(() => selectRecentStatusRequests.all(limit).map(toRequestRecord)),
+    recentStatusRequests: (query, excludeActive) =>
+      Effect.sync(() => readStatusRequests(typeof query === 'number' ? { limit: query } : query, false, excludeActive)),
 
-    activeStatusRequests: () =>
-      Effect.sync(() => selectActiveStatusRequests.all().map(toRequestRecord)),
+    activeStatusRequests: (query = {}) =>
+      Effect.sync(() => readStatusRequests(query, true)),
 
     transitionsFor: (id) =>
       Effect.sync(() => selectTransitions.all(id).map(toTransitionRecord)),

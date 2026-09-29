@@ -6,6 +6,11 @@ import { fileURLToPath } from 'node:url';
 
 import { version } from 'agent-bundle/meta';
 import { afterEach, describe, expect, it } from 'effect-rstest';
+import * as Effect from 'effect/Effect';
+
+import { toStatusRow } from '../../src/internal/contracts/protocol.js';
+import { resolveDaemonConfig } from '../../src/internal/daemon/config.js';
+import { createLedgerApi, openLedgerDatabase } from '../../src/internal/storage/ledger.js';
 
 import { removeTestPath } from '../support/tmp-guard.js';
 
@@ -66,9 +71,10 @@ const startStaleDaemon = (
     | 'skewed-older'
     | 'skewed-same'
     | 'skewed-newer',
+  activeRowsPath?: string,
 ): Promise<ChildProcess> =>
   new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [fixtureEntry, socketPath, logPath, mode], {
+    const child = spawn(process.execPath, [fixtureEntry, socketPath, logPath, mode, ...(activeRowsPath === undefined ? [] : [activeRowsPath])], {
       stdio: ['ignore', 'pipe', 'inherit'],
     });
     children.add(child);
@@ -105,19 +111,42 @@ describe.skipIf(!existsSync(haulerEntry))('stale daemon CLI replacement', () => 
   const requests = (logPath: string): string[] =>
     readFileSync(logPath, 'utf8').trim().split('\n').filter(Boolean);
 
-  it('reads status from a busy compatible older daemon without requesting shutdown', async () => {
+  it('scopes queued work from a busy compatible older daemon without requesting shutdown', async () => {
     const root = mkdtempSync(join(tmpdir(), 'ch-stale-status-'));
     const logPath = join(root, 'requests.log');
     const env = fixtureEnv(root);
     try {
-      await startStaleDaemon(join(env.CARGO_HAULER_STATE_DIR, 'daemon.sock'), logPath, 'busy-older');
-      const status = await run(haulerEntry, ['status', '--json'], env);
+      const config = resolveDaemonConfig(env);
+      const db = openLedgerDatabase(config.databasePath);
+      const activeRowsPath = join(root, 'active.json');
+      let ticket: string;
+      try {
+        const ledger = createLedgerApi(db);
+        const row = await Effect.runPromise(Effect.gen(function* () {
+          const request = yield* ledger.createRequest({
+            argv: ['cargo', 'check'], createdAtMs: 1_000, cwd: '/fixture', host: null,
+            intentJson: null, intentKey: null, laneKey: '["/fixture","/fixture/target"]',
+            session: 'queued-session', targetDir: '/fixture/target', workspaceRoot: '/fixture',
+          });
+          yield* ledger.markQueued(request.id, 1_001);
+          return yield* ledger.getRequest(request.id);
+        }));
+        expect(row).not.toBeNull();
+        ticket = row!.ticket;
+        writeFileSync(activeRowsPath, JSON.stringify([toStatusRow(row!)]));
+      } finally {
+        db.close();
+      }
+      await startStaleDaemon(config.socketPath, logPath, 'busy-older', activeRowsPath);
+      const status = await run(haulerEntry, ['status', '--json', '--ticket', ticket], env);
 
       expect(status.code).toBe(0);
       expect(JSON.parse(status.stdout)).toMatchObject({
+        active: [{ ticket, status: 'queued', cwd: '/fixture' }],
         daemon: 'running',
         lanes: [{ queued: 1 }],
         operation: 'status',
+        scope: 'filtered',
       });
       expect(status.stderr).toBe('');
       expect(requests(logPath)).toEqual(['ping', 'status']);

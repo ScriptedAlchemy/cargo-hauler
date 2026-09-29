@@ -7871,10 +7871,19 @@ var __webpack_modules__ = {
             id: zod__rspack_import_0.YjP().min(1),
             ticket: zod__rspack_import_0.YjP().min(1)
         });
-        const statusRequestSchema = zod__rspack_import_0.Ikc({
+        const statusQuerySchema = zod__rspack_import_0.Ikc({
+            limit: zod__rspack_import_0.aig().int().min(1).max(500).optional(),
+            cwd: zod__rspack_import_0.YjP().min(1).optional(),
+            session: zod__rspack_import_0.YjP().min(1).optional(),
+            laneKey: zod__rspack_import_0.YjP().min(1).optional(),
+            tickets: zod__rspack_import_0.YOg(zod__rspack_import_0.YjP().min(1)).max(100).optional(),
+            statuses: zod__rspack_import_0.YOg(zod__rspack_import_0.k5n(statusRowStatuses)).max(statusRowStatuses.length).optional(),
+            commandContains: zod__rspack_import_0.YjP().min(1).optional(),
+            telemetry: zod__rspack_import_0.zMY().optional()
+        });
+        const statusRequestSchema = statusQuerySchema.extend({
             type: zod__rspack_import_0.euz('status'),
-            id: zod__rspack_import_0.YjP().min(1),
-            limit: zod__rspack_import_0.aig().int().min(1).max(500).optional()
+            id: zod__rspack_import_0.YjP().min(1)
         });
         const pingRequestSchema = zod__rspack_import_0.Ikc({
             type: zod__rspack_import_0.euz('ping'),
@@ -7916,6 +7925,7 @@ var __webpack_modules__ = {
         __webpack_require__.d(__webpack_exports__, {}, {
             $K: statusRowStatuses,
             AZ: parseServerMessageLine,
+            Ew: statusQuerySchema,
             Qf: requestStatuses,
             RM: activeStatuses,
             Su: orphanedByRestartError1,
@@ -7950,6 +7960,7 @@ var __webpack_modules__ = {
         ]);
         const queueContextSchema = zod__rspack_import_1.Ikc({
             aheadTickets: zod__rspack_import_1.YOg(zod__rspack_import_1.YjP()),
+            aheadTicketsTotal: zod__rspack_import_1.aig().int().nonnegative().optional(),
             headElapsedMs: zod__rspack_import_1.aig().nonnegative().optional(),
             headEstimateMs: zod__rspack_import_1.aig().nonnegative().optional(),
             headEstimateState: zod__rspack_import_1.euz('overrun').optional(),
@@ -8254,13 +8265,17 @@ var __webpack_modules__ = {
             totals: savingsTotalsSchema
         });
         const statusReportSchema = zod__rspack_import_1.Ikc({
+            scope: zod__rspack_import_1.k5n([
+                'global',
+                'filtered'
+            ]).optional(),
             active: zod__rspack_import_1.YOg(statusRowSchema),
-            kache: kacheStatusSchema.nullable(),
-            savings: savingsSchema,
-            system: systemLoadSchema,
+            kache: kacheStatusSchema.nullable().optional(),
+            savings: savingsSchema.optional(),
+            system: systemLoadSchema.optional(),
             lanes: zod__rspack_import_1.YOg(laneStatusSchema),
             maxConcurrent: zod__rspack_import_1.aig().int(),
-            metrics: statusMetricsSchema,
+            metrics: statusMetricsSchema.optional(),
             pid: zod__rspack_import_1.aig().int(),
             recent: zod__rspack_import_1.YOg(statusRowSchema),
             socketPath: zod__rspack_import_1.YjP(),
@@ -8270,16 +8285,17 @@ var __webpack_modules__ = {
         const limitInputSchema = zod__rspack_import_1.Ikc({
             limit: zod__rspack_import_1.aig().int().min(1).max(500).optional()
         }).strict();
-        const statusInputSchema = zod__rspack_import_1.Ikc({
-            limit: zod__rspack_import_1.aig().int().min(1).max(500).optional(),
-            cwd: zod__rspack_import_1.YjP().min(1).optional(),
-            session: zod__rspack_import_1.YjP().min(1).optional(),
-            laneKey: zod__rspack_import_1.YjP().min(1).optional(),
-            tickets: zod__rspack_import_1.YOg(zod__rspack_import_1.YjP().min(1)).max(100).optional(),
-            statuses: zod__rspack_import_1.YOg(zod__rspack_import_1.k5n(_protocol_js__rspack_import_0.$K)).max(_protocol_js__rspack_import_0.$K.length).optional().describe('Filter by projected status. While the daemon is stopped, active rows appear as orphaned and running matches nothing.'),
-            commandContains: zod__rspack_import_1.YjP().min(1).optional()
+        const statusInputSchema = _protocol_js__rspack_import_0.Ew.omit({
+            telemetry: true
+        }).extend({
+            statuses: _protocol_js__rspack_import_0.Ew.shape.statuses.describe('Filter by projected status. While the daemon is stopped, active rows appear as orphaned and running matches nothing.'),
+            metrics: zod__rspack_import_1.zMY().optional().describe('Include daemon-wide metrics, savings, kache, and system telemetry, independent of filters.')
         }).strict();
         const statusResultSchema = zod__rspack_import_1.Ikc({
+            scope: zod__rspack_import_1.k5n([
+                'global',
+                'filtered'
+            ]).optional(),
             active: zod__rspack_import_1.YOg(statusRowSchema),
             daemon: daemonStatusSchema,
             kache: kacheStatusSchema.nullable().optional(),
@@ -9084,7 +9100,7 @@ var __webpack_modules__ = {
         var effect_Deferred__rspack_import_29 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Deferred.js");
         var effect_Effect__rspack_import_22 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
         var effect_Layer__rspack_import_21 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Layer.js");
-        var effect_Metric__rspack_import_31 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Metric.js");
+        var effect_Metric__rspack_import_32 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Metric.js");
         var effect_Ref__rspack_import_26 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Ref.js");
         var effect_Semaphore__rspack_import_25 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Semaphore.js");
         var effect_unstable_process_ChildProcessSpawner__rspack_import_23 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/unstable/process/ChildProcessSpawner.js");
@@ -9109,6 +9125,7 @@ var __webpack_modules__ = {
         var _ticket_directory_js__rspack_import_24 = __webpack_require__("./src/internal/daemon/broker/ticket-directory.ts");
         var _cargo_topology_js__rspack_import_17 = __webpack_require__("./src/internal/cargo/topology.ts");
         var _cargo_workspace_js__rspack_import_18 = __webpack_require__("./src/internal/cargo/workspace.ts");
+        var _operations_status_filter_js__rspack_import_31 = __webpack_require__("./src/internal/operations/status-filter.ts");
         class CargoIntentError extends effect_Data__rspack_import_19.rN('CargoIntentError') {
         }
         class Broker extends effect_Context__rspack_import_20.kl()('cargo-hauler/Broker') {
@@ -9620,7 +9637,12 @@ var __webpack_modules__ = {
                         reason
                     })
             }), daemonScope);
-            const report = (recentLimit = 50)=>effect_Effect__rspack_import_22.JkU(function*() {
+            const report = (input = 50)=>effect_Effect__rspack_import_22.JkU(function*() {
+                    const query = typeof input === 'number' ? {
+                        limit: input,
+                        telemetry: true
+                    } : input;
+                    const scoped = (0, _operations_status_filter_js__rspack_import_31.Gw)(query);
                     const histogramSnapshot = (snapshot)=>({
                             buckets: snapshot.buckets.map(([boundary, count])=>[
                                     Number.isFinite(boundary) ? boundary : null,
@@ -9632,27 +9654,54 @@ var __webpack_modules__ = {
                             sum: snapshot.sum
                         });
                     yield* ledger.ingestPassthroughSpool(config.stateDir);
-                    const laneStatuses = yield* lanesRuntime.laneStatuses();
                     const reportAtMs = Date.now();
-                    const activeRecords = yield* ledger.activeStatusRequests();
-                    const active = yield* effect_Effect__rspack_import_22.jJl(activeRecords, (record)=>withLiveStatus(record, reportAtMs, false).pipe(effect_Effect__rspack_import_22.TjK((live)=>statusRow(live ?? record))));
-                    const recent = (yield* ledger.recentStatusRequests(recentLimit)).map((record)=>(0, _contracts_protocol_js__rspack_import_12.el)(record));
-                    const cargoRun = yield* effect_Metric__rspack_import_31.Uq(_reporting_broker_metrics_js__rspack_import_1.io);
-                    const cargoRunByKind = yield* effect_Effect__rspack_import_22.jJl(_reporting_broker_metrics_js__rspack_import_1.Xe, (kind)=>effect_Metric__rspack_import_31.Uq((0, _reporting_broker_metrics_js__rspack_import_1.xT)(kind)).pipe(effect_Effect__rspack_import_22.TjK((snapshot)=>[
+                    const activeRecords = yield* ledger.activeStatusRequests(query);
+                    const activeRows = yield* effect_Effect__rspack_import_22.jJl(activeRecords, (record)=>withLiveStatus(record, reportAtMs, false).pipe(effect_Effect__rspack_import_22.TjK((live)=>statusRow(live ?? record))));
+                    const active = typeof input === 'number' ? activeRows : activeRows.map(_operations_status_filter_js__rspack_import_31.x3);
+                    const recent = (yield* ledger.recentStatusRequests(query, typeof input !== 'number')).map((record)=>(0, _contracts_protocol_js__rspack_import_12.el)(record));
+                    const selectLanes = scoped || query.telemetry !== true;
+                    const blockers = selectLanes ? yield* ledger.activeStatusRequests({
+                        tickets: [
+                            ...(0, _operations_status_filter_js__rspack_import_31.g1)(active)
+                        ]
+                    }) : [];
+                    const selectedKeys = new Set([
+                        ...active,
+                        ...recent,
+                        ...blockers
+                    ].map((row)=>row.laneKey));
+                    const allLanes = yield* lanesRuntime.laneStatuses(query.telemetry === true ? undefined : selectedKeys);
+                    const laneStatuses = selectLanes ? (0, _operations_status_filter_js__rspack_import_31.q)(allLanes, [
+                        ...active,
+                        ...recent
+                    ], blockers) : allLanes;
+                    const base = {
+                        scope: scoped ? 'filtered' : 'global',
+                        pid: process.pid,
+                        startedAtMs,
+                        socketPath: config.socketPath,
+                        maxConcurrent: config.maxConcurrent,
+                        lanes: laneStatuses,
+                        active,
+                        recent
+                    };
+                    if (query.telemetry !== true) return base;
+                    const cargoRun = yield* effect_Metric__rspack_import_32.Uq(_reporting_broker_metrics_js__rspack_import_1.io);
+                    const cargoRunByKind = yield* effect_Effect__rspack_import_22.jJl(_reporting_broker_metrics_js__rspack_import_1.Xe, (kind)=>effect_Metric__rspack_import_32.Uq((0, _reporting_broker_metrics_js__rspack_import_1.xT)(kind)).pipe(effect_Effect__rspack_import_22.TjK((snapshot)=>[
                                 kind,
                                 histogramSnapshot(snapshot)
                             ])));
-                    const jobOutcome = yield* effect_Metric__rspack_import_31.Uq(_reporting_broker_metrics_js__rspack_import_1.QV);
-                    const attachMode = yield* effect_Metric__rspack_import_31.Uq(_reporting_broker_metrics_js__rspack_import_1.xp);
-                    const attachRejections = yield* effect_Metric__rspack_import_31.Uq(_reporting_broker_metrics_js__rspack_import_1.H_);
-                    const waitSummary = yield* effect_Metric__rspack_import_31.Uq(_reporting_broker_metrics_js__rspack_import_1.eC);
+                    const jobOutcome = yield* effect_Metric__rspack_import_32.Uq(_reporting_broker_metrics_js__rspack_import_1.QV);
+                    const attachMode = yield* effect_Metric__rspack_import_32.Uq(_reporting_broker_metrics_js__rspack_import_1.xp);
+                    const attachRejections = yield* effect_Metric__rspack_import_32.Uq(_reporting_broker_metrics_js__rspack_import_1.H_);
+                    const waitSummary = yield* effect_Metric__rspack_import_32.Uq(_reporting_broker_metrics_js__rspack_import_1.eC);
                     const nowMs = Date.now();
                     const metricWindows = yield* ledger.metricsWindows(nowMs);
                     const kache = yield* costModel.kacheStatus;
                     const savings = yield* ledger.attachmentSavings();
                     const ioSample = yield* effect_Effect__rspack_import_22.OH5(()=>systemIo.sample([
                             config.stateDir,
-                            ...laneStatuses.filter((lane)=>lane.runningTicket !== null || (lane.executingTickets?.length ?? 0) > 0).map((lane)=>lane.targetDir)
+                            ...allLanes.filter((lane)=>lane.runningTicket !== null || (lane.executingTickets?.length ?? 0) > 0).map((lane)=>lane.targetDir)
                         ]));
                     const memorySample = yield* effect_Effect__rspack_import_22.OH5(()=>{
                         const psi = (0, _scheduling_pressure_js__rspack_import_11.g6)();
@@ -9681,13 +9730,7 @@ var __webpack_modules__ = {
                     });
                     const heavy = yield* lanesRuntime.heavyAdmission(memorySample.availableBytes);
                     return {
-                        pid: process.pid,
-                        startedAtMs,
-                        socketPath: config.socketPath,
-                        maxConcurrent: config.maxConcurrent,
-                        lanes: laneStatuses,
-                        active,
-                        recent,
+                        ...base,
                         kache,
                         system: {
                             loadAvg1: (0, node_os__rspack_import_0.loadavg)()[0],
@@ -10436,6 +10479,23 @@ var __webpack_modules__ = {
                         }
                         return next;
                     });
+                const yieldToQueuedJob = (lane, job)=>effect_Effect__rspack_import_15.OH5(()=>{
+                        if (effect_Ref__rspack_import_17.fp(job.state) !== 'queued') {
+                            return false;
+                        }
+                        const pending = [
+                            job,
+                            ...lane.pending
+                        ];
+                        const ready = pending.filter((candidate)=>effect_Ref__rspack_import_17.fp(candidate.state) === 'queued' && (0, _dependencies_js__rspack_import_7.pg)(candidate));
+                        const nowMs = Date.now();
+                        const index = (0, _scheduling_scheduler_js__rspack_import_12.qw)(ready.map((candidate)=>scheduleCandidate(candidate, pending, nowMs, lane.lastSurfaceKey)));
+                        if (index === -1 || ready[index] === job) {
+                            return false;
+                        }
+                        lane.pending.push(job);
+                        return true;
+                    });
                 const foldBatch = (lane, leader)=>effect_Effect__rspack_import_15.JkU(function*() {
                         const kind = config.batchEnabled ? (0, _scheduling_batch_js__rspack_import_2.Wk)(leader.intent) : null;
                         if (kind === null) {
@@ -10857,11 +10917,16 @@ var __webpack_modules__ = {
                         const claimed = {
                             value: false
                         };
-                        const admitAndRun = waitForLoadHeadroom(job, heavy, claimed).pipe(effect_Effect__rspack_import_15.hgn(admission.withPermits(1)(effect_Ref__rspack_import_17.yo(admittedCount, (count)=>count + 1).pipe(effect_Effect__rspack_import_15.hgn(effect_Effect__rspack_import_15.rfi(effect_Effect__rspack_import_15.JkU(function*() {
-                            if (yield* stillQueued(job)) {
-                                yield* foldBatch(lane, job);
+                        const admitAndRun = waitForLoadHeadroom(job, heavy, claimed).pipe(effect_Effect__rspack_import_15.hgn(admission.withPermits(1)(effect_Effect__rspack_import_15.JkU(function*() {
+                            if (yield* yieldToQueuedJob(lane, job)) {
+                                return;
                             }
-                        }))), effect_Effect__rspack_import_15.hgn(runAdmitted(lane, job)), effect_Effect__rspack_import_15.yeE(effect_Ref__rspack_import_17.yo(admittedCount, (count)=>count - 1))))));
+                            yield* effect_Ref__rspack_import_17.yo(admittedCount, (count)=>count + 1).pipe(effect_Effect__rspack_import_15.hgn(effect_Effect__rspack_import_15.rfi(effect_Effect__rspack_import_15.JkU(function*() {
+                                if (yield* stillQueued(job)) {
+                                    yield* foldBatch(lane, job);
+                                }
+                            }))), effect_Effect__rspack_import_15.hgn(runAdmitted(lane, job)), effect_Effect__rspack_import_15.yeE(effect_Ref__rspack_import_17.yo(admittedCount, (count)=>count - 1)));
+                        }))));
                         yield* effect_Effect__rspack_import_15.KT6(admitAndRun, killedBeforeStart(job).pipe(effect_Effect__rspack_import_15.hgn(finishKilledBeforeRun(lane, job)))).pipe(effect_Effect__rspack_import_15.yeE(effect_Effect__rspack_import_15.DYE(()=>claimed.value ? releaseHeavy : effect_Effect__rspack_import_15.rIH)));
                     }).pipe(effect_Effect__rspack_import_15.nAr(()=>settleInterruptedJob(job)));
                 const processLaneJob = (lane, job)=>effect_Effect__rspack_import_15.JkU(function*() {
@@ -10882,15 +10947,15 @@ var __webpack_modules__ = {
                             yield* effect_Effect__rspack_import_15.OH5(()=>{
                                 lane.head = job;
                             });
-                            yield* effect_Effect__rspack_import_15.zhn(processLaneJob(lane, job).pipe(effect_Effect__rspack_import_15.swY({
+                            const attempt = yield* effect_Effect__rspack_import_15.zhn(processLaneJob(lane, job).pipe(effect_Effect__rspack_import_15.swY({
                                 ticket: job.ticket,
                                 lane: lane.key
                             }), effect_Effect__rspack_import_15.yeE(effect_Effect__rspack_import_15.OH5(()=>{
                                 if (lane.head === job) {
                                     lane.head = null;
                                 }
-                            })), effect_Effect__rspack_import_15.yeE(effect_Deferred__rspack_import_19.Py(job.laneReleased, undefined))));
-                            yield* effect_Deferred__rspack_import_19.Tx(job.laneReleased);
+                            })), effect_Effect__rspack_import_15.yeE(effect_Effect__rspack_import_15.DYE(()=>lane.pending.includes(job) ? effect_Effect__rspack_import_15.rIH : effect_Deferred__rspack_import_19.Py(job.laneReleased, undefined)))));
+                            yield* effect_Effect__rspack_import_15.KT6(effect_Deferred__rspack_import_19.Tx(job.laneReleased), effect_Fiber__rspack_import_24.Tx(attempt));
                         }
                     });
                 const laneWorker = (lane)=>effect_Effect__rspack_import_15.i4r(effect_Queue__rspack_import_21.s(lane.wake).pipe(effect_Effect__rspack_import_15.hgn(drainLane(lane)), effect_Effect__rspack_import_15.sJf((cause)=>!effect_Cause__rspack_import_18.nn(cause), (cause)=>effect_Effect__rspack_import_15.vVN(`lane ${lane.key} iteration crashed`, cause))));
@@ -10916,11 +10981,12 @@ var __webpack_modules__ = {
                         yield* effect_Effect__rspack_import_15.OH5(()=>laneWorkers.add(worker));
                         return lane;
                     }));
-                const laneStatuses = ()=>effect_Effect__rspack_import_15.OH5(()=>{
+                const laneStatuses = (keys)=>effect_Effect__rspack_import_15.OH5(()=>{
                         const knownLanes = [
                             ...lanes.values()
                         ];
-                        return knownLanes.map((lane)=>{
+                        const selected = keys === undefined ? knownLanes : knownLanes.filter((lane)=>keys.has(lane.key));
+                        return selected.map((lane)=>{
                             const sharedWith = (0, _shared_target_js__rspack_import_13.h)(lane, knownLanes);
                             return {
                                 key: lane.key,
@@ -13020,15 +13086,16 @@ var __webpack_modules__ = {
     "./src/internal/daemon/runtime/server.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
         var effect_Cause__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Cause.js");
-        var effect_Deferred__rspack_import_9 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Deferred.js");
+        var effect_Deferred__rspack_import_10 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Deferred.js");
         var effect_Effect__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
         var effect_Queue__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Queue.js");
-        var effect_Result__rspack_import_10 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Result.js");
-        var effect_unstable_socket_Socket__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/unstable/socket/Socket.js");
+        var effect_Result__rspack_import_11 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Result.js");
+        var effect_unstable_socket_Socket__rspack_import_12 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/unstable/socket/Socket.js");
         var _util_guards_js__rspack_import_4 = __webpack_require__("./src/internal/util/guards.ts");
         var _platform_ndjson_js__rspack_import_1 = __webpack_require__("./src/internal/platform/ndjson.ts");
-        var _contracts_version_order_js__rspack_import_8 = __webpack_require__("./src/internal/contracts/version-order.ts");
+        var _contracts_version_order_js__rspack_import_9 = __webpack_require__("./src/internal/contracts/version-order.ts");
         var _contracts_protocol_js__rspack_import_2 = __webpack_require__("./src/internal/contracts/protocol.ts");
+        var _operations_status_filter_js__rspack_import_7 = __webpack_require__("./src/internal/operations/status-filter.ts");
         const outputMessageOverheadBytes = 256;
         const maxFrameBytes = 64 * 1024;
         const outputCost = (message)=>message.data.length + outputMessageOverheadBytes;
@@ -13367,7 +13434,10 @@ var __webpack_modules__ = {
                                 });
                             case 'status':
                                 return effect_Effect__rspack_import_3.JkU(function*() {
-                                    const report = yield* options.broker.report(message.limit);
+                                    const report = yield* options.broker.report(message.telemetry === undefined && !(0, _operations_status_filter_js__rspack_import_7.Gw)(message) ? message.limit : {
+                                        ...message,
+                                        telemetry: message.telemetry ?? true
+                                    });
                                     yield* send({
                                         type: 'status-result',
                                         id: message.id,
@@ -13440,7 +13510,7 @@ var __webpack_modules__ = {
                                 {
                                     return effect_Effect__rspack_import_3.JkU(function*() {
                                         const requester = message.version ?? null;
-                                        if (requester === null || (0, _contracts_version_order_js__rspack_import_8.Z)(requester, options.version) < 0) {
+                                        if (requester === null || (0, _contracts_version_order_js__rspack_import_9.Z)(requester, options.version) < 0) {
                                             return yield* send({
                                                 type: 'error',
                                                 id: message.id,
@@ -13452,7 +13522,7 @@ var __webpack_modules__ = {
                                             const mayRetire = yield* options.broker.prepareRetirement(write((0, _contracts_protocol_js__rspack_import_2.fI)({
                                                 type: 'shutting-down',
                                                 id: message.id
-                                            })).pipe(effect_Effect__rspack_import_3.XeO, effect_Effect__rspack_import_3.hgn(effect_Deferred__rspack_import_9.Py(options.shutdownLatch, undefined)), effect_Effect__rspack_import_3.NLW));
+                                            })).pipe(effect_Effect__rspack_import_3.XeO, effect_Effect__rspack_import_3.hgn(effect_Deferred__rspack_import_10.Py(options.shutdownLatch, undefined)), effect_Effect__rspack_import_3.NLW));
                                             if (!mayRetire) {
                                                 return yield* send({
                                                     type: 'error',
@@ -13467,7 +13537,7 @@ var __webpack_modules__ = {
                                             type: 'shutting-down',
                                             id: message.id
                                         })).pipe(effect_Effect__rspack_import_3.XeO);
-                                        yield* effect_Deferred__rspack_import_9.Py(options.shutdownLatch, undefined);
+                                        yield* effect_Deferred__rspack_import_10.Py(options.shutdownLatch, undefined);
                                     });
                                 }
                             default:
@@ -13484,7 +13554,7 @@ var __webpack_modules__ = {
                                 try: ()=>JSON.parse(line),
                                 catch: (cause)=>cause instanceof Error ? cause.message : String(cause)
                             }));
-                            if (effect_Result__rspack_import_10.N6(parsedJson)) {
+                            if (effect_Result__rspack_import_11.N6(parsedJson)) {
                                 yield* send({
                                     type: 'error',
                                     id: null,
@@ -13529,7 +13599,7 @@ var __webpack_modules__ = {
                                 discard: true
                             });
                         });
-                    yield* effect_unstable_socket_Socket__rspack_import_11.vt(socket).pipe(effect_Effect__rspack_import_3.qIB((pull)=>effect_Effect__rspack_import_3.i4r(effect_Effect__rspack_import_3.qIB(pull, (chunks)=>effect_Effect__rspack_import_3.jJl(chunks, readChunk, {
+                    yield* effect_unstable_socket_Socket__rspack_import_12.vt(socket).pipe(effect_Effect__rspack_import_3.qIB((pull)=>effect_Effect__rspack_import_3.i4r(effect_Effect__rspack_import_3.qIB(pull, (chunks)=>effect_Effect__rspack_import_3.jJl(chunks, readChunk, {
                                 discard: true
                             })))), effect_Effect__rspack_import_3.XeO, effect_Effect__rspack_import_3.yeE(effect_Effect__rspack_import_3.JkU(function*() {
                         const tickets = yield* effect_Effect__rspack_import_3.OH5(()=>{
@@ -15965,10 +16035,83 @@ var __webpack_modules__ = {
             Xu: environmentAttribution
         });
     },
+    "./src/internal/operations/status-filter.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
+        const hasStatusFilters = (input)=>input.cwd !== undefined || input.session !== undefined || input.laneKey !== undefined || input.tickets !== undefined || input.statuses !== undefined || input.commandContains !== undefined;
+        const filterStatusRows = (rows, input)=>{
+            const tickets = input.tickets === undefined ? null : new Set(input.tickets);
+            const statuses = input.statuses === undefined ? null : new Set(input.statuses);
+            return rows.filter((row)=>(input.cwd === undefined || row.cwd === input.cwd) && (input.session === undefined || row.session === input.session) && (input.laneKey === undefined || row.laneKey === input.laneKey) && (tickets === null || tickets.has(row.ticket)) && (statuses === null || statuses.has(row.status)) && (input.commandContains === undefined || row.argv.join(' ').includes(input.commandContains)));
+        };
+        const filterStatusLanes = (lanes, rows, blockers = [])=>{
+            const keys = new Set([
+                ...rows,
+                ...blockers
+            ].map((row)=>row.laneKey));
+            return lanes.filter((lane)=>keys.has(lane.key));
+        };
+        const statusBlockerTickets = (rows)=>[
+                ...new Set(rows.flatMap((row)=>[
+                        ...row.queue?.headTicket === undefined ? [] : [
+                            row.queue.headTicket
+                        ],
+                        ...row.waitingFor?.map((prerequisite)=>prerequisite.ticket) ?? [],
+                        ...row.attachedTo === null ? [] : [
+                            row.attachedTo
+                        ]
+                    ]))
+            ];
+        const boundedStatusQueue = (row)=>row.queue === undefined || row.queue.aheadTickets.length <= 20 ? row : {
+                ...row,
+                queue: {
+                    ...row.queue,
+                    aheadTickets: row.queue.aheadTickets.slice(0, 20),
+                    aheadTicketsTotal: row.queue.aheadTicketsTotal ?? row.queue.aheadTickets.length
+                }
+            };
+        const daemonHeader = (daemon)=>{
+            switch(daemon){
+                case 'running':
+                    return 'cargo-hauler daemon is running';
+                case 'stopped':
+                    return 'cargo-hauler daemon is not running';
+                case 'unresponsive':
+                    return 'cargo-hauler daemon is unresponsive (showing ledger data)';
+                case 'skewed':
+                    return 'cargo-hauler daemon is running but its status report is unreadable (showing ledger data)';
+                default:
+                    {
+                        const exhaustive = daemon;
+                        return exhaustive;
+                    }
+            }
+        };
+        const statusSummary = (daemon, active, recent)=>{
+            const commandLimit = 160;
+            const header = `${daemonHeader(daemon)}; ${active.length} active, ${recent.length} recent`;
+            if (active.length === 0) {
+                return header;
+            }
+            return [
+                header,
+                ...active.map((row)=>{
+                    const fullCommand = commandDisplay(row.argv);
+                    const command = fullCommand.length <= commandLimit ? fullCommand : `${fullCommand.slice(0, commandLimit - 1)}…`;
+                    const location = row.session ?? row.cwd;
+                    return `${row.ticket} ${row.status} ${command} (${location})`;
+                })
+            ].join('\n');
+        };
+        __webpack_require__.d(__webpack_exports__, {}, {
+            Gw: hasStatusFilters,
+            g1: statusBlockerTickets,
+            q: filterStatusLanes,
+            x3: boundedStatusQueue
+        });
+    },
     "./src/internal/operations/status.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var node_fs__rspack_import_0 = __webpack_require__("node:fs");
         var agent_bundle_meta__rspack_import_1 = __webpack_require__("./.agent-bundle-virtual/meta.mjs");
-        var effect_Effect__rspack_import_13 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
+        var effect_Effect__rspack_import_14 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
         var _client_ensure_daemon_js__rspack_import_2 = __webpack_require__("./src/internal/client/ensure-daemon.ts");
         var _daemon_config_js__rspack_import_3 = __webpack_require__("./src/internal/daemon/config.ts");
         var _client_control_js__rspack_import_4 = __webpack_require__("./src/internal/client/control.ts");
@@ -15979,7 +16122,8 @@ var __webpack_modules__ = {
         var _util_id_js__rspack_import_9 = __webpack_require__("./src/internal/util/id.ts");
         var _contracts_tool_schemas_js__rspack_import_10 = __webpack_require__("./src/internal/contracts/tool-schemas.ts");
         var _util_text_js__rspack_import_11 = __webpack_require__("./src/internal/util/text.ts");
-        var _contracts_version_order_js__rspack_import_12 = __webpack_require__("./src/internal/contracts/version-order.ts");
+        var _contracts_version_order_js__rspack_import_13 = __webpack_require__("./src/internal/contracts/version-order.ts");
+        var _status_filter_js__rspack_import_12 = __webpack_require__("./src/internal/operations/status-filter.ts");
         const defaultRecentLimit = 50;
         const statusTimeoutMs = 5000;
         const stalledGuidance = (request)=>request.status === 'running' && request.stall !== undefined ? `ticket looks stalled (no CPU for ${Math.floor(request.stall.idleMs / 60000)}m) — hauler kill ${request.attachedTo ?? request.ticket}` : null;
@@ -16060,24 +16204,39 @@ var __webpack_modules__ = {
                 enumerable: false,
                 value: report
             });
-        const fromReport = (report, config)=>withReport({
-                active: report.active,
+        const fromReport = (report, config, query)=>{
+            const { kache, metrics, savings, system, ...base } = report;
+            const selected = {
+                ...query.telemetry === true ? report : base,
+                active: report.active.map(_status_filter_js__rspack_import_12.x3),
+                recent: report.recent.map(_status_filter_js__rspack_import_12.x3),
+                lanes: report.scope === undefined && query.telemetry !== true ? (0, _status_filter_js__rspack_import_12.q)(report.lanes, [
+                    ...report.active,
+                    ...report.recent
+                ]) : report.lanes
+            };
+            return withReport({
+                scope: selected.scope,
+                active: selected.active,
                 daemon: 'running',
-                kache: report.kache,
-                lanes: report.lanes,
-                maxConcurrent: report.maxConcurrent,
-                metrics: report.metrics,
-                pid: report.pid,
-                recent: report.recent,
-                savings: report.savings,
-                socketPath: report.socketPath,
-                startedAtMs: report.startedAtMs,
+                ...query.telemetry === true ? {
+                    kache,
+                    metrics,
+                    savings,
+                    system
+                } : {},
+                lanes: selected.lanes,
+                maxConcurrent: selected.maxConcurrent,
+                pid: selected.pid,
+                recent: selected.recent,
+                socketPath: selected.socketPath,
+                startedAtMs: selected.startedAtMs,
                 stateRoot: config.stateDir,
-                summary: runningSummary(report),
-                system: report.system
-            }, report);
+                summary: runningSummary(selected)
+            }, selected);
+        };
         const skewSummary = (daemon)=>{
-            const order1 = (0, _contracts_version_order_js__rspack_import_12.Z)(daemon.version, "0.11.2");
+            const order1 = (0, _contracts_version_order_js__rspack_import_13.Z)(daemon.version, "0.11.2");
             const [release, fix] = (()=>{
                 switch(order1){
                     case -1:
@@ -16104,12 +16263,39 @@ var __webpack_modules__ = {
             })();
             return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${"0.11.2"}) cannot read, so this client shows tickets as the ledger recorded them. ${fix}`;
         };
-        const fromLiveReport = (raw, daemon, config, recentLimit)=>{
+        const fromLiveReport = (raw, daemon, config, query)=>{
             const decoded = _contracts_tool_schemas_js__rspack_import_10.qb.safeParse(raw);
             if (decoded.success) {
-                return effect_Effect__rspack_import_13.PyW(fromReport(decoded.data, config));
+                const report = decoded.data;
+                if (!(0, _status_filter_js__rspack_import_12.Gw)(query) || report.scope === 'filtered') {
+                    return effect_Effect__rspack_import_14.PyW(fromReport(report, config, query));
+                }
+                return effect_Effect__rspack_import_14.P1j(effect_Effect__rspack_import_14.JkU(function*() {
+                    const ledger = yield* acquireSnapshotLedger(config.databasePath);
+                    const live = new Map(report.active.map((row)=>[
+                            row.ticket,
+                            row
+                        ]));
+                    const active = (yield* ledger.activeStatusRequests(query)).map((record)=>live.get(record.ticket) ?? (0, _contracts_protocol_js__rspack_import_7.el)(record));
+                    const recent = (yield* ledger.recentStatusRequests(query, true)).map((record)=>(0, _contracts_protocol_js__rspack_import_7.el)(record));
+                    const blockers = yield* ledger.activeStatusRequests({
+                        tickets: [
+                            ...(0, _status_filter_js__rspack_import_12.g1)(active)
+                        ]
+                    });
+                    return fromReport({
+                        ...report,
+                        scope: 'filtered',
+                        active,
+                        recent,
+                        lanes: (0, _status_filter_js__rspack_import_12.q)(report.lanes, [
+                            ...active,
+                            ...recent
+                        ], blockers)
+                    }, config, query);
+                }));
             }
-            return fromLedger(config, recentLimit, 'skewed').pipe(effect_Effect__rspack_import_13.TjK((snapshot)=>withReport({
+            return fromLedger(config, query, 'skewed').pipe(effect_Effect__rspack_import_14.TjK((snapshot)=>withReport({
                     ...snapshot,
                     daemon: 'skewed',
                     pid: daemon.pid,
@@ -16127,7 +16313,8 @@ var __webpack_modules__ = {
             }));
         };
         const loadLedgerTicket = (ticket, daemon, config)=>loadLedgerRequest(ticket, config).pipe(Effect.map((record)=>record === null ? null : ledgerRequestRecord(displayRequestRecord(record), daemon)));
-        const emptyStopped = (config)=>withReport({
+        const emptyStopped = (config, query)=>withReport({
+                scope: (0, _status_filter_js__rspack_import_12.Gw)(query) ? 'filtered' : 'global',
                 active: [],
                 daemon: 'stopped',
                 lanes: [],
@@ -16151,24 +16338,31 @@ var __webpack_modules__ = {
                 throw error;
             }
         };
-        const acquireSnapshotLedger = (databasePath)=>effect_Effect__rspack_import_13.Q56(effect_Effect__rspack_import_13.SvU(()=>openSnapshotLedger(_storage_ledger_js__rspack_import_6.Xo, databasePath)).pipe(effect_Effect__rspack_import_13.MfU(()=>effect_Effect__rspack_import_13.OH5(()=>openSnapshotLedger(_storage_ledger_js__rspack_import_6.p, databasePath)))), ({ db })=>effect_Effect__rspack_import_13.OH5(()=>db.close())).pipe(effect_Effect__rspack_import_13.TjK(({ ledger })=>ledger));
-        const fromLedger = (config, recentLimit, daemon = 'stopped')=>{
+        const acquireSnapshotLedger = (databasePath)=>effect_Effect__rspack_import_14.Q56(effect_Effect__rspack_import_14.SvU(()=>openSnapshotLedger(_storage_ledger_js__rspack_import_6.Xo, databasePath)).pipe(effect_Effect__rspack_import_14.MfU(()=>effect_Effect__rspack_import_14.OH5(()=>openSnapshotLedger(_storage_ledger_js__rspack_import_6.p, databasePath)))), ({ db })=>effect_Effect__rspack_import_14.OH5(()=>db.close())).pipe(effect_Effect__rspack_import_14.TjK(({ ledger })=>ledger));
+        const fromLedger = (config, query, daemon = 'stopped')=>{
             if (!(0, node_fs__rspack_import_0.existsSync)(config.databasePath)) {
-                return effect_Effect__rspack_import_13.PyW(emptyStopped(config));
+                return effect_Effect__rspack_import_14.PyW(emptyStopped(config, query));
             }
-            return effect_Effect__rspack_import_13.P1j(effect_Effect__rspack_import_13.JkU(function*() {
+            return effect_Effect__rspack_import_14.P1j(effect_Effect__rspack_import_14.JkU(function*() {
                 const ledger = yield* acquireSnapshotLedger(config.databasePath);
-                const recent = (yield* ledger.recentRequests(recentLimit)).map((record)=>ledgerStatusRow(record, daemon));
-                const active = daemon === 'skewed' ? (yield* ledger.activeStatusRequests()).map((record)=>ledgerStatusRow(record, daemon)) : [];
-                const savings = yield* ledger.attachmentSavings();
+                const ledgerQuery = daemon === 'skewed' || query.statuses === undefined ? query : {
+                    ...query,
+                    statuses: query.statuses.flatMap((status)=>status === 'orphaned' ? [
+                            ..._contracts_protocol_js__rspack_import_7.RM
+                        ] : _contracts_protocol_js__rspack_import_7.RM.some((active)=>active === status) ? [] : [
+                            status
+                        ])
+                };
+                const recent = (yield* ledger.recentStatusRequests(ledgerQuery, daemon === 'skewed')).map((record)=>ledgerStatusRow(record, daemon));
+                const active = daemon === 'skewed' ? (yield* ledger.activeStatusRequests(ledgerQuery)).map((record)=>ledgerStatusRow(record, daemon)) : [];
                 return withReport({
+                    scope: (0, _status_filter_js__rspack_import_12.Gw)(query) ? 'filtered' : 'global',
                     active,
                     daemon: 'stopped',
                     lanes: [],
                     maxConcurrent: null,
                     pid: null,
                     recent,
-                    savings,
                     socketPath: config.socketPath,
                     startedAtMs: null,
                     stateRoot: config.stateDir,
@@ -16178,27 +16372,31 @@ var __webpack_modules__ = {
         };
         const loadHaulerSnapshot = (options = {})=>{
             const config = options.config ?? (0, _daemon_config_js__rspack_import_3.bF)();
-            const recentLimit = options.recentLimit ?? defaultRecentLimit;
-            const unreachable = (error)=>(0, _client_ensure_daemon_js__rspack_import_2.Yj)(error.cause) ? fromLedger(config, recentLimit) : unresponsiveSnapshot(config, recentLimit, `socket could not be opened (${(0, _platform_socket_errors_js__rspack_import_5.R)(error.cause) ?? 'no errno'})`);
-            return (0, _client_ensure_daemon_js__rspack_import_2.pk)(config, _client_ensure_daemon_js__rspack_import_2.R2, statusTimeoutMs, 'read').pipe(effect_Effect__rspack_import_13.qIB((daemon)=>daemon === null ? fromLedger(config, recentLimit) : (0, _client_control_js__rspack_import_4.dG)({
+            const query = {
+                limit: options.recentLimit ?? defaultRecentLimit,
+                telemetry: false,
+                ...options.query
+            };
+            const unreachable = (error)=>(0, _client_ensure_daemon_js__rspack_import_2.Yj)(error.cause) ? fromLedger(config, query) : unresponsiveSnapshot(config, query, `socket could not be opened (${(0, _platform_socket_errors_js__rspack_import_5.R)(error.cause) ?? 'no errno'})`);
+            return (0, _client_ensure_daemon_js__rspack_import_2.pk)(config, _client_ensure_daemon_js__rspack_import_2.R2, statusTimeoutMs, 'read').pipe(effect_Effect__rspack_import_14.qIB((daemon)=>daemon === null ? fromLedger(config, query) : (0, _client_control_js__rspack_import_4.dG)({
                     message: {
+                        ...query,
                         id: (0, _util_id_js__rspack_import_9.m)(),
-                        limit: recentLimit,
                         type: 'status'
                     },
                     socketPath: config.socketPath,
                     timeoutMs: statusTimeoutMs
-                }, (message)=>message.type === 'status-result').pipe(effect_Effect__rspack_import_13.qIB((result)=>result === undefined ? fromLedger(config, recentLimit) : fromLiveReport(result.report, daemon, config, recentLimit)), effect_Effect__rspack_import_13.loE({
-                    ControlTimeout: ()=>unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
-                    ConnectionClosed: ()=>unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
+                }, (message)=>message.type === 'status-result').pipe(effect_Effect__rspack_import_14.qIB((result)=>result === undefined ? fromLedger(config, query) : fromLiveReport(result.report, daemon, config, query)), effect_Effect__rspack_import_14.loE({
+                    ControlTimeout: ()=>unresponsiveSnapshot(config, query, `did not answer within ${statusTimeoutMs / 1000}s`),
+                    ConnectionClosed: ()=>unresponsiveSnapshot(config, query, 'closed the connection mid-status'),
                     DaemonUnreachable: unreachable
-                }))), effect_Effect__rspack_import_13.loE({
-                ControlTimeout: ()=>unresponsiveSnapshot(config, recentLimit, `did not answer within ${statusTimeoutMs / 1000}s`),
-                ConnectionClosed: ()=>unresponsiveSnapshot(config, recentLimit, 'closed the connection mid-status'),
+                }))), effect_Effect__rspack_import_14.loE({
+                ControlTimeout: ()=>unresponsiveSnapshot(config, query, `did not answer within ${statusTimeoutMs / 1000}s`),
+                ConnectionClosed: ()=>unresponsiveSnapshot(config, query, 'closed the connection mid-status'),
                 DaemonUnreachable: unreachable
             }));
         };
-        const unresponsiveSnapshot = (config, recentLimit, what)=>fromLedger(config, recentLimit, 'unresponsive').pipe(effect_Effect__rspack_import_13.TjK((snapshot)=>withReport({
+        const unresponsiveSnapshot = (config, query, what)=>fromLedger(config, query, 'unresponsive').pipe(effect_Effect__rspack_import_14.TjK((snapshot)=>withReport({
                     ...snapshot,
                     daemon: 'unresponsive',
                     summary: `cargo-hauler daemon ${what}, so status shows ledger data (${snapshot.recent.length} recorded)`
@@ -16915,6 +17113,9 @@ CREATE TABLE IF NOT EXISTS transitions (
 );
 CREATE INDEX IF NOT EXISTS requests_status_idx ON requests (status);
 CREATE INDEX IF NOT EXISTS requests_created_at_ms_idx ON requests (created_at_ms);
+CREATE INDEX IF NOT EXISTS requests_cwd_created_idx ON requests (cwd, created_at_ms DESC, id DESC);
+CREATE INDEX IF NOT EXISTS requests_session_created_idx ON requests (session, created_at_ms DESC, id DESC);
+CREATE INDEX IF NOT EXISTS requests_lane_created_idx ON requests (lane_key, created_at_ms DESC, id DESC);
 CREATE INDEX IF NOT EXISTS requests_session_finished_idx ON requests (session, finished_at_ms);
 CREATE INDEX IF NOT EXISTS requests_intent_status_id_idx ON requests (intent_key, status, id);
 CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id);
@@ -17288,7 +17489,6 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
      ORDER BY created_at_ms DESC, id DESC`);
             const updateDetached = db.prepare('UPDATE requests SET background = 1 WHERE id = ?');
             const selectRecentRequests = db.prepare(`SELECT ${requestColumns} FROM requests ORDER BY created_at_ms DESC, id DESC LIMIT ?`);
-            const selectRecentStatusRequests = db.prepare(`SELECT ${statusRequestColumns} FROM requests ORDER BY created_at_ms DESC, id DESC LIMIT ?`);
             const metricsWindowColumns = `id,
        lane_key,
        status,
@@ -17321,9 +17521,54 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             const selectActiveRequests = db.prepare(`SELECT ${requestColumns} FROM requests
      WHERE ${activeStatusFilter}
      ORDER BY created_at_ms ASC, id ASC`);
-            const selectActiveStatusRequests = db.prepare(`SELECT ${statusRequestColumns} FROM requests
-     WHERE ${activeStatusFilter}
-     ORDER BY created_at_ms ASC, id ASC`);
+            const readStatusRequests = (query, activeOnly, excludeActive = false)=>{
+                const filters = [];
+                const values = [];
+                if (activeOnly) filters.push(activeStatusFilter);
+                if (excludeActive) filters.push(`NOT (${activeStatusFilter})`);
+                for (const [column, value] of [
+                    [
+                        'cwd',
+                        query.cwd
+                    ],
+                    [
+                        'session',
+                        query.session
+                    ],
+                    [
+                        'lane_key',
+                        query.laneKey
+                    ]
+                ]){
+                    if (value !== undefined) {
+                        filters.push(`${column} = ?`);
+                        values.push(value);
+                    }
+                }
+                if (query.tickets !== undefined) {
+                    const ids = query.tickets.flatMap((ticket)=>{
+                        const id = (0, _contracts_protocol_js__rspack_import_6.sH)(ticket);
+                        return id === null || (0, _contracts_protocol_js__rspack_import_6.aJ)(id) !== ticket ? [] : [
+                            id
+                        ];
+                    });
+                    filters.push(ids.length === 0 ? '0' : `id IN (${ids.map(()=>'?').join(',')})`);
+                    values.push(...ids);
+                }
+                if (query.statuses !== undefined) {
+                    filters.push(query.statuses.length === 0 ? '0' : `status IN (${query.statuses.map(()=>'?').join(',')})`);
+                    values.push(...query.statuses);
+                }
+                if (query.commandContains !== undefined) {
+                    filters.push("instr((SELECT group_concat(value, ' ') FROM json_each(argv_json)), ?) > 0");
+                    values.push(query.commandContains);
+                }
+                if (!activeOnly) values.push(query.limit ?? 50);
+                return db.prepare(`SELECT ${statusRequestColumns} FROM requests
+       ${filters.length === 0 ? '' : `WHERE ${filters.join(' AND ')}`}
+       ORDER BY created_at_ms ${activeOnly ? 'ASC' : 'DESC'}, id ${activeOnly ? 'ASC' : 'DESC'}
+       ${activeOnly ? '' : 'LIMIT ?'}`).all(...values).map(toRequestRecord);
+            };
             const selectTransitions = db.prepare(`SELECT request_id, at_ms, from_status, to_status FROM transitions
      WHERE request_id = ?
      ORDER BY id ASC`);
@@ -17686,8 +17931,10 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                         })),
                 recentRequests: (limit)=>effect_Effect__rspack_import_12.OH5(()=>selectRecentRequests.all(limit).map(toRequestRecord)),
                 activeRequests: ()=>effect_Effect__rspack_import_12.OH5(()=>selectActiveRequests.all().map(toRequestRecord)),
-                recentStatusRequests: (limit)=>effect_Effect__rspack_import_12.OH5(()=>selectRecentStatusRequests.all(limit).map(toRequestRecord)),
-                activeStatusRequests: ()=>effect_Effect__rspack_import_12.OH5(()=>selectActiveStatusRequests.all().map(toRequestRecord)),
+                recentStatusRequests: (query, excludeActive)=>effect_Effect__rspack_import_12.OH5(()=>readStatusRequests(typeof query === 'number' ? {
+                            limit: query
+                        } : query, false, excludeActive)),
+                activeStatusRequests: (query = {})=>effect_Effect__rspack_import_12.OH5(()=>readStatusRequests(query, true)),
                 transitionsFor: (id)=>effect_Effect__rspack_import_12.OH5(()=>selectTransitions.all(id).map(toTransitionRecord)),
                 reapOrphans: (atMs, error)=>effect_Effect__rspack_import_12.OH5(()=>inTransaction(db, ()=>{
                             const orphans = selectOrphans.all();
@@ -17905,7 +18152,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             }
             return `…/${segments.slice(-2).join('/')}`;
         };
-        const commandDisplay = (argv)=>{
+        const commandDisplay1 = (argv)=>{
             const [program, ...args] = argv;
             return program === undefined ? '' : [
                 pathBasename(program),
