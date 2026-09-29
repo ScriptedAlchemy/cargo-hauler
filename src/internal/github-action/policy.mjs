@@ -57,7 +57,7 @@ export async function route(options) {
   try {
     const loaded = await loadPolicy({ ...options, signal: controller.signal }), { recipe, client, defaultBranch } = loaded;
     policy = loaded.policy;
-    let changesChecked = false;
+    let checkedBase;
     const deadline = Date.now() + Math.min(30000, Math.max(0, options.waitMilliseconds ?? 30000));
     const provenance = new Map();
     function managerOwns(check) {
@@ -68,11 +68,12 @@ export async function route(options) {
     do {
       const pr = await client.api(`/pulls/${options.pr}`);
       if (!trustedPull(pr, options.repository, recipe) || pr.head.sha !== options.head) return { decision: 'native', policy };
-      if (!changesChecked) {
+      if (!/^[a-f0-9]{40}$/.test(pr.base?.sha ?? '')) return { decision: 'native', policy };
+      if (checkedBase !== pr.base.sha) {
         if (await changesPolicy(client, pr, options.recipePath ?? '.github/hauler-ci.json', recipe)) return { decision: 'native', policy };
         const confirmed = await client.api(`/pulls/${options.pr}`);
-        if (!trustedPull(confirmed, options.repository, recipe) || confirmed.head.sha !== options.head || confirmed.changed_files !== pr.changed_files) return { decision: 'native', policy };
-        changesChecked = true;
+        if (!trustedPull(confirmed, options.repository, recipe) || confirmed.head.sha !== options.head || confirmed.changed_files !== pr.changed_files || confirmed.base?.sha !== pr.base.sha) return { decision: 'native', policy };
+        checkedBase = pr.base.sha;
       }
       const checks = await client.pages(`/commits/${options.head}/check-runs?filter=latest`, 'check_runs');
       const owned = recipe.lanes.map(l => checks.find(c => c.name === l.checkName && c.app?.slug === 'github-actions' && matchesCheck(c, checkIdentity(options.head, l.id, policy)) && (['queued', 'in_progress'].includes(c.status) || c.status === 'completed' && ['success', 'failure'].includes(c.conclusion))));
@@ -84,13 +85,25 @@ export async function route(options) {
   } catch { return { decision: 'native', policy }; }
   finally { clearTimeout(timer); }
 }
+export async function cancelConflictedChecks(client, { pr, recipe, repository, policy, lanes = recipe.lanes, checks }) {
+  if (pr.mergeable !== false) return;
+  const queued = checks.filter(check => check.status === 'queued' && check.head_sha === pr.head.sha && check.app?.slug === 'github-actions' && lanes.some(lane => check.name === lane.checkName && matchesCheck(check, checkIdentity(pr.head.sha, lane.id, policy))));
+  if (!queued.length) return;
+  const current = await client.api(`/pulls/${pr.number}`);
+  if (!trustedPull(current, repository, recipe) || current.head.sha !== pr.head.sha || current.mergeable !== false) return;
+  for (const check of queued) {
+    const latest = await client.api(`/check-runs/${check.id}`);
+    if (latest.status !== 'queued' || latest.head_sha !== check.head_sha || latest.external_id !== check.external_id || latest.name !== check.name || latest.app?.slug !== 'github-actions') continue;
+    await client.api(`/check-runs/${check.id}`, 'PATCH', { status: 'completed', conclusion: 'cancelled', completed_at: new Date().toISOString(), output: { title: 'Merge conflicts block admission', summary: 'Resolve this PR head’s merge conflicts before Hauler can admit a test snapshot.' } });
+  }
+}
 export async function enqueue({ recipe, policy, client, repository, onlyPullRequests, admissionWorkflow = 'ci.yml', managerRunId }) {
   if (!/^[1-9][0-9]{0,19}$/.test(String(managerRunId))) throw new TypeError('Manager run identity required');
   const queued = [];
   for (const listed of await client.pages('/pulls?state=open&sort=created&direction=asc')) {
     if (onlyPullRequests && !onlyPullRequests.includes(listed.number)) continue;
     const pr = await client.api(`/pulls/${listed.number}`);
-    if (!trustedPull(pr, repository, recipe)) continue;
+    if (!trustedPull(pr, repository, recipe) || pr.mergeable === false) continue;
     const checks = await client.pages(`/commits/${pr.head.sha}/check-runs?filter=latest`, 'check_runs');
     if (await receipt(client, { workflow: admissionWorkflow, head: pr.head.sha, pr: pr.number, policy }) === 'native') {
       for (const lane of recipe.lanes) {
