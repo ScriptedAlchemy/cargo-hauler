@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { drain } from '../../src/internal/github-action/manager.mjs';
+import { plan } from '../../src/internal/github-action/admission.mjs';
+import { checkOwner } from '../../src/internal/github-action/ownership.mjs';
 const recipe = { version: 1, trustedAuthors: ['owner'], sharedBuilds: true, requiredChecks: ['Gates'], image: { dockerfile: 'Dockerfile', context: '.' }, prepare: [], compatibilityPaths: ['Cargo.lock'], lanes: [{ id: 'linux', checkName: 'Hauler Linux', tasks: [{ id: 'first', run: 'first', timeoutSeconds: 60 }, { id: 'second', run: 'second', timeoutSeconds: 60 }] }] };
 const hex = n => n.toString(16).padStart(40, '0');
 function fixture({ authors = ['owner'], fail = false, change = false, prepareFail = false } = {}) {
@@ -308,4 +310,38 @@ test('an unreadable head during polling stays a visible infrastructure failure',
   assert.equal(result.snapshots[0].conclusion, 'cancelled');
   assert.ok([...f.checks.values()][0].external_id.endsWith(':infrastructure'));
   assert.ok(!f.events.some(e => e[1] === 'success'));
+});
+test('scoped workers reserve their active snapshot without covering unrelated queued PRs', async () => {
+  const f = fixture({ authors: ['owner', 'owner'] }), originalFetch = f.options.fetchImpl, originalFactory = f.options.sandboxFactory;
+  const policy = 'a'.repeat(64), worker = { runId: '20', jobId: '30', attempt: 2 };
+  f.checks.set(99, { id: 99, name: 'Hauler Linux', head_sha: hex(11), external_id: `hauler:linux:${hex(11)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'queued' });
+  const fetchImpl = async (url, options) => {
+    if (url.endsWith('/actions/runs/20')) return { ok: true, json: async () => ({ id: 20, run_attempt: 2, status: 'in_progress', event: 'workflow_dispatch', path: '.github/workflows/hauler-ci.yml', head_repository: { full_name: 'owner/repo' }, head_branch: 'master' }) };
+    if (url.includes('/actions/runs/20/attempts/2/jobs')) return { ok: true, json: async () => ({ jobs: [{ id: 30, name: 'Hauler pool / linux', status: 'in_progress' }] }) };
+    if (url.includes('/actions/workflows/')) {
+      const head = new URL(url).searchParams.get('head_sha'), number = head === hex(1) ? 1 : 2;
+      return { ok: true, json: async () => ({ workflow_runs: [{ id: 10, event: 'pull_request', head_sha: head, path: '.github/workflows/ci.yml', run_attempt: 1, pull_requests: [{ number }] }] }) };
+    }
+    if (url.includes('/actions/runs/10/')) return { ok: true, json: async () => ({ jobs: [{ steps: [{ name: `Hauler route / delegated / ${policy}`, conclusion: 'success' }] }] }) };
+    return originalFetch(url, options);
+  };
+  let checked = false;
+  const sandboxFactory = async (...args) => {
+    const sandbox = await originalFactory(...args);
+    return { ...sandbox, async run(command, options) {
+      if (!checked) {
+        checked = true;
+        const active = [...f.checks.values()].find(check => check.head_sha === hex(1));
+        assert.equal(checkOwner(active).remaining, 0);
+        assert.equal(checkOwner(active).finished, false);
+        assert.deepEqual(await plan({ recipe, repository: 'owner/repo', token: 'private', policy, defaultBranch: 'master', fetchImpl }), { lanes: ['linux'], count: 1 });
+      }
+      return sandbox.run(command, options);
+    } };
+  };
+  const result = await drain({ ...f.options, policy, worker, defaultBranch: 'master', fetchImpl, sandboxFactory, onlyPullRequests: [1], maxSnapshots: 2 });
+  assert.ok(checked);
+  assert.deepEqual(result.snapshots.map(snapshot => snapshot.pr), [1]);
+  assert.equal(result.snapshots[0].tasks.length, 2);
+  assert.equal(f.checks.get(99).status, 'queued');
 });

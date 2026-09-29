@@ -10,9 +10,10 @@ import { brokerFixture } from '../support/broker-fixture.js';
 import { execRequest, fakeCargoEnv, findExit, pollReport, scopedDaemon, scopedGate } from '../support/harness.js';
 
 describe('lane scheduler', () => {
-  it.live('reselects a cheaper same-lane request that arrived while the head waited for a global permit', () =>
+  it.live.each(['off', '1000000'])('reselects a cheaper same-lane request that arrived while the head waited for a global permit (heavy cap: %s)', (heavyMemAvailableGb) =>
     Effect.gen(function* () {
-      const fixture = yield* scopedDaemon(1, { CARGO_HAULER_HEAVY_MEM_AVAILABLE_GB: '1000000' });
+      const fixture = yield* scopedDaemon(1, { CARGO_HAULER_HEAVY_MEM_AVAILABLE_GB: heavyMemAvailableGb });
+      const heavyEnabled = fixture.config.heavyMemAvailableBytes !== null;
       const holderGate = yield* scopedGate(fixture, 'holder-release');
       const buildGate = yield* scopedGate(fixture, 'build-release');
       const fmtGate = yield* scopedGate(fixture, 'fmt-release');
@@ -33,7 +34,7 @@ describe('lane scheduler', () => {
       yield* pollReport(fixture, (report) =>
         report.active.some((record) => record.cwd === fixture.ws1 && record.status === 'queued') &&
         report.lanes.some((lane) => lane.workspaceRoot === fixture.ws1 && lane.queued === 0) &&
-        report.system?.heavy?.running === 1,
+        report.system?.heavy?.running === (heavyEnabled ? 1 : undefined),
       );
       const fmt = yield* Effect.forkChild(
         execRequest(fixture, {
@@ -49,7 +50,7 @@ describe('lane scheduler', () => {
       const replaced = yield* pollReport(fixture, (report) =>
         report.active.some((record) => record.cwd === fixture.ws1 && record.status === 'running'),
       );
-      expect(replaced.system?.heavy?.running).toBe(0);
+      expect(replaced.system?.heavy?.running).toBe(heavyEnabled ? 0 : undefined);
       yield* fmtGate.open;
       const fmtTicket = findExit(yield* Fiber.join(fmt)).ticket;
       yield* pollReport(fixture, (report) =>
@@ -86,7 +87,7 @@ describe('lane scheduler', () => {
       expect(followingRecord?.startedAtMs ?? 0).toBeGreaterThanOrEqual(
         buildRecord?.finishedAtMs ?? Number.POSITIVE_INFINITY,
       );
-      expect(report.system?.heavy?.running).toBe(0);
+      expect(report.system?.heavy?.running).toBe(heavyEnabled ? 0 : undefined);
     }));
 
   it.live('keeps dependents blocked and a reselected head killable without spending another permit', () =>

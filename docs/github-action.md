@@ -106,6 +106,8 @@ attempt, lane job, snapshot ordinal, finish state, remaining admissions and dead
 The planner verifies the current run attempt, repository, default branch, manager
 workflow and unique `Hauler pool / <lane>` job through GitHub. Live owners suppress
 their active snapshots and cover ready work within their remaining capacity.
+Workers with an explicit PR selection advertise zero future capacity, so unrelated
+queued PRs remain eligible; selected PRs still drain and reuse compatible sandboxes.
 One worker is counted once using its latest ordinal, even when several checks
 carry its evidence. Completed early failure checks remain owned until independent
 tasks finish. Finished, expired, deleted or superseded owners release work for

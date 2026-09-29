@@ -61,7 +61,7 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
       if (signal?.aborted) controller.abort();
       const timer = setTimeout(() => controller.abort(), Math.max(1, deadline - Date.now()));
       const record = { pr: s.pr, head: s.head, base: s.base, merge: s.merge, imageReference: image, conclusion: 'cancelled', readyAt: new Date(s.readyAt).toISOString(), admittedAt: new Date(started).toISOString(), queueSeconds: Math.max(0, (started - s.readyAt) / 1000), durationSeconds: 0, compatibleSandboxReuse: false, stages: [], tasks: [] };
-      const ownership = worker && { ...worker, lane: lane.id, ordinal: summary.snapshots.length + 1, remaining: maxSnapshots - summary.snapshots.length - 1, finished: false, deadline };
+      const ownership = worker && { ...worker, lane: lane.id, ordinal: summary.snapshots.length + 1, remaining: onlyPullRequests ? 0 : maxSnapshots - summary.snapshots.length - 1, finished: false, deadline };
       const outputText = () => [ownership && ownerText(ownership), `hauler-evidence-v1:${JSON.stringify(snapshotEvidence(record))}`].filter(Boolean).join('\n');
       let check, failed = false, stale = false, polling = false;
       const poll = setInterval(async () => {
