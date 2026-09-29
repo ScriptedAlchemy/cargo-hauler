@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.2
+
+### Patch Changes
+
+- 893a3c4: Honor native CI ownership across policy changes and plan queued prior-policy checks for retirement in serialized drains. Recheck ownership before cancellation; delegation still requires the exact policy.
+- d09af46: Add read-only CI planning that starts workers only for lanes with eligible tests or queued-check maintenance. Drains share admission logic and revalidate the advisory plan under their lane lock.
+
 ## 0.11.1
 
 ### Patch Changes
