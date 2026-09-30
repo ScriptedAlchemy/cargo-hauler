@@ -2534,15 +2534,15 @@ var __webpack_modules__ = {
                     kind: 'malformed'
                 };
             }
-            if ((0, _contracts_version_order_js__rspack_import_5.M)(ping.message.version, "0.11.2")) {
+            if ((0, _contracts_version_order_js__rspack_import_5.M)(ping.message.version, "0.12.0")) {
                 return {
-                    detail: `cargo-hauler daemon ${ping.message.version} is newer than this client ${"0.11.2"}`,
+                    detail: `cargo-hauler daemon ${ping.message.version} is newer than this client ${"0.12.0"}`,
                     kind: 'replacement-failed'
                 };
             }
             if (!(0, _contracts_wire_version_js__rspack_import_6.W)(ping.message)) {
                 return {
-                    detail: `cargo-hauler daemon ${ping.message.version} is incompatible with this client ${"0.11.2"}`,
+                    detail: `cargo-hauler daemon ${ping.message.version} is incompatible with this client ${"0.12.0"}`,
                     kind: 'replacement-failed'
                 };
             }
@@ -22617,7 +22617,7 @@ var __webpack_modules__ = {
                     return withEventState(signal, async (bindings)=>{
                         const gate = await (0, _agent_bundle_runtime_request__rspack_import_6.iC)({
                             invocation: {
-                                artifactEpoch: "be2211c94a4d9592b410afff3ada2c9db2b60bed68537712f2c4997a73f302b6",
+                                artifactEpoch: "1cb13381b4e47362057621d086420ccddeda188dd91297dab936a0dbe827fe25",
                                 hostContractRevision: capabilityRevision,
                                 kind: "event",
                                 operationId: `event:${canonicalEvent}`,
@@ -22845,8 +22845,8 @@ var __webpack_modules__ = {
     "./.agent-bundle-virtual/meta.mjs" () {
         const name = "cargo-hauler";
         const packageName = "cargo-hauler";
-        const packageVersion = "0.11.2";
-        const version = "0.11.2";
+        const packageVersion = "0.12.0";
+        const version = "0.12.0";
         const meta = Object.freeze({
             name,
             packageName,
