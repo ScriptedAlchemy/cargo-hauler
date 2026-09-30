@@ -53,7 +53,7 @@ jobs:
       # Green must mean published. Once no changesets are pending, the version
       # in package.json is the one that should be on npm, whether this run
       # published it or an earlier one did; a silent publish failure is red.
-      - name: Verify package.json version resolves on npm
+      - name: Verify package and canonical tarball resolve on npm
         if: steps.changesets.outputs.has-changesets == 'false'
         run: |
           node --input-type=module <<'NODE'
@@ -75,8 +75,14 @@ jobs:
               if (response.ok) {
                 const metadata = await response.json();
                 if (metadata.name === name && metadata.version === version) {
-                  console.log(`registry ${name}@${version}`);
-                  process.exit(0);
+                  const artifact = await fetch(metadata.dist.tarball, {
+                    method: 'HEAD',
+                    signal: AbortSignal.timeout(10_000),
+                  });
+                  if (artifact.ok) {
+                    console.log(`registry artifact ${name}@${version}`);
+                    process.exit(0);
+                  }
                 }
               }
             } catch {}
