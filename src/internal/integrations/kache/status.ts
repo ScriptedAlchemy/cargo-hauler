@@ -750,7 +750,7 @@ export const createKacheSnapshotReader = (
       return indexCache.result;
     }
     const result = aggregateIndexScan(await scanIndex(indexPath, indexReadTimeoutMs));
-    indexCache = { fingerprint, result };
+    indexCache = result.state === 'timed-out' ? undefined : { fingerprint, result };
     return result;
   };
 

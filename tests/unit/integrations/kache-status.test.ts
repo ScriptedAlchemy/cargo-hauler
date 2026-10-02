@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
+import { rs } from '@rstest/core';
 import { describe, expect, it } from 'effect-rstest';
 import * as Effect from 'effect/Effect';
 import * as Schedule from 'effect/Schedule';
@@ -179,6 +180,28 @@ describe('createKacheSnapshotReader', () => {
       } catch {
         // ENXIO: the terminated worker never reached the open.
       }
+      removeTestPath(root);
+    }
+  });
+
+  it('re-scans an unchanged index after one transient timeout', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'cc-kache-status-timeout-retry-'));
+    const indexPath = join(root, 'index.db');
+    createIndex(indexPath, [['alpha', 'dev', 1_200]]);
+    rs.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const reader = createKacheSnapshotReader(indexPath, { indexReadTimeoutMs: 5_000 });
+      const first = reader.read(1_000);
+      while (rs.getTimerCount() === 0) {
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+      rs.advanceTimersByTime(5_000);
+      expect((await first).status.indexState).toBe('timed-out');
+      const second = await reader.read(2_000);
+      expect(second.status.indexState).toBe('read');
+      expect(second.indexPriors.compileTimeMs('alpha', ['dev'])).toBe(1_200);
+    } finally {
+      rs.useRealTimers();
       removeTestPath(root);
     }
   });
