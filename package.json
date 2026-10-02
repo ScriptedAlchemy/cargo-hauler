@@ -65,8 +65,8 @@
     "@effect/atom-react": "4.0.0-rc.117",
     "@effect/platform-node": "4.0.0-rc.117",
     "@effect/tsgo": "0.45.0",
-    "@rstest/browser": "0.12.2",
-    "@rstest/core": "0.12.2",
+    "@rstest/browser": "0.12.3",
+    "@rstest/core": "0.12.3",
     "@types/node": "^22.18.0",
     "@types/proper-lockfile": "^4.1.4",
     "@types/react": "^19.3.0",
@@ -84,5 +84,5 @@
     "typescript": "7.0.2",
     "zod": "4.6.5"
   },
-  "packageManager": "pnpm@12.6.0"
+  "packageManager": "pnpm@12.8.1"
 }
