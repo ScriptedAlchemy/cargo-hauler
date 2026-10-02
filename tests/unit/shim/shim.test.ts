@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'effect-rstest';
 
 import {
+  findCargoShim,
   installCargoShim,
   renderCargoShim,
   resolveRealCargo,
@@ -196,6 +197,8 @@ describe('PATH cargo shim', () => {
       const rustupCargo = join(rustupDir, 'cargo');
       writeFileSync(shim, '#!/bin/sh\n');
       writeFileSync(rustupCargo, '#!/bin/sh\n');
+      chmodSync(shim, 0o755);
+      chmodSync(rustupCargo, 0o755);
 
       expect(shimPathStatus(shim, { PATH: `${shimDir}:${rustupDir}` })).toEqual({ kind: 'wins' });
       // rustup's ~/.cargo/bin earlier on PATH: cargo bypasses the shim.
@@ -204,6 +207,32 @@ describe('PATH cargo shim', () => {
         kind: 'shadowed',
       });
       expect(shimPathStatus(shim, { PATH: '/nonexistent-dir' })).toEqual({ kind: 'not-on-path' });
+    } finally {
+      removeTestPath(root);
+    }
+  });
+
+  it('skips a non-executable cargo earlier on PATH, as the shell does', () => {
+    const root = mkdtempSync(join(tmpdir(), 'cc-shim-noexec-'));
+    try {
+      const dirA = join(root, 'a');
+      const dirB = join(root, 'b');
+      mkdirSync(dirA, { recursive: true });
+      mkdirSync(dirB, { recursive: true });
+      const inert = join(dirA, 'cargo');
+      writeFileSync(inert, '#!/bin/sh\n');
+      chmodSync(inert, 0o644);
+      const shim = join(dirB, 'cargo');
+      writeFileSync(shim, renderCargoShim({ haulerArgv: ['hauler'], realCargo: '/usr/bin/cargo' }));
+      chmodSync(shim, 0o755);
+      const env = { PATH: `${dirA}:${dirB}` };
+
+      expect(shimPathStatus(shim, env)).toEqual({ kind: 'wins' });
+      expect(findCargoShim(env)).toEqual({
+        haulerArgv: ['hauler'],
+        path: shim,
+        realCargo: '/usr/bin/cargo',
+      });
     } finally {
       removeTestPath(root);
     }
