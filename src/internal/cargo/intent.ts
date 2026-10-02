@@ -24,7 +24,10 @@ export interface ParsedCargoArgv {
   readonly targetDir: string | null;
   readonly targetTriple: string | null;
   readonly targets: readonly string[];
-  /** Positional test-name filters (`cargo test <NAME>`, nextest run filters). */
+  /**
+   * Positional test-name filters: at most one for `cargo test` / `cargo bench`
+   * (cargo rejects a second, so it stays opaque), any number for nextest run.
+   */
   readonly testFilters: readonly string[];
   readonly toolchain: string | null;
   readonly workspace: boolean;
@@ -660,6 +663,8 @@ export const parseCargoArgv = (input: readonly string[]): ParsedCargoArgv => {
           opaqueArguments.push(argument);
         } else if (subcommand === 'nextest' && nextestCommand === null) {
           nextestCommand = argument;
+        } else if (subcommand !== 'nextest' && testFilters.length > 0) {
+          opaqueArguments.push(argument);
         } else {
           testFilters.push(argument);
         }

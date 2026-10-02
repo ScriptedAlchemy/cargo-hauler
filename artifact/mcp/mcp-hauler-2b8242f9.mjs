@@ -9935,6 +9935,8 @@ var __webpack_modules__ = {
                             opaqueArguments.push(argument);
                         } else if (subcommand === 'nextest' && nextestCommand === null) {
                             nextestCommand = argument;
+                        } else if (subcommand !== 'nextest' && testFilters.length > 0) {
+                            opaqueArguments.push(argument);
                         } else {
                             testFilters.push(argument);
                         }
@@ -86929,7 +86931,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                 name: "hauler_status"
             })
         });
-        const EVENT_ARTIFACT_EPOCH = "4734bafd075da6a7a672415dbb41f2664ec645fcda77de62c0d3b041369235a4";
+        const EVENT_ARTIFACT_EPOCH = "47a6ef37bbafaf10b5921627f6162c3c9053446d872e62de371753120b47e886";
         const EVENT_ALLOWED_TARGETS = Object.freeze([
             "claude",
             "codex",

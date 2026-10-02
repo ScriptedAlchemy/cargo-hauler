@@ -70,8 +70,8 @@ const filteredTest = [
   'alpha',
   '--lib',
   'daemon::tests::route',
-  'mcp::server::tests::wire',
   '--',
+  'mcp::server::tests::wire',
   '--test-threads=4',
 ];
 const noRunCompile = ['cargo', 'test', '-p', 'alpha', '--lib', '--no-run'];
