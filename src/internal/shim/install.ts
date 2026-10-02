@@ -153,7 +153,7 @@ const isExecutableFile = (path: string): boolean => {
 const pathCargo = (env: Readonly<Record<string, string | undefined>>): string | null => {
   for (const entry of (env.PATH ?? '').split(delimiter)) {
     const candidate = join(entry, 'cargo');
-    if (entry.length > 0 && isFile(candidate)) {
+    if (entry.length > 0 && isExecutableFile(candidate)) {
       return candidate;
     }
   }
