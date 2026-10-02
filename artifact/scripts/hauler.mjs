@@ -518,7 +518,7 @@ var __webpack_modules__ = {
         }
     },
     "./node_modules/.pnpm/graceful-fs@4.2.11/node_modules/graceful-fs/polyfills.js" (module, __unused_rspack_exports, __webpack_require__) {
-        var constants1 = __webpack_require__("constants");
+        var constants = __webpack_require__("constants");
         var origCwd = process.cwd;
         var cwd = null;
         var platform = process.env.GRACEFUL_FS_PLATFORM || process.platform;
@@ -539,7 +539,7 @@ var __webpack_modules__ = {
         }
         module.exports = patch;
         function patch(fs) {
-            if (constants1.hasOwnProperty('O_SYMLINK') && process.version.match(/^v0\.6\.[0-2]|^v0\.5\./)) {
+            if (constants.hasOwnProperty('O_SYMLINK') && process.version.match(/^v0\.6\.[0-2]|^v0\.5\./)) {
                 patchLchmod(fs);
             }
             if (!fs.lutimes) {
@@ -634,7 +634,7 @@ var __webpack_modules__ = {
             }(fs.readSync);
             function patchLchmod(fs) {
                 fs.lchmod = function(path, mode, callback) {
-                    fs.open(path, constants1.O_WRONLY | constants1.O_SYMLINK, mode, function(err, fd) {
+                    fs.open(path, constants.O_WRONLY | constants.O_SYMLINK, mode, function(err, fd) {
                         if (err) {
                             if (callback) callback(err);
                             return;
@@ -647,7 +647,7 @@ var __webpack_modules__ = {
                     });
                 };
                 fs.lchmodSync = function(path, mode) {
-                    var fd = fs.openSync(path, constants1.O_WRONLY | constants1.O_SYMLINK, mode);
+                    var fd = fs.openSync(path, constants.O_WRONLY | constants.O_SYMLINK, mode);
                     var threw = true;
                     var ret;
                     try {
@@ -666,9 +666,9 @@ var __webpack_modules__ = {
                 };
             }
             function patchLutimes(fs) {
-                if (constants1.hasOwnProperty("O_SYMLINK") && fs.futimes) {
+                if (constants.hasOwnProperty("O_SYMLINK") && fs.futimes) {
                     fs.lutimes = function(path, at, mt, cb) {
-                        fs.open(path, constants1.O_SYMLINK, function(er, fd) {
+                        fs.open(path, constants.O_SYMLINK, function(er, fd) {
                             if (er) {
                                 if (cb) cb(er);
                                 return;
@@ -681,7 +681,7 @@ var __webpack_modules__ = {
                         });
                     };
                     fs.lutimesSync = function(path, at, mt) {
-                        var fd = fs.openSync(path, constants1.O_SYMLINK);
+                        var fd = fs.openSync(path, constants.O_SYMLINK);
                         var ret;
                         var threw = true;
                         try {
@@ -16898,7 +16898,7 @@ exec ${hauler} exec --host shim -- ${cargo} "$@"
         };
         const isExecutableFile = (path)=>{
             try {
-                accessSync(path, constants.X_OK);
+                (0, node_fs__rspack_import_0.accessSync)(path, node_fs__rspack_import_0.constants.X_OK);
             } catch  {
                 return false;
             }
@@ -16907,7 +16907,7 @@ exec ${hauler} exec --host shim -- ${cargo} "$@"
         const pathCargo = (env)=>{
             for (const entry of (env.PATH ?? '').split(node_path__rspack_import_2.delimiter)){
                 const candidate = (0, node_path__rspack_import_2.join)(entry, 'cargo');
-                if (entry.length > 0 && isFile(candidate)) {
+                if (entry.length > 0 && isExecutableFile(candidate)) {
                     return candidate;
                 }
             }
