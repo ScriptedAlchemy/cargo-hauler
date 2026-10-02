@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.1
+
+### Patch Changes
+
+- e779145: GitHub workers again copy each snapshot's exported test reports into the evidence artifact, next to its count summary, so a failed lane names its failing tests.
+
 ## 0.12.0
 
 ### Minor Changes
