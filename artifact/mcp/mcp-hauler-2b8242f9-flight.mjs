@@ -13201,6 +13201,8 @@ var __webpack_modules__ = {
                             opaqueArguments.push(argument);
                         } else if (subcommand === 'nextest' && nextestCommand === null) {
                             nextestCommand = argument;
+                        } else if (subcommand !== 'nextest' && testFilters.length > 0) {
+                            opaqueArguments.push(argument);
                         } else {
                             testFilters.push(argument);
                         }
