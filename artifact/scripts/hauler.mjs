@@ -15869,7 +15869,7 @@ var __webpack_modules__ = {
                     return indexCache.result;
                 }
                 const result = aggregateIndexScan(await scanIndex(indexPath, indexReadTimeoutMs));
-                indexCache = {
+                indexCache = result.state === 'timed-out' ? undefined : {
                     fingerprint,
                     result
                 };
