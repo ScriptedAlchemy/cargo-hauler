@@ -280,9 +280,8 @@ describe('test --no-run riding a running test (#88)', () => {
 
   it('lets the observed cc-5527 shape ride cc-5526: same package and --lib, leader filters ignored', () => {
     const leader = [
-      'test', '-p', 'tracedecay', '--lib',
-      'daemon::tests::rmcp_route', 'mcp::server::tests::wire', 'a::b', 'c::d',
-      '--', '--test-threads=4',
+      'test', '-p', 'tracedecay', '--lib', 'daemon::tests::rmcp_route',
+      '--', 'mcp::server::tests::wire', 'a::b', 'c::d', '--test-threads=4',
     ];
     expect(coverage(leader, ['test', '-p', 'tracedecay', '--lib', '--no-run'])).toEqual({
       _tag: 'attach',
