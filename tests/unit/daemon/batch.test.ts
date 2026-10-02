@@ -318,6 +318,15 @@ describe('batchKindFor', () => {
     );
   });
 
+  it('keeps a run with two positional TESTNAMEs out of every composite', () => {
+    const invalid = intent(['cargo', 'test', '-p', 'alpha', '--lib', 'A', 'B']);
+    const rider = intent(['cargo', 'test', '-p', 'alpha', '--lib', '--', 'B', 'A']);
+    expect(batchKindFor(invalid)).toBe(null);
+    expect(batchKindFor(rider)).toBe('test');
+    expect(batchCompatibleFor('test', invalid, rider)).toBe(false);
+    expect(batchCompatibleFor('test', rider, invalid)).toBe(false);
+  });
+
   it('lets a test run lead with foldable harness flags after `--` (#87)', () => {
     expect(
       batchKindFor(intent(['cargo', 'test', '-p', 'alpha', '--', 'a_filter', '--test-threads=4'])),

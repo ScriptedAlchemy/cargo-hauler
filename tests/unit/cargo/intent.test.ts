@@ -168,6 +168,15 @@ describe('parseCargoArgv', () => {
     expect(parsed.opaqueArguments).toEqual([]);
   });
 
+  it('keeps a second cargo test positional out of the TESTNAME slot', () => {
+    const parsed = parseCargoArgv(['cargo', 'test', '-p', 'alpha', '--lib', 'A', 'B']);
+    expect(parsed.testFilters).toEqual(['A']);
+    expect(parsed.opaqueArguments).toEqual(['B']);
+    const nextest = parseCargoArgv(['cargo', 'nextest', 'run', 'A', 'B']);
+    expect(nextest.testFilters).toEqual(['A', 'B']);
+    expect(nextest.opaqueArguments).toEqual([]);
+  });
+
   it('models the nextest run command, filtersets, and positional filters', () => {
     const parsed = parseCargoArgv([
       'cargo',
