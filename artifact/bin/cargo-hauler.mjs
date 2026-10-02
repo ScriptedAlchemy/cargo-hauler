@@ -16945,10 +16945,12 @@ var __webpack_modules__ = {
                                 lane.pending.splice(index, 1);
                                 candidate.attachGate.open = false;
                                 directory.remove(candidate.ticket);
+                                const decision = (0, _coverage_js__rspack_import_4.lW)(leader.intent, candidate.intent);
+                                const identical = decision._tag === 'attach' && decision.mode === 'identity';
                                 const candidateAttachment = (0, _job_state_js__rspack_import_9.qD)({
                                     id: candidate.id,
                                     ticket: candidate.ticket,
-                                    mode: 'batch',
+                                    mode: identical ? 'identity' : 'batch',
                                     input: candidate.input,
                                     intent: candidate.intent,
                                     callbacks: candidate.callbacks,
@@ -16967,7 +16969,9 @@ var __webpack_modules__ = {
                                 for (const attachment of candidate.attachments.values()){
                                     switch(attachment.mode){
                                         case 'identity':
-                                            attachment.mode = 'batch';
+                                            if (!identical) {
+                                                attachment.mode = 'batch';
+                                            }
                                             break;
                                         case 'coverage':
                                         case 'batch':
