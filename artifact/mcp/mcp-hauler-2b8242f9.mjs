@@ -11834,7 +11834,7 @@ var __webpack_modules__ = {
         }
         const minimumDefaultMaxConcurrent = 5;
         const maximumDefaultMaxConcurrent = 16;
-        const coresPerDefaultPermit = 8;
+        const coresPerDefaultPermit = 6;
         const defaultReplayBufferBytes = 4 * 1024 * 1024;
         const defaultLoadMinConcurrent = 2;
         const defaultCpuStallThreshold = 75;
@@ -86929,7 +86929,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                 name: "hauler_status"
             })
         });
-        const EVENT_ARTIFACT_EPOCH = "aebfff0f8609f7927c2faf4a3c2ed1996980fbc68e25746497a29ab8b2fe0b34";
+        const EVENT_ARTIFACT_EPOCH = "69a0c1f6d23615de82c156ca0e38df16981fbe0f962cd79c3e858b7943723fde";
         const EVENT_ALLOWED_TARGETS = Object.freeze([
             "claude",
             "codex",

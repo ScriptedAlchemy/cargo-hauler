@@ -192,7 +192,7 @@ hands its slot to the next request, and that compile overlaps the leader's
 test run (`CARGO_HAULER_OVERLAP_EXECUTION=0` restores strict one-at-a-time).
 Different lanes may run concurrently after each acquires one of the global
 admission permits. `CARGO_HAULER_MAX_CONCURRENT` controls the machine-wide
-permit count. The default is one permit per eight cores, clamped between five
+permit count. The default is one permit per six cores, clamped between five
 and sixteen, since the shared jobserver already bounds compile parallelism and
 the pressure arms defer admission under load. Attached requests (riders) do
 not hold permits. The admission meter counts permit holders and reports riders
@@ -709,7 +709,7 @@ commands submitted through supported agent shells. The optional PATH shim
 | --- | --- | --- |
 | `CARGO_HAULER_STATE_DIR` | Per-user cache directory | Unix socket or Windows named pipe source, SQLite ledger, daemon log, pid lock, `hook-state.json`, `hook-events.jsonl`, and the per-ticket output logs under `tickets/`. The directory is owner-private on Linux and macOS. It is `0700`, its sensitive files are `0600`, and the daemon refuses an unsafe or unowned path rather than reusing it. |
 | `CARGO_HAULER_CARGO_BIN` | `$CARGO_HOME/bin/cargo` | Cargo binary for daemon-started work. Bare `cargo` is the last fallback. The daemon never resolves it through `PATH`. The daemon reads it from its own environment (export it where the daemon starts, or before `hauler daemon start`), and clients do not forward it. |
-| `CARGO_HAULER_MAX_CONCURRENT` | cores ÷ 8, clamped to 5 through 16 | Global admission permits for Cargo processes across all lanes, as an integer >= 1. |
+| `CARGO_HAULER_MAX_CONCURRENT` | cores ÷ 6, clamped to 5 through 16 | Global admission permits for Cargo processes across all lanes, as an integer >= 1. |
 | `CARGO_HAULER_OVERLAP_EXECUTION` | `1` | Hand a lane to its next request once a `test`, `nextest`, `bench`, or `run` leader reports its build finished, which overlaps the next compile with the leader's execution phase. `0` keeps a lane strictly one process at a time. |
 | `CARGO_HAULER_ALLOW_SHARED_TARGET` | `0` | Allow different workspace roots to use one external target directory. The daemon still warns, and status flags the lanes, because Cargo artifacts can collide. Set it on the request as `1`, or in the daemon environment to allow all requests. |
 | `CARGO_HAULER_JOBS_GRANT` | `max(4, cores / max concurrent)` | `CARGO_BUILD_JOBS` added to each Cargo process only while the shared jobserver FIFO is not armed. An armed daemon injects `MAKEFLAGS` instead and leaves `CARGO_BUILD_JOBS` unset. `0` disables injection. |

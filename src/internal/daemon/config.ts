@@ -142,7 +142,7 @@ export class DaemonConfig extends Context.Service<DaemonConfig, DaemonConfigShap
 
 const minimumDefaultMaxConcurrent = 5;
 const maximumDefaultMaxConcurrent = 16;
-const coresPerDefaultPermit = 8;
+const coresPerDefaultPermit = 6;
 const defaultReplayBufferBytes = 4 * 1024 * 1024;
 const defaultLoadMinConcurrent = 2;
 const defaultCpuStallThreshold = 75;
@@ -163,7 +163,7 @@ const defaultTicketLogMaxBytes = 64 * 1024 * 1024;
 
 /**
  * Default admission permits for a machine with `cores` hardware threads:
- * one per eight cores, never below the historical five nor above sixteen.
+ * one per six cores, never below the historical five nor above sixteen.
  * The shared jobserver already bounds compile parallelism machine-wide and
  * the pressure arms defer admission under load, so extra permits on a large
  * machine only let more lanes make progress at once instead of parking

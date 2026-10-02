@@ -18070,7 +18070,7 @@ var __webpack_modules__ = {
         }
         const minimumDefaultMaxConcurrent = 5;
         const maximumDefaultMaxConcurrent = 16;
-        const coresPerDefaultPermit = 8;
+        const coresPerDefaultPermit = 6;
         const defaultReplayBufferBytes = 4 * 1024 * 1024;
         const defaultLoadMinConcurrent = 2;
         const defaultCpuStallThreshold = 75;
