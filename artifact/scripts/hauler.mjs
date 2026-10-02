@@ -8681,7 +8681,7 @@ var __webpack_modules__ = {
                     }
                     return won;
                 });
-            const finishAttachment = (attachment, atMs, exit, savings = null)=>effect_Effect__rspack_import_6.JkU(function*() {
+            const finishAttachment = (leader, attachment, atMs, exit, savings = null)=>effect_Effect__rspack_import_6.JkU(function*() {
                     const startedAtMs = attachment.startedAtMs;
                     yield* (0, _job_state_js__rspack_import_4.sb)(`ledger.markFinished (${attachment.ticket})`, ledger.markFinished(attachment.id, {
                         status: exit.status,
@@ -8691,7 +8691,7 @@ var __webpack_modules__ = {
                         outputTail: attachment.tail.toString(),
                         error: exit.error,
                         ...savings === null ? {} : savings,
-                        ...(0, _job_state_js__rspack_import_4.Az)(attachment.diagnostics)
+                        ...(0, _job_state_js__rspack_import_4.Az)(leader.startedAtMs === null ? null : attachment.diagnostics)
                     }));
                     yield* (0, _job_state_js__rspack_import_4.sb)(`metrics (${attachment.ticket})`, effect_Metric__rspack_import_7.yo(_reporting_broker_metrics_js__rspack_import_1.QV, exit.status));
                     yield* (0, _job_state_js__rspack_import_4.sb)(`notifyWaiters (${attachment.ticket})`, directory.notifyWaiters(attachment.ticket));
@@ -8723,7 +8723,7 @@ var __webpack_modules__ = {
                         channel: 'stderr',
                         data: encodedNote
                     }));
-                    yield* finishAttachment(attachment, atMs, exit, savings);
+                    yield* finishAttachment(leader, attachment, atMs, exit, savings);
                 });
             const decideAttach = (job, attachment)=>{
                 const decision = (0, _coverage_js__rspack_import_3.lW)(job.intent, attachment.intent);
@@ -9054,7 +9054,7 @@ var __webpack_modules__ = {
                             }, servedSavings(attachment, atMs, leaderRunMs, job));
                         }
                         if (mirrors) {
-                            return notifyAttachmentStarted(job, attachment, atMs).pipe(effect_Effect__rspack_import_6.hgn(finishAttachment(attachment, atMs, {
+                            return notifyAttachmentStarted(job, attachment, atMs).pipe(effect_Effect__rspack_import_6.hgn(finishAttachment(job, attachment, atMs, {
                                 status,
                                 exitCode,
                                 signal,
@@ -9064,7 +9064,7 @@ var __webpack_modules__ = {
                         if (requeue !== null) {
                             return requeue(attachment, (0, _job_state_js__rspack_import_4.c0)(attachment.mode, status));
                         }
-                        return finishAttachment(attachment, atMs, {
+                        return finishAttachment(job, attachment, atMs, {
                             status: 'killed',
                             exitCode: null,
                             signal: null,
@@ -9387,7 +9387,7 @@ var __webpack_modules__ = {
                     if (!removed) {
                         return false;
                     }
-                    yield* attachments.finishAttachment(entry.attachment, Date.now(), {
+                    yield* attachments.finishAttachment(entry.leader, entry.attachment, Date.now(), {
                         status: 'killed',
                         exitCode: null,
                         signal: null,
@@ -10702,9 +10702,9 @@ var __webpack_modules__ = {
                             atMs,
                             exitCode,
                             signal,
-                            outputTail: job.tail.toString(),
+                            outputTail: startedAtMs === null ? null : job.tail.toString(),
                             error,
-                            ...(0, _job_state_js__rspack_import_9.Az)(job.demux?.globalDiagnostics ?? null)
+                            ...(0, _job_state_js__rspack_import_9.Az)(startedAtMs === null ? null : job.demux?.globalDiagnostics ?? null)
                         }));
                         yield* step('metrics', effect_Metric__rspack_import_22.yo(_reporting_broker_metrics_js__rspack_import_5.QV, status).pipe(effect_Effect__rspack_import_15.hgn(startedAtMs === null ? effect_Effect__rspack_import_15.rIH : effect_Metric__rspack_import_22.yo(_reporting_broker_metrics_js__rspack_import_5.eC, waitMs))));
                         yield* step('notifyWaiters', directory.notifyWaiters(job.ticket));
@@ -17422,11 +17422,11 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
          END,
          exit_code = ?,
          signal = ?,
-         output_tail = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
+         output_tail = ?,
          error = ?,
-         error_count = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
-         warning_count = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
-         diagnostics_json = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
+         error_count = ?,
+         warning_count = ?,
+         diagnostics_json = ?,
          saved_compute_ms = ?,
          saved_compute_source = ?,
          saved_latency_ms = ?
