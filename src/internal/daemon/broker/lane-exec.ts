@@ -660,9 +660,11 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
               atMs,
               exitCode,
               signal,
-              outputTail: job.tail.toString(),
+              outputTail: startedAtMs === null ? null : job.tail.toString(),
               error,
-              ...diagnosticFinishFields(job.demux?.globalDiagnostics ?? null),
+              ...diagnosticFinishFields(
+                startedAtMs === null ? null : (job.demux?.globalDiagnostics ?? null),
+              ),
             }),
           );
           yield* step(

@@ -589,6 +589,7 @@ export const BrokerLive: Layer.Layer<
           return false;
         }
         yield* attachments.finishAttachment(
+          entry.leader,
           entry.attachment,
           Date.now(),
           { status: 'killed', exitCode: null, signal: null, error: 'detached by kill' },

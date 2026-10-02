@@ -598,6 +598,63 @@ describe('attachment registration races (#52)', () => {
       ).pipe(Effect.provide(layer));
     }));
 
+  it.live('keeps a follower error count when its running leader fails during registration', () =>
+    Effect.gen(function* () {
+      let leaderTicket: string | null = null;
+      const followerExited = Deferred.makeUnsafe<ExitInfo>();
+      const { fixture, layer, ledger } = yield* brokerFixture(1, (base) => ({
+        ...base,
+        markAttached: (id, input) =>
+          (input.leaderTicket === leaderTicket
+            ? Effect.asVoid(Deferred.await(followerExited))
+            : Effect.void
+          ).pipe(Effect.andThen(base.markAttached(id, input))),
+      }));
+      const env = stagedCargo(fixture, [
+        'sleep:0.4',
+        JSON.stringify({
+          reason: 'compiler-message',
+          package_id: 'path+file:///fx#aa@0.1.0',
+          target: { kind: ['lib'], name: 'aa' },
+          message: { rendered: 'error[E0432]: unresolved import\n', level: 'error' },
+        }),
+        '{"reason":"build-finished","success":false}',
+        'exit:101',
+      ]);
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const broker = yield* Broker;
+          const input = { argv: ['cargo', 'check', '-p', 'aa'], cwd: fixture.ws1, env };
+          const leader = yield* submitTracked(broker, input);
+          leaderTicket = leader.submitted.ticket;
+          yield* Deferred.await(leader.started);
+
+          const followerFiber = yield* Effect.forkChild(
+            submitTracked(broker, input, {
+              onExit: (info) => Effect.asVoid(Deferred.succeed(followerExited, info)),
+            }),
+          );
+          const leaderExit = yield* Deferred.await(leader.exit).pipe(Effect.timeout('10 seconds'));
+          expect(leaderExit.status).toBe('failed');
+          const followerExit = yield* Deferred.await(followerExited).pipe(
+            Effect.timeout('5 seconds'),
+          );
+          expect(followerExit.status).toBe('failed');
+
+          const follower = yield* Fiber.join(followerFiber);
+          expect(follower.submitted.attachedTo).toBe(leader.submitted.ticket);
+          yield* Effect.sleep('100 millis');
+          const leaderRow = yield* ledger.getRequestByTicket(leader.submitted.ticket);
+          const followerRow = yield* ledger.getRequestByTicket(follower.submitted.ticket);
+          expect({
+            leader: leaderRow?.errorCount,
+            follower: followerRow?.errorCount,
+            followerStarted: followerRow?.startedAtMs ?? null,
+          }).toEqual({ leader: 1, follower: 1, followerStarted: null });
+        }),
+      ).pipe(Effect.provide(layer));
+    }), 20_000);
+
   it.live('keeps the leader running when an early follower release hits a ledger defect', () =>
     Effect.gen(function* () {
       let failFinishForId: number | null = null;

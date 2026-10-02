@@ -14529,11 +14529,11 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
          END,
          exit_code = ?,
          signal = ?,
-         output_tail = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
+         output_tail = ?,
          error = ?,
-         error_count = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
-         warning_count = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
-         diagnostics_json = CASE WHEN started_at_ms IS NULL THEN NULL ELSE ? END,
+         error_count = ?,
+         warning_count = ?,
+         diagnostics_json = ?,
          saved_compute_ms = ?,
          saved_compute_source = ?,
          saved_latency_ms = ?
@@ -86931,7 +86931,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                 name: "hauler_status"
             })
         });
-        const EVENT_ARTIFACT_EPOCH = "c87ff59e422c319e66239e23fa4bd40640aa4b081a8f5bbf60390087ef5a37f6";
+        const EVENT_ARTIFACT_EPOCH = "3f9fd4603bb9e21aedcc37dfb0f80c4e8bd7048e6e117e3a860fe7dea430c7c3";
         const EVENT_ALLOWED_TARGETS = Object.freeze([
             "claude",
             "codex",
