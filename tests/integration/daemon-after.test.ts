@@ -166,6 +166,41 @@ describe('explicit ticket dependencies (--after)', () => {
       ).pipe(Effect.provide(layer));
     }));
 
+  it.live('folds an identical released dependent onto its twin as an identity rider', () =>
+    Effect.gen(function* () {
+      const { fixture, layer } = yield* brokerFixture(5);
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const broker = yield* Broker;
+          const prerequisite = yield* submit(broker, fixture, {
+            argv: ['cargo', 'build', '-p', 'base'],
+            cwd: fixture.ws1,
+            sleep: '0.3',
+          });
+          yield* Deferred.await(prerequisite.started);
+          const twin = (): Effect.Effect<Submitted, unknown> =>
+            submit(broker, fixture, {
+              after: [prerequisite.result.ticket],
+              argv: ['cargo', 'check', '-p', 'twin'],
+              cwd: fixture.ws1,
+              sleep: '0.2',
+            });
+          const first = yield* twin();
+          const second = yield* twin();
+          expect(second.result.attachedTo).toBeUndefined();
+
+          const records = [
+            yield* settled(broker, first.result.ticket),
+            yield* settled(broker, second.result.ticket),
+          ];
+          const follower = records.find((record) => record.attachedTo !== null);
+          expect(records.map((record) => record.status)).toEqual(['done', 'done']);
+          expect(follower?.attachMode).toBe('identity');
+          expect(follower?.savedComputeMs ?? 0).toBeGreaterThan(0);
+        }),
+      ).pipe(Effect.provide(layer));
+    }));
+
   it.live('waits for a prerequisite that runs in another lane', () =>
     Effect.gen(function* () {
       const { fixture, layer } = yield* brokerFixture(5);
