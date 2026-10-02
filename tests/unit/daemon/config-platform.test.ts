@@ -278,11 +278,11 @@ describe('daemon config platform posture', () => {
 });
 
 describe('admission permit defaults', () => {
-  it('scales default permits with cores, one per eight, clamped between 5 and 16', () => {
+  it('scales default permits with cores, one per six, clamped between 5 and 16', () => {
     expect(defaultMaxConcurrentFor(4)).toBe(5);
-    expect(defaultMaxConcurrentFor(40)).toBe(5);
-    expect(defaultMaxConcurrentFor(48)).toBe(6);
-    expect(defaultMaxConcurrentFor(96)).toBe(12);
+    expect(defaultMaxConcurrentFor(30)).toBe(5);
+    expect(defaultMaxConcurrentFor(48)).toBe(8);
+    expect(defaultMaxConcurrentFor(96)).toBe(16);
     expect(defaultMaxConcurrentFor(256)).toBe(16);
     expect(defaultMaxConcurrentFor(Number.NaN)).toBe(5);
   });
@@ -290,8 +290,8 @@ describe('admission permit defaults', () => {
   it('threads the core count into the default permits and the per-run jobs grant', () => {
     const quiet = () => {};
     const big = resolveDaemonConfig({ CARGO_HAULER_STATE_DIR: '/tmp/cc-test' }, 'linux', quiet, 96);
-    expect(big.maxConcurrent).toBe(12);
-    expect(big.jobsGrant).toBe(8);
+    expect(big.maxConcurrent).toBe(16);
+    expect(big.jobsGrant).toBe(6);
     const small = resolveDaemonConfig({ CARGO_HAULER_STATE_DIR: '/tmp/cc-test' }, 'linux', quiet, 8);
     expect(small.maxConcurrent).toBe(5);
     expect(small.jobsGrant).toBe(4);
