@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile, writeFile, appendFile, mkdtemp, realpath, chmod, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, appendFile, mkdtemp, realpath, chmod, mkdir, cp } from 'node:fs/promises';
 import { resolve, relative, isAbsolute, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -102,7 +102,8 @@ export async function main(env = process.env) {
   const evidence = join(state, 'evidence'), summary = join(evidence, 'summary.json');
   await mkdir(evidence, { mode: 0o700 });
   if (env.GITHUB_OUTPUT) await appendFile(env.GITHUB_OUTPUT, `summary=${summary}\nevidence=${evidence}\n`);
-  const persistSnapshot = async (snapshot, result) => {
+  const persistSnapshot = async (snapshot, result, reports) => {
+    if (reports) await cp(reports, join(evidence, `pr-${snapshot.pr}-${snapshot.merge}`), { recursive: true });
     await writeFile(join(evidence, `pr-${snapshot.pr}-${snapshot.merge}.json`), `${JSON.stringify(snapshot, null, 2)}\n`, { mode: 0o600 });
     await writeFile(summary, `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 });
   };

@@ -63,7 +63,7 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
       const record = { pr: s.pr, head: s.head, base: s.base, merge: s.merge, imageReference: image, conclusion: 'cancelled', readyAt: new Date(s.readyAt).toISOString(), admittedAt: new Date(started).toISOString(), queueSeconds: Math.max(0, (started - s.readyAt) / 1000), durationSeconds: 0, compatibleSandboxReuse: false, stages: [], tasks: [] };
       const ownership = worker && { ...worker, lane: lane.id, ordinal: summary.snapshots.length + 1, remaining: onlyPullRequests ? 0 : maxSnapshots - summary.snapshots.length - 1, finished: false, deadline };
       const outputText = () => [ownership && ownerText(ownership), `hauler-evidence-v1:${JSON.stringify(snapshotEvidence(record))}`].filter(Boolean).join('\n');
-      let check, failed = false, stale = false, polling = false;
+      let check, reports, failed = false, stale = false, polling = false;
       const poll = setInterval(async () => {
         if (polling || controller.signal.aborted) return;
         polling = true;
@@ -124,7 +124,7 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
           if (conclusion === 'failure' && !failed) { failed = true; await report('failure'); }
         }
         if (!controller.signal.aborted && recipe.reports.length) {
-          await stage('reports', async () => { record.junit = await aggregateJUnit(await sandbox.exportReports(recipe.reports)); });
+          await stage('reports', async () => { reports = await sandbox.exportReports(recipe.reports); record.junit = await aggregateJUnit(reports); });
         }
         await report(controller.signal.aborted || stale ? 'cancelled' : failed || record.tasks.length !== lane.tasks.length ? 'failure' : 'success', true);
       } catch {
@@ -139,7 +139,9 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
         record.completedAt = new Date().toISOString();
         record.durationSeconds = (performance.now() - monotonicStart) / 1000;
         summary.snapshots.push(record);
-        if (persistSnapshot) await persistSnapshot(snapshotEvidence(record), summary);
+        // The exported report files go to the evidence artifact; the record
+        // and check run carry only their counts.
+        if (persistSnapshot) await persistSnapshot(snapshotEvidence(record), summary, reports);
       }
     }
   } finally { if (sandbox) await sandbox.close(); }
