@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { drain } from '../../src/internal/github-action/manager.mjs';
 import { plan } from '../../src/internal/github-action/admission.mjs';
 import { checkOwner } from '../../src/internal/github-action/ownership.mjs';
@@ -244,6 +247,17 @@ test('snapshot evidence persists before next admission and records compatible re
   assert.equal(persisted.length, 2);
   assert.equal(result.snapshots[0].compatibleSandboxReuse, false);
   assert.equal(result.snapshots[1].compatibleSandboxReuse, true);
+});
+test('exported reports reach evidence persistence but not the record', async () => {
+  const f = fixture(), directory = await mkdtemp(join(tmpdir(), 'hauler-reports-')), persisted = [];
+  await writeFile(join(directory, 'lane.xml'), '<testsuites tests="2" failures="1"><testsuite tests="2" failures="1"/></testsuites>');
+  const original = f.options.sandboxFactory;
+  f.options.sandboxFactory = async (...args) => ({ ...await original(...args), async exportReports() { return directory; } });
+  const result = await drain({ ...f.options, recipe: { ...recipe, reports: ['target/reports'] }, maxSnapshots: 1, persistSnapshot: async (record, summary, reports) => { persisted.push({ record, reports }); } });
+  assert.deepEqual(persisted.map(entry => entry.reports), [directory]);
+  assert.deepEqual(persisted[0].record.junit, { tests: 2, failures: 1, errors: 0, skipped: 0 });
+  assert.ok(!JSON.stringify(result).includes(directory));
+  assert.ok(![...f.checks.values()].some(check => JSON.stringify(check).includes(directory)));
 });
 test('completed early failures keep ownership unfinished until remaining tasks finish', async () => {
   const f = fixture({ fail: true }), original = f.options.fetchImpl, failureBodies = [];
