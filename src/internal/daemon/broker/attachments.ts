@@ -48,6 +48,7 @@ export interface AttachmentRuntime {
     atMs: number,
   ) => Effect.Effect<boolean>;
   readonly finishAttachment: (
+    leader: Job,
     attachment: Attachment,
     atMs: number,
     exit: Omit<ExitInfo, 'ticket' | 'waitMs' | 'runMs'>,
@@ -297,6 +298,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
     });
 
   const finishAttachment = (
+    leader: Job,
     attachment: Attachment,
     atMs: number,
     exit: Omit<ExitInfo, 'ticket' | 'waitMs' | 'runMs'>,
@@ -316,7 +318,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
           outputTail: attachment.tail.toString(),
           error: exit.error,
           ...(savings === null ? {} : savings),
-          ...diagnosticFinishFields(attachment.diagnostics),
+          ...diagnosticFinishFields(leader.startedAtMs === null ? null : attachment.diagnostics),
         }),
       );
       yield* settlementStep(
@@ -370,7 +372,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
           data: encodedNote,
         }),
       );
-      yield* finishAttachment(attachment, atMs, exit, savings);
+      yield* finishAttachment(leader, attachment, atMs, exit, savings);
     });
 
   /**
@@ -857,6 +859,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
           return notifyAttachmentStarted(job, attachment, atMs).pipe(
             Effect.andThen(
               finishAttachment(
+                job,
                 attachment,
                 atMs,
                 { status, exitCode, signal, error },
@@ -868,7 +871,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
         if (requeue !== null) {
           return requeue(attachment, requeueReasonFor(attachment.mode, status));
         }
-        return finishAttachment(attachment, atMs, {
+        return finishAttachment(job, attachment, atMs, {
           status: 'killed',
           exitCode: null,
           signal: null,
