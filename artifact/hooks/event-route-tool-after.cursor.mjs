@@ -1535,7 +1535,7 @@ var __webpack_modules__ = {
         }
     },
     "./src/events/tool/after.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-        var agent_bundle_routes__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/routes.js");
+        var agent_bundle_routes__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/routes.js");
         var _internal_host_hooks_hook_state_js__rspack_import_1 = __webpack_require__("./src/internal/host-hooks/hook-state.ts");
         var _internal_host_hooks_session_ping_js__rspack_import_2 = __webpack_require__("./src/internal/host-hooks/session-ping.ts");
         var _internal_host_hooks_tokens_js__rspack_import_3 = __webpack_require__("./src/internal/host-hooks/tokens.ts");
@@ -3138,9 +3138,9 @@ var __webpack_modules__ = {
     "util" (module) {
         module.exports = __rspack_createRequire_require("util");
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/40.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_6f233c389e1c622f766ad876672bffe5/node_modules/@agent-bundle/runtime/dist/40.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_fs_promises__rspack_import_0 = __webpack_require__("node:fs/promises");
-        var _736_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/736.js");
+        var _736_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_6f233c389e1c622f766ad876672bffe5/node_modules/@agent-bundle/runtime/dist/736.js");
         const CODEX_ROLLOUT_HEAD_BYTES = 1048576;
         const ROLLOUT_BASENAME = /rollout-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\.jsonl$/iu;
         const codexThreadFromRolloutPath = (path)=>{
@@ -3321,12 +3321,12 @@ var __webpack_modules__ = {
             Bu: resolveStandaloneLineage
         });
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/49.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_6f233c389e1c622f766ad876672bffe5/node_modules/@agent-bundle/runtime/dist/49.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
         var node_fs__rspack_import_1 = __webpack_require__("node:fs");
         var node_os__rspack_import_2 = __webpack_require__("node:os");
         var node_path__rspack_import_3 = __webpack_require__("node:path");
-        var _736_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/736.js");
+        var _736_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_6f233c389e1c622f766ad876672bffe5/node_modules/@agent-bundle/runtime/dist/736.js");
         const PLUGIN_ROOT_ENV_ANCHOR = 'AGENT_BUNDLE_PLUGIN_ROOT';
         const PLUGIN_STATE_ROOT_ENV_ANCHOR = 'AGENT_BUNDLE_STATE_ROOT';
         const PLUGIN_STATE_DIRECTORY = 'state';
@@ -3392,7 +3392,7 @@ var __webpack_modules__ = {
             E7: resolvePluginRoot
         });
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/736.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_6f233c389e1c622f766ad876672bffe5/node_modules/@agent-bundle/runtime/dist/736.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_async_hooks__rspack_import_0 = __webpack_require__("node:async_hooks");
         const AGENT_REQUEST_STORE_VERSION = 6;
         const STORE_SYMBOL = Symbol.for('@agent-bundle/runtime/request-store');
@@ -3676,15 +3676,15 @@ var __webpack_modules__ = {
             qC: available
         });
     },
-    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/request.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-        var _736_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/736.js");
+    "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_6f233c389e1c622f766ad876672bffe5/node_modules/@agent-bundle/runtime/dist/request.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+        var _736_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_6f233c389e1c622f766ad876672bffe5/node_modules/@agent-bundle/runtime/dist/736.js");
         var request_AGENT_REQUEST_STORE_VERSION = 6;
         var request_PLUGIN_STATE_DIRECTORY = "state";
         __webpack_require__.d(__webpack_exports__, {
             agent: ()=>_736_js__rspack_import_0.MA
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/242~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/242~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         function getEnumValues(entries) {
             const numericValues = Object.values(entries).filter((v)=>"number" == typeof v);
             const values = Object.entries(entries).filter(([k, _])=>-1 === numericValues.indexOf(+k)).map(([_, v])=>v);
@@ -9383,12 +9383,12 @@ var __webpack_modules__ = {
             xf: ()=>schemas_object
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/573~1.js" (__unused_rspack___webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
-        var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/917~1.js");
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/573~1.js" (__unused_rspack___webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
+        var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/917~1.js");
         const appResourceUri = (reference)=>reference;
         const MAX_ROUTE_RENDER_ELAPSED_MS = 86400000;
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/818~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/818~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         const isPlainObjectOrArray = (value)=>{
             if (Array.isArray(value)) return true;
             const proto = Object.getPrototypeOf(value);
@@ -9405,8 +9405,8 @@ var __webpack_modules__ = {
             o: deepFreeze
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/917~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-        var _818_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/818~1.js");
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/917~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+        var _818_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/818~1.js");
         const canonicalAgentEvents = Object.freeze([
             'session/start',
             'tool/before',
@@ -9967,7 +9967,7 @@ var __webpack_modules__ = {
             wo: eventContracts
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/991~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/991~1.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         const isJsonWhitespace = (code)=>0x09 === code || 0x0a === code || 0x0d === code || 0x20 === code;
         const isValueTerminator = (code)=>isJsonWhitespace(code) || 0x2c === code || 0x7d === code || 0x5d === code;
         const skipWhitespace = (bytes, index)=>{
@@ -10144,15 +10144,15 @@ var __webpack_modules__ = {
             u4: isRecord1
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/event-project.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/event-project.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_crypto__rspack_import_0 = __webpack_require__("node:crypto");
         var node_fs_promises__rspack_import_1 = __webpack_require__("node:fs/promises");
         var node_path__rspack_import_2 = __webpack_require__("node:path");
         var node_url__rspack_import_3 = __webpack_require__("node:url");
-        var _917_1_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/917~1.js");
-        var _242_1_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/242~1.js");
-        var _818_1_js__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/818~1.js");
-        var _991_1_js__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/991~1.js");
+        var _917_1_js__rspack_import_4 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/917~1.js");
+        var _242_1_js__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/242~1.js");
+        var _818_1_js__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/818~1.js");
+        var _991_1_js__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/991~1.js");
         const isJsonValue = (value)=>{
             switch(typeof value){
                 case 'boolean':
@@ -11537,7 +11537,7 @@ var __webpack_modules__ = {
             wG: createEventTracer
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/launch-env.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/launch-env.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
         var node_fs__rspack_import_0 = __webpack_require__("node:fs");
         var node_path__rspack_import_1 = __webpack_require__("node:path");
         const OPERATOR_ENV_FILE_VARIABLE = 'AGENT_BUNDLE_ENV_FILE';
@@ -11660,11 +11660,11 @@ var __webpack_modules__ = {
             OJ: applyOperatorEnv
         });
     },
-    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/routes.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
-        var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/917~1.js");
-        var _573_1_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/573~1.js");
+    "./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/routes.js" (__unused_rspack___webpack_module__, __webpack_exports__, __webpack_require__) {
+        var _917_1_js__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/917~1.js");
+        var _573_1_js__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/573~1.js");
         const defineTool = (config, handler)=>Object.assign(async (props)=>{
-                const { agent } = await Promise.resolve().then(__webpack_require__.bind(__webpack_require__, "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/request.js"));
+                const { agent } = await Promise.resolve().then(__webpack_require__.bind(__webpack_require__, "./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_6f233c389e1c622f766ad876672bffe5/node_modules/@agent-bundle/runtime/dist/request.js"));
                 return handler(props.input, await agent());
             }, config);
         const definitions = {};
@@ -22533,7 +22533,7 @@ var __webpack_modules__ = {
     },
     "./.agent-bundle-virtual/hooks-event-route-tool-after.cursor-0.mjs" (__unused_rspack___webpack_module__, __unused_rspack___webpack_exports__, __webpack_require__) {
         var node_url__rspack_import_0 = __webpack_require__("node:url");
-        var agent_bundle_launch_env__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/launch-env.js");
+        var agent_bundle_launch_env__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/launch-env.js");
         (0, agent_bundle_launch_env__rspack_import_1.OJ)({
             pluginRoot: (0, agent_bundle_launch_env__rspack_import_1.FF)((0, node_url__rspack_import_0.fileURLToPath)(new URL('..', import.meta.url)))
         });
@@ -22544,11 +22544,11 @@ var __webpack_modules__ = {
                 var agent_bundle_launch_env_layer__rspack_import_0 = __webpack_require__("./.agent-bundle-virtual/hooks-event-route-tool-after.cursor-0.mjs");
                 var node_child_process__rspack_import_1 = __webpack_require__("node:child_process");
                 var node_url__rspack_import_2 = __webpack_require__("node:url");
-                var agent_bundle_event_project__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_11f3fc4764ad88a24cb031ff69ba885f/node_modules/agent-bundle/dist/event-project.js");
+                var agent_bundle_event_project__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/event-project.js");
                 var _src_events_tool_after_ts__rspack_import_4 = __webpack_require__("./src/events/tool/after.ts");
-                var _agent_bundle_runtime_request__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/49.js");
-                var _agent_bundle_runtime_request__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/736.js");
-                var _agent_bundle_runtime_lineage__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_e5293a7115b1d1bcd59ded4b7703c7d1/node_modules/@agent-bundle/runtime/dist/40.js");
+                var _agent_bundle_runtime_request__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_6f233c389e1c622f766ad876672bffe5/node_modules/@agent-bundle/runtime/dist/49.js");
+                var _agent_bundle_runtime_request__rspack_import_6 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_6f233c389e1c622f766ad876672bffe5/node_modules/@agent-bundle/runtime/dist/736.js");
+                var _agent_bundle_runtime_lineage__rspack_import_7 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_6f233c389e1c622f766ad876672bffe5/node_modules/@agent-bundle/runtime/dist/40.js");
                 const pluginRoot = (0, _agent_bundle_runtime_request__rspack_import_5.E7)({
                     fallback: (0, node_url__rspack_import_2.fileURLToPath)(new URL('..', import.meta.url)),
                     stateAnchor: 'user-data'
@@ -22617,7 +22617,7 @@ var __webpack_modules__ = {
                     return withEventState(signal, async (bindings)=>{
                         const gate = await (0, _agent_bundle_runtime_request__rspack_import_6.iC)({
                             invocation: {
-                                artifactEpoch: "3bcf0e1f3d3be264e29e41a88304a5ac8d288567f26d8cc897616b8100c8b12a",
+                                artifactEpoch: "88c0c7ce1a2847f79110c5de0d9adb1dee6594058927cd904f3a035b9070d84d",
                                 hostContractRevision: capabilityRevision,
                                 kind: "event",
                                 operationId: `event:${canonicalEvent}`,
