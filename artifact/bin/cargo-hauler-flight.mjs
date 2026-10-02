@@ -11885,7 +11885,7 @@ var __webpack_modules__ = {
             pingDaemon: _control_js__rspack_import_6.LT,
             pollMs: 100,
             processAlive: _shutdown_js__rspack_import_8.FN,
-            requestShutdown: (socketPath)=>(0, _shutdown_js__rspack_import_8.iU)(socketPath, 5000, "0.12.1", true),
+            requestShutdown: (socketPath)=>(0, _shutdown_js__rspack_import_8.iU)(socketPath, 5000, "0.12.2", true),
             spawnDetachedDaemon,
             waitForDaemon
         };
@@ -11897,9 +11897,9 @@ var __webpack_modules__ = {
                     startedAtMs: daemon.startedAtMs,
                     version: daemon.version
                 };
-                if ((0, _contracts_version_order_js__rspack_import_17.M)(daemon.version, "0.12.1")) {
+                if ((0, _contracts_version_order_js__rspack_import_17.M)(daemon.version, "0.12.2")) {
                     return yield* new _shutdown_js__rspack_import_8.gD({
-                        clientVersion: "0.12.1",
+                        clientVersion: "0.12.2",
                         daemon: identity1,
                         socketPath
                     });
@@ -11928,19 +11928,19 @@ var __webpack_modules__ = {
                     startedAtMs: already.startedAtMs,
                     version: already.version
                 };
-                if ((0, _contracts_version_order_js__rspack_import_17.M)(already.version, "0.12.1")) {
+                if ((0, _contracts_version_order_js__rspack_import_17.M)(already.version, "0.12.2")) {
                     if (access === 'read' && (0, _contracts_wire_version_js__rspack_import_18.W)(already)) {
                         return already;
                     }
                     return yield* new _shutdown_js__rspack_import_8.gD({
-                        clientVersion: "0.12.1",
+                        clientVersion: "0.12.2",
                         daemon: identity1,
                         socketPath: config.socketPath
                     });
                 }
                 if (!(0, _contracts_wire_version_js__rspack_import_18.W)(already)) {
                     return yield* new _shutdown_js__rspack_import_8.K9({
-                        clientVersion: "0.12.1",
+                        clientVersion: "0.12.2",
                         daemon: identity1,
                         socketPath: config.socketPath
                     });
@@ -11956,11 +11956,11 @@ var __webpack_modules__ = {
                         return yield* dependencies.waitForDaemon(config.socketPath);
                     });
                 }
-                if (daemon.version === "0.12.1") {
+                if (daemon.version === "0.12.2") {
                     return effect_Effect__rspack_import_15.PyW(daemon);
                 }
                 const deferred = ()=>effect_Effect__rspack_import_15.OH5(()=>{
-                        reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${"0.12.1"} when idle\n`);
+                        reportDiagnostic(`[cargo-hauler] daemon ${daemon.version} will be replaced by ${"0.12.2"} when idle\n`);
                         return daemon;
                     });
                 return dependencies.daemonIsIdle(config.socketPath).pipe(effect_Effect__rspack_import_15.qIB((idle)=>{
@@ -12110,7 +12110,7 @@ var __webpack_modules__ = {
                 }
                 return true;
             });
-        const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = "0.12.1", ifIdle = false)=>effect_Effect__rspack_import_4.DYE(()=>{
+        const requestShutdown = (socketPath, timeoutMs = 5000, clientVersion = "0.12.2", ifIdle = false)=>effect_Effect__rspack_import_4.DYE(()=>{
                 const id = (0, _util_id_js__rspack_import_1.m)();
                 const isResponse = (message)=>message.id === id && (message.type === 'shutting-down' || message.type === 'error');
                 return (0, _control_js__rspack_import_2.Lb)({
@@ -12219,7 +12219,7 @@ var __webpack_modules__ = {
             constructor(fields){
                 super({
                     ...fields,
-                    message: `cargo-hauler daemon at ${fields.socketPath} sent a ticket record this client (${"0.12.1"}) cannot read. The daemon is another release or build, and \`hauler status\` names it with the command that replaces it.`
+                    message: `cargo-hauler daemon at ${fields.socketPath} sent a ticket record this client (${"0.12.2"}) cannot read. The daemon is another release or build, and \`hauler status\` names it with the command that replaces it.`
                 });
             }
         }
@@ -14924,7 +14924,7 @@ var __webpack_modules__ = {
             }, selected);
         };
         const skewSummary = (daemon)=>{
-            const order1 = (0, _contracts_version_order_js__rspack_import_13.Z)(daemon.version, "0.12.1");
+            const order1 = (0, _contracts_version_order_js__rspack_import_13.Z)(daemon.version, "0.12.2");
             const [release, fix] = (()=>{
                 switch(order1){
                     case -1:
@@ -14949,7 +14949,7 @@ var __webpack_modules__ = {
                         }
                 }
             })();
-            return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${"0.12.1"}) cannot read, so this client shows tickets as the ledger recorded them. ${fix}`;
+            return `cargo-hauler daemon pid ${daemon.pid} (${daemon.version}) is ${release} whose status report this client (${"0.12.2"}) cannot read, so this client shows tickets as the ledger recorded them. ${fix}`;
         };
         const fromLiveReport = (raw, daemon, config, query)=>{
             const decoded = _contracts_tool_schemas_js__rspack_import_10.qb.safeParse(raw);
@@ -18365,7 +18365,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                     route: route.id,
                     server: route.serverId ?? null,
                     surface: route.kind,
-                    version: "0.12.1"
+                    version: "0.12.2"
                 }
             };
             return (0, react_jsx_runtime__rspack_import_0.jsxs)(_agent_bundle_runtime__rspack_import_6.g.Result, {
@@ -52686,8 +52686,8 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
     "./.agent-bundle-virtual/meta.mjs" () {
         const name = "cargo-hauler";
         const packageName = "cargo-hauler";
-        const packageVersion = "0.12.1";
-        const version = "0.12.1";
+        const packageVersion = "0.12.2";
+        const version = "0.12.2";
         const meta = Object.freeze({
             name,
             packageName,

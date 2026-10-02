@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.12.2
+
+### Patch Changes
+
+- c797e9e: A `cargo test` run with two positional test names no longer leads, joins, or rides a shared run. Cargo rejects that invocation, and valid runs folded onto it used to inherit its usage error as a false failure.
+- f358263: An identical request folded onto a queued run now attaches as an identity rider instead of a batch rider. Its saved compute is credited in full, so the dashboard and savings metrics no longer under-count it.
+- 33bd8f8: A kache index scan that times out once no longer sticks. The next status refresh scans the index again instead of reporting it as timed out until the index changes or the daemon restarts.
+- b33e3b5: The default admission permit count is now one per six cores instead of one per eight, still clamped to 5 through 16. A 96-core machine admits 16 leaders instead of 12. Replaying a week of ledger traffic from such a machine cut summed queue wait from 1,340 h to 571 h and p90 wait from 1,264 s to 695 s. `CARGO_HAULER_MAX_CONCURRENT` still overrides the default.
+- d3c9430: A request that attaches to a running build and finishes before its attach is fully recorded now keeps the build's error and warning counts and diagnostics in its result.
+- 088eacf: Install and doctor now skip a non-executable `cargo` file earlier on PATH, as the shell does. The installed shim is no longer reported as shadowed, and doctor finds a stale shim behind it.
+
 ## 0.12.1
 
 ### Patch Changes
