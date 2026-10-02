@@ -22,7 +22,7 @@ import {
   withExtraPackages,
 } from '../scheduling/batch.js';
 import { createBuildPhaseDetector, executionSubcommands } from '../../cargo/execution/build-phase.js';
-import { compileSurfaceKey } from './coverage.js';
+import { attachDecisionFor, compileSurfaceKey } from './coverage.js';
 import {
   attachModeMetric,
   cargoRunByKindMetric,
@@ -362,8 +362,11 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
 
     /**
      * Absorbs other queued compatible jobs onto `leader` as batch
-     * attachments. Every composite is the leader's argv plus the followers'
-     * `-p` flags; test/nextest composites also add `--no-fail-fast` and,
+     * attachments, or as identity attachments when `attachDecisionFor`
+     * would have let the candidate ride at submit (twins released together
+     * from `--after`). Every composite is the leader's argv plus the
+     * followers' `-p` flags; test/nextest composites also add
+     * `--no-fail-fast` and,
      * for `cargo test`, the followers' extra name filters, admitting only
      * followers with the leader's `--test` targets and harness flags (#53,
      * #87); compile composites keep the leader's `--` trailer, so only
@@ -416,10 +419,12 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
             lane.pending.splice(index, 1);
             candidate.attachGate.open = false;
             directory.remove(candidate.ticket);
+            const decision = attachDecisionFor(leader.intent, candidate.intent);
+            const identical = decision._tag === 'attach' && decision.mode === 'identity';
             const candidateAttachment = makeAttachment({
               id: candidate.id,
               ticket: candidate.ticket,
-              mode: 'batch',
+              mode: identical ? 'identity' : 'batch',
               input: candidate.input,
               intent: candidate.intent,
               callbacks: candidate.callbacks,
@@ -442,7 +447,9 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
             for (const attachment of candidate.attachments.values()) {
               switch (attachment.mode) {
                 case 'identity':
-                  attachment.mode = 'batch';
+                  if (!identical) {
+                    attachment.mode = 'batch';
+                  }
                   break;
                 case 'coverage':
                 case 'batch':
