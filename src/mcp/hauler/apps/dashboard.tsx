@@ -32,6 +32,7 @@ import {
   kachePressureView,
   kacheProfileGroups,
   laneIsActive,
+  laneTargetCell,
   metricsWindowIds,
   metricsWindowLabel,
   memoryStatView,
@@ -163,6 +164,16 @@ const workspace = (value: unknown): ReactNode =>
       {pathBasename(value)}
     </span>
   );
+const laneTarget = (lane: Parameters<typeof laneTargetCell>[0]): ReactNode => {
+  const target = laneTargetCell(lane);
+  return target === null ? (
+    '—'
+  ) : (
+    <span className="path" title={target.title}>
+      {target.label}
+    </span>
+  );
+};
 const sharedTarget = (lane: Parameters<typeof sharedTargetCell>[0]): ReactNode => {
   const shared = sharedTargetCell(lane);
   return shared === null ? (
@@ -1386,7 +1397,7 @@ const DashboardContent = ({ structured }: { readonly structured: DashboardStatus
               rows={activeLanes.map((lane) => ({
                 cells: [
                   workspace(lane.workspaceRoot),
-                  workspace(lane.targetDir),
+                  laneTarget(lane),
                   sharedTarget(lane),
                   ticket(typeof lane.runningTicket === 'string' ? lane.runningTicket : null),
                   typeof lane.queued === 'number' ? String(lane.queued) : '—',

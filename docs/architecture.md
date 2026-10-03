@@ -64,8 +64,13 @@ twice.
 - **rider.** A request attached to an in-flight leader instead of running
   (`attachments.ts`). `coverage.ts` decides *how* it may attach, by identity
   or by coverage.
-- **lane.** One FIFO per pair of workspace root and resolved target directory
-  (`lane-exec.ts`). A lane runs at most one leader's compile at a time.
+- **lane.** One FIFO per workspace root, resolved target directory, and cargo
+  profile output directory (`debug`, `release`, `perf`), keyed by
+  `laneKeyFor` in `lane-exec.ts` from the intent's `BuildLock`
+  (`cargo/intent.ts`). A lane runs at most one leader's compile at a time,
+  matching the directory lock cargo takes. A whole-target `cargo clean` has
+  its own lane and a per-target-directory gate: it waits for every build on
+  that target directory to settle, and builds wait for it.
 - **admission permit.** The machine-wide cap on concurrently admitted leaders
   (`config.ts`, `scheduling/scheduler.ts`). The CPU pressure arm in
   `scheduling/pressure.ts` defers admission, and `reporting/disk-stats.ts`

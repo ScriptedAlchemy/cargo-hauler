@@ -11,6 +11,7 @@ import {
   formatBytes,
   formatMs,
   heavyCapNote,
+  laneTargetName,
   pathBasename,
   relativeTime,
   shortenPath,
@@ -1098,6 +1099,25 @@ export const laneIsActive = (lane: {
   typeof lane.runningTicket === 'string' ||
   (Array.isArray(lane.executingTickets) && lane.executingTickets.length > 0) ||
   (Array.isArray(lane.sharedTargetWith) && lane.sharedTargetWith.length > 0);
+
+/**
+ * An untyped lane row's target cell: `target/debug` for a profile-dir lane,
+ * `target` for the whole-target clean lane, with the full path for the
+ * tooltip. Null without a target dir.
+ */
+export const laneTargetCell = (lane: {
+  readonly targetDir?: unknown;
+  readonly profileDir?: unknown;
+}): { readonly label: string; readonly title: string } | null => {
+  if (typeof lane.targetDir !== 'string' || lane.targetDir.length === 0) {
+    return null;
+  }
+  const profileDir = typeof lane.profileDir === 'string' ? lane.profileDir : null;
+  return {
+    label: laneTargetName(lane.targetDir, profileDir),
+    title: profileDir === null ? lane.targetDir : `${lane.targetDir}/${profileDir}`,
+  };
+};
 
 /**
  * The daemon's shared-target flag on an untyped lane row (#185): the other

@@ -184,9 +184,16 @@ finished, or with no daemon at all, exits with no output. Measured with
 ~50 ms wall and ~49 MB RSS. The 0.4.8 event-route wrappers took ~100 ms and
 64 MB with a shared runtime available and ~560 ms and 144 MB without one.
 
-The daemon keys each lane by workspace root and resolved target directory. A
-lane compiles one job at a time, because Cargo's own build-directory lock
-would serialize them anyway. Once a `test`, `nextest`, `bench`, or `run`
+The daemon keys each lane by workspace root, resolved target directory, and
+the profile output directory Cargo locks (`dev` and `test` build in `debug`,
+`release` and `bench` in `release`, a custom profile in its own name). A lane
+compiles one job at a time, because Cargo's own build-directory lock would
+serialize them anyway. A `build` and a `build --profile perf` in one
+workspace run at once, as Cargo itself allows. A whole-target `cargo clean`
+takes no Cargo lock and deletes under every profile, so the daemon gates it
+per target directory instead. It waits for every build on that directory to
+settle, and builds that arrive meanwhile wait for it (`target-clean` in the
+admission hold). Once a `test`, `nextest`, `bench`, or `run`
 leader reports its build finished, Cargo has dropped that lock. The lane then
 hands its slot to the next request, and that compile overlaps the leader's
 test run (`CARGO_HAULER_OVERLAP_EXECUTION=0` restores strict one-at-a-time).
@@ -358,7 +365,7 @@ over both.
 | Capability | Behavior |
 | --- | --- |
 | Work sharing | Identical requests attach, covered checks and compile-only `test --no-run` requests attach, and compatible queued compile or test requests fold. |
-| Lane isolation | The daemon serializes each workspace-root and target-directory pair independently from other lanes. |
+| Lane isolation | The daemon serializes each workspace root, target directory, and profile output directory independently from other lanes. A whole-target `cargo clean` waits for every build on its target directory. |
 | Shared target safety | If different workspace roots use the same target directory outside the requesting workspace, the daemon refuses the later request unless explicitly allowed, and status flags both lanes. |
 | Admission | Per-core load, Linux CPU PSI, Linux memory PSI and `MemAvailable`, macOS VM pressure, configured thresholds, and the global permit cap control new starts. |
 | Parallelism | One daemon-owned jobserver FIFO is shared by every spawned Cargo. A per-run `CARGO_BUILD_JOBS` grant applies only when the daemon could not arm the FIFO. |
@@ -827,8 +834,9 @@ files keep the permissions the filesystem gives them.
   inherit its failure, and the rest rerun alone.
 - The `cargo clean` guard probes the daemon for 250 ms. Active work denies
   the clean, and an idle daemon brokers it. A daemon that accepts but does
-  not answer in time is busy, so the hook brokers the clean, and the lane
-  serializes it behind the builds it would otherwise race. Only a socket
+  not answer in time is busy, so the hook brokers the clean. A whole-target
+  clean then waits at the target-directory gate for the builds it would
+  otherwise race, and a `-p` clean queues in its profile's lane. Only a socket
   nobody listens on (`ECONNREFUSED`, `ENOENT`) lets a raw `cargo clean` run.
 - cargo-hauler records hook rewrites, policy denials such as `cargo clean`
   during an active build, and malformed requests (in `hook-events.jsonl`, or

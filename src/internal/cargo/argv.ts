@@ -12,6 +12,20 @@ export const defaultCargoProfile = (subcommand: string): string => {
   return 'dev';
 };
 
+/** The directory under the target dir a profile writes, which cargo locks while it builds. */
+export const profileOutputDir = (profile: string): string => {
+  switch (profile) {
+    case 'dev':
+    case 'test':
+      return 'debug';
+    case 'release':
+    case 'bench':
+      return 'release';
+    default:
+      return profile;
+  }
+};
+
 export const cargoJsonDemuxFlag = '--message-format=json-diagnostic-rendered-ansi';
 
 export const optionParts = (

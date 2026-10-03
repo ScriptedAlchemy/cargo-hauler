@@ -347,13 +347,19 @@ describe('coverage subsumption', () => {
       });
       expect(findAck(otherLane).attachedTo).toBeUndefined();
 
-      // Different profile: no attach (queues behind the leader instead).
+      // Different profile: no attach, and nothing ahead of it, since cargo
+      // locks target/release, not the leader's target/debug.
       const otherProfile = yield* execRequest(fixture, {
         cwd: fixture.ws1,
         argv: ['cargo', 'check', '-p', 'aa', '--release'],
         timeoutMs: 12_000,
       });
-      expect(findAck(otherProfile).attachedTo).toBeUndefined();
+      const otherProfileAck = findAck(otherProfile);
+      expect(otherProfileAck.attachedTo).toBeUndefined();
+      expect(otherProfileAck.laneKey).toBe(
+        JSON.stringify([fixture.ws1, `${fixture.ws1}/target`, 'release']),
+      );
+      expect(otherProfileAck.position).toBe(0);
 
       expect(findAck(yield* Fiber.join(sameLaneFiber)).attachedTo).toBe('cc-1');
       findExit(yield* Fiber.join(leaderFiber));

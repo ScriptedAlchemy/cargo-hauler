@@ -22,6 +22,7 @@ import {
   kachePressureView,
   kacheProfileGroups,
   laneIsActive,
+  laneTargetCell,
   outputPreviewLine,
   outputTextFor,
   percentileMinSamples,
@@ -916,6 +917,20 @@ describe('laneIsActive (idle lanes collapse)', () => {
   it('drops lanes with nothing running and nothing queued', () => {
     expect(laneIsActive({ queued: 0, runningTicket: null })).toBe(false);
     expect(laneIsActive({})).toBe(false);
+  });
+});
+
+describe('laneTargetCell (profile dir lanes)', () => {
+  it('names the profile dir under the target dir, and the bare target dir for the clean lane', () => {
+    expect(laneTargetCell({ profileDir: 'perf', targetDir: '/work/one/target' })).toEqual({
+      label: 'target/perf',
+      title: '/work/one/target/perf',
+    });
+    expect(laneTargetCell({ profileDir: null, targetDir: '/work/one/target' })).toEqual({
+      label: 'target',
+      title: '/work/one/target',
+    });
+    expect(laneTargetCell({ profileDir: 'debug' })).toBeNull();
   });
 });
 

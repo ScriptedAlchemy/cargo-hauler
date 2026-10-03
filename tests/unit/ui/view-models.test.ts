@@ -222,8 +222,9 @@ describe('ticketCardModel', () => {
 
 describe('laneBoardModel and admissionModel', () => {
   const lanes: LaneStatus[] = [
-    { executingTickets: [], key: 'a', queued: 2, runningTicket: 'cc-7', targetDir: '/home/me/work/ws/target', workspaceRoot: '/home/me/work/ws' },
+    { executingTickets: [], key: 'a', profileDir: 'debug', queued: 2, runningTicket: 'cc-7', targetDir: '/home/me/work/ws/target', workspaceRoot: '/home/me/work/ws' },
     { executingTickets: [], key: 'b', queued: 0, runningTicket: null, targetDir: '/x/target', workspaceRoot: '/x' },
+    { executingTickets: [], key: 'c', profileDir: null, queued: 1, runningTicket: null, targetDir: '/home/me/work/ws/target', workspaceRoot: '/home/me/work/ws' },
   ];
 
   it('lists busy lanes with their leader and counts idle ones', () => {
@@ -231,7 +232,8 @@ describe('laneBoardModel and admissionModel', () => {
     expect(model.idleLanes).toBe(1);
     expect(model.sharedTargets).toEqual([]);
     expect(model.rows).toEqual([
-      { executing: null, name: 'ws (target)', queued: 2, running: 'cc-7', runningCommand: 'cargo check -p foo', runningFor: '1m', sharedWith: null, stalled: null },
+      { executing: null, name: 'ws (target/debug)', queued: 2, running: 'cc-7', runningCommand: 'cargo check -p foo', runningFor: '1m', sharedWith: null, stalled: null },
+      { executing: null, name: 'ws (target)', queued: 1, running: '—', runningCommand: null, runningFor: null, sharedWith: null, stalled: null },
     ]);
   });
 
