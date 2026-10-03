@@ -46,6 +46,16 @@ test('empty, single and mixed lane plans share one metadata scan and never execu
   assert.equal(f.state.writes.length, 0);
   assert.equal(f.state.builds, 0);
 });
+test('a settled pull request is skipped from its list row without a pull read', async () => {
+  const f = fixture();
+  f.state.checks = ['a', 'b', 'c'].map(lane => f.check(lane, { status: 'completed', conclusion: 'success' }));
+  assert.deepEqual(await plan(f.options), { lanes: [], count: 0 });
+  assert.deepEqual(f.state.calls.filter(p => p.startsWith('/pulls')), ['/pulls']);
+  f.state.checks = [f.check('a')];
+  f.state.calls = [];
+  assert.deepEqual(await plan(f.options), { lanes: ['a'], count: 1 });
+  assert.deepEqual(f.state.calls.filter(p => p.startsWith('/pulls')), ['/pulls', '/pulls/1']);
+});
 test('conflict and native maintenance stay read-only until the serialized drain', async () => {
   for (const kind of ['conflict', 'native']) {
     const f = fixture(); f.state.checks = [f.check('a')];
