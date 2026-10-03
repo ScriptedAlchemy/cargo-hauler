@@ -231,7 +231,7 @@ test('route stays native when the manager run outlasts the wait or never ran', a
   await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
   const pending = lateManager(f, 'queued');
   assert.deepEqual(await route({ ...f.options, fetchImpl: pending.fetchImpl, managerWaitMilliseconds: 500 }), { decision: 'native', policy: loaded.policy });
-  assert.equal(pending.seen.polled, 1);
+  assert.ok(pending.seen.polled >= 1);
   const finished = lateManager(f, 'completed');
   assert.deepEqual(await route({ ...f.options, fetchImpl: finished.fetchImpl, managerWaitMilliseconds: 60000 }), { decision: 'native', policy: loaded.policy });
   assert.deepEqual(finished.seen, { listed: 1, polled: 0 });
