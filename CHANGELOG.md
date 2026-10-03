@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.2
+
+### Patch Changes
+
+- b1d4794: The `tool/before` hook no longer loads its rendered view for shell commands without `cargo`, so `hauler await` and `hauler result` calls skip about 450 ms of hook time.
+- 2d2e077: The kache status refresh now scans kache's index table in order instead of walking its crate_name index. On a 275k entry index the refresh query drops from about 5.4 s to 0.84 s of CPU.
+
 ## 0.13.1
 
 ### Patch Changes
