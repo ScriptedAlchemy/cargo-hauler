@@ -234,8 +234,11 @@ compatibility metadata reads; `image` includes image pull/build and sandbox
 creation or cleanup; `checkout`, preparation, tasks and report collection have
 separate timings. Each check publishes this sanitized evidence as work progresses.
 Final per-snapshot JSON and the current summary are persisted before admitting
-the next snapshot. `evidence` contains those JSON files and numeric JUnit totals;
-raw XML/JSON reports, test names, errors and worker output stay private. The caller's
+the next snapshot. `evidence` contains those JSON files, numeric JUnit totals and
+the names of up to 10 failing or erroring test cases (each at most 120 characters,
+plus a count of the rest), which the completed check summary also lists. Raw
+XML/JSON reports, passing test names, failure messages, errors and worker output
+stay private. The caller's
 final artifact upload still happens after the drain step ends. Checks therefore
 provide evidence during long drains and interrupted jobs without an artifact SDK.
 
