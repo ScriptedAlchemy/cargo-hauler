@@ -162,12 +162,11 @@ statement, `elif`, and `function name { … }`.
 
 Both shell hooks run on every shell tool call, so each decides cheaply before
 it does anything else. The `tool/before` entry reads `tool_input.command` and
-answers `continue` for a command with no `cargo` or `hauler` word in it. The
-test is word-boundary aware. `mycargo` and `CARGO_HOME=… ls` do not match,
-while `~/.cargo/bin/cargo`, `cargo-hauler`, and `echo cargo` do. A false
-negative would bypass the broker, so anything that looks like a mention takes
-the full path. Only a matching command evaluates the parser and the rewrite.
-The `tool/after` entry runs the token test and one bounded socket ping to the
+answers `continue` for a command that does not contain `cargo`. The rewrite
+makes the same check first, so the gate never skips a command the rewrite
+would govern. `hauler await` and `hauler result` continue without loading the
+rendered view. Only a matching command evaluates the parser and the rewrite.
+The `tool/after` entry runs one bounded socket ping to the
 daemon (the `session-completed` request with the session's hook-state cursor,
 500 ms, no Effect runtime). It loads the telemetry and notification code only
 when the command was cargo-related, the daemon reported finished tickets, or
