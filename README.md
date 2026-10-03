@@ -10,7 +10,10 @@ requester its own result.
 
 The [GitHub Action](docs/github-action.md) applies warm workers to a repository's
 PR queue. It manages isolated snapshots, per-PR checks, and compiler reuse from
-one trusted CI recipe.
+one trusted CI recipe. Routing delegates a trusted PR at once, before its lane
+checks exist, so consumers relying on that optimistic delegation should also
+run the Action with `mode: enqueue` on a schedule to recover heads whose
+enqueue run was missed.
 
 ## The problem
 

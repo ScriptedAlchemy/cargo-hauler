@@ -137,10 +137,19 @@ unless routing succeeds and returns `delegated`.
 
 The named step records ownership in GitHub's job metadata. The controller
 requires that successful receipt from the configured `admission-workflow`
-(default `ci.yml`) before draining automatic work. If routing times out or
-policy validation fails, native CI remains responsible; a late enqueue cannot
-start duplicate managed work. Enqueue creates pending lane checks before a
-PR waits for a worker. It runs outside worker concurrency limits.
+(default `ci.yml`) before draining automatic work. Routing decides from policy
+alone: a trusted, non-draft, same-repository head that leaves policy untouched
+is delegated at once, without waiting for lane checks. Drain still verifies
+those checks before it admits a snapshot, so routing never mints or trusts
+them. If routing times out or policy validation fails, native CI remains
+responsible; a late enqueue cannot start duplicate managed work. Enqueue
+creates pending lane checks before a PR waits for a worker. It runs outside
+worker concurrency limits.
+
+Delegation is optimistic: a delegated head whose `pull_request_target` enqueue
+run failed or never ran has no lane checks, and no worker admits it. Consumers
+relying on delegation should also run `mode: enqueue` on a schedule (without
+`pull-requests`) so those heads get their checks on the next tick.
 
 PRs that change `.github/`, the configured recipe, or its Dockerfile or build
 context retain native CI so new validation cannot be skipped by the default
@@ -241,6 +250,13 @@ XML/JSON reports, passing test names, failure messages, errors and worker output
 stay private. The caller's
 final artifact upload still happens after the drain step ends. Checks therefore
 provide evidence during long drains and interrupted jobs without an artifact SDK.
+
+A drain worker is resident: when an admission scan finds nothing, it waits one
+poll interval and scans again, keeping its warm sandbox, and exits after
+`idle-polls` (default 5, 0 to 60) consecutive empty scans. Found work resets the
+count; `idle-polls: 0` exits on the first empty scan. A snapshot superseded by a
+new PR head is cancelled but its sandbox stays warm for the next snapshot;
+infrastructure errors and workflow cancellation still discard it.
 
 Workers and caches last only for the hosted job. The schedule recovers missed
 demand; normal admission follows the cheap CI workflow's completion. When
