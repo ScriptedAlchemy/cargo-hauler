@@ -41,14 +41,15 @@ const shellPayload = (command: string | undefined, session = 'sess-claude'): Rec
 describe('tool/before event handler', () => {
   it('continues a non-cargo command and a tool input without a command', async () => {
     expect(await beforeEvent(eventContext('tool/before', shellPayload('ls -la')))).toEqual({ outcome: 'continue' });
+    expect(await beforeEvent(eventContext('tool/before', shellPayload('hauler status')))).toEqual({ outcome: 'continue' });
     expect(await beforeEvent(eventContext('tool/before', shellPayload('git status && pnpm test')))).toEqual({
       outcome: 'continue',
     });
     expect(await beforeEvent(eventContext('tool/before', shellPayload(undefined)))).toEqual({ outcome: 'continue' });
   });
 
-  it('renders the view for cargo and hauler commands', async () => {
-    for (const command of ['cargo test -p foo', 'cargo clean', 'cd crates/foo && cargo build', 'hauler status', 'hauler exec -- cargo check']) {
+  it('renders the view for cargo commands', async () => {
+    for (const command of ['cargo test -p foo', 'cargo clean', 'cd crates/foo && cargo build', 'hauler exec -- cargo check']) {
       expect(await beforeEvent(eventContext('tool/before', shellPayload(command)))).toEqual({
         data: {},
         module: './before.view.js',

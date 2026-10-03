@@ -9,8 +9,7 @@ import * as __rspack_external_node_url_3991086a from "node:url";
 var __webpack_modules__ = {
     "./src/events/tool/before.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var agent_bundle_routes__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/routes.js");
-        var _internal_host_hooks_tokens_js__rspack_import_1 = __webpack_require__("./src/internal/host-hooks/tokens.ts");
-        var _internal_host_hooks_tool_input_js__rspack_import_2 = __webpack_require__("./src/internal/host-hooks/tool-input.ts");
+        var _internal_host_hooks_tool_input_js__rspack_import_1 = __webpack_require__("./src/internal/host-hooks/tool-input.ts");
         const __rspack_default_export = agent_bundle_routes__rspack_import_0.AZ.tool.before({
             requires: [
                 'events.toolBefore.deny'
@@ -20,7 +19,7 @@ var __webpack_modules__ = {
             tools: [
                 'shell'
             ]
-        }, (context)=>(0, _internal_host_hooks_tokens_js__rspack_import_1.C)((0, _internal_host_hooks_tool_input_js__rspack_import_2.H)(context.canonical.payload.toolInput?.value)) ? context.render('./before.view.js', {}) : {
+        }, (context)=>(0, _internal_host_hooks_tool_input_js__rspack_import_1.H)(context.canonical.payload.toolInput?.value)?.includes('cargo') === true ? context.render('./before.view.js', {}) : {
                 outcome: 'continue'
             });
         __webpack_require__.d(__webpack_exports__, {}, {
@@ -627,32 +626,6 @@ var __webpack_modules__ = {
         };
         __webpack_require__.d(__webpack_exports__, {}, {
             JE: parseJobserverModeSetting
-        });
-    },
-    "./src/internal/host-hooks/tokens.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-        const haulerToken = /(?:^|[^A-Za-z0-9_])(?:cargo|hauler)(?![A-Za-z0-9_])/iu;
-        const commandMentionsHauler = (command)=>command !== undefined && command.length > 0 && haulerToken.test(command);
-        const cargoStatusLine = /^(?: {3}Compiling| {4}Checking| {4}Finished| {5}Running| {3}Doc-tests| Documenting| {4}Blocking) \S/mu;
-        const fileReaders = new Set([
-            'awk',
-            'bat',
-            'cat',
-            'grep',
-            'head',
-            'less',
-            'more',
-            'rg',
-            'sed',
-            'tac',
-            'tail'
-        ]);
-        const readsFile = (command)=>{
-            const first = command.trimStart().split(/\s+/u, 1)[0] ?? '';
-            return fileReaders.has(first.slice(first.lastIndexOf('/') + 1));
-        };
-        const hiddenCargoRun = (command, output)=>command !== undefined && output !== undefined && !commandMentionsHauler(command) && !readsFile(command) && cargoStatusLine.test(output);
-        __webpack_require__.d(__webpack_exports__, {}, {
-            C: commandMentionsHauler
         });
     },
     "./src/internal/host-hooks/tool-input.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
@@ -20496,7 +20469,7 @@ var __webpack_modules__ = {
                     return withEventState(signal, async (bindings)=>{
                         const gate = await (0, _agent_bundle_runtime_request__rspack_import_6.iC)({
                             invocation: {
-                                artifactEpoch: "cea6062a35a77335b91cc025c4913697a879292e7e804c1dff56e8f262a8d039",
+                                artifactEpoch: "93fbbcb4f65c1cd303d9bf8aa851cf6a2b1be2dd91aeeaf0ac1127fcb2037f58",
                                 hostContractRevision: capabilityRevision,
                                 kind: "event",
                                 operationId: `event:${canonicalEvent}`,
