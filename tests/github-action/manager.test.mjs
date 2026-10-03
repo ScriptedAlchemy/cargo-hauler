@@ -6,12 +6,13 @@ import { join } from 'node:path';
 import { drain } from '../../src/internal/github-action/manager.mjs';
 import { plan } from '../../src/internal/github-action/admission.mjs';
 import { checkOwner } from '../../src/internal/github-action/ownership.mjs';
+import { graphqlFetch } from './graphql-fixture.mjs';
 const recipe = { version: 1, trustedAuthors: ['owner'], sharedBuilds: true, requiredChecks: ['Gates'], image: { dockerfile: 'Dockerfile', context: '.' }, prepare: [], compatibilityPaths: ['Cargo.lock'], lanes: [{ id: 'linux', checkName: 'Hauler Linux', tasks: [{ id: 'first', run: 'first', timeoutSeconds: 60 }, { id: 'second', run: 'second', timeoutSeconds: 60 }] }] };
 const hex = n => n.toString(16).padStart(40, '0');
 function fixture({ authors = ['owner'], fail = false, change = false, prepareFail = false } = {}) {
   const events = [], checks = new Map(), prs = authors.map((login, i) => ({ number: i + 1, state: 'open', draft: false, user: { login }, head: { repo: { full_name: 'owner/repo' }, sha: hex(i * 10 + 1) }, base: { sha: hex(2) }, merge_commit_sha: hex(i * 10 + 3) }));
   let counter = 0;
-  async function fetchImpl(url, options) {
+  async function rest(url, options) {
     const path = new URL(url).pathname.replace('/repos/owner/repo', ''), body = options.body && JSON.parse(options.body);
     let result;
     if (path === '/pulls') result = prs;
@@ -35,8 +36,8 @@ function fixture({ authors = ['owner'], fail = false, change = false, prepareFai
     builds++;
     return { async prepare() { if (prepareFail) throw new Error('private worker diagnostic'); }, async run(command) { events.push(['run', command]); if (change) prs[0].head.sha = hex(500); return { exitCode: fail && command === 'first' ? 1 : 0 }; }, async close() { events.push(['close']); } };
   }
-  const options = { recipe, lane: 'linux', repository: 'owner/repo', token: 'not-logged', root: '/tmp', image: 'trusted', actionIdentity: 'abc', manualAdmission: true, maxMinutes: 1, maxSnapshots: 3, fetchImpl, sandboxFactory };
-  return { options, events, checks, prs, builds: () => builds };
+  const options = { recipe, lane: 'linux', repository: 'owner/repo', token: 'not-logged', root: '/tmp', image: 'trusted', actionIdentity: 'abc', manualAdmission: true, maxMinutes: 1, maxSnapshots: 3, fetchImpl: graphqlFetch(rest), sandboxFactory };
+  return { options, rest, events, checks, prs, builds: () => builds };
 }
 test('publishes first failure before running remaining task and preserves failure', async () => {
   const f = fixture({ fail: true }), result = await drain(f.options);
@@ -67,7 +68,7 @@ test('untrusted authors never enter sandbox; oldest head first with compatible p
 });
 test('failed cheap gates prevent admission', async () => {
   const f = fixture();
-  const fetchImpl = async (...args) => { const r = await f.options.fetchImpl(...args); const data = await r.json(); if (data.check_runs) data.check_runs[0].conclusion = 'failure'; return { ...r, json: async () => data }; };
+  const fetchImpl = graphqlFetch(async (...args) => { const r = await f.rest(...args); const data = await r.json(); if (data.check_runs) data.check_runs[0].conclusion = 'failure'; return { ...r, json: async () => data }; });
   assert.equal((await drain({ ...f.options, fetchImpl })).snapshots.length, 0);
   assert.equal(f.builds(), 0);
 });
@@ -104,8 +105,8 @@ test('report collection failure cannot publish success', async () => {
   assert.ok(!f.events.some(e => e[1] === 'success'));
 });
 test('a merge commit with different parents is never tested', async () => {
-  const f = fixture(), original = f.options.fetchImpl;
-  const fetchImpl = async (...args) => { const r = await original(...args), data = await r.json(); if (data.parents) data.parents[0].sha = hex(999); return { ...r, json: async () => data }; };
+  const f = fixture(), original = f.rest;
+  const fetchImpl = graphqlFetch(async (...args) => { const r = await original(...args), data = await r.json(); if (data.parents) data.parents[0].sha = hex(999); return { ...r, json: async () => data }; });
   assert.equal((await drain({ ...f.options, fetchImpl })).snapshots.length, 0);
   assert.equal(f.builds(), 0);
 });
@@ -157,15 +158,15 @@ test('infrastructure failure retries the same head while task failure remains te
   assert.equal((await drain(failure.options)).snapshots.length, 0);
 });
 test('delegated drain updates queued check ID and rejects absent or native receipts', async () => {
-  const f = fixture(), policy = 'a'.repeat(64), original = f.options.fetchImpl;
+  const f = fixture(), policy = 'a'.repeat(64), original = f.rest;
   const queued = { id: 99, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'queued' };
   f.checks.set(99, queued);
   let decision = null;
-  const fetchImpl = async (url, options) => {
+  const fetchImpl = graphqlFetch(async (url, options) => {
     if (url.includes('/actions/workflows/')) return { ok: true, json: async () => ({ workflow_runs: [{ id: 10, event: 'pull_request', head_sha: hex(1), path: '.github/workflows/ci.yml', run_attempt: 1, pull_requests: [{ number: 1 }] }] }) };
     if (url.includes('/actions/runs/10/')) return { ok: true, json: async () => ({ jobs: [{ steps: decision ? [{ name: `Hauler route / ${decision} / ${policy}`, conclusion: 'success' }] : [] }] }) };
     return original(url, options);
-  };
+  });
   const options = { ...f.options, manualAdmission: false, policy, fetchImpl };
   assert.equal((await drain(options)).snapshots.length, 0);
   decision = 'delegated';
@@ -176,14 +177,14 @@ test('delegated drain updates queued check ID and rejects absent or native recei
 });
 
 test('automatic delegated recovery retries infrastructure failure and cancels native queued markers', async () => {
-  const f = fixture({ prepareFail: true }), policy = 'b'.repeat(64), original = f.options.fetchImpl;
+  const f = fixture({ prepareFail: true }), policy = 'b'.repeat(64), original = f.rest;
   f.checks.set(99, { id: 99, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'queued' });
   let decision = 'delegated';
-  const fetchImpl = async (url, options) => {
+  const fetchImpl = graphqlFetch(async (url, options) => {
     if (url.includes('/actions/workflows/')) return { ok: true, json: async () => ({ workflow_runs: [{ id: 10, event: 'pull_request', head_sha: hex(1), path: '.github/workflows/ci.yml', run_attempt: 1, pull_requests: [{ number: 1 }] }] }) };
     if (url.includes('/actions/runs/10/')) return { ok: true, json: async () => ({ jobs: [{ steps: [{ name: `Hauler route / ${decision} / ${policy}`, conclusion: 'success' }] }] }) };
     return original(url, options);
-  };
+  });
   const options = { ...f.options, manualAdmission: false, policy, fetchImpl };
   assert.equal((await drain(options)).snapshots[0].infrastructureError, true);
   assert.ok(f.checks.get(99).external_id.endsWith(':run:10:infrastructure'));
@@ -211,16 +212,16 @@ test('drain cleans only its queued conflicted-head markers without a merge or re
 });
 test('cleanup rechecks conflict, head and queued state before cancellation', async () => {
   for (const race of ['head', 'conflict', 'running']) {
-    const f = fixture(), policy = 'e'.repeat(64), original = f.options.fetchImpl;
+    const f = fixture(), policy = 'e'.repeat(64), original = f.rest;
     f.prs[0].mergeable = false; f.prs[0].merge_commit_sha = null;
     f.checks.set(90, { id: 90, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'queued' });
     let reads = 0;
-    const fetchImpl = async (url, options) => {
+    const fetchImpl = graphqlFetch(async (url, options) => {
       const response = await original(url, options), data = await response.json();
-      if (url.endsWith('/pulls/1') && ++reads === 2) { if (race === 'head') data.head.sha = hex(99); if (race === 'conflict') data.mergeable = true; }
+      if (url.endsWith('/pulls/1') && ++reads === 1) { if (race === 'head') data.head.sha = hex(99); if (race === 'conflict') data.mergeable = true; }
       if (race === 'running' && url.endsWith('/check-runs/90') && options.method === 'GET') data.status = 'in_progress';
       return { ...response, json: async () => data };
-    };
+    });
     assert.equal((await drain({ ...f.options, manualAdmission: false, policy, fetchImpl })).snapshots.length, 0);
     assert.equal(f.checks.get(90).status, 'queued');
   }
@@ -260,12 +261,12 @@ test('exported reports reach evidence persistence but not the record', async () 
   assert.ok(![...f.checks.values()].some(check => JSON.stringify(check).includes(directory)));
 });
 test('completed early failures keep ownership unfinished until remaining tasks finish', async () => {
-  const f = fixture({ fail: true }), original = f.options.fetchImpl, failureBodies = [];
-  const fetchImpl = async (url, options) => {
+  const f = fixture({ fail: true }), original = f.rest, failureBodies = [];
+  const fetchImpl = graphqlFetch(async (url, options) => {
     const body = options.body && JSON.parse(options.body);
     if (body?.conclusion === 'failure') failureBodies.push(body);
     return original(url, options);
-  };
+  });
   const worker = { runId: '20', jobId: '30', attempt: 2 };
   await drain({ ...f.options, worker, fetchImpl });
   const parse = body => JSON.parse(body.output.text.split('\n')[0].split('hauler-owner-v1:')[1]);
@@ -294,26 +295,26 @@ test('aborted image, checkout, preparation, task and report stages retain monoto
   }
 });
 test('claim rechecks another live owner before admitting selected queued work', async () => {
-  const f = fixture(), original = f.options.fetchImpl, policy = 'a'.repeat(64);
+  const f = fixture(), original = f.rest, policy = 'a'.repeat(64);
   const owner = { runId: '20', jobId: '30', attempt: 2, lane: 'linux', ordinal: 1, remaining: 0, finished: false, deadline: Date.now() + 60000 };
   f.checks.set(99, { id: 99, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'queued' });
-  const fetchImpl = async (url, options) => {
+  const fetchImpl = graphqlFetch(async (url, options) => {
     if (url.endsWith('/actions/runs/20')) return { ok: true, json: async () => ({ id: 20, run_attempt: 2, status: 'in_progress', event: 'schedule', path: '.github/workflows/hauler-ci.yml', head_repository: { full_name: 'owner/repo' }, head_branch: 'master' }) };
     if (url.includes('/actions/runs/20/attempts/2/jobs')) return { ok: true, json: async () => ({ jobs: [{ id: 30, name: 'Hauler pool / linux', status: 'in_progress' }] }) };
     if (url.endsWith('/check-runs/99') && options.method === 'GET') f.checks.get(99).output = { text: `hauler-owner-v1:${JSON.stringify(owner)}` };
     return original(url, options);
-  };
+  });
   const result = await drain({ ...f.options, policy, defaultBranch: 'master', fetchImpl });
   assert.equal(result.snapshots.length, 0);
   assert.equal(f.builds(), 0);
 });
 test('an unreadable head during polling stays a visible infrastructure failure', async () => {
-  const f = fixture(), original = f.options.fetchImpl;
+  const f = fixture(), original = f.rest;
   let running = false, failedPoll = false;
-  const fetchImpl = async (url, options) => {
+  const fetchImpl = graphqlFetch(async (url, options) => {
     if (running && !failedPoll && url.endsWith('/pulls/1')) { failedPoll = true; return { ok: false, status: 403 }; }
     return original(url, options);
-  };
+  });
   f.options.sandboxFactory = async () => ({ async prepare() {}, async close() {}, async run(command, { signal }) {
     running = true;
     await new Promise(resolve => signal.addEventListener('abort', resolve, { once: true }));
@@ -326,10 +327,10 @@ test('an unreadable head during polling stays a visible infrastructure failure',
   assert.ok(!f.events.some(e => e[1] === 'success'));
 });
 test('scoped workers reserve their active snapshot without covering unrelated queued PRs', async () => {
-  const f = fixture({ authors: ['owner', 'owner'] }), originalFetch = f.options.fetchImpl, originalFactory = f.options.sandboxFactory;
+  const f = fixture({ authors: ['owner', 'owner'] }), originalFetch = f.rest, originalFactory = f.options.sandboxFactory;
   const policy = 'a'.repeat(64), worker = { runId: '20', jobId: '30', attempt: 2 };
   f.checks.set(99, { id: 99, name: 'Hauler Linux', head_sha: hex(11), external_id: `hauler:linux:${hex(11)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'queued' });
-  const fetchImpl = async (url, options) => {
+  const fetchImpl = graphqlFetch(async (url, options) => {
     if (url.endsWith('/actions/runs/20')) return { ok: true, json: async () => ({ id: 20, run_attempt: 2, status: 'in_progress', event: 'workflow_dispatch', path: '.github/workflows/hauler-ci.yml', head_repository: { full_name: 'owner/repo' }, head_branch: 'master' }) };
     if (url.includes('/actions/runs/20/attempts/2/jobs')) return { ok: true, json: async () => ({ jobs: [{ id: 30, name: 'Hauler pool / linux', status: 'in_progress' }] }) };
     if (url.includes('/actions/workflows/')) {
@@ -338,7 +339,7 @@ test('scoped workers reserve their active snapshot without covering unrelated qu
     }
     if (url.includes('/actions/runs/10/')) return { ok: true, json: async () => ({ jobs: [{ steps: [{ name: `Hauler route / delegated / ${policy}`, conclusion: 'success' }] }] }) };
     return originalFetch(url, options);
-  };
+  });
   let checked = false;
   const sandboxFactory = async (...args) => {
     const sandbox = await originalFactory(...args);
