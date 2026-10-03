@@ -38,7 +38,7 @@ to service to repository, and nobody should add one.
 | `internal/storage/` | the SQLite ledger and per-ticket output logs. The daemon owns the writable open with migration. A stopped-daemon status read uses `openLedgerDatabaseReadOnly` (with its recovery fallback). | broker, UI |
 | `internal/client/` | everything that talks to the socket from outside the daemon, which is `control.ts` (one-shot requests, ping), `tickets.ts` (submit, await, fetch, kill), `ensure-daemon.ts` (spawn or replace), `shutdown.ts`, and the streaming foreground run in `exec.ts` | broker internals |
 | `internal/operations/` | what the routes call, which is `tickets.ts`, `status.ts` (live report or ledger snapshot), `inspection.ts` (`last`, `log`, `status` results), `daemon-health.ts`, attribution, and output loading | React |
-| `internal/host-hooks/` | the shell and session hook handlers (`before-shell.ts`, `after-shell.ts`, `stop-hold.ts`), the cheap event-handler token test (`tokens.ts`, `tool-input.ts`), the small native-socket RPC client (`rpc.ts`, `session-ping.ts`), hook state, and records | React, Effect (see below) |
+| `internal/host-hooks/` | the shell and session hook handlers (`before-shell.ts`, `after-shell.ts`, `stop-hold.ts`), the cheap event-handler token test (`tokens.ts`, `tool-input.ts`), the small native-socket RPC client (`rpc.ts`), hook state, and records | React, Effect (see below) |
 | `internal/integrations/kache/` | kache index status, store pressure readers, and the pressure presentation model | daemon runtime |
 | `internal/platform/` | machine facts, which are state and socket paths, the 0700/0600 private-file policy, socket errno walking, NDJSON line buffering, and `hauler-binding.ts` (where the `hauler` executable is) | anything above it |
 | `internal/shim/` | the PATH shim installer and entry classification | daemon |
@@ -165,17 +165,17 @@ The dashboard App (`mcp/hauler/apps/dashboard.tsx`) polls the same
 `tool/before` is steps 1 and 2 of Walkthrough 1. `tool/after` runs these
 steps:
 
-1. `events/tool/after.ts` reads the command and its output
-   (`host-hooks/tool-input.ts`). Once per call, it pings the daemon for
-   finished tickets with `host-hooks/session-ping.ts` over the native
-   socket client in `host-hooks/rpc.ts`, using the cursor from
-   `host-hooks/hook-state.ts`. Nothing here imports React or Effect.
-2. `events/tool/after.view.tsx` receives the handler's `renderInput` and calls
-   `host-hooks/after-shell.ts`. That handler records the cargo command
-   (`host-hooks/record.ts`), injects finished background tickets as context
-   (`host-hooks/finished-ticket.ts`, with `host-hooks/shared.ts` for the
-   wording), advances the cursor, and flags cargo that ran unbrokered inside
-   a wrapper (`tokens.ts` `hiddenCargoRun`).
+1. `events/tool/after.ts` calls `host-hooks/after-shell.ts` on every shell
+   command. That handler records cargo telemetry (`host-hooks/record.ts`),
+   asks the daemon for finished tickets (`host-hooks/rpc.ts`
+   `listSessionCompleted`, cursor from `host-hooks/hook-state.ts`), and
+   flags cargo that ran unbrokered inside a wrapper (`tokens.ts`
+   `hiddenCargoRun`). It captures `asOfMs` before the query and advances
+   the cursor to that time. The handler returns `continue` unless the
+   result carries `additionalContext`. Nothing here imports React or Effect.
+2. `events/tool/after.view.tsx` renders the `additionalContext` text the
+   handler already decided to inject (`host-hooks/finished-ticket.ts`, with
+   `host-hooks/shared.ts` for the wording).
 3. `events/stop.tsx` calls `host-hooks/stop-hold.ts`, which holds the stop
    while a foreground ticket is pending. `awaitCeilingMs` from
    `contracts/protocol.ts` and the deny counters in `hook-state.ts` bound
@@ -187,7 +187,7 @@ commands or paths.
 ## Boundaries the layout must keep
 
 - **Event handlers stay light.** `events/tool/{before,after}.ts` and everything
-  they reach (`host-hooks/tokens.ts`, `tool-input.ts`, `session-ping.ts`,
+  they reach (`host-hooks/after-shell.ts`, `tokens.ts`, `tool-input.ts`,
   `rpc.ts`, `hook-state.ts`, `platform/*`, `util/*`) must not import React,
   Effect, or server-only modules. No `index.ts` barrels under `internal/`
   may pull them in. `tests/integration/event-handler.test.ts` and

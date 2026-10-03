@@ -1,9 +1,8 @@
 import { isRecord } from '../util/guards.js';
 
 /**
- * One finished ticket as the daemon's `session-completed-result` lists it,
- * shared by the after-shell event-handler ping (`session-ping.ts`) and
- * the full client in `rpc.ts`, so both read the daemon's reply the same way.
+ * One finished ticket as the daemon's `session-completed-result` lists it.
+ * `rpc.ts` and `after-shell.ts` read the daemon's reply through this shape.
  */
 export interface FinishedTicket {
   readonly error: string | null;

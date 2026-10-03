@@ -12541,27 +12541,18 @@ var __webpack_modules__ = {
     "./src/events/tool/after.view.tsx" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         __webpack_require__.r(__webpack_exports__);
         var react_jsx_runtime__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/jsx-runtime.react-server.js");
-        var _agent_bundle_runtime__rspack_import_5 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_6f233c389e1c622f766ad876672bffe5/node_modules/@agent-bundle/runtime/dist/506.js");
+        var _agent_bundle_runtime__rspack_import_3 = __webpack_require__("./node_modules/.pnpm/@agent-bundle+runtime@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+@agent-bundle+run_6f233c389e1c622f766ad876672bffe5/node_modules/@agent-bundle/runtime/dist/506.js");
         var react__rspack_import_1 = __webpack_require__("./node_modules/.pnpm/react@19.3.0/node_modules/react/react.react-server.js");
-        var _internal_host_hooks_after_shell_js__rspack_import_2 = __webpack_require__("./src/internal/host-hooks/after-shell.ts");
-        var _internal_host_hooks_session_ping_js__rspack_import_3 = __webpack_require__("./src/internal/host-hooks/session-ping.ts");
         var _internal_host_hooks_event_support_js__rspack_import_4 = __webpack_require__("./src/internal/host-hooks/event-support.ts");
-        async function AfterShellTool({ canonical, renderInput }) {
-            const { host, nativeEvent } = canonical.provenance;
-            const event = (0, _internal_host_hooks_event_support_js__rspack_import_4.h)(canonical.payload);
-            const announcement = (0, _internal_host_hooks_session_ping_js__rspack_import_3.cJ)(renderInput);
-            const result = await (0, _internal_host_hooks_after_shell_js__rspack_import_2.t)(announcement === undefined ? event : {
-                ...event,
-                finishedAsOfMs: announcement.asOfMs,
-                finishedTickets: announcement.tickets
-            }, {
-                nativeEvent,
-                target: host
-            });
-            return (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5.g.Result, {
-                value: (0, _internal_host_hooks_event_support_js__rspack_import_4.Q)(result),
-                children: result.additionalContext === undefined ? null : (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_5.g.Context, {
-                    children: result.additionalContext
+        var _internal_util_guards_js__rspack_import_2 = __webpack_require__("./src/internal/util/guards.ts");
+        function AfterShellTool({ renderInput }) {
+            const additionalContext = (0, _internal_util_guards_js__rspack_import_2.u)(renderInput) && typeof renderInput.additionalContext === 'string' ? renderInput.additionalContext : undefined;
+            return (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3.g.Result, {
+                value: (0, _internal_host_hooks_event_support_js__rspack_import_4.Q)({
+                    outcome: 'continue'
+                }),
+                children: additionalContext === undefined ? null : (0, react_jsx_runtime__rspack_import_0.jsx)(_agent_bundle_runtime__rspack_import_3.g.Context, {
+                    children: additionalContext
                 })
             });
         }
@@ -14520,111 +14511,6 @@ var __webpack_modules__ = {
             JE: parseJobserverModeSetting
         });
     },
-    "./src/internal/host-hooks/after-shell.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-        var _util_guards_js__rspack_import_4 = __webpack_require__("./src/internal/util/guards.ts");
-        var _tool_input_js__rspack_import_6 = __webpack_require__("./src/internal/host-hooks/tool-input.ts");
-        var _hook_state_js__rspack_import_0 = __webpack_require__("./src/internal/host-hooks/hook-state.ts");
-        var _record_js__rspack_import_1 = __webpack_require__("./src/internal/host-hooks/record.ts");
-        var _rpc_js__rspack_import_2 = __webpack_require__("./src/internal/host-hooks/rpc.ts");
-        var _shared_js__rspack_import_5 = __webpack_require__("./src/internal/host-hooks/shared.ts");
-        var _tokens_js__rspack_import_3 = __webpack_require__("./src/internal/host-hooks/tokens.ts");
-        const hiddenCargoReason = "cargo ran outside cargo-hauler (wrapper script, alias, or shell variable)";
-        const hiddenCargoContext = "cargo-hauler: this command ran cargo outside the broker, through a wrapper script, alias, or shell variable the hook cannot see. The run skipped lane serialization, attach, and the ledger. Name `cargo` in the command itself, or run `hauler exec -- cargo …` so the daemon brokers it. An env prefix such as `RUSTC_WRAPPER= cargo test …` is fine.";
-        const extractExitCode = (toolResponse)=>{
-            if (!(0, _util_guards_js__rspack_import_4.u)(toolResponse)) {
-                return undefined;
-            }
-            const value = toolResponse.exitCode ?? toolResponse.exit_code;
-            return typeof value === 'number' ? value : undefined;
-        };
-        const notifyContext = async (session, services, known, asOfMs)=>{
-            if (session === undefined || session.length === 0) {
-                return undefined;
-            }
-            const write = services.writeCursor ?? _hook_state_js__rspack_import_0.Wh;
-            const nowMs = (services.nowMs ?? Date.now)();
-            let finished;
-            if (known !== undefined) {
-                finished = known;
-            } else {
-                const read = services.readCursor ?? _hook_state_js__rspack_import_0.fS;
-                const completedSince = services.completedSince ?? _rpc_js__rspack_import_2.k$;
-                try {
-                    finished = await completedSince(session, read(session));
-                } catch  {
-                    return undefined;
-                }
-            }
-            if (finished.length === 0) {
-                return undefined;
-            }
-            write(session, asOfMs ?? nowMs);
-            return finished.map(_shared_js__rspack_import_5.S).join('\n');
-        };
-        const decideAfterShell = async (event, context, services)=>{
-            const command = (0, _tool_input_js__rspack_import_6.H)(event.toolInput);
-            if (command === undefined) {
-                return {
-                    outcome: 'continue'
-                };
-            }
-            const hidden = (0, _tokens_js__rspack_import_3.j)(command, (0, _tool_input_js__rspack_import_6.N)(event.toolResponse));
-            if (hidden || command.includes('cargo') || command.includes('hauler')) {
-                const record = services.record ?? _record_js__rspack_import_1.r;
-                const exitCode = extractExitCode(event.toolResponse);
-                await record({
-                    atMs: (services.nowMs ?? Date.now)(),
-                    command,
-                    host: (0, _shared_js__rspack_import_5.e)(context),
-                    outcome: 'continue',
-                    phase: 'afterTool',
-                    ...hidden ? {
-                        reason: hiddenCargoReason
-                    } : {},
-                    ...event.cwd === undefined ? {} : {
-                        cwd: event.cwd
-                    },
-                    ...exitCode === undefined ? {} : {
-                        exitCode
-                    },
-                    ...event.sessionId === undefined ? {} : {
-                        session: event.sessionId
-                    },
-                    ...event.toolName === undefined ? {} : {
-                        toolName: event.toolName
-                    }
-                });
-            }
-            const finished = await notifyContext(event.sessionId, services, event.finishedTickets, event.finishedAsOfMs);
-            const notices = [
-                ...hidden ? [
-                    hiddenCargoContext
-                ] : [],
-                ...finished === undefined ? [] : [
-                    finished
-                ]
-            ];
-            return notices.length === 0 ? {
-                outcome: 'continue'
-            } : {
-                additionalContext: notices.join('\n'),
-                outcome: 'continue'
-            };
-        };
-        const handleAfterShell = async (event, context = {}, services = {})=>{
-            try {
-                return await decideAfterShell(event, context, services);
-            } catch  {
-                return {
-                    outcome: 'continue'
-                };
-            }
-        };
-        var __rspack_default_export = null && handleAfterShell;
-        __webpack_require__.d(__webpack_exports__, {}, {
-            t: handleAfterShell
-        });
-    },
     "./src/internal/host-hooks/before-shell.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var _best_effort_js__rspack_import_5 = __webpack_require__("./src/internal/host-hooks/best-effort.ts");
         var _inspect_js__rspack_import_0 = __webpack_require__("./src/internal/host-hooks/inspect.ts");
@@ -14837,7 +14723,7 @@ var __webpack_modules__ = {
     },
     "./src/internal/host-hooks/finished-ticket.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var _util_guards_js__rspack_import_0 = __webpack_require__("./src/internal/util/guards.ts");
-        const asFinishedTicket = (value)=>{
+        const asFinishedTicket1 = (value)=>{
             if (!(0, _util_guards_js__rspack_import_0.u)(value) || typeof value.ticket !== 'string') {
                 return null;
             }
@@ -14854,19 +14740,19 @@ var __webpack_modules__ = {
                 warningCount: typeof value.warningCount === 'number' ? value.warningCount : null
             };
         };
-        const finishedTicketsOf1 = (reply)=>{
+        const finishedTicketsOf = (reply)=>{
             if (reply.type !== 'session-completed-result' || !Array.isArray(reply.requests)) {
                 return null;
             }
             return reply.requests.flatMap((entry)=>{
-                const parsed = asFinishedTicket(entry);
+                const parsed = asFinishedTicket1(entry);
                 return parsed === null ? [] : [
                     parsed
                 ];
             });
         };
         __webpack_require__.d(__webpack_exports__, {}, {
-            r: asFinishedTicket
+            r: asFinishedTicket1
         });
     },
     "./src/internal/host-hooks/hook-state.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
@@ -14962,8 +14848,8 @@ var __webpack_modules__ = {
                 throw error;
             }
         };
-        const readCursor = (session, stateDir = (0, _platform_state_paths_js__rspack_import_4.JT)())=>loadState(stateDir).cursors[session] ?? 0;
-        const writeCursor = (session, atMs, stateDir = (0, _platform_state_paths_js__rspack_import_4.JT)())=>{
+        const readCursor = (session, stateDir = resolveStateDir())=>loadState(stateDir).cursors[session] ?? 0;
+        const writeCursor = (session, atMs, stateDir = resolveStateDir())=>{
             withStateLock(stateDir, ()=>{
                 const state = loadState(stateDir);
                 state.cursors[session] = atMs;
@@ -14999,8 +14885,6 @@ var __webpack_modules__ = {
         };
         __webpack_require__.d(__webpack_exports__, {}, {
             UA: readDenyCount,
-            Wh: writeCursor,
-            fS: readCursor,
             ln: incrementDenyCount,
             xK: pruneDenyCounts
         });
@@ -15548,7 +15432,7 @@ var __webpack_modules__ = {
                     });
                 });
             });
-        const requestOutcome1 = async (message, socketPath, timeoutMs)=>{
+        const requestOutcome = async (message, socketPath, timeoutMs)=>{
             const ping = await requestOnce({
                 id: `hook-version-${Date.now()}`,
                 type: 'ping'
@@ -15576,7 +15460,7 @@ var __webpack_modules__ = {
             return requestOnce(message, socketPath, timeoutMs);
         };
         const requestJson = async (message, socketPath, timeoutMs)=>{
-            const outcome = await requestOutcome1(message, socketPath, timeoutMs);
+            const outcome = await requestOutcome(message, socketPath, timeoutMs);
             return outcome.kind === 'reply' ? outcome.message : null;
         };
         const recordDeniedAttempt = async (attempt, socketPath = (0, _paths_js__rspack_import_3.G)())=>{
@@ -15609,7 +15493,7 @@ var __webpack_modules__ = {
                 ];
             });
         };
-        const listSessionCompleted = async (session, sinceMs, socketPath = (0, _paths_js__rspack_import_3.G)())=>{
+        const listSessionCompleted = async (session, sinceMs, socketPath = resolveHookSocketPath())=>{
             const message = await requestJson({
                 id: 'hook-completed',
                 session,
@@ -15620,7 +15504,7 @@ var __webpack_modules__ = {
                 throw new Error('session-completed unavailable');
             }
             return message.requests.flatMap((entry)=>{
-                const parsed = (0, _finished_ticket_js__rspack_import_7.r)(entry);
+                const parsed = asFinishedTicket(entry);
                 return parsed === null ? [] : [
                     parsed
                 ];
@@ -15643,87 +15527,15 @@ var __webpack_modules__ = {
         };
         __webpack_require__.d(__webpack_exports__, {}, {
             gj: waitForTickets,
-            k$: listSessionCompleted,
             kd: recordDeniedAttempt,
             qP: listSessionPending,
-            wc: requestOutcome1
-        });
-    },
-    "./src/internal/host-hooks/session-ping.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-        var _util_guards_js__rspack_import_2 = __webpack_require__("./src/internal/util/guards.ts");
-        var _finished_ticket_js__rspack_import_3 = __webpack_require__("./src/internal/host-hooks/finished-ticket.ts");
-        var _paths_js__rspack_import_0 = __webpack_require__("./src/internal/host-hooks/paths.ts");
-        var _rpc_js__rspack_import_1 = __webpack_require__("./src/internal/host-hooks/rpc.ts");
-        const defaultPingTimeoutMs = 500;
-        const finishedTicketsFromRenderInput = (value)=>{
-            if (!(0, _util_guards_js__rspack_import_2.u)(value) || value.kind !== 'finished' || !Array.isArray(value.tickets)) {
-                return undefined;
-            }
-            const tickets = value.tickets.flatMap((entry)=>{
-                const ticket = (0, _finished_ticket_js__rspack_import_3.r)(entry);
-                return ticket === null ? [] : [
-                    ticket
-                ];
-            });
-            return {
-                tickets,
-                ...typeof value.asOfMs === 'number' ? {
-                    asOfMs: value.asOfMs
-                } : {}
-            };
-        };
-        const pingSessionCompleted = async (session, sinceMs, options = {})=>{
-            const outcome = await requestOutcome({
-                id: 'hook-completed',
-                session,
-                sinceMs,
-                type: 'session-completed'
-            }, options.socketPath ?? resolveHookSocketPath(), options.timeoutMs ?? defaultPingTimeoutMs);
-            switch(outcome.kind){
-                case 'reply':
-                    {
-                        const tickets = finishedTicketsOf(outcome.message);
-                        return tickets === null ? {
-                            kind: 'unavailable',
-                            reason: 'malformed'
-                        } : {
-                            kind: 'finished',
-                            tickets
-                        };
-                    }
-                case 'closed':
-                case 'malformed':
-                case 'timeout':
-                    return {
-                        kind: 'unavailable',
-                        reason: outcome.kind
-                    };
-                case 'replacement-failed':
-                    return {
-                        kind: 'unavailable',
-                        reason: 'replacement-failed'
-                    };
-                case 'unreachable':
-                    return {
-                        code: outcome.code ?? null,
-                        kind: 'unavailable',
-                        reason: 'unreachable'
-                    };
-                default:
-                    {
-                        const exhaustive = outcome;
-                        return exhaustive;
-                    }
-            }
-        };
-        __webpack_require__.d(__webpack_exports__, {}, {
-            cJ: finishedTicketsFromRenderInput
+            wc: requestOutcome
         });
     },
     "./src/internal/host-hooks/shared.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-        var _ui_documents_headlines_js__rspack_import_0 = __webpack_require__("./src/internal/ui/documents/headlines.ts");
+        var _util_text_js__rspack_import_0 = __webpack_require__("./src/internal/util/text.ts");
         const formatFinishedTicket = (ticket)=>{
-            const counts = (0, _ui_documents_headlines_js__rspack_import_0.YQ)(ticket);
+            const counts = ticket.errorCount === null || ticket.warningCount === null ? null : `${(0, _util_text_js__rspack_import_0.M)(ticket.errorCount, 'error')}, ${(0, _util_text_js__rspack_import_0.M)(ticket.warningCount, 'warning')}`;
             switch(ticket.status){
                 case 'done':
                     return `ticket ${ticket.ticket} finished: success${counts === null ? '' : `, ${counts}`}. Call hauler_result ${ticket.ticket}.`;
@@ -15856,32 +15668,6 @@ var __webpack_modules__ = {
             q: handleStopHold
         });
     },
-    "./src/internal/host-hooks/tokens.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-        const haulerToken = /(?:^|[^A-Za-z0-9_])(?:cargo|hauler)(?![A-Za-z0-9_])/iu;
-        const commandMentionsHauler = (command)=>command !== undefined && command.length > 0 && haulerToken.test(command);
-        const cargoStatusLine = /^(?: {3}Compiling| {4}Checking| {4}Finished| {5}Running| {3}Doc-tests| Documenting| {4}Blocking) \S/mu;
-        const fileReaders = new Set([
-            'awk',
-            'bat',
-            'cat',
-            'grep',
-            'head',
-            'less',
-            'more',
-            'rg',
-            'sed',
-            'tac',
-            'tail'
-        ]);
-        const readsFile = (command)=>{
-            const first = command.trimStart().split(/\s+/u, 1)[0] ?? '';
-            return fileReaders.has(first.slice(first.lastIndexOf('/') + 1));
-        };
-        const hiddenCargoRun = (command, output)=>command !== undefined && output !== undefined && !commandMentionsHauler(command) && !readsFile(command) && cargoStatusLine.test(output);
-        __webpack_require__.d(__webpack_exports__, {}, {
-            j: hiddenCargoRun
-        });
-    },
     "./src/internal/host-hooks/tool-input.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var _util_guards_js__rspack_import_0 = __webpack_require__("./src/internal/util/guards.ts");
         const extractShellCommand = (toolInput)=>{
@@ -15890,7 +15676,7 @@ var __webpack_modules__ = {
             }
             return toolInput.command;
         };
-        const outputKeys = [
+        const outputKeys = null && [
             'stdout',
             'stderr',
             'output',
@@ -15901,15 +15687,14 @@ var __webpack_modules__ = {
             if (typeof toolResponse === 'string') {
                 return toolResponse;
             }
-            if (!(0, _util_guards_js__rspack_import_0.u)(toolResponse)) {
+            if (!isRecord(toolResponse)) {
                 return undefined;
             }
             const parts = outputKeys.map((key)=>toolResponse[key]).filter((value)=>typeof value === 'string');
             return parts.length === 0 ? undefined : parts.join('\n');
         };
         __webpack_require__.d(__webpack_exports__, {}, {
-            H: extractShellCommand,
-            N: extractShellOutput
+            H: extractShellCommand
         });
     },
     "./src/internal/operations/daemon-health.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
@@ -16356,7 +16141,7 @@ var __webpack_modules__ = {
             return (0, node_path__rspack_import_3.join)(home, '.cache');
         };
         const defaultStateDir = (env = process.env, platform = process.platform, home = (0, node_os__rspack_import_2.homedir)())=>(0, node_path__rspack_import_3.join)(userCacheDir(env, platform, home), 'cargo-hauler');
-        const resolveStateDir = (env = process.env)=>{
+        const resolveStateDir1 = (env = process.env)=>{
             const current = env.CARGO_HAULER_STATE_DIR;
             if (current !== undefined && current.length > 0) {
                 return current;
@@ -16409,7 +16194,7 @@ var __webpack_modules__ = {
         };
         __webpack_require__.d(__webpack_exports__, {}, {
             $Q: daemonSocketPath,
-            JT: resolveStateDir,
+            JT: resolveStateDir1,
             rU: defaultKacheIndexPath
         });
     },
@@ -16513,50 +16298,6 @@ var __webpack_modules__ = {
             });
         __webpack_require__.d(__webpack_exports__, {}, {
             RJ: ticketLogDirFor
-        });
-    },
-    "./src/internal/ui/documents/headlines.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-        var _util_text_js__rspack_import_0 = __webpack_require__("./src/internal/util/text.ts");
-        const commandText1 = (record)=>commandDisplay(record.argv);
-        const elapsedMs = (record, nowMs)=>{
-            switch(record.status){
-                case 'queued':
-                case 'requested':
-                    return Math.max(0, nowMs - (record.queuedAtMs ?? record.createdAtMs));
-                case 'running':
-                    return record.startedAtMs === null ? null : Math.max(0, nowMs - record.startedAtMs);
-                case 'done':
-                case 'failed':
-                case 'killed':
-                case 'denied':
-                case 'passthrough':
-                    return record.runMs;
-                case 'orphaned':
-                    return null;
-                default:
-                    {
-                        const exhaustive = record.status;
-                        return exhaustive;
-                    }
-            }
-        };
-        const diagnosticCounts1 = (record)=>record.errorCount === null || record.warningCount === null ? null : `${(0, _util_text_js__rspack_import_0.M)(record.errorCount, 'error')}, ${(0, _util_text_js__rspack_import_0.M)(record.warningCount, 'warning')}`;
-        const failedPrerequisite = (record)=>{
-            if (record.status !== 'failed' || record.startedAtMs !== null || record.exitCode !== null) return null;
-            return /^prerequisite (cc-\d+) (?:failed|killed|denied|passthrough|unknown)$/u.exec(record.error ?? '')?.[1] ?? null;
-        };
-        const ticketHeadline = (record, nowMs)=>{
-            const elapsed = elapsedMs(record, nowMs);
-            const timing = elapsed === null ? '' : ` ${formatMs(elapsed)}`;
-            const estimate = (record.status === 'queued' || record.status === 'running') && record.estimateMs !== null ? ` (est ~${formatMs(record.estimateMs)})` : '';
-            const exit = record.exitCode === null || record.status === 'done' ? '' : ` exit=${record.exitCode}`;
-            const counts = diagnosticCounts1(record);
-            const outcome = failedPrerequisite(record) !== null ? ` — never ran: ${record.error}` : counts === null ? '' : ` — ${counts}`;
-            const stalled = record.status === 'running' && record.stall !== undefined ? ` · stalled ${formatMs(record.stall.idleMs)}` : '';
-            return `${record.ticket} ${record.status}${timing}${estimate}${stalled}${exit}${outcome} — ${commandText1(record)}`;
-        };
-        __webpack_require__.d(__webpack_exports__, {}, {
-            YQ: diagnosticCounts1
         });
     },
     "./src/internal/ui/documents/view-models.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
@@ -16936,7 +16677,7 @@ var __webpack_modules__ = {
             }
             return `…/${segments.slice(-2).join('/')}`;
         };
-        const commandDisplay1 = (argv)=>{
+        const commandDisplay = (argv)=>{
             const [program, ...args] = argv;
             return program === undefined ? '' : [
                 pathBasename1(program),

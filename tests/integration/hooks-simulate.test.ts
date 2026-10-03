@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, statSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,13 +9,14 @@ import { createEventRouteInput } from 'agent-bundle/test';
 import { describe, expect, it } from 'effect-rstest';
 import * as Effect from 'effect/Effect';
 
+import { runExecClient } from '../../src/internal/client/exec.js';
 import { handleAfterShell } from '../../src/internal/host-hooks/after-shell.js';
 import { handleBeforeShell, type HookContext } from '../../src/internal/host-hooks/before-shell.js';
 import type { HookRecord } from '../../src/internal/host-hooks/record.js';
 import { recordDeniedAttempt } from '../../src/internal/host-hooks/rpc.js';
 import { shellEventFrom } from '../../src/internal/host-hooks/event-support.js';
 
-import { pollReport, scopedDaemon } from '../support/harness.js';
+import { fakeCargoEnv, pollReport, scopedDaemon } from '../support/harness.js';
 import { removeTestPath } from '../support/tmp-guard.js';
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
@@ -41,14 +42,18 @@ const runWrapper = (
   wrapper: string,
   input: Record<string, unknown>,
   stateDir = process.env.CARGO_HAULER_STATE_DIR,
+  host: 'claude' | 'cursor' = 'claude',
 ): Promise<{ readonly code: number; readonly stderr: string; readonly stdout: string }> =>
   new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [wrapper], {
       cwd: artifactRoot,
       env: {
         ...process.env,
-        AGENT_BUNDLE_HOOK_HOST: 'claude',
+        AGENT_BUNDLE_HOOK_HOST: host,
+        AGENT_BUNDLE_PLUGIN_ROOT: artifactRoot,
         CARGO_HAULER_STATE_DIR: stateDir,
+        CLAUDE_PLUGIN_ROOT: artifactRoot,
+        CURSOR_PLUGIN_ROOT: artifactRoot,
       },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -325,6 +330,96 @@ describe('agent-bundle hooks simulate', () => {
         removeTestPath(stateDir);
       }
     },
+  );
+
+  it.skipIf(findHookEntry('after-tool', 'cursor') === undefined)(
+    'continues a cargo Cursor tool/after without the Flight worker when nothing finished',
+    async () => {
+      const stateDir = mkdtempSync(join(tmpdir(), 'hauler-after-no-flight-'));
+      const hooksCopy = mkdtempSync(join(tmpdir(), 'hauler-after-hooks-'));
+      try {
+        cpSync(hooksRoot, hooksCopy, { recursive: true });
+        for (const name of readdirSync(hooksCopy)) {
+          if (name.endsWith('.execute.mjs') || name === 'hooks-flight.mjs') {
+            unlinkSync(join(hooksCopy, name));
+          }
+        }
+        const ran = await runWrapper(
+          join(hooksCopy, 'event-route-tool-after.cursor.mjs'),
+          loadJson('cursor-after-cargo.json'),
+          stateDir,
+          'cursor',
+        );
+        expect(ran).toEqual({ code: 0, stderr: '', stdout: '' });
+        const records = readFileSync(join(stateDir, 'hook-events.jsonl'), 'utf8')
+          .trim()
+          .split('\n')
+          .map((line) => JSON.parse(line) as Record<string, unknown>);
+        expect(records).toEqual([
+          {
+            atMs: expect.any(Number),
+            command: 'cargo test -p foo',
+            cwd: '/tmp/ws',
+            exitCode: 0,
+            host: 'cursor',
+            outcome: 'continue',
+            phase: 'afterTool',
+            session: 'sess-cursor',
+            toolName: 'Shell',
+          },
+        ]);
+      } finally {
+        removeTestPath(stateDir);
+        removeTestPath(hooksCopy);
+      }
+    },
+  );
+
+  it.live('injects finished background ticket context from the compiled Cursor tool/after', () =>
+    Effect.gen(function* () {
+        const entry = findHookEntry('after-tool', 'cursor');
+        expect(entry).toBeDefined();
+        const fixture = yield* scopedDaemon(1);
+        const session = 'sess-after-ticket';
+        const submitted = yield* runExecClient({
+          argv: ['cargo', 'check'],
+          autoSpawn: false,
+          background: true,
+          config: fixture.config,
+          cwd: fixture.ws1,
+          env: fakeCargoEnv(fixture),
+          host: 'cursor',
+          io: { writeStderr: () => undefined, writeStdout: () => undefined },
+          session,
+        });
+        expect(submitted.ticket).toMatch(/^cc-\d+$/u);
+        yield* pollReport(fixture, (report) =>
+          report.recent.some((request) => request.ticket === submitted.ticket && request.status === 'done'),
+        );
+        const ran = yield* Effect.promise(() =>
+          runWrapper(
+            entry!,
+            {
+              conversation_id: session,
+              cwd: fixture.ws1,
+              hook_event_name: 'postToolUse',
+              session_id: session,
+              tool_input: { command: 'ls -la' },
+              tool_name: 'Shell',
+              tool_output: '{"exitCode":0}',
+              tool_use_id: 'call_cursor',
+              transcript_path: '/tmp/transcript.json',
+            },
+            fixture.config.stateDir,
+            'cursor',
+          ),
+        );
+        expect(ran.code).toBe(0);
+        expect(ran.stderr).toBe('');
+        expect(ran.stdout).toContain(submitted.ticket);
+        expect(ran.stdout).toContain('Call hauler_result');
+      }),
+    20_000,
   );
 
   it.skipIf(!existsSync(hooksRoot))('ships the cheap shell hook handlers without the rendering runtime', () => {

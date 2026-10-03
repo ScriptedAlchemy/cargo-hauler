@@ -1,4 +1,4 @@
-import { diagnosticCounts } from '../ui/documents/headlines.js';
+import { countWord } from '../util/text.js';
 
 import type { DaemonProbe } from './probe.js';
 import type { HookRecord } from './record.js';
@@ -31,7 +31,10 @@ export interface HookServices {
 }
 
 export const formatFinishedTicket = (ticket: FinishedTicket): string => {
-  const counts = diagnosticCounts(ticket);
+  const counts =
+    ticket.errorCount === null || ticket.warningCount === null
+      ? null
+      : `${countWord(ticket.errorCount, 'error')}, ${countWord(ticket.warningCount, 'warning')}`;
   switch (ticket.status) {
     case 'done':
       return `ticket ${ticket.ticket} finished: success${counts === null ? '' : `, ${counts}`}. Call hauler_result ${ticket.ticket}.`;

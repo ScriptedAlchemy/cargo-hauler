@@ -925,15 +925,19 @@ Event routes are host protocol responses, and the layout never wraps them.
 sibling `.view.tsx` modules. The framework compiles each `.ts` handler into
 the hook entry itself, `hooks/event-route-tool-before.<host>.mjs`. That entry
 is about 1 MiB with the lazy provider registry but no React or Flight worker.
-It loads the rendered view only when the handler calls `context.render`. The
-handler decides on the raw command (`src/internal/host-hooks/tokens.ts`, plus
-`session-ping.ts` for the one bounded completion ping after a tool ran). It
-returns `continue` for the shell calls that name neither cargo nor hauler, and
-a rendered view for the rest. Neither handler resolves the daemon-config
-provider. The rendered view calls `before-shell.ts` (the rewrite, the
-`cargo clean` guard) or `after-shell.ts` (telemetry, finished-ticket
-context). It returns `allow`, `continue` with `updatedInput`, `deny` with a
-reason, or `additionalContext` through the framework's host projection.
+It loads the rendered view only when the handler calls `context.render`.
+
+`tool/before` decides on the raw command (`src/internal/host-hooks/tokens.ts`).
+It returns `continue` for shell calls that name neither cargo nor hauler, and
+a rendered view for the rest. The rendered view calls `before-shell.ts` for
+the rewrite and the `cargo clean` guard.
+
+`tool/after` calls `after-shell.ts` in the handler. That records telemetry and
+asks the daemon for finished tickets. It returns `continue` unless the result
+carries `additionalContext`. The rendered view projects that text. Neither
+handler resolves the daemon-config provider. The views return `allow`,
+`continue` with `updatedInput`, `deny` with a reason, or `additionalContext`
+through the framework's host projection.
 
 #### The daemon provider (`src/providers/hauler-daemon.ts`)
 
