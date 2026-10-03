@@ -34,6 +34,7 @@ export interface ParsedCargoArgv {
   readonly packages: readonly string[];
   /** Arguments after `--`, forwarded to rustc/libtest/the spawned program. */
   readonly passthrough: readonly string[];
+  /** Cargo profile. Nextest `--profile`/`-P` stays opaque and is not this field. */
   readonly profile: string;
   readonly subcommand: string;
   readonly targetDir: string | null;
@@ -394,7 +395,6 @@ const opaqueOptionsWithValues = new Set([
 const nextestOpaqueOptionsWithValues = new Set([
   '--archive-file',
   '--build-jobs',
-  '--cargo-profile',
   '--config-file',
   '--extract-to',
   '--failure-output',
@@ -408,8 +408,37 @@ const nextestOpaqueOptionsWithValues = new Set([
   '--test-threads',
   '--tool-config-file',
   '--workspace-remap',
-  '-P',
 ]);
+
+type CargoProfileOption =
+  | { readonly _tag: 'CargoValue' }
+  | { readonly _tag: 'CargoNamed'; readonly profile: string }
+  | { readonly _tag: 'OpaqueValue' };
+
+const namedCargoProfileOptions: Readonly<Record<string, CargoProfileOption>> = {
+  '--release': { _tag: 'CargoNamed', profile: 'release' },
+  '-r': { _tag: 'CargoNamed', profile: 'release' },
+  '--debug': { _tag: 'CargoNamed', profile: 'dev' },
+};
+
+const defaultCargoProfileOptions: Readonly<Record<string, CargoProfileOption>> = {
+  ...namedCargoProfileOptions,
+  '--profile': { _tag: 'CargoValue' },
+};
+
+const cargoProfileOptionsBySubcommand: Readonly<
+  Record<string, Readonly<Record<string, CargoProfileOption>>>
+> = {
+  nextest: {
+    ...namedCargoProfileOptions,
+    '--cargo-profile': { _tag: 'CargoValue' },
+    '--profile': { _tag: 'OpaqueValue' },
+    '-P': { _tag: 'OpaqueValue' },
+  },
+};
+
+const cargoProfileOptionFor = (subcommand: string, option: string): CargoProfileOption | undefined =>
+  (cargoProfileOptionsBySubcommand[subcommand] ?? defaultCargoProfileOptions)[option];
 
 const opaqueOptionTakesValue = (subcommand: string, option: string): boolean =>
   opaqueOptionsWithValues.has(option) ||
@@ -593,6 +622,31 @@ export const parseCargoArgv = (input: readonly string[]): ParsedCargoArgv => {
       return following;
     };
 
+    const profileOption = cargoProfileOptionFor(subcommand, option);
+    if (profileOption !== undefined) {
+      switch (profileOption._tag) {
+        case 'CargoValue':
+          profile = takeValue();
+          profileNamed = true;
+          break;
+        case 'CargoNamed':
+          profile = profileOption.profile;
+          profileNamed = true;
+          break;
+        case 'OpaqueValue':
+          opaqueArguments.push(argument);
+          if (inlineValue === undefined) {
+            opaqueArguments.push(takeValue());
+          }
+          break;
+        default: {
+          const _exhaustive: never = profileOption;
+          throw new Error(`unhandled cargo profile option ${JSON.stringify(_exhaustive)}`);
+        }
+      }
+      continue;
+    }
+
     switch (option) {
       case '-p':
       case '--package': {
@@ -613,10 +667,6 @@ export const parseCargoArgv = (input: readonly string[]): ParsedCargoArgv => {
       }
       case '--manifest-path':
         manifestPath = takeValue();
-        break;
-      case '--profile':
-        profile = takeValue();
-        profileNamed = true;
         break;
       case '--target':
         targetTriple = takeValue();
@@ -662,15 +712,6 @@ export const parseCargoArgv = (input: readonly string[]): ParsedCargoArgv => {
         break;
       case '--no-default-features':
         noDefaultFeatures = true;
-        break;
-      case '-r':
-      case '--release':
-        profile = 'release';
-        profileNamed = true;
-        break;
-      case '--debug':
-        profile = 'dev';
-        profileNamed = true;
         break;
       default:
         if (argument.startsWith('-')) {
