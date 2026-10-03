@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.6
+
+### Patch Changes
+
+- 596adfa: Route wait tests no longer depend on timer precision.
+
 ## 0.13.5
 
 ### Patch Changes
