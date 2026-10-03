@@ -195,6 +195,7 @@ const statusMetricsWindowBySubcommandSchema = z.object({
 
 const statusMetricsWaitSplitSchema = z.object({
   count: z.number().int().nonnegative(),
+  prerequisiteBoundMs: z.number().nonnegative(),
   laneBoundMs: z.number().nonnegative(),
   permitBoundMs: z.number().nonnegative(),
   otherMs: z.number().nonnegative(),

@@ -65,10 +65,12 @@ export default () => (
       </li>
       <li>
         <strong>Queue wait vs run.</strong> For each window, this panel compares total queue wait with total
-        leader run time and splits the wait by cause. <em>Lane-bound</em> is time when a leader in the same lane
-        was still compiling, before its <code>Finished</code> line or exit. <em>Permit-bound</em> is time when
-        every admission permit was in use and no compile in the same lane explains the wait. <em>Other</em> covers
-        admission holds, <code>--after</code> prerequisites, and scheduling latency. The permit split assumes the
+        leader run time and splits the wait by cause. <em>Prerequisite-bound</em> is time when an{' '}
+        <code>--after</code> prerequisite had not finished yet, and it takes precedence over the other causes.{' '}
+        <em>Lane-bound</em> is time when a leader in the same lane was still compiling, before its{' '}
+        <code>Finished</code> line or exit. <em>Permit-bound</em> is time when every admission permit was in use
+        and no compile in the same lane explains the wait. <em>Other</em> covers admission holds and scheduling
+        latency. The permit split assumes the
         daemon's current permit count, and the caption says so. The "lane time released by hand-back" stat is
         the execution time of test and run leaders that had already handed their lane to the next compile.
       </li>

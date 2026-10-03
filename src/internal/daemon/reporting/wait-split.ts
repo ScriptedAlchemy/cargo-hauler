@@ -12,6 +12,10 @@ import type {
  * A leader waits in `[queuedAt, startedAt)`. During that wait each instant
  * is attributed to exactly one cause, in this precedence:
  *
+ * - prerequisite-bound: an `--after` prerequisite had not finished yet. A
+ *   blocked leader cannot start whatever its lane or the permits are doing,
+ *   so this owns `[queuedAt, prerequisitesDoneAt)`, and lane and permit
+ *   overlap is measured only over the rest of the wait;
  * - lane-bound: another leader in the same lane was still compiling, i.e.
  *   between its start and its build-finished stamp (or its finish, for pure
  *   compiles and for rows older than the hand-back);
@@ -19,8 +23,7 @@ import type {
  *   anywhere on the machine, and no same-lane head was compiling — a leader
  *   keeps its permit through its execution phase, so this window runs from
  *   start to finish;
- * - other: admission holds (memory, load, heavy cap), `--after`
- *   prerequisites, and scheduling latency.
+ * - other: admission holds (memory, load, heavy cap) and scheduling latency.
  */
 
 export interface WaitSplitRow {
@@ -31,10 +34,13 @@ export interface WaitSplitRow {
   readonly buildFinishedAtMs: number | null;
   /** Null for a leader still running; its run is open-ended at `nowMs`. */
   readonly finishedAtMs: number | null;
+  /** Latest finish among the row's `--after` tickets; null when it has none. */
+  readonly prerequisitesDoneAtMs: number | null;
 }
 
 export interface WaitSplit {
   readonly waitMs: number;
+  readonly prerequisiteBoundMs: number;
   readonly laneBoundMs: number;
   readonly permitBoundMs: number;
   readonly otherMs: number;
@@ -168,13 +174,15 @@ export const classifyWaits = (
     if (row.queuedAtMs === null || row.startedAtMs === null) {
       continue;
     }
-    const from = row.queuedAtMs;
+    const queuedAt = row.queuedAtMs;
     const to = row.startedAtMs;
-    const waitMs = Math.max(0, to - from);
+    const waitMs = Math.max(0, to - queuedAt);
     if (waitMs === 0) {
-      splits.set(row.id, { laneBoundMs: 0, otherMs: 0, permitBoundMs: 0, waitMs });
+      splits.set(row.id, { laneBoundMs: 0, otherMs: 0, permitBoundMs: 0, prerequisiteBoundMs: 0, waitMs });
       continue;
     }
+    const from = Math.min(to, Math.max(queuedAt, row.prerequisitesDoneAtMs ?? queuedAt));
+    const prerequisiteBoundMs = from - queuedAt;
     const lane = laneUnions.get(row.laneKey) ?? [];
     const laneBoundMs = overlapMs(from, to, lane);
     let permitBoundMs = 0;
@@ -188,8 +196,9 @@ export const classifyWaits = (
     }
     splits.set(row.id, {
       laneBoundMs,
-      otherMs: Math.max(0, waitMs - laneBoundMs - permitBoundMs),
+      otherMs: Math.max(0, waitMs - prerequisiteBoundMs - laneBoundMs - permitBoundMs),
       permitBoundMs,
+      prerequisiteBoundMs,
       waitMs,
     });
   }
@@ -205,16 +214,18 @@ export const sumWaitSplits = (
   permits: number | null,
 ): StatusMetricsWaitSplit => {
   let count = 0;
+  let prerequisiteBoundMs = 0;
   let laneBoundMs = 0;
   let permitBoundMs = 0;
   let otherMs = 0;
   for (const split of splits) {
     count += 1;
+    prerequisiteBoundMs += split.prerequisiteBoundMs;
     laneBoundMs += split.laneBoundMs;
     permitBoundMs += split.permitBoundMs;
     otherMs += split.otherMs;
   }
-  return { count, laneBoundMs, otherMs, permitBoundMs, permits };
+  return { count, laneBoundMs, otherMs, permitBoundMs, permits, prerequisiteBoundMs };
 };
 
 export interface PhaseSample {

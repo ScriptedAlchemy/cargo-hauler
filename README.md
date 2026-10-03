@@ -1040,10 +1040,12 @@ and refreshes it while the ticket runs, so the poll never carries 16 KiB per
 running ticket.
 
 Each metrics window also reports queue wait against run time for leaders,
-with the wait split by cause. *Lane-bound* wait means a same-lane leader was
-still compiling, before its `Finished` line or exit. *Permit-bound* wait
-means every admission permit was held and no same-lane compile was to blame.
-*Other* wait covers admission holds, `--after` prerequisites, and scheduling
+with the wait split by cause. *Prerequisite-bound* wait means an `--after`
+prerequisite had not finished yet. It takes precedence, because a blocked
+leader cannot start whatever its lane is doing. *Lane-bound* wait means a
+same-lane leader was still compiling, before its `Finished` line or exit.
+*Permit-bound* wait means every admission permit was held and no same-lane
+compile was to blame. *Other* wait covers admission holds and scheduling
 latency. The classification is a pure sweep over ledger rows
 (`src/internal/daemon/reporting/wait-split.ts`). It runs once per status
 refresh against the daemon's current permit count, which the tile states, so

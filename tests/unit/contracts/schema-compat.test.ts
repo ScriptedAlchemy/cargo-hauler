@@ -143,7 +143,7 @@ const metricsWindow = (id: 'hour' | 'day' | 'all') => ({
   ],
   runTotalMs: 21_600,
   waitTotalMs: 2_400,
-  waitSplit: { count: 12, laneBoundMs: 1_800, permitBoundMs: 400, otherMs: 200, permits: 5 },
+  waitSplit: { count: 12, prerequisiteBoundMs: 0, laneBoundMs: 1_800, permitBoundMs: 400, otherMs: 200, permits: 5 },
   handBack: { leaders: 5, laneReleasedMs: 3_200 },
 });
 

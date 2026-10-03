@@ -1014,7 +1014,7 @@ const WaitVsRun = ({
             />
             <Stat
               label="wait ÷ run"
-              title="queue wait as a share of run time; above 100% leaders spent longer waiting for a lane or permit than running"
+              title="queue wait as a share of run time; above 100% leaders spent longer waiting for a prerequisite, lane, or permit than running"
               value={view.waitToRunPercent === null ? '—' : `${Math.round(view.waitToRunPercent)}%`}
             />
             <Stat

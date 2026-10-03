@@ -535,15 +535,16 @@ export interface StatusMetricsWindowBySubcommand {
 }
 
 /**
- * Where leaders' queue wait went (#92). Lane-bound: a leader in the same
- * lane was still compiling (before its build-finished or finish stamp).
+ * Where leaders' queue wait went (#92). Prerequisite-bound: an `--after`
+ * prerequisite had not finished yet. Lane-bound: a leader in the same lane
+ * was still compiling (before its build-finished or finish stamp).
  * Permit-bound: every admission permit was held by a running leader while
- * no same-lane head compiled. Other: admission holds, `--after`
- * prerequisites, and scheduling latency.
+ * no same-lane head compiled. Other: admission holds and scheduling latency.
  */
 export interface StatusMetricsWaitSplit {
   /** Leaders in the window whose queued and started stamps bound a wait. */
   readonly count: number;
+  readonly prerequisiteBoundMs: number;
   readonly laneBoundMs: number;
   readonly permitBoundMs: number;
   readonly otherMs: number;

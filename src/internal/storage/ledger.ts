@@ -753,8 +753,9 @@ export const createLedgerApi = (db: DatabaseSync, options: CreateLedgerApiOption
   const selectRecentRequests = db.prepare(
     `SELECT ${requestColumns} FROM requests ORDER BY created_at_ms DESC, id DESC LIMIT ?`,
   );
-  // The wait-split classification needs each leader's lane and its queued,
-  // started, build-finished, and finished stamps beside the run summary.
+  // The wait-split classification needs each leader's lane, its queued,
+  // started, build-finished, and finished stamps, and when its last `--after`
+  // ticket (stored as `cc-N`) finished, beside the run summary.
   const metricsWindowColumns = `id,
        lane_key,
        status,
@@ -762,6 +763,9 @@ export const createLedgerApi = (db: DatabaseSync, options: CreateLedgerApiOption
        started_at_ms,
        build_finished_at_ms,
        finished_at_ms,
+       (SELECT MAX(p.finished_at_ms)
+          FROM json_each(requests.after_json) j
+          JOIN requests p ON p.id = CAST(substr(j.value, 4) AS INTEGER)) AS prerequisites_done_at_ms,
        run_ms,
        wait_ms,
        COALESCE(json_extract(intent_json, '$.subcommand'), 'unknown') AS subcommand,
@@ -944,6 +948,7 @@ export const createLedgerApi = (db: DatabaseSync, options: CreateLedgerApiOption
     startedAtMs: toNullableNumber(row.started_at_ms),
     buildFinishedAtMs: toNullableNumber(row.build_finished_at_ms),
     finishedAtMs: toNullableNumber(row.finished_at_ms),
+    prerequisitesDoneAtMs: toNullableNumber(row.prerequisites_done_at_ms),
   });
 
   /**

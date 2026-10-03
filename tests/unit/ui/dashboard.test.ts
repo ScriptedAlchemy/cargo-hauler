@@ -193,7 +193,7 @@ describe('pickMetricsWindow (window toggle and fallback)', () => {
       bySubcommand: [{ subcommand: 'check', profile: 'debug', count: 3, p50Ms: 900, maxMs: 1_800, phases: null }],
       runTotalMs: 3_150,
       waitTotalMs: 180,
-      waitSplit: { count: 3, laneBoundMs: 120, permitBoundMs: 0, otherMs: 60, permits: 5 },
+      waitSplit: { count: 3, prerequisiteBoundMs: 0, laneBoundMs: 120, permitBoundMs: 0, otherMs: 60, permits: 5 },
       handBack: noHandBack,
     },
     {
@@ -210,7 +210,7 @@ describe('pickMetricsWindow (window toggle and fallback)', () => {
       bySubcommand: [{ subcommand: 'check', profile: 'debug', count: 12, p50Ms: 1_200, maxMs: 2_700, phases: null }],
       runTotalMs: 19_200,
       waitTotalMs: 1_100,
-      waitSplit: { count: 12, laneBoundMs: 800, permitBoundMs: 100, otherMs: 200, permits: 5 },
+      waitSplit: { count: 12, prerequisiteBoundMs: 0, laneBoundMs: 800, permitBoundMs: 100, otherMs: 200, permits: 5 },
       handBack: noHandBack,
     },
     {
@@ -227,7 +227,7 @@ describe('pickMetricsWindow (window toggle and fallback)', () => {
       bySubcommand: [{ subcommand: 'check', profile: 'debug', count: 55, p50Ms: 1_600, maxMs: 5_000, phases: null }],
       runTotalMs: 126_500,
       waitTotalMs: 9_400,
-      waitSplit: { count: 55, laneBoundMs: 7_000, permitBoundMs: 1_400, otherMs: 1_000, permits: 5 },
+      waitSplit: { count: 55, prerequisiteBoundMs: 0, laneBoundMs: 7_000, permitBoundMs: 1_400, otherMs: 1_000, permits: 5 },
       handBack: noHandBack,
     },
   ];
@@ -999,7 +999,14 @@ describe('waitVsRunView (queue wait vs run, split by cause)', () => {
     bySubcommand: [],
     runTotalMs: 600_000,
     waitTotalMs: 960_000,
-    waitSplit: { count: 12, laneBoundMs: 480_000, permitBoundMs: 240_000, otherMs: 240_000, permits: 5 },
+    waitSplit: {
+      count: 12,
+      prerequisiteBoundMs: 480_000,
+      laneBoundMs: 240_000,
+      permitBoundMs: 120_000,
+      otherMs: 120_000,
+      permits: 5,
+    },
     handBack: { leaders: 3, laneReleasedMs: 90_000 },
   };
 
@@ -1013,10 +1020,11 @@ describe('waitVsRunView (queue wait vs run, split by cause)', () => {
     expect(view.waitTotalMs).toBe(960_000);
     expect(view.runTotalMs).toBe(600_000);
     expect(view.waitToRunPercent).toBe(160);
-    expect(view.parts.map((part) => [part.kind, part.ms, part.percent])).toEqual([
-      ['lane', 480_000, 50],
-      ['permit', 240_000, 25],
-      ['other', 240_000, 25],
+    expect(view.parts.map((part) => [part.kind, part.label, part.ms, part.percent])).toEqual([
+      ['prerequisite', 'prerequisite-bound', 480_000, 50],
+      ['lane', 'lane-bound', 240_000, 25],
+      ['permit', 'permit-bound', 120_000, 12.5],
+      ['other', 'other', 120_000, 12.5],
     ]);
     // The permit assumption is stated, with the caveat about earlier caps.
     expect(view.permitsNote).toContain('5-permit cap');
@@ -1028,7 +1036,7 @@ describe('waitVsRunView (queue wait vs run, split by cause)', () => {
       ...window,
       runTotalMs: 0,
       waitTotalMs: 0,
-      waitSplit: { count: 0, laneBoundMs: 0, permitBoundMs: 0, otherMs: 0, permits: null },
+      waitSplit: { count: 0, prerequisiteBoundMs: 0, laneBoundMs: 0, permitBoundMs: 0, otherMs: 0, permits: null },
     });
     expect(view.kind).toBe('available');
     if (view.kind !== 'available') {

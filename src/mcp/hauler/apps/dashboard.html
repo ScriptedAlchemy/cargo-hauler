@@ -15,6 +15,7 @@
         --good: #7dce9a;
         --bad: #e07a5f;
         --warn: #e39a55;
+        --prerequisite: #8fb3d9;
         --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
       }
       html, body {
@@ -222,6 +223,7 @@
         background: var(--line);
         overflow: hidden;
       }
+      .wait-split-fill.prerequisite { background: var(--prerequisite); }
       .wait-split-fill.lane { background: var(--accent); }
       .wait-split-fill.permit { background: var(--warn); }
       .wait-split-fill.other { background: rgba(232, 228, 217, 0.28); }
@@ -242,6 +244,7 @@
         border-radius: 2px;
         vertical-align: -1px;
       }
+      .swatch.prerequisite { background: var(--prerequisite); }
       .swatch.lane { background: var(--accent); }
       .swatch.permit { background: var(--warn); }
       .swatch.other { background: rgba(232, 228, 217, 0.28); }
