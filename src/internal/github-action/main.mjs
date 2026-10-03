@@ -124,8 +124,10 @@ export async function main(env = process.env) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main().catch(() => {
+  main().catch(error => {
     console.error('Hauler CI controller failed. No successful PR verdict is inferred.');
+    console.error(error?.stack ?? String(error));
+    if (error?.status) console.error(`GitHub ${error.status} on ${error.path}: ${JSON.stringify(error.rateLimit)}`);
     process.exitCode = 1;
   });
 }
