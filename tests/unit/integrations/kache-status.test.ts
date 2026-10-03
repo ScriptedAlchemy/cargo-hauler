@@ -22,9 +22,34 @@ import * as Schedule from 'effect/Schedule';
 import {
   createKacheSnapshotReader,
   createKacheStatus,
+  kacheIndexAggregateSql,
   readKacheEventPriors,
 } from '../../../src/internal/integrations/kache/status.js';
 import { removeTestPath } from '../../support/tmp-guard.js';
+
+/** kache's `entries` table and indexes as of kache's current store layout. */
+const kacheIndexSchema = `
+  CREATE TABLE entries (
+    cache_key TEXT PRIMARY KEY,
+    crate_name TEXT NOT NULL,
+    size INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_accessed TEXT NOT NULL DEFAULT (datetime('now')),
+    hit_count INTEGER NOT NULL DEFAULT 0,
+    committed INTEGER NOT NULL DEFAULT 0,
+    crate_type TEXT NOT NULL DEFAULT '',
+    profile TEXT NOT NULL DEFAULT '',
+    num_features INTEGER NOT NULL DEFAULT 0,
+    content_hash TEXT,
+    compile_time_ms INTEGER NOT NULL DEFAULT 0,
+    key_schema INTEGER NOT NULL DEFAULT 0,
+    durable INTEGER NOT NULL DEFAULT 1,
+    unit_id TEXT NOT NULL DEFAULT '',
+    imported_at INTEGER
+  );
+  CREATE INDEX idx_entries_crate_name ON entries(crate_name);
+  CREATE INDEX idx_entries_crate_unit ON entries(crate_name, unit_id);
+`;
 
 const createIndex = (indexPath: string, rows: readonly (readonly [string, string, number])[]) => {
   const database = new DatabaseSync(indexPath);
@@ -299,6 +324,37 @@ describe('createKacheSnapshotReader', () => {
 
       utimesSync(indexPath, pinnedAt, new Date(pinnedAt.getTime() + 5_000));
       expect((await reader.read(3_000)).status.entryCount).toBe(2);
+    } finally {
+      removeTestPath(root);
+    }
+  });
+
+  it('aggregates a kache-schema index with a table scan instead of the crate_name index', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'cc-kache-status-plan-'));
+    const indexPath = join(root, 'index.db');
+    try {
+      const database = new DatabaseSync(indexPath);
+      database.exec(kacheIndexSchema);
+      const insert = database.prepare(
+        'INSERT INTO entries (cache_key, crate_name, profile, compile_time_ms, unit_id) VALUES (?, ?, ?, ?, ?)',
+      );
+      insert.run('k1', 'alpha', 'dev', 100, 'u1');
+      insert.run('k2', 'alpha', 'dev', 300, 'u2');
+      insert.run('k3', 'beta', 'release', 2_000, 'u3');
+      const plan = database
+        .prepare(`EXPLAIN QUERY PLAN ${kacheIndexAggregateSql}`)
+        .all()
+        .map((row) => row.detail);
+      database.close();
+
+      expect(plan).toEqual(['SCAN entries', 'USE TEMP B-TREE FOR GROUP BY']);
+      const { status } = await createKacheSnapshotReader(indexPath, { env: {}, home: root }).read(1_000);
+      expect(status.indexState).toBe('read');
+      expect(status.entryCount).toBe(3);
+      expect(status.topCrates).toEqual([
+        { crate: 'beta', profile: 'release', ms: 2_000 },
+        { crate: 'alpha', profile: 'dev', ms: 300 },
+      ]);
     } finally {
       removeTestPath(root);
     }

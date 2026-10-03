@@ -375,6 +375,22 @@ const unavailableIndex = (state: Exclude<KacheIndexState, 'read'>): IndexReadRes
   priors: emptyIndexPriors,
 });
 
+/**
+ * Per crate and profile: the slowest recorded compile and the entry count.
+ * `NOT INDEXED` keeps SQLite off `idx_entries_crate_name`, which costs one
+ * random table lookup per row (5.4 s against 0.84 s of CPU for a sequential
+ * scan of 275k entries). kache owns the schema, so the plan is pinned here.
+ */
+export const kacheIndexAggregateSql = `SELECT crate_name, profile, MAX(compile_time_ms) AS compile_time_ms,
+       COUNT(*) AS entry_count
+FROM entries NOT INDEXED
+GROUP BY crate_name, profile`;
+
+interface IndexScanRequest {
+  readonly indexPath: string;
+  readonly aggregateSql: string;
+}
+
 type IndexScan =
   | {
       readonly kind: 'read';
@@ -393,19 +409,12 @@ const scanIndexInWorker = (): void => {
   const { parentPort, workerData } = process.getBuiltinModule('node:worker_threads');
   const { DatabaseSync } = process.getBuiltinModule('node:sqlite');
   const { statSync } = process.getBuiltinModule('node:fs');
-  const indexPath = String(workerData);
+  const { indexPath, aggregateSql } = workerData as IndexScanRequest;
   let database: InstanceType<typeof DatabaseSync> | undefined;
   try {
     const indexSizeBytes = statSync(indexPath).size;
     database = new DatabaseSync(indexPath, { readOnly: true });
-    const rows = database
-      .prepare(
-        `SELECT crate_name, profile, MAX(compile_time_ms) AS compile_time_ms,
-                COUNT(*) AS entry_count
-         FROM entries
-         GROUP BY crate_name, profile`,
-      )
-      .all();
+    const rows = database.prepare(aggregateSql).all();
     let storeBytes: number | null = null;
     try {
       const total = Number(database.prepare('SELECT SUM(size) AS total FROM blobs').get()?.total ?? 0);
@@ -429,7 +438,8 @@ const scanIndexSource = `(${scanIndexInWorker.toString()})()`;
  */
 const scanIndex = (indexPath: string, timeoutMs: number): Promise<IndexScan> =>
   new Promise((resolve) => {
-    const worker = new Worker(scanIndexSource, { eval: true, workerData: indexPath });
+    const request: IndexScanRequest = { indexPath, aggregateSql: kacheIndexAggregateSql };
+    const worker = new Worker(scanIndexSource, { eval: true, workerData: request });
     worker.unref();
     const settle = (scan: IndexScan): void => {
       clearTimeout(timer);

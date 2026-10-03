@@ -14484,9 +14484,7 @@ var __webpack_modules__ = {
                     readOnly: true
                 });
                 db.prepare('SELECT compile_time_ms FROM entries LIMIT 1').get();
-                aggregate = db.prepare(`SELECT crate_name, profile, MAX(compile_time_ms) AS compile_time_ms
-       FROM entries
-       GROUP BY crate_name, profile`);
+                aggregate = db.prepare(kacheIndexAggregateSql);
             } catch  {
                 try {
                     db?.close();
@@ -15745,21 +15743,22 @@ var __webpack_modules__ = {
                 topCrates: [],
                 priors: emptyIndexPriors1
             });
+        const kacheIndexAggregateSql1 = `SELECT crate_name, profile, MAX(compile_time_ms) AS compile_time_ms,
+       COUNT(*) AS entry_count
+FROM entries NOT INDEXED
+GROUP BY crate_name, profile`;
         const scanIndexInWorker = ()=>{
             const { parentPort, workerData } = process.getBuiltinModule('node:worker_threads');
             const { DatabaseSync: DatabaseSync1 } = process.getBuiltinModule('node:sqlite');
             const { statSync: statSync1 } = process.getBuiltinModule('node:fs');
-            const indexPath = String(workerData);
+            const { indexPath, aggregateSql } = workerData;
             let database;
             try {
                 const indexSizeBytes = statSync1(indexPath).size;
                 database = new DatabaseSync1(indexPath, {
                     readOnly: true
                 });
-                const rows = database.prepare(`SELECT crate_name, profile, MAX(compile_time_ms) AS compile_time_ms,
-                COUNT(*) AS entry_count
-         FROM entries
-         GROUP BY crate_name, profile`).all();
+                const rows = database.prepare(aggregateSql).all();
                 let storeBytes = null;
                 try {
                     const total = Number(database.prepare('SELECT SUM(size) AS total FROM blobs').get()?.total ?? 0);
@@ -15781,9 +15780,13 @@ var __webpack_modules__ = {
         };
         const scanIndexSource = `(${scanIndexInWorker.toString()})()`;
         const scanIndex = (indexPath, timeoutMs)=>new Promise((resolve)=>{
+                const request = {
+                    indexPath,
+                    aggregateSql: kacheIndexAggregateSql1
+                };
                 const worker = new node_worker_threads__rspack_import_5.Worker(scanIndexSource, {
                     eval: true,
-                    workerData: indexPath
+                    workerData: request
                 });
                 worker.unref();
                 const settle = (scan)=>{

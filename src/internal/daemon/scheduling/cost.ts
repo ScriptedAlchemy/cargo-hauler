@@ -15,6 +15,7 @@ import {
   emptyIndexPriors,
   eventPriorKey,
   finitePositiveMs,
+  kacheIndexAggregateSql,
   KacheStatus,
 } from '../../integrations/kache/status.js';
 import type {
@@ -161,11 +162,7 @@ export const openKacheReader = (indexPath: string): KacheReader | null => {
   try {
     db = new DatabaseSync(indexPath, { readOnly: true });
     db.prepare('SELECT compile_time_ms FROM entries LIMIT 1').get();
-    aggregate = db.prepare(
-      `SELECT crate_name, profile, MAX(compile_time_ms) AS compile_time_ms
-       FROM entries
-       GROUP BY crate_name, profile`,
-    );
+    aggregate = db.prepare(kacheIndexAggregateSql);
   } catch {
     try {
       db?.close();
