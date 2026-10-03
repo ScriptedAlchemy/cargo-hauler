@@ -378,8 +378,8 @@ const unavailableIndex = (state: Exclude<KacheIndexState, 'read'>): IndexReadRes
 /**
  * Per crate and profile: the slowest recorded compile and the entry count.
  * `NOT INDEXED` keeps SQLite off `idx_entries_crate_name`, which costs one
- * random table lookup per row (7.4 s against 1.1 s for a sequential scan of
- * 275k entries). kache owns the schema, so the plan is pinned here.
+ * random table lookup per row (5.4 s against 0.84 s of CPU for a sequential
+ * scan of 275k entries). kache owns the schema, so the plan is pinned here.
  */
 export const kacheIndexAggregateSql = `SELECT crate_name, profile, MAX(compile_time_ms) AS compile_time_ms,
        COUNT(*) AS entry_count
