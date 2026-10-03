@@ -8,12 +8,14 @@ export function checkOwner(check) {
     if (!positive(owner.runId) || !positive(owner.jobId) || !Number.isSafeInteger(owner.attempt) || owner.attempt < 1 ||
         !/^[a-z][a-z0-9-]{0,47}$/.test(owner.lane) || !Number.isSafeInteger(owner.ordinal) || owner.ordinal < 1 || owner.ordinal > 100 ||
         !Number.isSafeInteger(owner.remaining) || owner.remaining < 0 || owner.remaining > 100 || typeof owner.finished !== 'boolean' ||
-        !Number.isSafeInteger(owner.deadline) || owner.deadline < 1) return null;
+        !Number.isSafeInteger(owner.deadline) || owner.deadline < 1 ||
+        owner.worker !== undefined && (!Number.isSafeInteger(owner.worker) || owner.worker < 1 || owner.worker > 100)) return null;
     return owner;
   } catch { return null; }
 }
 export const ownerText = owner => `${prefix}${JSON.stringify(owner)}`;
 export const ownerKey = owner => `${owner.runId}:${owner.attempt}:${owner.jobId}`;
+export const poolJobName = (lane, worker) => worker ? `Hauler pool / ${lane} / ${worker}` : `Hauler pool / ${lane}`;
 
 export function verifyOwners(client, { repository, workflow = 'hauler-ci.yml', defaultBranch }) {
   if (!/^[\w.-]+\.ya?ml$/.test(workflow)) throw new TypeError('Invalid manager workflow');
@@ -33,18 +35,18 @@ export function verifyOwners(client, { repository, workflow = 'hauler-ci.yml', d
     let listed;
     try { listed = await jobs.get(key); }
     catch (error) { if (error.message === 'GitHub GET returned 404') return false; throw error; }
-    const matches = listed.filter(job => job.name === `Hauler pool / ${owner.lane}`);
+    const matches = listed.filter(job => job.name === poolJobName(owner.lane, owner.worker));
     return matches.length === 1 && String(matches[0].id) === owner.jobId && ['queued', 'in_progress'].includes(matches[0].status);
   };
 }
 
-export async function workerIdentity(client, { runId, attempt, lane, repository, workflow, defaultBranch }) {
-  const owner = { runId: String(runId), attempt: Number(attempt), jobId: '1', lane, ordinal: 1, remaining: 0, finished: false, deadline: Date.now() + 60000 };
+export async function workerIdentity(client, { runId, attempt, lane, worker, repository, workflow, defaultBranch }) {
+  const owner = { runId: String(runId), attempt: Number(attempt), jobId: '1', lane, ordinal: 1, remaining: 0, finished: false, deadline: Date.now() + 60000, worker };
   if (!checkOwner({ output: { text: ownerText(owner) } })) throw new Error('Invalid worker identity');
   const jobs = await client.pages(`/actions/runs/${owner.runId}/attempts/${owner.attempt}/jobs`, 'jobs');
-  const matches = jobs.filter(job => job.name === `Hauler pool / ${lane}`);
+  const matches = jobs.filter(job => job.name === poolJobName(lane, worker));
   if (matches.length !== 1) throw new Error('Unique Hauler pool lane job required');
   owner.jobId = String(matches[0].id);
   if (!checkOwner({ output: { text: ownerText(owner) } }) || !await verifyOwners(client, { repository, workflow, defaultBranch })(owner)) throw new Error('Could not verify current worker provenance');
-  return { runId: owner.runId, attempt: owner.attempt, jobId: owner.jobId };
+  return { runId: owner.runId, attempt: owner.attempt, jobId: owner.jobId, ...(worker ? { worker } : {}) };
 }
