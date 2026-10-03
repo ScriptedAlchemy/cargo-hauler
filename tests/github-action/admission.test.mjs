@@ -35,7 +35,7 @@ function fixture() {
   }
   const options = { recipe, repository: 'owner/repo', token: 'private', policy, fetchImpl };
   const sandboxFactory = async () => { state.builds++; return { async prepare() {}, async run() { return { exitCode: 0 }; }, async close() {} }; };
-  const drainOptions = { ...options, actionIdentity: 'action', lane: 'a', root: '/tmp', maxMinutes: 1, maxSnapshots: 1, sandboxFactory };
+  const drainOptions = { ...options, actionIdentity: 'action', lane: 'a', root: '/tmp', maxMinutes: 1, maxSnapshots: 1, idlePolls: 0, sandboxFactory };
   return { state, check, rest, options, drainOptions };
 }
 test('empty, single and mixed lane plans share one metadata scan and never execute work', async () => {

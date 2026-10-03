@@ -36,7 +36,7 @@ function fixture({ authors = ['owner'], fail = false, change = false, prepareFai
     builds++;
     return { async prepare() { if (prepareFail) throw new Error('private worker diagnostic'); }, async run(command) { events.push(['run', command]); if (change) prs[0].head.sha = hex(500); return { exitCode: fail && command === 'first' ? 1 : 0 }; }, async close() { events.push(['close']); } };
   }
-  const options = { recipe, lane: 'linux', repository: 'owner/repo', token: 'not-logged', root: '/tmp', image: 'trusted', actionIdentity: 'abc', manualAdmission: true, maxMinutes: 1, maxSnapshots: 3, fetchImpl: graphqlFetch(rest), sandboxFactory };
+  const options = { recipe, lane: 'linux', repository: 'owner/repo', token: 'not-logged', root: '/tmp', image: 'trusted', actionIdentity: 'abc', manualAdmission: true, maxMinutes: 1, maxSnapshots: 3, idlePolls: 0, fetchImpl: graphqlFetch(rest), sandboxFactory };
   return { options, rest, events, checks, prs, builds: () => builds };
 }
 test('publishes first failure before running remaining task and preserves failure', async () => {
@@ -360,4 +360,96 @@ test('scoped workers reserve their active snapshot without covering unrelated qu
   assert.deepEqual(result.snapshots.map(snapshot => snapshot.pr), [1]);
   assert.equal(result.snapshots[0].tasks.length, 2);
   assert.equal(f.checks.get(99).status, 'queued');
+});
+const scanCounter = (f, emptyScans = 0) => {
+  const counter = { scans: 0 };
+  counter.fetchImpl = graphqlFetch(async (url, options) => {
+    if (new URL(url).pathname === '/repos/owner/repo/pulls' && ++counter.scans <= emptyScans) return { ok: true, json: async () => [] };
+    return f.rest(url, options);
+  });
+  return counter;
+};
+test('resident worker rescans after empty admission and resets its idle count on work', async () => {
+  const f = fixture(), counter = scanCounter(f, 2);
+  const result = await drain({ ...f.options, fetchImpl: counter.fetchImpl, idlePolls: 2, pollMilliseconds: 5 });
+  assert.equal(result.snapshots.length, 1);
+  assert.equal(f.builds(), 1);
+  // Two empty scans, the admitted one, then a fresh idle budget of two waits before exit.
+  assert.equal(counter.scans, 6);
+});
+test('resident worker exits after idlePolls waits on always-empty admission', async () => {
+  for (const idlePolls of [0, 3]) {
+    const f = fixture({ authors: [] }), counter = scanCounter(f);
+    const result = await drain({ ...f.options, fetchImpl: counter.fetchImpl, idlePolls, pollMilliseconds: 5 });
+    assert.equal(result.snapshots.length, 0);
+    assert.equal(counter.scans, idlePolls + 1);
+  }
+  await assert.rejects(drain({ ...fixture().options, idlePolls: 61 }), /Invalid Hauler drain options/);
+});
+test('workflow cancellation during an idle wait exits promptly', async () => {
+  const f = fixture({ authors: [] }), controller = new AbortController(), counter = { scans: 0 };
+  const fetchImpl = graphqlFetch(async (url, options) => {
+    if (new URL(url).pathname === '/repos/owner/repo/pulls' && ++counter.scans === 1) setTimeout(() => controller.abort(), 20);
+    return f.rest(url, options);
+  });
+  const started = Date.now();
+  const result = await drain({ ...f.options, fetchImpl, idlePolls: 5, pollMilliseconds: 60000, signal: controller.signal });
+  assert.equal(result.snapshots.length, 0);
+  assert.equal(counter.scans, 1);
+  assert.ok(Date.now() - started < 5000);
+});
+function interruptible(f, interrupt) {
+  let builds = 0, first = true, active;
+  const sandboxFactory = async () => {
+    builds++;
+    return {
+      async prepare({ pr }) { active = pr; f.events.push(['prepare', pr]); },
+      async run(command, { signal }) {
+        f.events.push(['run', command]);
+        if (!first) return { exitCode: 0 };
+        first = false;
+        interrupt(f.prs[active - 1]);
+        if (!signal.aborted) await new Promise(resolve => signal.addEventListener('abort', resolve, { once: true }));
+        return { exitCode: 130 };
+      },
+      async close() { f.events.push(['close']); }
+    };
+  };
+  return { sandboxFactory, builds: () => builds };
+}
+test('a superseded snapshot keeps the warm sandbox for the next admission', async () => {
+  const f = fixture({ authors: ['owner', 'owner'] });
+  const sandbox = interruptible(f, pr => { pr.head.sha = hex(500); });
+  const persistSnapshot = async () => { f.events.push(['persist']); };
+  const result = await drain({ ...f.options, sandboxFactory: sandbox.sandboxFactory, persistSnapshot, maxSnapshots: 2, pollMilliseconds: 5 });
+  assert.equal(result.snapshots[0].conclusion, 'cancelled');
+  assert.equal(result.snapshots[0].infrastructureError, undefined);
+  assert.equal(result.snapshots[1].compatibleSandboxReuse, true);
+  assert.equal(result.snapshots[1].conclusion, 'success');
+  assert.equal(sandbox.builds(), 1);
+  const kinds = f.events.map(e => e[0]);
+  assert.equal(kinds.filter(kind => kind === 'prepare').length, 2);
+  assert.deepEqual(kinds.filter(kind => ['close', 'persist'].includes(kind)), ['persist', 'persist', 'close']);
+});
+test('an infrastructure abort still discards the sandbox', async () => {
+  const f = fixture({ authors: ['owner', 'owner'] });
+  let failing = false, failed = false;
+  const fetchImpl = graphqlFetch(async (url, options) => {
+    if (failing && !failed && /\/pulls\/\d+$/.test(url)) { failed = true; return { ok: false, status: 403 }; }
+    return f.rest(url, options);
+  });
+  const sandbox = interruptible(f, () => { failing = true; });
+  const result = await drain({ ...f.options, fetchImpl, sandboxFactory: sandbox.sandboxFactory, maxSnapshots: 2, pollMilliseconds: 5 });
+  assert.equal(result.snapshots[0].infrastructureError, true);
+  assert.equal(result.snapshots[1].compatibleSandboxReuse, false);
+  assert.equal(sandbox.builds(), 2);
+});
+test('workflow cancellation during a snapshot still closes the sandbox', async () => {
+  const f = fixture({ authors: ['owner', 'owner'] }), controller = new AbortController();
+  const sandbox = interruptible(f, pr => { pr.head.sha = hex(500); controller.abort(); });
+  const persistSnapshot = async () => { f.events.push(['persist']); };
+  const result = await drain({ ...f.options, sandboxFactory: sandbox.sandboxFactory, persistSnapshot, maxSnapshots: 2, pollMilliseconds: 5, signal: controller.signal });
+  assert.equal(result.snapshots.length, 1);
+  // The snapshot's own cleanup closes the sandbox before its evidence persists, not the drain exit.
+  assert.deepEqual(f.events.map(e => e[0]).filter(kind => ['close', 'persist'].includes(kind)), ['close', 'persist']);
 });

@@ -6,12 +6,13 @@ import { parseRecipe } from './recipe.mjs';
 import { checkOwner, ownerKey, ownerText, verifyOwners } from './ownership.mjs';
 import { aggregateJUnit, failingTestsSummary, snapshotEvidence } from './evidence.mjs';
 import { performance } from 'node:perf_hooks';
+import { setTimeout as delay } from 'node:timers/promises';
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
 
-export async function drain({ recipe: input, lane: laneId, repository, token, root, actionIdentity, policy, admissionWorkflow = 'ci.yml', managerWorkflow = 'hauler-ci.yml', defaultBranch, worker, persistSnapshot, manualAdmission = false, image, maxMinutes = 45, maxSnapshots = 8, onlyPullRequests, sandboxFactory, fetchImpl = fetch, signal, pollMilliseconds = 60000 }) {
+export async function drain({ recipe: input, lane: laneId, repository, token, root, actionIdentity, policy, admissionWorkflow = 'ci.yml', managerWorkflow = 'hauler-ci.yml', defaultBranch, worker, persistSnapshot, manualAdmission = false, image, maxMinutes = 45, maxSnapshots = 8, idlePolls = 5, onlyPullRequests, sandboxFactory, fetchImpl = fetch, signal, pollMilliseconds = 60000 }) {
   const recipe = parseRecipe(input), lane = recipe.lanes.find(l => l.id === laneId);
-  if (!lane || !/^[\w.-]+\/[\w.-]+$/.test(repository) || !token || !actionIdentity || !Number.isFinite(maxMinutes) || maxMinutes <= 0 || maxMinutes > 350 || !Number.isInteger(maxSnapshots) || maxSnapshots < 1 || maxSnapshots > 100) throw new TypeError('Invalid Hauler drain options');
+  if (!lane || !/^[\w.-]+\/[\w.-]+$/.test(repository) || !token || !actionIdentity || !Number.isFinite(maxMinutes) || maxMinutes <= 0 || maxMinutes > 350 || !Number.isInteger(maxSnapshots) || maxSnapshots < 1 || maxSnapshots > 100 || !Number.isInteger(idlePolls) || idlePolls < 0 || idlePolls > 60) throw new TypeError('Invalid Hauler drain options');
   if (onlyPullRequests && (!Array.isArray(onlyPullRequests) || onlyPullRequests.some(n => !Number.isSafeInteger(n) || n < 1))) throw new TypeError('Invalid pull request selection');
   const deadline = Date.now() + maxMinutes * 60000, identity = policy ?? digest({ recipe, actionIdentity });
   const summary = { lane: lane.id, snapshots: [] }, attempted = new Set();
@@ -41,10 +42,17 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
     const entries = tree.tree.filter(e => e.path === 'Cargo.toml' || e.path.endsWith('/Cargo.toml') || recipe.compatibilityPaths.some(p => p.endsWith('/') ? e.path.startsWith(p) : e.path === p)).map(e => [e.path, e.mode, e.sha]).sort((a, b) => a[0].localeCompare(b[0]));
     return digest({ identity, entries, ...(!recipe.sharedBuilds ? { merge: s.merge } : {}) });
   }
+  let idle = 0;
   try {
     while (summary.snapshots.length < maxSnapshots && Date.now() < deadline && !signal?.aborted) {
       const s = await eligible();
-      if (!s) break;
+      if (!s) {
+        // A resident worker keeps its warm sandbox for work enqueued shortly after it ran dry.
+        if (idle++ >= idlePolls) break;
+        await delay(Math.max(0, Math.min(pollMilliseconds, deadline - Date.now())), undefined, { signal }).catch(() => {});
+        continue;
+      }
+      idle = 0;
       if (!same(s, await snapshot(s.pr)) || signal?.aborted || Date.now() >= deadline) continue;
       if (s.queued || s.retry) {
         const selected = s.queued ?? s.retry, latest = await api(`/check-runs/${selected.id}`), owner = checkOwner(latest);
@@ -64,6 +72,8 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
       const ownership = worker && { ...worker, lane: lane.id, ordinal: summary.snapshots.length + 1, remaining: onlyPullRequests ? 0 : maxSnapshots - summary.snapshots.length - 1, finished: false, deadline };
       const outputText = () => [ownership && ownerText(ownership), `hauler-evidence-v1:${JSON.stringify(snapshotEvidence(record))}`].filter(Boolean).join('\n');
       let check, reports, failed = false, stale = false, polling = false;
+      // A moved head only supersedes this snapshot; the sandbox stays warm for the next one.
+      const superseded = () => stale && !signal?.aborted && !record.infrastructureError;
       const poll = setInterval(async () => {
         if (polling || controller.signal.aborted) return;
         polling = true;
@@ -129,13 +139,13 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
         await report(controller.signal.aborted || stale ? 'cancelled' : failed || record.tasks.length !== lane.tasks.length ? 'failure' : 'success', true);
       } catch {
         record.infrastructureError ||= !controller.signal.aborted && !stale;
-        if (sandbox) { await sandbox.close(); sandbox = undefined; }
+        if (sandbox && !superseded()) { await sandbox.close(); sandbox = undefined; }
         if (check) await report(controller.signal.aborted || stale ? 'cancelled' : 'failure', true);
         else throw new Error('Could not create Hauler check');
       } finally {
         clearTimeout(timer); clearInterval(poll);
         signal?.removeEventListener('abort', abort);
-        if (controller.signal.aborted && sandbox) { await sandbox.close(); sandbox = undefined; }
+        if (controller.signal.aborted && sandbox && !superseded()) { await sandbox.close(); sandbox = undefined; }
         record.completedAt = new Date().toISOString();
         record.durationSeconds = (performance.now() - monotonicStart) / 1000;
         summary.snapshots.push(record);

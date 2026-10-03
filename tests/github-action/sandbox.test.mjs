@@ -54,6 +54,15 @@ test('real Docker isolates credentials, preserves warm outputs and kills descend
     const after = execFileSync('docker', ['ps', '-a', '--format', '{{.Names}}'], { encoding: 'utf8' }).split('\n');
     assert(containers.some(name => !after.includes(name)));
     await assert.rejects(sandbox.run('true'), /not ready/);
+    // A superseded snapshot aborts mid-task but keeps the sandbox; the next checkout starts clean and warm.
+    const superseded = new AbortController();
+    await sandbox.prepare({ ...fixture.snapshot, signal: superseded.signal });
+    assert.equal((await sandbox.run('touch /workspace/superseded-proof', { signal: superseded.signal })).exitCode, 0);
+    const interrupted = sandbox.run('sleep 1000', { signal: superseded.signal });
+    superseded.abort();
+    await assert.rejects(interrupted, /aborted/);
+    await sandbox.prepare(fixture.snapshot);
+    assert.equal((await sandbox.run('test ! -e /workspace/superseded-proof && test -e /workspace/target/warm-proof')).exitCode, 0);
     const controller = new AbortController();
     await sandbox.prepare({ ...fixture.snapshot, signal: controller.signal });
     assert.equal((await sandbox.run('sleep 1000 >/dev/null 2>&1 &')).exitCode, 0);
