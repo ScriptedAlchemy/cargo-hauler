@@ -12115,10 +12115,7 @@ var __webpack_modules__ = {
             }
             return merged;
         };
-        const overlapMs = (from, to, disjoint)=>{
-            if (to <= from) {
-                return 0;
-            }
+        const firstEndingAfter = (disjoint, from)=>{
             let low = 0;
             let high = disjoint.length;
             while(low < high){
@@ -12130,8 +12127,14 @@ var __webpack_modules__ = {
                     high = middle;
                 }
             }
+            return low;
+        };
+        const overlapMs = (from, to, disjoint)=>{
+            if (to <= from) {
+                return 0;
+            }
             let total = 0;
-            for(let index = low; index < disjoint.length; index += 1){
+            for(let index = firstEndingAfter(disjoint, from); index < disjoint.length; index += 1){
                 const interval = disjoint[index];
                 if (interval === undefined || interval.from >= to) {
                     break;
@@ -12223,12 +12226,13 @@ var __webpack_modules__ = {
                 const lane = laneUnions.get(row.laneKey) ?? [];
                 const laneBoundMs = overlapMs(from, to, lane);
                 let permitBoundMs = 0;
-                for (const interval of saturated){
+                for(let index = firstEndingAfter(saturated, from); index < saturated.length; index += 1){
+                    const interval = saturated[index];
+                    if (interval === undefined || interval.from >= to) {
+                        break;
+                    }
                     const pieceFrom = Math.max(from, interval.from);
                     const pieceTo = Math.min(to, interval.to);
-                    if (pieceTo <= pieceFrom) {
-                        continue;
-                    }
                     permitBoundMs += pieceTo - pieceFrom - overlapMs(pieceFrom, pieceTo, lane);
                 }
                 splits.set(row.id, {
@@ -86943,7 +86947,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                 name: "hauler_status"
             })
         });
-        const EVENT_ARTIFACT_EPOCH = "af8f1efd0de0a35381affb1e0ec06426ca0ae8a2841a11975b25180131800e42";
+        const EVENT_ARTIFACT_EPOCH = "51d4cc5475d1df1abc0bfee4251967bff6ada94dbbe90b13a7ef2fc8e0e41c97";
         const EVENT_ALLOWED_TARGETS = Object.freeze([
             "claude",
             "codex",
