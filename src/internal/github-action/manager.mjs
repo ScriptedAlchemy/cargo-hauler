@@ -4,7 +4,7 @@ import { checkIdentity, checkMetadata, cancelConflictedChecks, cancelNativeCheck
 import { readSnapshot, scanAdmission } from './admission.mjs';
 import { parseRecipe } from './recipe.mjs';
 import { checkOwner, ownerKey, ownerText, verifyOwners } from './ownership.mjs';
-import { aggregateJUnit, snapshotEvidence } from './evidence.mjs';
+import { aggregateJUnit, failingTestsSummary, snapshotEvidence } from './evidence.mjs';
 import { performance } from 'node:perf_hooks';
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
@@ -86,7 +86,7 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
         if (!await currentHead(s)) { stale = true; controller.abort(); conclusion = 'cancelled'; }
         record.conclusion = conclusion;
         if (finished) { record.completedAt = new Date().toISOString(); record.durationSeconds = (performance.now() - monotonicStart) / 1000; if (ownership) ownership.finished = true; }
-        await api(`/check-runs/${check.id}`, 'PATCH', { external_id: record.infrastructureError ? `${provenanceIdentity}:infrastructure` : provenanceIdentity, status: 'completed', conclusion, completed_at: new Date().toISOString(), output: { title: `Hauler ${lane.id}: ${conclusion}`, text: outputText(), summary: `${record.tasks.length}/${lane.tasks.length} tasks finished. Stage ${record.stage}. Tested head ${s.head} against pinned base ${s.base}, merge ${s.merge}. Later base changes are not revalidated. Failed tasks: ${record.tasks.filter(t => t.conclusion === 'failure').map(t => `${t.id} (exit ${t.exitCode})`).join(', ') || 'none'}.` } });
+        await api(`/check-runs/${check.id}`, 'PATCH', { external_id: record.infrastructureError ? `${provenanceIdentity}:infrastructure` : provenanceIdentity, status: 'completed', conclusion, completed_at: new Date().toISOString(), output: { title: `Hauler ${lane.id}: ${conclusion}`, text: outputText(), summary: `${record.tasks.length}/${lane.tasks.length} tasks finished. Stage ${record.stage}. Tested head ${s.head} against pinned base ${s.base}, merge ${s.merge}. Later base changes are not revalidated. Failed tasks: ${record.tasks.filter(t => t.conclusion === 'failure').map(t => `${t.id} (exit ${t.exitCode})`).join(', ') || 'none'}.${failingTestsSummary(record.junit)}` } });
       }
       try {
         if (s.queued) {
