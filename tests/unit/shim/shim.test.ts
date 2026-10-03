@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -230,7 +230,7 @@ describe('PATH cargo shim', () => {
       expect(shimPathStatus(shim, env)).toEqual({ kind: 'wins' });
       expect(findCargoShim(env)).toEqual({
         haulerArgv: ['hauler'],
-        path: shim,
+        path: realpathSync(shim),
         realCargo: '/usr/bin/cargo',
       });
     } finally {
