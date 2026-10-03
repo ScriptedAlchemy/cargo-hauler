@@ -186,10 +186,11 @@ finished, or with no daemon at all, exits with no output. Measured with
 
 The daemon keys each lane by workspace root, resolved target directory, and
 the profile output directory Cargo locks (`dev` and `test` build in `debug`,
-`release` and `bench` in `release`, a custom profile in its own name). A lane
-compiles one job at a time, because Cargo's own build-directory lock would
-serialize them anyway. A `build` and a `build --profile perf` in one
-workspace run at once, as Cargo itself allows. A whole-target `cargo clean`
+`release` and `bench` in `release`, a custom profile in its own name).
+`cargo nextest` selects that directory with `--cargo-profile` or `--release`,
+not with nextest's `--profile`. A lane compiles one job at a time, because
+Cargo's own build-directory lock would serialize them anyway. A `build` and a
+`build --profile perf` in one workspace run at once, as Cargo itself allows. A whole-target `cargo clean`
 takes no Cargo lock and deletes under every profile, so the daemon gates it
 per target directory instead. It waits for every build on that directory to
 settle, and builds that arrive meanwhile wait for it (`target-clean` in the

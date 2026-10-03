@@ -12970,7 +12970,6 @@ var __webpack_modules__ = {
         const nextestOpaqueOptionsWithValues = new Set([
             '--archive-file',
             '--build-jobs',
-            '--cargo-profile',
             '--config-file',
             '--extract-to',
             '--failure-output',
@@ -12983,9 +12982,43 @@ var __webpack_modules__ = {
             '--success-output',
             '--test-threads',
             '--tool-config-file',
-            '--workspace-remap',
-            '-P'
+            '--workspace-remap'
         ]);
+        const namedCargoProfileOptions = {
+            '--release': {
+                _tag: 'CargoNamed',
+                profile: 'release'
+            },
+            '-r': {
+                _tag: 'CargoNamed',
+                profile: 'release'
+            },
+            '--debug': {
+                _tag: 'CargoNamed',
+                profile: 'dev'
+            }
+        };
+        const defaultCargoProfileOptions = {
+            ...namedCargoProfileOptions,
+            '--profile': {
+                _tag: 'CargoValue'
+            }
+        };
+        const cargoProfileOptionsBySubcommand = {
+            nextest: {
+                ...namedCargoProfileOptions,
+                '--cargo-profile': {
+                    _tag: 'CargoValue'
+                },
+                '--profile': {
+                    _tag: 'OpaqueValue'
+                },
+                '-P': {
+                    _tag: 'OpaqueValue'
+                }
+            }
+        };
+        const cargoProfileOptionFor = (subcommand, option)=>(cargoProfileOptionsBySubcommand[subcommand] ?? defaultCargoProfileOptions)[option];
         const opaqueOptionTakesValue = (subcommand, option)=>opaqueOptionsWithValues.has(option) || subcommand === 'nextest' && nextestOpaqueOptionsWithValues.has(option);
         const affectsCompilation = null && isRelevantCargoEnvironmentVariable;
         const sha256 = (value)=>createHash('sha256').update(value).digest('hex');
@@ -13118,6 +13151,31 @@ var __webpack_modules__ = {
                     index += 1;
                     return following;
                 };
+                const profileOption = cargoProfileOptionFor(subcommand, option);
+                if (profileOption !== undefined) {
+                    switch(profileOption._tag){
+                        case 'CargoValue':
+                            profile = takeValue();
+                            profileNamed = true;
+                            break;
+                        case 'CargoNamed':
+                            profile = profileOption.profile;
+                            profileNamed = true;
+                            break;
+                        case 'OpaqueValue':
+                            opaqueArguments.push(argument);
+                            if (inlineValue === undefined) {
+                                opaqueArguments.push(takeValue());
+                            }
+                            break;
+                        default:
+                            {
+                                const _exhaustive = profileOption;
+                                throw new Error(`unhandled cargo profile option ${JSON.stringify(_exhaustive)}`);
+                            }
+                    }
+                    continue;
+                }
                 switch(option){
                     case '-p':
                     case '--package':
@@ -13141,10 +13199,6 @@ var __webpack_modules__ = {
                         }
                     case '--manifest-path':
                         manifestPath = takeValue();
-                        break;
-                    case '--profile':
-                        profile = takeValue();
-                        profileNamed = true;
                         break;
                     case '--target':
                         targetTriple = takeValue();
@@ -13190,15 +13244,6 @@ var __webpack_modules__ = {
                         break;
                     case '--no-default-features':
                         noDefaultFeatures = true;
-                        break;
-                    case '-r':
-                    case '--release':
-                        profile = 'release';
-                        profileNamed = true;
-                        break;
-                    case '--debug':
-                        profile = 'dev';
-                        profileNamed = true;
                         break;
                     default:
                         if (argument.startsWith('-')) {

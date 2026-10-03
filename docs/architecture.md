@@ -67,10 +67,12 @@ twice.
 - **lane.** One FIFO per workspace root, resolved target directory, and cargo
   profile output directory (`debug`, `release`, `perf`), keyed by
   `laneKeyFor` in `lane-exec.ts` from the intent's `BuildLock`
-  (`cargo/intent.ts`). A lane runs at most one leader's compile at a time,
-  matching the directory lock cargo takes. A whole-target `cargo clean` has
-  its own lane and a per-target-directory gate: it waits for every build on
-  that target directory to settle, and builds wait for it.
+  (`cargo/intent.ts`). Nextest `--profile`/`-P` is nextest's own profile and
+  does not select this directory. `--cargo-profile` and `--release`/`-r` do.
+  A lane runs at most one leader's compile at a time, matching the directory
+  lock cargo takes. A whole-target `cargo clean` has its own lane and a
+  per-target-directory gate: it waits for every build on that target
+  directory to settle, and builds wait for it.
 - **admission permit.** The machine-wide cap on concurrently admitted leaders
   (`config.ts`, `scheduling/scheduler.ts`). The CPU pressure arm in
   `scheduling/pressure.ts` defers admission, and `reporting/disk-stats.ts`

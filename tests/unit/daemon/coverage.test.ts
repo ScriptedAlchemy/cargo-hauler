@@ -6,7 +6,7 @@ import {
   isBuildOnlyIntent,
 } from '../../../src/internal/daemon/broker/coverage.js';
 import type { AttachDecision } from '../../../src/internal/daemon/broker/coverage.js';
-import { normalizeCargoIntent } from '../../../src/internal/cargo/intent.js';
+import { lockedProfileDir, normalizeCargoIntent } from '../../../src/internal/cargo/intent.js';
 import type { NormalizedCargoIntent } from '../../../src/internal/cargo/intent.js';
 import type { AttachRejectionGate } from '../../../src/internal/contracts/protocol.js';
 
@@ -46,6 +46,16 @@ describe('attachModeFor identity', () => {
     // run under it (the flags differ), see the #89 gates below for the
     // identical-flags case.
     expect(attachModeFor(leader, intent(['check', '-p', 'aa']))).toBeNull();
+  });
+
+  it('keeps the nextest profile in identity and out of the lane', () => {
+    const leader = intent(['nextest', 'run', '--profile', 'ci']);
+    expect([
+      lockedProfileDir(leader.buildLock),
+      attachModeFor(leader, intent(['nextest', 'run', '--profile', 'ci'])),
+      attachModeFor(leader, intent(['nextest', 'run', '--profile', 'default'])),
+      attachModeFor(leader, intent(['nextest', 'run'])),
+    ]).toEqual(['debug', 'identity', null, null]);
   });
 
   it('never coalesces side-effecting subcommands even when identical', () => {
