@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.4
+
+### Patch Changes
+
+- 6166659: The GitHub Action admission scan reads open pull requests, their check runs and admission receipts through paginated GraphQL queries instead of per-PR REST calls, so a scan costs a constant number of requests and no longer exhausts the `GITHUB_TOKEN` REST quota.
+
 ## 0.13.3
 
 ### Patch Changes
