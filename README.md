@@ -10,7 +10,9 @@ requester its own result.
 
 The [GitHub Action](docs/github-action.md) applies warm workers to a repository's
 PR queue. It manages isolated snapshots, per-PR checks, and compiler reuse from
-one trusted CI recipe.
+one trusted CI recipe. A lane can run several numbered workers through a
+`worker: [1, 2]` matrix with one `hauler-ci-<lane>-<worker>` concurrency group
+each. Workers agree on one holder for each head.
 
 ## The problem
 
