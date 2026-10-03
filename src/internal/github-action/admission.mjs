@@ -15,13 +15,8 @@ export async function scanAdmission(client, { recipe, repository, policy, lanes 
   if (onlyPullRequests && (!Array.isArray(onlyPullRequests) || onlyPullRequests.some(n => !Number.isSafeInteger(n) || n < 1))) throw new TypeError('Invalid pull request selection');
   const candidates = [], maintenance = [], owners = new Map(), ownedChecks = new Set();
   const live = verifyOwners(client, { repository, workflow: managerWorkflow, defaultBranch });
-  const pulls = onlyPullRequests ? onlyPullRequests.map(number => ({ number })) : await client.pages('/pulls?state=open&sort=created&direction=asc');
-  for (const listed of pulls) {
-    if (Date.now() >= deadline || signal?.aborted) break;
-    const pr = await client.api(`/pulls/${listed.number}`);
-    if (!trustedPull(pr, repository, recipe) || attempted.has(pr.head.sha)) continue;
-    const checks = await client.pages(`/commits/${pr.head.sha}/check-runs?filter=latest`, 'check_runs');
-    const pending = [], nativeQueued = [];
+  const classify = async (pr, checks) => {
+    const pending = [], nativeQueued = [], conflicts = [];
     for (const lane of lanes) {
       const identity = checkIdentity(pr.head.sha, lane.id, policy);
       const own = checks.filter(c => c.name === lane.checkName && c.app?.slug === 'github-actions' && c.head_sha === pr.head.sha);
@@ -37,13 +32,33 @@ export async function scanAdmission(client, { recipe, repository, policy, lanes 
       const queued = own.find(c => matchesCheck(c, identity) && ['queued', 'in_progress'].includes(c.status));
       for (const check of own) if (check.status === 'queued' && checkMetadata(check.external_id)?.identity.startsWith(checkIdentity(pr.head.sha, lane.id, '')) && (pr.mergeable !== false || !matchesCheck(check, identity))) nativeQueued.push({ lane, queued: check });
       if (pr.mergeable === false) {
-        if (own.some(c => matchesCheck(c, identity) && c.status === 'queued')) maintenance.push({ kind: 'conflict', lane, pr, checks });
+        if (own.some(c => matchesCheck(c, identity) && c.status === 'queued')) conflicts.push({ kind: 'conflict', lane, pr, checks });
         continue;
       }
       if (own.some(c => matchesCheck(c, identity) && c.status === 'completed' && ['success', 'failure'].includes(c.conclusion) && checkOwner(c)?.finished !== false)) continue;
       const retry = own.find(c => c.status === 'completed' && (checkMetadata(c.external_id)?.identity === identity && checkMetadata(c.external_id)?.infrastructure || matchesCheck(c, identity) && (c.conclusion === 'cancelled' || checkOwner(c)?.finished === false)));
       if (manualAdmission || queued || retry) pending.push({ lane, queued, retry });
     }
+    return { pending, nativeQueued, conflicts };
+  };
+  const checkRuns = head => client.pages(`/commits/${head}/check-runs?filter=latest`, 'check_runs');
+  const pulls = onlyPullRequests ? onlyPullRequests.map(number => ({ number })) : await client.pages('/pulls?state=open&sort=created&direction=asc');
+  for (const listed of pulls) {
+    if (Date.now() >= deadline || signal?.aborted) break;
+    let checks;
+    if (!onlyPullRequests) {
+      // List rows omit mergeability. Classifying the row as mergeable-unknown is a superset of
+      // both mergeable outcomes, so a row with no work skips the per-PR read.
+      if (!trustedPull(listed, repository, recipe) || attempted.has(listed.head.sha)) continue;
+      checks = await checkRuns(listed.head.sha);
+      const early = await classify({ ...listed, mergeable: null }, checks);
+      if (!early.pending.length && !early.nativeQueued.length) continue;
+    }
+    const pr = await client.api(`/pulls/${listed.number}`);
+    if (!trustedPull(pr, repository, recipe) || attempted.has(pr.head.sha)) continue;
+    if (pr.head.sha !== listed.head?.sha) checks = await checkRuns(pr.head.sha);
+    const { pending, nativeQueued, conflicts } = await classify(pr, checks);
+    maintenance.push(...conflicts);
     if (!pending.length && !nativeQueued.length) continue;
     if (!manualAdmission) {
       const decision = await receipt(client, { workflow: admissionWorkflow, head: pr.head.sha, pr: pr.number, policy });
