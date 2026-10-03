@@ -2,27 +2,17 @@ import { Agent } from '@agent-bundle/runtime';
 import type { AgentEventRouteProps } from 'agent-bundle';
 import React from 'react';
 
-import { handleAfterShell } from '../../internal/host-hooks/after-shell.js';
-import { finishedTicketsFromRenderInput } from '../../internal/host-hooks/session-ping.js';
-import { decisionValue, shellEventFrom } from '../../internal/host-hooks/event-support.js';
+import { decisionValue } from '../../internal/host-hooks/event-support.js';
+import { isRecord } from '../../internal/util/guards.js';
 
-/** Record cargo telemetry and render any finished-ticket context selected by the handler. */
-export default async function AfterShellTool({
-  canonical,
-  renderInput,
-}: AgentEventRouteProps<'tool/after'>) {
-  const { host, nativeEvent } = canonical.provenance;
-  const event = shellEventFrom(canonical.payload);
-  const announcement = finishedTicketsFromRenderInput(renderInput);
-  const result = await handleAfterShell(
-    announcement === undefined
-      ? event
-      : { ...event, finishedAsOfMs: announcement.asOfMs, finishedTickets: announcement.tickets },
-    { nativeEvent, target: host },
-  );
+export default function AfterShellTool({ renderInput }: AgentEventRouteProps<'tool/after'>) {
+  const additionalContext =
+    isRecord(renderInput) && typeof renderInput.additionalContext === 'string'
+      ? renderInput.additionalContext
+      : undefined;
   return (
-    <Agent.Result value={decisionValue(result)}>
-      {result.additionalContext === undefined ? null : <Agent.Context>{result.additionalContext}</Agent.Context>}
+    <Agent.Result value={decisionValue({ outcome: 'continue' })}>
+      {additionalContext === undefined ? null : <Agent.Context>{additionalContext}</Agent.Context>}
     </Agent.Result>
   );
 }

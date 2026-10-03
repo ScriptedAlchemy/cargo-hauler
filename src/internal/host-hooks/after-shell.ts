@@ -16,8 +16,6 @@ import { hiddenCargoRun } from './tokens.js';
 export interface AfterShellEvent {
   readonly cwd?: string;
   readonly sessionId?: string;
-  readonly finishedAsOfMs?: number;
-  readonly finishedTickets?: readonly FinishedTicket[];
   /** The completed call's input as the host sent it, an object on Claude and Cursor and any JSON on Codex. */
   readonly toolInput?: unknown;
   readonly toolName?: string;
@@ -45,32 +43,26 @@ const extractExitCode = (toolResponse: unknown): number | undefined => {
 const notifyContext = async (
   session: string | undefined,
   services: HookServices,
-  known?: readonly FinishedTicket[],
-  asOfMs?: number,
 ): Promise<string | undefined> => {
   if (session === undefined || session.length === 0) {
     return undefined;
   }
   const write = services.writeCursor ?? writeCursor;
-  const nowMs = (services.nowMs ?? Date.now)();
+  const asOfMs = (services.nowMs ?? Date.now)();
+  const read = services.readCursor ?? readCursor;
+  const completedSince = services.completedSince ?? listSessionCompleted;
   let finished: readonly FinishedTicket[];
-  if (known !== undefined) {
-    finished = known;
-  } else {
-    const read = services.readCursor ?? readCursor;
-    const completedSince = services.completedSince ?? listSessionCompleted;
-    try {
-      finished = await completedSince(session, read(session));
-    } catch {
-      return undefined;
-    }
+  try {
+    finished = await completedSince(session, read(session));
+  } catch {
+    return undefined;
   }
   if (finished.length === 0) {
     // The query is `finished_at_ms >= cursor`, so leaving the cursor where it
     // was returns the same (empty) set next time; skip the state-file write.
     return undefined;
   }
-  write(session, asOfMs ?? nowMs);
+  write(session, asOfMs);
   return finished.map(formatFinishedTicket).join('\n');
 };
 
@@ -104,7 +96,7 @@ const decideAfterShell = async (
       ...(event.toolName === undefined ? {} : { toolName: event.toolName }),
     });
   }
-  const finished = await notifyContext(event.sessionId, services, event.finishedTickets, event.finishedAsOfMs);
+  const finished = await notifyContext(event.sessionId, services);
   const notices = [...(hidden ? [hiddenCargoContext] : []), ...(finished === undefined ? [] : [finished])];
   return notices.length === 0
     ? { outcome: 'continue' }

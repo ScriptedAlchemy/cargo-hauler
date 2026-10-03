@@ -68,39 +68,36 @@ describe('afterTool completion notify', () => {
     expect(down).toEqual({ outcome: 'continue' });
   });
 
-  it('announces handler-provided tickets without querying the daemon, at the ping watermark', async () => {
-    let queried = false;
+  it('advances the cursor to the time captured before the completion query', async () => {
+    let now = 40;
     let cursor: number | undefined;
     const result = await handleAfterShell(
       {
-        finishedAsOfMs: 40,
-        finishedTickets: [
-          {
-            error: null,
-            errorCount: 0,
-            exitCode: 0,
-            status: 'done',
-            ticket: 'cc-42',
-            warningCount: 0,
-          },
-        ],
         sessionId: 'sess-1',
         toolInput: { command: 'ls' },
       },
       { target: 'claude' },
       {
         completedSince: async () => {
-          queried = true;
-          return [];
+          now = 99;
+          return [
+            {
+              error: null,
+              errorCount: 0,
+              exitCode: 0,
+              status: 'done',
+              ticket: 'cc-42',
+              warningCount: 0,
+            },
+          ];
         },
-        nowMs: () => 99,
+        nowMs: () => now,
         record: () => undefined,
         writeCursor: (_session, atMs) => {
           cursor = atMs;
         },
       },
     );
-    expect(queried).toBe(false);
     expect(cursor).toBe(40);
     expect(result.additionalContext).toContain('cc-42 finished: success');
   });
