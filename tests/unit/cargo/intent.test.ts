@@ -44,8 +44,25 @@ describe('cargo build lock scope', () => {
       [['clean', '-p', 'aa'], { _tag: 'ProfileDir', dir: 'debug' }],
       [['clean', '-p', 'aa', '--target', 'x86_64-unknown-linux-gnu'], { _tag: 'ProfileDir', dir: 'debug' }],
       [['clean', '-p', 'aa', '--release'], { _tag: 'ProfileDir', dir: 'release' }],
+      [['test', '--profile', 'perf'], { _tag: 'ProfileDir', dir: 'perf' }],
+      [['nextest', 'run'], { _tag: 'ProfileDir', dir: 'debug' }],
+      [['nextest', 'run', '--cargo-profile', 'perf'], { _tag: 'ProfileDir', dir: 'perf' }],
+      [['nextest', 'run', '--cargo-profile=perf'], { _tag: 'ProfileDir', dir: 'perf' }],
+      [['nextest', 'run', '--profile', 'ci'], { _tag: 'ProfileDir', dir: 'debug' }],
+      [['nextest', 'run', '--profile=ci'], { _tag: 'ProfileDir', dir: 'debug' }],
+      [['nextest', 'run', '-P', 'ci', '--cargo-profile', 'release'], { _tag: 'ProfileDir', dir: 'release' }],
+      [['nextest', 'run', '-P', 'ci', '--release'], { _tag: 'ProfileDir', dir: 'release' }],
     ];
     expect(table.map(([argv]) => [argv, lockOf(argv)])).toEqual(table);
+  });
+
+  it('reads the nextest profile as an option with a value and the cargo profile from --cargo-profile', () => {
+    const parsed = parseCargoArgv(['cargo', 'nextest', 'run', '--profile', 'ci', '--cargo-profile', 'perf', 'only_filter']);
+    expect([parsed.profile, parsed.opaqueArguments, parsed.testFilters]).toEqual([
+      'perf',
+      ['--profile', 'ci'],
+      ['only_filter'],
+    ]);
   });
 });
 
