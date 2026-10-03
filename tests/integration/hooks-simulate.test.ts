@@ -375,6 +375,33 @@ describe('agent-bundle hooks simulate', () => {
     },
   );
 
+  it.skipIf(findHookEntry('before-tool', 'cursor') === undefined)(
+    'continues a hauler Cursor tool/before without the Flight worker',
+    async () => {
+      const stateDir = mkdtempSync(join(tmpdir(), 'hauler-before-no-flight-'));
+      const hooksCopy = mkdtempSync(join(tmpdir(), 'hauler-before-hooks-'));
+      try {
+        cpSync(hooksRoot, hooksCopy, { recursive: true });
+        for (const name of readdirSync(hooksCopy)) {
+          if (name.endsWith('.execute.mjs') || name === 'hooks-flight.mjs') {
+            unlinkSync(join(hooksCopy, name));
+          }
+        }
+        const ran = await runWrapper(
+          join(hooksCopy, 'event-route-tool-before.cursor.mjs'),
+          { ...loadJson('cursor-before-cargo.json'), tool_input: { command: 'hauler await cc-12' } },
+          stateDir,
+          'cursor',
+        );
+        expect(ran).toEqual({ code: 0, stderr: '', stdout: '' });
+        expect(readdirSync(stateDir)).toEqual([]);
+      } finally {
+        removeTestPath(stateDir);
+        removeTestPath(hooksCopy);
+      }
+    },
+  );
+
   it.live('injects finished background ticket context from the compiled Cursor tool/after', () =>
     Effect.gen(function* () {
         const entry = findHookEntry('after-tool', 'cursor');
