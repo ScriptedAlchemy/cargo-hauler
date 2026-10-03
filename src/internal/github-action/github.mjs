@@ -13,7 +13,11 @@ export function githubClient({ repository, token, fetchImpl = fetch, signal }) {
       }
       if (!response.ok) {
         if (method === 'GET' && attempt < 2 && response.status >= 500) { await delay(250 * (attempt + 1)); continue; }
-        throw new Error(`GitHub ${method} returned ${response.status}`);
+        const error = new Error(`GitHub ${method} returned ${response.status}`);
+        error.status = response.status;
+        error.path = path;
+        error.rateLimit = Object.fromEntries(['x-ratelimit-remaining', 'x-ratelimit-reset', 'x-ratelimit-resource', 'retry-after'].map(name => [name, response.headers?.get?.(name) ?? null]));
+        throw error;
       }
       return response.json();
     }

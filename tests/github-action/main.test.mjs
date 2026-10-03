@@ -86,3 +86,18 @@ test('plan entry emits empty lanes without worker state, image files or sandbox 
     assert.equal(await readFile(outputPath, 'utf8'), 'lanes=[]\ncount=0\n');
   } finally { globalThis.fetch = previousFetch; await rm(root, { recursive: true, force: true }); }
 });
+
+test('the entry script reports the failing error instead of only the generic line', async () => {
+  const exec = promisify(execFile), root = await mkdtemp(join(tmpdir(), 'hauler-entry-error-'));
+  try {
+    const eventPath = join(root, 'event.json');
+    await writeFile(eventPath, JSON.stringify({ repository: { default_branch: 'master', private: false, full_name: 'owner/repo' } }));
+    const env = { PATH: process.env.PATH, GITHUB_EVENT_PATH: eventPath, CARGO_HAULER_CI_MODE: 'bogus' };
+    await assert.rejects(exec(process.execPath, ['src/internal/github-action/main.mjs'], { env }), error => {
+      assert.equal(error.code, 1);
+      assert.match(error.stderr, /Hauler CI controller failed\. No successful PR verdict is inferred\./);
+      assert.match(error.stderr, /Error: Invalid Action mode/);
+      return true;
+    });
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
