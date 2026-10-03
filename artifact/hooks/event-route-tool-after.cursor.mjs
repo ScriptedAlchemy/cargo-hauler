@@ -781,7 +781,7 @@ var __webpack_modules__ = {
             const release = await toPromise(lockfile.lock)(file, options);
             return toPromise(release);
         }
-        function lockSync1(file, options) {
+        function lockSync(file, options) {
             const release = toSync(lockfile.lock)(file, toSyncOptions(options));
             return toSync(release);
         }
@@ -800,7 +800,7 @@ var __webpack_modules__ = {
         module.exports = lock;
         module.exports.lock = lock;
         module.exports.unlock = unlock;
-        module.exports.lockSync = lockSync1;
+        module.exports.lockSync = lockSync;
         module.exports.unlockSync = unlockSync;
         module.exports.check = check;
         module.exports.checkSync = checkSync;
@@ -1536,11 +1536,9 @@ var __webpack_modules__ = {
     },
     "./src/events/tool/after.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var agent_bundle_routes__rspack_import_0 = __webpack_require__("./node_modules/.pnpm/agent-bundle@https+++pkg.pr.new+ScriptedAlchemy+agent-bundle+agent-bundle@899755dc6d_@a_8186c203ef87c752052e5ba19a80d783/node_modules/agent-bundle/dist/routes.js");
-        var _internal_host_hooks_hook_state_js__rspack_import_1 = __webpack_require__("./src/internal/host-hooks/hook-state.ts");
-        var _internal_host_hooks_session_ping_js__rspack_import_2 = __webpack_require__("./src/internal/host-hooks/session-ping.ts");
-        var _internal_host_hooks_tokens_js__rspack_import_3 = __webpack_require__("./src/internal/host-hooks/tokens.ts");
-        var _internal_util_json_js__rspack_import_5 = __webpack_require__("./src/internal/util/json.ts");
-        var _internal_host_hooks_tool_input_js__rspack_import_4 = __webpack_require__("./src/internal/host-hooks/tool-input.ts");
+        var _internal_host_hooks_after_shell_js__rspack_import_1 = __webpack_require__("./src/internal/host-hooks/after-shell.ts");
+        var _internal_host_hooks_event_support_js__rspack_import_2 = __webpack_require__("./src/internal/host-hooks/event-support.ts");
+        var _internal_util_json_js__rspack_import_3 = __webpack_require__("./src/internal/util/json.ts");
         const __rspack_default_export = agent_bundle_routes__rspack_import_0.AZ.tool.after({
             requires: [
                 'events.toolAfter.context'
@@ -1551,22 +1549,16 @@ var __webpack_modules__ = {
                 'shell'
             ]
         }, async (context)=>{
-            const command = (0, _internal_host_hooks_tool_input_js__rspack_import_4.H)(context.canonical.payload.toolInput?.value);
-            if ((0, _internal_host_hooks_tokens_js__rspack_import_3.C)(command) || (0, _internal_host_hooks_tokens_js__rspack_import_3.j)(command, (0, _internal_host_hooks_tool_input_js__rspack_import_4.N)(context.canonical.payload.toolResponse?.value))) {
-                return context.render('./after.view.js', {});
-            }
-            const session = context.canonical.payload.sessionId?.value;
-            if (session === undefined || session.length === 0) return {
+            const { host, nativeEvent } = context.canonical.provenance;
+            const result = await (0, _internal_host_hooks_after_shell_js__rspack_import_1.t)((0, _internal_host_hooks_event_support_js__rspack_import_2.h)(context.canonical.payload), {
+                nativeEvent,
+                target: host
+            });
+            return result.additionalContext === undefined ? {
                 outcome: 'continue'
-            };
-            const asOfMs = Date.now();
-            const pinged = await (0, _internal_host_hooks_session_ping_js__rspack_import_2.SW)(session, (0, _internal_host_hooks_hook_state_js__rspack_import_1.fS)(session));
-            return pinged.kind === 'finished' && pinged.tickets.length > 0 ? context.render('./after.view.js', (0, _internal_util_json_js__rspack_import_5.H)({
-                ...pinged,
-                asOfMs
-            })) : {
-                outcome: 'continue'
-            };
+            } : context.render('./after.view.js', (0, _internal_util_json_js__rspack_import_3.H)({
+                additionalContext: result.additionalContext
+            }));
         });
         __webpack_require__.d(__webpack_exports__, {}, {
             A: __rspack_default_export
@@ -2259,6 +2251,129 @@ var __webpack_modules__ = {
             JE: parseJobserverModeSetting
         });
     },
+    "./src/internal/host-hooks/after-shell.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
+        var _util_guards_js__rspack_import_4 = __webpack_require__("./src/internal/util/guards.ts");
+        var _tool_input_js__rspack_import_6 = __webpack_require__("./src/internal/host-hooks/tool-input.ts");
+        var _hook_state_js__rspack_import_0 = __webpack_require__("./src/internal/host-hooks/hook-state.ts");
+        var _record_js__rspack_import_1 = __webpack_require__("./src/internal/host-hooks/record.ts");
+        var _rpc_js__rspack_import_2 = __webpack_require__("./src/internal/host-hooks/rpc.ts");
+        var _shared_js__rspack_import_5 = __webpack_require__("./src/internal/host-hooks/shared.ts");
+        var _tokens_js__rspack_import_3 = __webpack_require__("./src/internal/host-hooks/tokens.ts");
+        const hiddenCargoReason = "cargo ran outside cargo-hauler (wrapper script, alias, or shell variable)";
+        const hiddenCargoContext = "cargo-hauler: this command ran cargo outside the broker, through a wrapper script, alias, or shell variable the hook cannot see. The run skipped lane serialization, attach, and the ledger. Name `cargo` in the command itself, or run `hauler exec -- cargo …` so the daemon brokers it. An env prefix such as `RUSTC_WRAPPER= cargo test …` is fine.";
+        const extractExitCode = (toolResponse)=>{
+            if (!(0, _util_guards_js__rspack_import_4.u)(toolResponse)) {
+                return undefined;
+            }
+            const value = toolResponse.exitCode ?? toolResponse.exit_code;
+            return typeof value === 'number' ? value : undefined;
+        };
+        const notifyContext = async (session, services)=>{
+            if (session === undefined || session.length === 0) {
+                return undefined;
+            }
+            const write = services.writeCursor ?? _hook_state_js__rspack_import_0.Wh;
+            const asOfMs = (services.nowMs ?? Date.now)();
+            const read = services.readCursor ?? _hook_state_js__rspack_import_0.fS;
+            const completedSince = services.completedSince ?? _rpc_js__rspack_import_2.k$;
+            let finished;
+            try {
+                finished = await completedSince(session, read(session));
+            } catch  {
+                return undefined;
+            }
+            if (finished.length === 0) {
+                return undefined;
+            }
+            write(session, asOfMs);
+            return finished.map(_shared_js__rspack_import_5.S).join('\n');
+        };
+        const decideAfterShell = async (event, context, services)=>{
+            const command = (0, _tool_input_js__rspack_import_6.H)(event.toolInput);
+            if (command === undefined) {
+                return {
+                    outcome: 'continue'
+                };
+            }
+            const hidden = (0, _tokens_js__rspack_import_3.j)(command, (0, _tool_input_js__rspack_import_6.N)(event.toolResponse));
+            if (hidden || command.includes('cargo') || command.includes('hauler')) {
+                const record = services.record ?? _record_js__rspack_import_1.r;
+                const exitCode = extractExitCode(event.toolResponse);
+                await record({
+                    atMs: (services.nowMs ?? Date.now)(),
+                    command,
+                    host: (0, _shared_js__rspack_import_5.e)(context),
+                    outcome: 'continue',
+                    phase: 'afterTool',
+                    ...hidden ? {
+                        reason: hiddenCargoReason
+                    } : {},
+                    ...event.cwd === undefined ? {} : {
+                        cwd: event.cwd
+                    },
+                    ...exitCode === undefined ? {} : {
+                        exitCode
+                    },
+                    ...event.sessionId === undefined ? {} : {
+                        session: event.sessionId
+                    },
+                    ...event.toolName === undefined ? {} : {
+                        toolName: event.toolName
+                    }
+                });
+            }
+            const finished = await notifyContext(event.sessionId, services);
+            const notices = [
+                ...hidden ? [
+                    hiddenCargoContext
+                ] : [],
+                ...finished === undefined ? [] : [
+                    finished
+                ]
+            ];
+            return notices.length === 0 ? {
+                outcome: 'continue'
+            } : {
+                additionalContext: notices.join('\n'),
+                outcome: 'continue'
+            };
+        };
+        const handleAfterShell = async (event, context = {}, services = {})=>{
+            try {
+                return await decideAfterShell(event, context, services);
+            } catch  {
+                return {
+                    outcome: 'continue'
+                };
+            }
+        };
+        var __rspack_default_export = null && handleAfterShell;
+        __webpack_require__.d(__webpack_exports__, {}, {
+            t: handleAfterShell
+        });
+    },
+    "./src/internal/host-hooks/event-support.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
+        const shellEventFrom = (payload)=>({
+                cwd: payload.cwd?.value,
+                sessionId: payload.sessionId?.value,
+                toolInput: payload.toolInput?.value,
+                toolName: payload.toolName?.value,
+                toolResponse: payload.toolResponse?.value,
+                toolUseId: payload.toolUseId?.value
+            });
+        const decisionValue = (decision)=>documentValue({
+                outcome: decision.outcome,
+                ...decision.outcome === 'continue' || decision.reason === undefined || decision.reason.length === 0 ? {} : {
+                    reason: decision.reason
+                },
+                ...decision.updatedInput === undefined ? {} : {
+                    updatedInput: decision.updatedInput
+                }
+            });
+        __webpack_require__.d(__webpack_exports__, {}, {
+            h: shellEventFrom
+        });
+    },
     "./src/internal/host-hooks/finished-ticket.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var _util_guards_js__rspack_import_0 = __webpack_require__("./src/internal/util/guards.ts");
         const asFinishedTicket1 = (value)=>{
@@ -2290,7 +2405,7 @@ var __webpack_modules__ = {
             });
         };
         __webpack_require__.d(__webpack_exports__, {}, {
-            F: finishedTicketsOf
+            r: asFinishedTicket1
         });
     },
     "./src/internal/host-hooks/hook-state.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
@@ -2309,22 +2424,22 @@ var __webpack_modules__ = {
             Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
         };
         const withStateLock = (stateDir, update)=>{
-            ensurePrivateDir(stateDir);
+            (0, _platform_private_state_js__rspack_import_3.rh)(stateDir);
             const target = statePath(stateDir);
-            if (!existsSync(target)) {
+            if (!(0, node_fs__rspack_import_0.existsSync)(target)) {
                 try {
-                    writeFileSync(target, `${JSON.stringify(emptyState())}\n`, {
+                    (0, node_fs__rspack_import_0.writeFileSync)(target, `${JSON.stringify(emptyState())}\n`, {
                         flag: 'wx',
-                        mode: privateFileMode
+                        mode: 384
                     });
                 } catch  {}
             }
-            ensurePrivateFile(target);
+            (0, _platform_private_state_js__rspack_import_3.on)(target);
             const deadline = Date.now() + lockWaitMs;
             let release = null;
             for(;;){
                 try {
-                    release = lockSync(target, {
+                    release = (0, proper_lockfile__rspack_import_2.lockSync)(target, {
                         realpath: false,
                         stale: lockStaleMs
                     });
@@ -2371,23 +2486,23 @@ var __webpack_modules__ = {
             }
         };
         const saveState = (stateDir, state)=>{
-            ensurePrivateDir(stateDir);
+            (0, _platform_private_state_js__rspack_import_3.rh)(stateDir);
             const target = statePath(stateDir);
             const temp = `${target}.${process.pid}.${Math.random().toString(36).slice(2, 8)}.tmp`;
             try {
-                writeFileSync(temp, `${JSON.stringify(state)}\n`, {
-                    mode: privateFileMode
+                (0, node_fs__rspack_import_0.writeFileSync)(temp, `${JSON.stringify(state)}\n`, {
+                    mode: 384
                 });
-                renameSync(temp, target);
+                (0, node_fs__rspack_import_0.renameSync)(temp, target);
             } catch (error) {
-                rmSync(temp, {
+                (0, node_fs__rspack_import_0.rmSync)(temp, {
                     force: true
                 });
                 throw error;
             }
         };
         const readCursor = (session, stateDir = (0, _platform_state_paths_js__rspack_import_4.JT)())=>loadState(stateDir).cursors[session] ?? 0;
-        const writeCursor = (session, atMs, stateDir = resolveStateDir())=>{
+        const writeCursor = (session, atMs, stateDir = (0, _platform_state_paths_js__rspack_import_4.JT)())=>{
             withStateLock(stateDir, ()=>{
                 const state = loadState(stateDir);
                 state.cursors[session] = atMs;
@@ -2422,6 +2537,7 @@ var __webpack_modules__ = {
             });
         };
         __webpack_require__.d(__webpack_exports__, {}, {
+            Wh: writeCursor,
             fS: readCursor
         });
     },
@@ -2432,6 +2548,22 @@ var __webpack_modules__ = {
             G: resolveHookSocketPath1
         });
     },
+    "./src/internal/host-hooks/record.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
+        var node_fs__rspack_import_0 = __webpack_require__("node:fs");
+        var node_path__rspack_import_1 = __webpack_require__("node:path");
+        var _platform_private_state_js__rspack_import_2 = __webpack_require__("./src/internal/platform/private-state.ts");
+        var _platform_state_paths_js__rspack_import_3 = __webpack_require__("./src/internal/platform/state-paths.ts");
+        const hookEventsFileName = 'hook-events.jsonl';
+        const appendHookRecord = (record, stateDir = (0, _platform_state_paths_js__rspack_import_3.JT)())=>{
+            const path = (0, node_path__rspack_import_1.join)(stateDir, hookEventsFileName);
+            (0, _platform_private_state_js__rspack_import_2.rh)(stateDir);
+            (0, _platform_private_state_js__rspack_import_2.on)(path);
+            (0, node_fs__rspack_import_0.appendFileSync)(path, `${JSON.stringify(record)}\n`);
+        };
+        __webpack_require__.d(__webpack_exports__, {}, {
+            r: appendHookRecord
+        });
+    },
     "./src/internal/host-hooks/rpc.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var node_net__rspack_import_0 = __webpack_require__("node:net");
         var agent_bundle_meta__rspack_import_1 = __webpack_require__("./.agent-bundle-virtual/meta.mjs");
@@ -2439,6 +2571,7 @@ var __webpack_modules__ = {
         var _contracts_version_order_js__rspack_import_5 = __webpack_require__("./src/internal/contracts/version-order.ts");
         var _contracts_wire_version_js__rspack_import_6 = __webpack_require__("./src/internal/contracts/wire-version.ts");
         var _util_guards_js__rspack_import_4 = __webpack_require__("./src/internal/util/guards.ts");
+        var _finished_ticket_js__rspack_import_7 = __webpack_require__("./src/internal/host-hooks/finished-ticket.ts");
         var _paths_js__rspack_import_3 = __webpack_require__("./src/internal/host-hooks/paths.ts");
         const asPending = (value)=>{
             if (!isRecord(value) || typeof value.ticket !== 'string') {
@@ -2582,7 +2715,7 @@ var __webpack_modules__ = {
                 ];
             });
         };
-        const listSessionCompleted = async (session, sinceMs, socketPath = resolveHookSocketPath())=>{
+        const listSessionCompleted = async (session, sinceMs, socketPath = (0, _paths_js__rspack_import_3.G)())=>{
             const message = await requestJson({
                 id: 'hook-completed',
                 session,
@@ -2593,7 +2726,7 @@ var __webpack_modules__ = {
                 throw new Error('session-completed unavailable');
             }
             return message.requests.flatMap((entry)=>{
-                const parsed = asFinishedTicket(entry);
+                const parsed = (0, _finished_ticket_js__rspack_import_7.r)(entry);
                 return parsed === null ? [] : [
                     parsed
                 ];
@@ -2615,77 +2748,48 @@ var __webpack_modules__ = {
             return awaited.filter((entry)=>entry !== null);
         };
         __webpack_require__.d(__webpack_exports__, {}, {
-            wc: requestOutcome
+            k$: listSessionCompleted
         });
     },
-    "./src/internal/host-hooks/session-ping.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-        var _finished_ticket_js__rspack_import_2 = __webpack_require__("./src/internal/host-hooks/finished-ticket.ts");
-        var _paths_js__rspack_import_0 = __webpack_require__("./src/internal/host-hooks/paths.ts");
-        var _rpc_js__rspack_import_1 = __webpack_require__("./src/internal/host-hooks/rpc.ts");
-        const defaultPingTimeoutMs = 500;
-        const finishedTicketsFromRenderInput = (value)=>{
-            if (!isRecord(value) || value.kind !== 'finished' || !Array.isArray(value.tickets)) {
-                return undefined;
-            }
-            const tickets = value.tickets.flatMap((entry)=>{
-                const ticket = asFinishedTicket(entry);
-                return ticket === null ? [] : [
-                    ticket
-                ];
-            });
-            return {
-                tickets,
-                ...typeof value.asOfMs === 'number' ? {
-                    asOfMs: value.asOfMs
-                } : {}
-            };
-        };
-        const pingSessionCompleted = async (session, sinceMs, options = {})=>{
-            const outcome = await (0, _rpc_js__rspack_import_1.wc)({
-                id: 'hook-completed',
-                session,
-                sinceMs,
-                type: 'session-completed'
-            }, options.socketPath ?? (0, _paths_js__rspack_import_0.G)(), options.timeoutMs ?? defaultPingTimeoutMs);
-            switch(outcome.kind){
-                case 'reply':
+    "./src/internal/host-hooks/shared.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
+        var _util_text_js__rspack_import_0 = __webpack_require__("./src/internal/util/text.ts");
+        const formatFinishedTicket = (ticket)=>{
+            const counts = ticket.errorCount === null || ticket.warningCount === null ? null : `${(0, _util_text_js__rspack_import_0.M)(ticket.errorCount, 'error')}, ${(0, _util_text_js__rspack_import_0.M)(ticket.warningCount, 'warning')}`;
+            switch(ticket.status){
+                case 'done':
+                    return `ticket ${ticket.ticket} finished: success${counts === null ? '' : `, ${counts}`}. Call hauler_result ${ticket.ticket}.`;
+                case 'failed':
                     {
-                        const tickets = (0, _finished_ticket_js__rspack_import_2.F)(outcome.message);
-                        return tickets === null ? {
-                            kind: 'unavailable',
-                            reason: 'malformed'
-                        } : {
-                            kind: 'finished',
-                            tickets
-                        };
+                        const detail = ticket.error === null || ticket.error.length === 0 ? '' : ` (${ticket.error})`;
+                        return `ticket ${ticket.ticket} finished: failed${counts === null ? '' : `, ${counts}`}${detail}. Call hauler_result ${ticket.ticket}.`;
                     }
-                case 'closed':
-                case 'malformed':
-                case 'timeout':
-                    return {
-                        kind: 'unavailable',
-                        reason: outcome.kind
-                    };
-                case 'replacement-failed':
-                    return {
-                        kind: 'unavailable',
-                        reason: 'replacement-failed'
-                    };
-                case 'unreachable':
-                    return {
-                        code: outcome.code ?? null,
-                        kind: 'unavailable',
-                        reason: 'unreachable'
-                    };
+                case 'killed':
+                    return `ticket ${ticket.ticket} finished: killed${counts === null ? '' : `, ${counts}`}. Call hauler_result ${ticket.ticket}.`;
                 default:
                     {
-                        const exhaustive = outcome;
+                        const exhaustive = ticket.status;
                         return exhaustive;
                     }
             }
         };
+        const resolveHookHost = (context, env = process.env)=>{
+            const nativeEvent = context?.nativeEvent;
+            if (nativeEvent === 'preToolUse' || nativeEvent === 'postToolUse') {
+                return 'cursor';
+            }
+            const target = context?.target;
+            if (target === 'claude' || target === 'codex' || target === 'cursor') {
+                return target;
+            }
+            const declared = env.AGENT_BUNDLE_HOOK_HOST;
+            if (declared === 'claude' || declared === 'codex' || declared === 'cursor') {
+                return declared;
+            }
+            return target ?? 'plugin';
+        };
         __webpack_require__.d(__webpack_exports__, {}, {
-            SW: pingSessionCompleted
+            S: formatFinishedTicket,
+            e: resolveHookHost
         });
     },
     "./src/internal/host-hooks/tokens.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
@@ -2711,7 +2815,6 @@ var __webpack_modules__ = {
         };
         const hiddenCargoRun = (command, output)=>command !== undefined && output !== undefined && !commandMentionsHauler(command) && !readsFile(command) && cargoStatusLine.test(output);
         __webpack_require__.d(__webpack_exports__, {}, {
-            C: commandMentionsHauler,
             j: hiddenCargoRun
         });
     },
@@ -2748,7 +2851,7 @@ var __webpack_modules__ = {
     "./src/internal/platform/private-state.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var node_fs__rspack_import_0 = __webpack_require__("node:fs");
         const privateDirMode = 448;
-        const privateFileMode1 = 384;
+        const privateFileMode = 384;
         const currentUid = ()=>process.getuid?.() ?? null;
         class UnsafeStatePathError extends Error {
             path;
@@ -2808,20 +2911,20 @@ var __webpack_modules__ = {
                 throw new UnsafeStatePathError(path, `it is owned by uid ${stats.uid}, not by this process (uid ${uid})`);
             }
         };
-        const entryStats = (path)=>lstatSync(path, {
+        const entryStats = (path)=>(0, node_fs__rspack_import_0.lstatSync)(path, {
                 throwIfNoEntry: false
             });
         const appendCreateFlags = node_fs__rspack_import_0.constants.O_APPEND | node_fs__rspack_import_0.constants.O_CREAT | node_fs__rspack_import_0.constants.O_WRONLY | (node_fs__rspack_import_0.constants.O_NOFOLLOW ?? 0);
         const ensurePrivateDir1 = (dir)=>{
             if (currentUid() === null) {
-                mkdirSync(dir, {
+                (0, node_fs__rspack_import_0.mkdirSync)(dir, {
                     recursive: true
                 });
                 return;
             }
             const existing = entryStats(dir);
             if (existing === undefined) {
-                mkdirSync(dir, {
+                (0, node_fs__rspack_import_0.mkdirSync)(dir, {
                     recursive: true,
                     mode: privateDirMode
                 });
@@ -2833,7 +2936,7 @@ var __webpack_modules__ = {
                 throw new UnsafeStatePathError(dir, 'it disappeared while being created');
             }
             assertOwnedPrivateEntry(dir, created, 'directory');
-            chmodSync(dir, privateDirMode);
+            (0, node_fs__rspack_import_0.chmodSync)(dir, privateDirMode);
         };
         const hardenPrivateEntry1 = (path, kind)=>{
             if (currentUid() === null) {
@@ -2844,16 +2947,18 @@ var __webpack_modules__ = {
                 return;
             }
             assertOwnedPrivateEntry(path, existing, kind);
-            chmodSync(path, privateFileMode1);
+            (0, node_fs__rspack_import_0.chmodSync)(path, privateFileMode);
         };
         const ensurePrivateFile1 = (path)=>{
             if (entryStats(path) === undefined) {
-                closeSync(openSync(path, appendCreateFlags, privateFileMode1));
+                (0, node_fs__rspack_import_0.closeSync)((0, node_fs__rspack_import_0.openSync)(path, appendCreateFlags, privateFileMode));
             }
             hardenPrivateEntry1(path, 'file');
         };
         __webpack_require__.d(__webpack_exports__, {}, {
-            Oq: currentUid
+            Oq: currentUid,
+            on: ensurePrivateFile1,
+            rh: ensurePrivateDir1
         });
     },
     "./src/internal/platform/socket-errors.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
@@ -3073,9 +3178,15 @@ var __webpack_modules__ = {
         });
     },
     "./src/internal/util/json.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
-        const documentValue = (result)=>result;
+        const documentValue1 = (result)=>result;
         __webpack_require__.d(__webpack_exports__, {}, {
-            H: documentValue
+            H: documentValue1
+        });
+    },
+    "./src/internal/util/text.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
+        const countWord = (count, singular, plural = `${singular}s`)=>`${count} ${count === 1 ? singular : plural}`;
+        __webpack_require__.d(__webpack_exports__, {}, {
+            M: countWord
         });
     },
     "./src/providers/hauler-daemon.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
@@ -22617,7 +22728,7 @@ var __webpack_modules__ = {
                     return withEventState(signal, async (bindings)=>{
                         const gate = await (0, _agent_bundle_runtime_request__rspack_import_6.iC)({
                             invocation: {
-                                artifactEpoch: "1685b178ce25693329f6aa51578de858464bcb378cb655112ecf6ccebd66e052",
+                                artifactEpoch: "19cbd48f3c5b08186d2e00c78b63e438508fa5c684b7ff34ca1535e1cfbfd946",
                                 hostContractRevision: capabilityRevision,
                                 kind: "event",
                                 operationId: `event:${canonicalEvent}`,
