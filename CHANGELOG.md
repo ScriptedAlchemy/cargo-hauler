@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.1
+
+### Patch Changes
+
+- 644758c: The `tool/after` hook now records telemetry and looks up finished tickets in the cheap handler. It loads the rendered view only when there is additional context to inject, so a cargo command with nothing to announce skips the Flight worker.
+- e8e3eb3: `cargo nextest --profile` no longer keys the compile lane. The lane follows `--cargo-profile` and `--release`. Nextest's own profile stays in request identity so `ci` and `default` do not coalesce.
+
 ## 0.13.0
 
 ### Minor Changes
