@@ -252,9 +252,9 @@ final artifact upload still happens after the drain step ends. Checks therefore
 provide evidence during long drains and interrupted jobs without an artifact SDK.
 
 A drain worker is resident: when an admission scan finds nothing, it waits one
-poll interval and scans again, keeping its warm sandbox, and exits after
-`idle-polls` (default 5, 0 to 60) consecutive empty scans. Found work resets the
-count; `idle-polls: 0` exits on the first empty scan. A snapshot superseded by a
+poll interval and scans again, keeping its warm sandbox. It waits through up to
+`idle-polls` (default 5, 0 to 60) consecutive empty scans and exits on the next
+one. Found work resets the count; `idle-polls: 0` exits on the first empty scan. A snapshot superseded by a
 new PR head is cancelled but its sandbox stays warm for the next snapshot;
 infrastructure errors and workflow cancellation still discard it.
 
