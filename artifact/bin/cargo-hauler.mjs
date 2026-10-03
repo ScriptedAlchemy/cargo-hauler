@@ -11386,6 +11386,18 @@ var __webpack_modules__ = {
             }
             return 'dev';
         };
+        const profileOutputDir = (profile)=>{
+            switch(profile){
+                case 'dev':
+                case 'test':
+                    return 'debug';
+                case 'release':
+                case 'bench':
+                    return 'release';
+                default:
+                    return profile;
+            }
+        };
         const cargoJsonDemuxFlag = '--message-format=json-diagnostic-rendered-ansi';
         const optionParts = (argument)=>{
             const equalsIndex = argument.indexOf('=');
@@ -11418,7 +11430,8 @@ var __webpack_modules__ = {
             Rn: defaultCargoProfile,
             SX: optionParts,
             Wj: namedPackagesInArgv,
-            cU: cargoJsonDemuxFlag
+            cU: cargoJsonDemuxFlag,
+            uv: profileOutputDir
         });
     },
     "./src/internal/cargo/env.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
@@ -11960,6 +11973,7 @@ var __webpack_modules__ = {
         var node_path__rspack_import_2 = __webpack_require__("node:path");
         var _argv_js__rspack_import_4 = __webpack_require__("./src/internal/cargo/argv.ts");
         var _env_js__rspack_import_3 = __webpack_require__("./src/internal/cargo/env.ts");
+        const lockedProfileDir = (lock)=>lock._tag === 'ProfileDir' ? lock.dir : null;
         const sortedUnique = (values)=>[
                 ...new Set(values)
             ].sort((left, right)=>left.localeCompare(right));
@@ -12339,6 +12353,7 @@ var __webpack_modules__ = {
             let nextestCommand = null;
             let noDefaultFeatures = false;
             let profile = (0, _argv_js__rspack_import_4.Rn)(subcommand);
+            let profileNamed = false;
             let passthrough = [];
             let targetTriple = null;
             let workspace = false;
@@ -12386,6 +12401,7 @@ var __webpack_modules__ = {
                         break;
                     case '--profile':
                         profile = takeValue();
+                        profileNamed = true;
                         break;
                     case '--target':
                         targetTriple = takeValue();
@@ -12435,9 +12451,11 @@ var __webpack_modules__ = {
                     case '-r':
                     case '--release':
                         profile = 'release';
+                        profileNamed = true;
                         break;
                     case '--debug':
                         profile = 'dev';
+                        profileNamed = true;
                         break;
                     default:
                         if (argument.startsWith('-')) {
@@ -12457,8 +12475,15 @@ var __webpack_modules__ = {
                         break;
                 }
             }
+            const wholeTargetClean = subcommand === 'clean' && packages.length === 0 && (!profileNamed || targets.includes('doc') || targetTriple !== null);
             return {
                 allFeatures,
+                buildLock: wholeTargetClean ? {
+                    _tag: 'WholeTarget'
+                } : {
+                    _tag: 'ProfileDir',
+                    dir: (0, _argv_js__rspack_import_4.uv)(profile)
+                },
                 excludes: sortedUnique(excludes),
                 features: sortedUnique(features),
                 filterExpressions: sortedUnique(filterExpressions),
@@ -12542,6 +12567,7 @@ var __webpack_modules__ = {
             };
         };
         __webpack_require__.d(__webpack_exports__, {}, {
+            $2: lockedProfileDir,
             R$: cargoExecutablePattern,
             cS: parseCargoArgv1,
             eT: normalizeCargoIntent
@@ -14385,7 +14411,8 @@ var __webpack_modules__ = {
                 'heavy-profile-cap',
                 'memory-soft',
                 'load',
-                'cpu-stall'
+                'cpu-stall',
+                'target-clean'
             ])
         });
         const prerequisiteContextSchema = zod__rspack_import_1.Ikc({
@@ -14465,6 +14492,7 @@ var __webpack_modules__ = {
             executingTickets: zod__rspack_import_1.YOg(zod__rspack_import_1.YjP()),
             targetDir: zod__rspack_import_1.YjP(),
             workspaceRoot: zod__rspack_import_1.YjP(),
+            profileDir: zod__rspack_import_1.YjP().nullable().optional(),
             sharedTargetWith: zod__rspack_import_1.YOg(zod__rspack_import_1.YjP()).optional()
         });
         const frequencyMetricSchema = zod__rspack_import_1.g1P(zod__rspack_import_1.YjP(), zod__rspack_import_1.aig().int().nonnegative());
@@ -15626,7 +15654,6 @@ var __webpack_modules__ = {
                                 message: cause instanceof Error ? cause.message : String(cause)
                             })
                     }).pipe(recordingRejection(input));
-                    const laneKey = (0, _lane_exec_js__rspack_import_9.jD)(normalized.workspaceRoot, normalized.targetDir);
                     const { lane, warning } = yield* laneRegistration.withPermits(1)(effect_Effect__rspack_import_22.JkU(function*() {
                         const sharedWith = (0, _shared_target_js__rspack_import_14.h)(normalized, (yield* lanesRuntime.laneStatuses()));
                         if (sharedWith.length > 0 && !config.allowSharedTarget && input.allowSharedTarget !== true) {
@@ -15634,7 +15661,7 @@ var __webpack_modules__ = {
                                 message: `Refusing to run: ${(0, _ui_shared_shared_target_js__rspack_import_28.jk)(normalized, sharedWith)}`
                             });
                         }
-                        const lane = yield* lanesRuntime.getOrCreateLane(laneKey, normalized.workspaceRoot, normalized.targetDir);
+                        const lane = yield* lanesRuntime.getOrCreateLane(normalized);
                         return {
                             lane,
                             ...sharedWith.length === 0 ? {} : {
@@ -15656,7 +15683,7 @@ var __webpack_modules__ = {
                             cwd: normalized.cwd,
                             workspaceRoot: normalized.workspaceRoot,
                             targetDir: normalized.targetDir,
-                            laneKey,
+                            laneKey: lane.key,
                             argv: input.argv,
                             intentKey: normalized.estimateKey,
                             intentJson: JSON.stringify(normalized),
@@ -15678,13 +15705,13 @@ var __webpack_modules__ = {
                             tail: new _cargo_execution_executor_js__rspack_import_6.v(config.outputTailBytes),
                             attachedAtMs: createdAtMs
                         });
-                        const registered = prerequisites.pending.length > 0 ? null : yield* attachments.tryRegisterAttachment(laneKey, attachment);
+                        const registered = prerequisites.pending.length > 0 ? null : yield* attachments.tryRegisterAttachment(lane.key, attachment);
                         if (registered !== null) {
                             yield* registerOwnership(callbacks, created.ticket);
                             yield* attachments.completeAttachRegistration(registered.leader, attachment, registered.mode, Date.now());
                             return {
                                 ticket: created.ticket,
-                                laneKey,
+                                laneKey: lane.key,
                                 ...warning === undefined ? {} : {
                                     warning
                                 },
@@ -15695,7 +15722,7 @@ var __webpack_modules__ = {
                                 etaSource: registered.leader.estimateSource
                             };
                         }
-                        const job = yield* lanesRuntime.makeJob(created.id, created.ticket, laneKey, input, normalized, callbacks, createdAtMs, estimate, {
+                        const job = yield* lanesRuntime.makeJob(created.id, created.ticket, lane.key, input, normalized, callbacks, createdAtMs, estimate, {
                             editedRecently
                         });
                         yield* effect_Effect__rspack_import_22.OH5(()=>directory.setLeader(job));
@@ -15711,7 +15738,7 @@ var __webpack_modules__ = {
                         const queued = yield* lanesRuntime.requestStatusFields(created.ticket, Date.now());
                         return {
                             ticket: created.ticket,
-                            laneKey,
+                            laneKey: lane.key,
                             ...warning === undefined ? {} : {
                                 warning
                             },
@@ -16784,15 +16811,15 @@ var __webpack_modules__ = {
     },
     "./src/internal/daemon/broker/lane-exec.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
         var node_os__rspack_import_0 = __webpack_require__("node:os");
-        var effect_Cause__rspack_import_18 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Cause.js");
-        var effect_Deferred__rspack_import_19 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Deferred.js");
-        var effect_Effect__rspack_import_15 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
-        var effect_Fiber__rspack_import_24 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Fiber.js");
-        var effect_Metric__rspack_import_22 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Metric.js");
-        var effect_Queue__rspack_import_21 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Queue.js");
-        var effect_Ref__rspack_import_17 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Ref.js");
-        var effect_Semaphore__rspack_import_16 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Semaphore.js");
-        var effect_unstable_process_ChildProcessSpawner__rspack_import_23 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/unstable/process/ChildProcessSpawner.js");
+        var effect_Cause__rspack_import_20 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Cause.js");
+        var effect_Deferred__rspack_import_17 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Deferred.js");
+        var effect_Effect__rspack_import_16 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Effect.js");
+        var effect_Fiber__rspack_import_25 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Fiber.js");
+        var effect_Metric__rspack_import_23 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Metric.js");
+        var effect_Queue__rspack_import_22 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Queue.js");
+        var effect_Ref__rspack_import_19 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Ref.js");
+        var effect_Semaphore__rspack_import_18 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/Semaphore.js");
+        var effect_unstable_process_ChildProcessSpawner__rspack_import_24 = __webpack_require__("./node_modules/.pnpm/effect@4.0.0-rc.117/node_modules/effect/dist/unstable/process/ChildProcessSpawner.js");
         var _attachments_js__rspack_import_1 = __webpack_require__("./src/internal/daemon/broker/attachments.ts");
         var _scheduling_batch_js__rspack_import_2 = __webpack_require__("./src/internal/daemon/scheduling/batch.ts");
         var _cargo_execution_build_phase_js__rspack_import_3 = __webpack_require__("./src/internal/cargo/execution/build-phase.ts");
@@ -16801,16 +16828,75 @@ var __webpack_modules__ = {
         var _scheduling_cost_js__rspack_import_6 = __webpack_require__("./src/internal/daemon/scheduling/cost.ts");
         var _dependencies_js__rspack_import_7 = __webpack_require__("./src/internal/daemon/broker/dependencies.ts");
         var _cargo_execution_executor_js__rspack_import_8 = __webpack_require__("./src/internal/cargo/execution/executor.ts");
-        var _job_state_js__rspack_import_9 = __webpack_require__("./src/internal/daemon/broker/job-state.ts");
-        var _runtime_jobserver_js__rspack_import_10 = __webpack_require__("./src/internal/daemon/runtime/jobserver.ts");
-        var _scheduling_pressure_js__rspack_import_11 = __webpack_require__("./src/internal/daemon/scheduling/pressure.ts");
-        var _replay_js__rspack_import_20 = __webpack_require__("./src/internal/daemon/broker/replay.ts");
-        var _scheduling_scheduler_js__rspack_import_12 = __webpack_require__("./src/internal/daemon/scheduling/scheduler.ts");
-        var _shared_target_js__rspack_import_13 = __webpack_require__("./src/internal/daemon/broker/shared-target.ts");
-        var _storage_ticket_log_js__rspack_import_14 = __webpack_require__("./src/internal/storage/ticket-log.ts");
-        const laneKeyFor = (workspaceRoot, targetDir)=>JSON.stringify([
-                workspaceRoot,
-                targetDir
+        var _cargo_intent_js__rspack_import_9 = __webpack_require__("./src/internal/cargo/intent.ts");
+        var _job_state_js__rspack_import_10 = __webpack_require__("./src/internal/daemon/broker/job-state.ts");
+        var _runtime_jobserver_js__rspack_import_11 = __webpack_require__("./src/internal/daemon/runtime/jobserver.ts");
+        var _scheduling_pressure_js__rspack_import_12 = __webpack_require__("./src/internal/daemon/scheduling/pressure.ts");
+        var _replay_js__rspack_import_21 = __webpack_require__("./src/internal/daemon/broker/replay.ts");
+        var _scheduling_scheduler_js__rspack_import_13 = __webpack_require__("./src/internal/daemon/scheduling/scheduler.ts");
+        var _shared_target_js__rspack_import_14 = __webpack_require__("./src/internal/daemon/broker/shared-target.ts");
+        var _storage_ticket_log_js__rspack_import_15 = __webpack_require__("./src/internal/storage/ticket-log.ts");
+        const tryEnterGate = (gate, lock, ticket)=>{
+            const cleanHold = (clean)=>({
+                    reason: 'target-clean',
+                    detail: `whole-target cargo clean ${clean} on ${gate.targetDir}`
+                });
+            switch(lock._tag){
+                case 'ProfileDir':
+                    {
+                        const clean = gate.clean ?? gate.cleansWaiting[0];
+                        if (clean !== undefined) {
+                            return cleanHold(clean);
+                        }
+                        gate.builds.add(ticket);
+                        return null;
+                    }
+                case 'WholeTarget':
+                    {
+                        if (!gate.cleansWaiting.includes(ticket)) {
+                            gate.cleansWaiting.push(ticket);
+                        }
+                        const ahead = gate.clean ?? gate.cleansWaiting[0];
+                        if (ahead !== undefined && ahead !== ticket) {
+                            return cleanHold(ahead);
+                        }
+                        if (gate.builds.size > 0) {
+                            const builds = [
+                                ...gate.builds
+                            ];
+                            return {
+                                reason: 'target-clean',
+                                detail: `${builds.join(', ')} still ${builds.length === 1 ? 'uses' : 'use'} ${gate.targetDir}`
+                            };
+                        }
+                        gate.cleansWaiting.shift();
+                        gate.clean = ticket;
+                        return null;
+                    }
+                default:
+                    {
+                        const exhaustive = lock;
+                        return exhaustive;
+                    }
+            }
+        };
+        const leaveGate = (gate, ticket)=>effect_Effect__rspack_import_16.DYE(()=>{
+                gate.builds.delete(ticket);
+                if (gate.clean === ticket) {
+                    gate.clean = null;
+                }
+                const waiting = gate.cleansWaiting.indexOf(ticket);
+                if (waiting !== -1) {
+                    gate.cleansWaiting.splice(waiting, 1);
+                }
+                const changed = gate.changed;
+                gate.changed = effect_Deferred__rspack_import_17.LZ();
+                return effect_Deferred__rspack_import_17.Py(changed, undefined);
+            });
+        const laneKeyFor = (intent)=>JSON.stringify([
+                intent.workspaceRoot,
+                intent.targetDir,
+                (0, _cargo_intent_js__rspack_import_9.$2)(intent.buildLock) ?? '*'
             ]);
         const pinsJobs = (argument)=>argument === '-j' || argument.startsWith('--jobs') || /^-j\d+$/u.test(argument);
         const cargoExecEnv = (jobsGrant, input, jobserverArmed)=>{
@@ -16820,26 +16906,27 @@ var __webpack_modules__ = {
                 CARGO_BUILD_JOBS: String(jobsGrant)
             } : input.env;
         };
-        const makeLaneRuntime = (deps)=>effect_Effect__rspack_import_15.JkU(function*() {
+        const makeLaneRuntime = (deps)=>effect_Effect__rspack_import_16.JkU(function*() {
                 const { config, ledger, costModel, topology, spawner, directory, daemonScope } = deps;
-                const admission = yield* effect_Semaphore__rspack_import_16.L8(config.maxConcurrent);
-                const admittedCount = yield* effect_Ref__rspack_import_17.L8(0);
-                const heavyAdmittedCount = yield* effect_Ref__rspack_import_17.L8(0);
-                const laneCreation = yield* effect_Semaphore__rspack_import_16.L8(1);
+                const admission = yield* effect_Semaphore__rspack_import_18.L8(config.maxConcurrent);
+                const admittedCount = yield* effect_Ref__rspack_import_19.L8(0);
+                const heavyAdmittedCount = yield* effect_Ref__rspack_import_19.L8(0);
+                const laneCreation = yield* effect_Semaphore__rspack_import_18.L8(1);
                 const lanes = new Map();
+                const targetGates = new Map();
                 const laneWorkers = new Set();
                 const attachments = (0, _attachments_js__rspack_import_1.o)({
                     directory,
                     ledger
                 });
-                const recoverDefect = (fallback)=>(cause)=>effect_Cause__rspack_import_18.nn(cause) ? effect_Effect__rspack_import_15.ATB(cause) : effect_Effect__rspack_import_15.vVN(`broker dependency failed: ${effect_Cause__rspack_import_18.j9(cause)}`).pipe(effect_Effect__rspack_import_15.as(fallback));
-                const makeJob = (id, ticket, laneKey, input, intent, callbacks, queuedAtMs, estimate, options = {})=>effect_Effect__rspack_import_15.JkU(function*() {
-                        const killSignal = yield* effect_Deferred__rspack_import_19.L8();
-                        const laneReleased = yield* effect_Deferred__rspack_import_19.L8();
-                        const state = yield* effect_Ref__rspack_import_17.L8('queued');
-                        const plan = (0, _job_state_js__rspack_import_9.Z2)(intent, input.argv);
-                        const editedRecently = options.editedRecently ?? (yield* topology.editedRecently(intent.workspaceRoot, intent.packages).pipe(effect_Effect__rspack_import_15.Tyx(recoverDefect(false))));
-                        const depClosure = yield* topology.dependencyClosure(intent.workspaceRoot, intent.packages).pipe(effect_Effect__rspack_import_15.Tyx(recoverDefect(new Set())));
+                const recoverDefect = (fallback)=>(cause)=>effect_Cause__rspack_import_20.nn(cause) ? effect_Effect__rspack_import_16.ATB(cause) : effect_Effect__rspack_import_16.vVN(`broker dependency failed: ${effect_Cause__rspack_import_20.j9(cause)}`).pipe(effect_Effect__rspack_import_16.as(fallback));
+                const makeJob = (id, ticket, laneKey, input, intent, callbacks, queuedAtMs, estimate, options = {})=>effect_Effect__rspack_import_16.JkU(function*() {
+                        const killSignal = yield* effect_Deferred__rspack_import_17.L8();
+                        const laneReleased = yield* effect_Deferred__rspack_import_17.L8();
+                        const state = yield* effect_Ref__rspack_import_19.L8('queued');
+                        const plan = (0, _job_state_js__rspack_import_10.Z2)(intent, input.argv);
+                        const editedRecently = options.editedRecently ?? (yield* topology.editedRecently(intent.workspaceRoot, intent.packages).pipe(effect_Effect__rspack_import_16.Tyx(recoverDefect(false))));
+                        const depClosure = yield* topology.dependencyClosure(intent.workspaceRoot, intent.packages).pipe(effect_Effect__rspack_import_16.Tyx(recoverDefect(new Set())));
                         return {
                             id,
                             ticket,
@@ -16850,7 +16937,7 @@ var __webpack_modules__ = {
                             killSignal,
                             state,
                             queuedAtMs,
-                            replay: new _replay_js__rspack_import_20.E(config.replayBufferBytes),
+                            replay: new _replay_js__rspack_import_21.E(config.replayBufferBytes),
                             attachments: new Map(),
                             attachGate: {
                                 open: true
@@ -16880,45 +16967,45 @@ var __webpack_modules__ = {
                             waitingFor: new Set()
                         };
                     });
-                const enqueueJob = (lane, job)=>effect_Effect__rspack_import_15.JkU(function*() {
-                        const position = yield* effect_Effect__rspack_import_15.OH5(()=>{
+                const enqueueJob = (lane, job)=>effect_Effect__rspack_import_16.JkU(function*() {
+                        const position = yield* effect_Effect__rspack_import_16.OH5(()=>{
                             lane.pending.push(job);
                             return lane.pending.length - 1;
                         });
-                        yield* effect_Queue__rspack_import_21.x(lane.wake, undefined);
-                        yield* effect_Effect__rspack_import_15.MDB('enqueued job', {
+                        yield* effect_Queue__rspack_import_22.x(lane.wake, undefined);
+                        yield* effect_Effect__rspack_import_16.MDB('enqueued job', {
                             position
                         });
                         return position;
                     });
-                const takeNextJob = (lane)=>effect_Effect__rspack_import_15.OH5(()=>{
+                const takeNextJob = (lane)=>effect_Effect__rspack_import_16.OH5(()=>{
                         const nowMs = Date.now();
                         const ready = lane.pending.filter(_dependencies_js__rspack_import_7.pg);
-                        const index = (0, _scheduling_scheduler_js__rspack_import_12.qw)(ready.map((candidate)=>scheduleCandidate(candidate, lane.pending, nowMs, lane.lastSurfaceKey)));
+                        const index = (0, _scheduling_scheduler_js__rspack_import_13.qw)(ready.map((candidate)=>scheduleCandidate(candidate, lane.pending, nowMs, lane.lastSurfaceKey)));
                         const next = index === -1 ? undefined : ready[index];
                         if (next !== undefined) {
                             lane.pending.splice(lane.pending.indexOf(next), 1);
                         }
                         return next;
                     });
-                const yieldToQueuedJob = (lane, job)=>effect_Effect__rspack_import_15.OH5(()=>{
-                        if (effect_Ref__rspack_import_17.fp(job.state) !== 'queued') {
+                const yieldToQueuedJob = (lane, job)=>effect_Effect__rspack_import_16.OH5(()=>{
+                        if (effect_Ref__rspack_import_19.fp(job.state) !== 'queued') {
                             return false;
                         }
                         const pending = [
                             job,
                             ...lane.pending
                         ];
-                        const ready = pending.filter((candidate)=>effect_Ref__rspack_import_17.fp(candidate.state) === 'queued' && (0, _dependencies_js__rspack_import_7.pg)(candidate));
+                        const ready = pending.filter((candidate)=>effect_Ref__rspack_import_19.fp(candidate.state) === 'queued' && (0, _dependencies_js__rspack_import_7.pg)(candidate));
                         const nowMs = Date.now();
-                        const index = (0, _scheduling_scheduler_js__rspack_import_12.qw)(ready.map((candidate)=>scheduleCandidate(candidate, pending, nowMs, lane.lastSurfaceKey)));
+                        const index = (0, _scheduling_scheduler_js__rspack_import_13.qw)(ready.map((candidate)=>scheduleCandidate(candidate, pending, nowMs, lane.lastSurfaceKey)));
                         if (index === -1 || ready[index] === job) {
                             return false;
                         }
                         lane.pending.push(job);
                         return true;
                     });
-                const foldBatch = (lane, leader)=>effect_Effect__rspack_import_15.JkU(function*() {
+                const foldBatch = (lane, leader)=>effect_Effect__rspack_import_16.JkU(function*() {
                         const kind = config.batchEnabled ? (0, _scheduling_batch_js__rspack_import_2.Wk)(leader.intent) : null;
                         if (kind === null) {
                             return;
@@ -16927,11 +17014,11 @@ var __webpack_modules__ = {
                         const absorbed = [];
                         const foldedAttachments = [];
                         const atMs = Date.now();
-                        yield* effect_Effect__rspack_import_15.OH5(()=>{
+                        yield* effect_Effect__rspack_import_16.OH5(()=>{
                             const named = new Set(leader.intent.packages);
                             for(let index = lane.pending.length - 1; index >= 0; index -= 1){
                                 const candidate = lane.pending[index];
-                                if (candidate === undefined || effect_Ref__rspack_import_17.fp(candidate.state) !== 'queued' || !(0, _dependencies_js__rspack_import_7.pg)(candidate) || !(0, _scheduling_batch_js__rspack_import_2.uY)(kind, leader.intent, candidate.intent)) {
+                                if (candidate === undefined || effect_Ref__rspack_import_19.fp(candidate.state) !== 'queued' || !(0, _dependencies_js__rspack_import_7.pg)(candidate) || !(0, _scheduling_batch_js__rspack_import_2.uY)(kind, leader.intent, candidate.intent)) {
                                     continue;
                                 }
                                 const extra = (0, _scheduling_batch_js__rspack_import_2.Jr)(leader.intent, candidate.intent);
@@ -16948,7 +17035,7 @@ var __webpack_modules__ = {
                                 directory.remove(candidate.ticket);
                                 const decision = (0, _coverage_js__rspack_import_4.lW)(leader.intent, candidate.intent);
                                 const identical = decision._tag === 'attach' && decision.mode === 'identity';
-                                const candidateAttachment = (0, _job_state_js__rspack_import_9.qD)({
+                                const candidateAttachment = (0, _job_state_js__rspack_import_10.qD)({
                                     id: candidate.id,
                                     ticket: candidate.ticket,
                                     mode: identical ? 'identity' : 'batch',
@@ -16962,7 +17049,7 @@ var __webpack_modules__ = {
                                     attachedAtMs: atMs
                                 });
                                 if (leader.demux !== null) {
-                                    candidateAttachment.diagnostics = (0, _job_state_js__rspack_import_9.PE)(leader.demux, candidateAttachment);
+                                    candidateAttachment.diagnostics = (0, _job_state_js__rspack_import_10.PE)(leader.demux, candidateAttachment);
                                 }
                                 leader.attachments.set(candidateAttachment.ticket, candidateAttachment);
                                 directory.setAttachment(leader, candidateAttachment);
@@ -16993,18 +17080,18 @@ var __webpack_modules__ = {
                         if (absorbed.length === 0) {
                             return;
                         }
-                        yield* effect_Effect__rspack_import_15.MDB('folded queued jobs into batch', {
+                        yield* effect_Effect__rspack_import_16.MDB('folded queued jobs into batch', {
                             attachments: foldedAttachments.length,
                             leader: leader.ticket
                         });
-                        yield* effect_Effect__rspack_import_15.jJl(foldedAttachments, (attachment)=>ledger.markAttached(attachment.id, {
+                        yield* effect_Effect__rspack_import_16.jJl(foldedAttachments, (attachment)=>ledger.markAttached(attachment.id, {
                                 atMs,
                                 leaderTicket: leader.ticket,
                                 mode: attachment.mode
-                            }).pipe(effect_Effect__rspack_import_15.hgn(effect_Metric__rspack_import_22.yo(_reporting_broker_metrics_js__rspack_import_5.xp, attachment.mode))), {
+                            }).pipe(effect_Effect__rspack_import_16.hgn(effect_Metric__rspack_import_23.yo(_reporting_broker_metrics_js__rspack_import_5.xp, attachment.mode))), {
                             discard: true
                         });
-                        yield* effect_Effect__rspack_import_15.OH5(()=>{
+                        yield* effect_Effect__rspack_import_16.OH5(()=>{
                             switch(kind){
                                 case 'compile':
                                     if (extras.length > 0) {
@@ -17023,21 +17110,21 @@ var __webpack_modules__ = {
                             }
                         });
                     });
-                const requeueAttachment = (lane, attachment, reason)=>effect_Effect__rspack_import_15.JkU(function*() {
+                const requeueAttachment = (lane, attachment, reason)=>effect_Effect__rspack_import_16.JkU(function*() {
                         const atMs = Date.now();
-                        yield* effect_Effect__rspack_import_15.MDB('requeueing attachment', {
+                        yield* effect_Effect__rspack_import_16.MDB('requeueing attachment', {
                             reason,
                             ticket: attachment.ticket
                         });
                         yield* ledger.markRequeued(attachment.id, atMs);
                         const onRequeued = attachment.callbacks.onRequeued;
                         if (onRequeued !== undefined) {
-                            yield* (0, _job_state_js__rspack_import_9.Nj)(onRequeued({
+                            yield* (0, _job_state_js__rspack_import_10.Nj)(onRequeued({
                                 ticket: attachment.ticket,
                                 reason
                             }));
                         }
-                        const revived = (0, _job_state_js__rspack_import_9.qD)({
+                        const revived = (0, _job_state_js__rspack_import_10.qD)({
                             id: attachment.id,
                             ticket: attachment.ticket,
                             mode: attachment.mode,
@@ -17059,12 +17146,12 @@ var __webpack_modules__ = {
                             estimateMs: attachment.estimateMs,
                             source: attachment.estimateSource
                         });
-                        yield* effect_Effect__rspack_import_15.OH5(()=>directory.setLeader(job));
+                        yield* effect_Effect__rspack_import_16.OH5(()=>directory.setLeader(job));
                         yield* enqueueJob(lane, job);
                     });
-                const handBackLane = (lane, job)=>effect_Effect__rspack_import_15.JkU(function*() {
+                const handBackLane = (lane, job)=>effect_Effect__rspack_import_16.JkU(function*() {
                         const atMs = Date.now();
-                        const first = yield* effect_Effect__rspack_import_15.OH5(()=>{
+                        const first = yield* effect_Effect__rspack_import_16.OH5(()=>{
                             if (job.buildFinishedAtMs !== null) {
                                 return false;
                             }
@@ -17078,44 +17165,44 @@ var __webpack_modules__ = {
                         if (!first) {
                             return;
                         }
-                        yield* ledger.markBuildFinished(job.id, atMs).pipe(effect_Effect__rspack_import_15.GrF);
-                        yield* effect_Effect__rspack_import_15.MDB('build finished; lane handed to the next job', {
+                        yield* ledger.markBuildFinished(job.id, atMs).pipe(effect_Effect__rspack_import_16.GrF);
+                        yield* effect_Effect__rspack_import_16.MDB('build finished; lane handed to the next job', {
                             ticket: job.ticket
                         });
-                        yield* effect_Deferred__rspack_import_19.Py(job.laneReleased, undefined);
+                        yield* effect_Deferred__rspack_import_17.Py(job.laneReleased, undefined);
                         yield* attachments.releaseBuildFinishedAttachments(job, atMs);
                     });
-                const completeExit = (job)=>effect_Effect__rspack_import_15.JkU(function*() {
+                const completeExit = (job)=>effect_Effect__rspack_import_16.JkU(function*() {
                         const lane = lanes.get(job.laneKey);
                         if (lane !== undefined) {
-                            yield* effect_Effect__rspack_import_15.OH5(()=>{
+                            yield* effect_Effect__rspack_import_16.OH5(()=>{
                                 if (lane.running === job.ticket) {
                                     lane.running = null;
                                 }
                                 lane.executing.delete(job.ticket);
                             });
                         }
-                        yield* effect_Effect__rspack_import_15.OH5(()=>directory.remove(job.ticket));
+                        yield* effect_Effect__rspack_import_16.OH5(()=>directory.remove(job.ticket));
                     });
-                const claimSettlement = (job)=>effect_Ref__rspack_import_17.JP(job.state, (state)=>state === 'finished' ? [
+                const claimSettlement = (job)=>effect_Ref__rspack_import_19.JP(job.state, (state)=>state === 'finished' ? [
                             false,
                             state
                         ] : [
                             true,
                             'finished'
                         ]);
-                const settleJob = (attachmentLane, job, status, exitCode, signal, error, atMs)=>effect_Effect__rspack_import_15.rfi(effect_Effect__rspack_import_15.JkU(function*() {
+                const settleJob = (attachmentLane, job, status, exitCode, signal, error, atMs)=>effect_Effect__rspack_import_16.rfi(effect_Effect__rspack_import_16.JkU(function*() {
                         const won = yield* claimSettlement(job);
                         if (!won) {
                             return;
                         }
-                        const step = (label, effect1)=>(0, _job_state_js__rspack_import_9.sb)(`${label} (${job.ticket})`, effect1);
+                        const step = (label, effect1)=>(0, _job_state_js__rspack_import_10.sb)(`${label} (${job.ticket})`, effect1);
                         const startedAtMs = job.startedAtMs;
                         const waitMs = Math.max(0, (startedAtMs ?? atMs) - job.queuedAtMs);
                         const runMs = startedAtMs === null ? 0 : Math.max(0, atMs - startedAtMs);
                         const log = job.log;
                         if (log !== null) {
-                            yield* step('closeTicketLog', log.close().pipe(effect_Effect__rspack_import_15.wRz('5 seconds'), effect_Effect__rspack_import_15.XeO));
+                            yield* step('closeTicketLog', log.close().pipe(effect_Effect__rspack_import_16.wRz('5 seconds'), effect_Effect__rspack_import_16.XeO));
                         }
                         yield* step('ledger.markFinished', ledger.markFinished(job.id, {
                             status,
@@ -17124,12 +17211,12 @@ var __webpack_modules__ = {
                             signal,
                             outputTail: startedAtMs === null ? null : job.tail.toString(),
                             error,
-                            ...(0, _job_state_js__rspack_import_9.Az)(startedAtMs === null ? null : job.demux?.globalDiagnostics ?? null)
+                            ...(0, _job_state_js__rspack_import_10.Az)(startedAtMs === null ? null : job.demux?.globalDiagnostics ?? null)
                         }));
-                        yield* step('metrics', effect_Metric__rspack_import_22.yo(_reporting_broker_metrics_js__rspack_import_5.QV, status).pipe(effect_Effect__rspack_import_15.hgn(startedAtMs === null ? effect_Effect__rspack_import_15.rIH : effect_Metric__rspack_import_22.yo(_reporting_broker_metrics_js__rspack_import_5.eC, waitMs))));
+                        yield* step('metrics', effect_Metric__rspack_import_23.yo(_reporting_broker_metrics_js__rspack_import_5.QV, status).pipe(effect_Effect__rspack_import_16.hgn(startedAtMs === null ? effect_Effect__rspack_import_16.rIH : effect_Metric__rspack_import_23.yo(_reporting_broker_metrics_js__rspack_import_5.eC, waitMs))));
                         yield* step('notifyWaiters', directory.notifyWaiters(job.ticket));
                         yield* step('completeExit', completeExit(job));
-                        yield* (0, _job_state_js__rspack_import_9.Nj)(job.callbacks.onExit({
+                        yield* (0, _job_state_js__rspack_import_10.Nj)(job.callbacks.onExit({
                             ticket: job.ticket,
                             status,
                             exitCode,
@@ -17141,7 +17228,7 @@ var __webpack_modules__ = {
                         yield* step('settleAttachments', attachments.settleAttachments(attachmentLane === null ? null : (attachment, reason)=>requeueAttachment(attachmentLane, attachment, reason), job, status, exitCode, signal, error, atMs));
                     }));
                 const finishKilledBeforeRun = (lane, job)=>settleJob(lane, job, 'killed', null, null, job.killReason ?? 'killed while queued', Date.now());
-                const removePending = (lane, job)=>effect_Effect__rspack_import_15.OH5(()=>{
+                const removePending = (lane, job)=>effect_Effect__rspack_import_16.OH5(()=>{
                         const index = lane.pending.indexOf(job);
                         if (index === -1) {
                             return false;
@@ -17149,16 +17236,16 @@ var __webpack_modules__ = {
                         lane.pending.splice(index, 1);
                         return true;
                     });
-                const failPendingJob = (lane, job, error)=>effect_Effect__rspack_import_15.JkU(function*() {
+                const failPendingJob = (lane, job, error)=>effect_Effect__rspack_import_16.JkU(function*() {
                         yield* removePending(lane, job);
-                        const state = yield* effect_Ref__rspack_import_17.Jt(job.state);
+                        const state = yield* effect_Ref__rspack_import_19.Jt(job.state);
                         if (state === 'kill-requested') {
                             yield* finishKilledBeforeRun(lane, job);
                             return;
                         }
                         yield* settleJob(lane, job, 'failed', null, null, error, Date.now());
                     });
-                const settleKilledPending = (job)=>effect_Effect__rspack_import_15.JkU(function*() {
+                const settleKilledPending = (job)=>effect_Effect__rspack_import_16.JkU(function*() {
                         const lane = lanes.get(job.laneKey);
                         if (lane === undefined) {
                             return;
@@ -17167,52 +17254,52 @@ var __webpack_modules__ = {
                             yield* finishKilledBeforeRun(lane, job);
                         }
                     });
-                const settleInterruptedJob = (job)=>settleJob(null, job, 'killed', null, 'SIGTERM', 'daemon shutdown', Date.now()).pipe(effect_Effect__rspack_import_15.XeO);
-                const claimStart = (job)=>effect_Ref__rspack_import_17.JP(job.state, (state)=>state === 'queued' ? [
+                const settleInterruptedJob = (job)=>settleJob(null, job, 'killed', null, 'SIGTERM', 'daemon shutdown', Date.now()).pipe(effect_Effect__rspack_import_16.XeO);
+                const claimStart = (job)=>effect_Ref__rspack_import_19.JP(job.state, (state)=>state === 'queued' ? [
                             true,
                             'starting'
                         ] : [
                             false,
                             state
                         ]);
-                const runAdmitted = (lane, job)=>effect_Effect__rspack_import_15.JkU(function*() {
+                const runAdmitted = (lane, job)=>effect_Effect__rspack_import_16.JkU(function*() {
                         const starts = yield* claimStart(job);
                         if (!starts) {
-                            const state = yield* effect_Ref__rspack_import_17.Jt(job.state);
+                            const state = yield* effect_Ref__rspack_import_19.Jt(job.state);
                             if (state === 'kill-requested') {
                                 yield* finishKilledBeforeRun(lane, job);
                             }
                             return;
                         }
-                        yield* effect_Effect__rspack_import_15.MDB('starting admitted job');
+                        yield* effect_Effect__rspack_import_16.MDB('starting admitted job');
                         const runStartedAtMs = Date.now();
-                        const queuedAttachments = yield* effect_Effect__rspack_import_15.OH5(()=>{
+                        const queuedAttachments = yield* effect_Effect__rspack_import_16.OH5(()=>{
                             job.startedAtMs = runStartedAtMs;
                             job.lastOutputAtMs = runStartedAtMs;
-                            job.log = config.ticketLogMaxBytes > 0 ? (0, _storage_ticket_log_js__rspack_import_14.xO)(config.ticketLogDir, job.ticket, config.ticketLogMaxBytes) : null;
+                            job.log = config.ticketLogMaxBytes > 0 ? (0, _storage_ticket_log_js__rspack_import_15.xO)(config.ticketLogDir, job.ticket, config.ticketLogMaxBytes) : null;
                             return [
                                 ...job.attachments.values()
                             ];
                         });
                         const outputPath = job.log?.path ?? null;
-                        yield* effect_Effect__rspack_import_15.OH5(()=>{
+                        yield* effect_Effect__rspack_import_16.OH5(()=>{
                             lane.running = job.ticket;
                             lane.lastSurfaceKey = (0, _coverage_js__rspack_import_4.eK)(job.intent);
                         });
                         yield* ledger.markRunning(job.id, runStartedAtMs, job.execArgv, outputPath);
-                        yield* effect_Ref__rspack_import_17.hZ(job.state, 'running');
+                        yield* effect_Ref__rspack_import_19.hZ(job.state, 'running');
                         const waitMs = runStartedAtMs - job.queuedAtMs;
-                        yield* effect_Effect__rspack_import_15.ww9('waitMs', waitMs);
-                        yield* (0, _job_state_js__rspack_import_9.Nj)(job.callbacks.onStarted({
+                        yield* effect_Effect__rspack_import_16.ww9('waitMs', waitMs);
+                        yield* (0, _job_state_js__rspack_import_10.Nj)(job.callbacks.onStarted({
                             ticket: job.ticket,
                             waitMs,
                             outputPath
                         }));
-                        yield* effect_Effect__rspack_import_15.jJl(queuedAttachments, (attachment)=>effect_Effect__rspack_import_15.JkU(function*() {
+                        yield* effect_Effect__rspack_import_16.jJl(queuedAttachments, (attachment)=>effect_Effect__rspack_import_16.JkU(function*() {
                                 yield* ledger.markRunning(attachment.id, runStartedAtMs, undefined, outputPath);
                                 const won = yield* attachments.notifyAttachmentStarted(job, attachment, runStartedAtMs);
                                 if (won) {
-                                    yield* effect_Effect__rspack_import_15.OH5(()=>{
+                                    yield* effect_Effect__rspack_import_16.OH5(()=>{
                                         attachment.live = true;
                                     });
                                 }
@@ -17220,22 +17307,22 @@ var __webpack_modules__ = {
                             discard: true
                         });
                         const phase = config.overlapExecution && job.demux === null && _cargo_execution_build_phase_js__rspack_import_3.nI.has(job.intent.subcommand) ? (0, _cargo_execution_build_phase_js__rspack_import_3.wZ)() : null;
-                        const execEnv = cargoExecEnv(config.jobsGrant, job.input, (0, _runtime_jobserver_js__rspack_import_10.RV)());
+                        const execEnv = cargoExecEnv(config.jobsGrant, job.input, (0, _runtime_jobserver_js__rspack_import_11.RV)());
                         const result = yield* (0, _cargo_execution_executor_js__rspack_import_8.g)({
                             argv: job.execArgv,
                             cwd: job.input.cwd,
                             env: execEnv,
                             killSignal: job.killSignal,
                             tailBytes: 0,
-                            onSpawn: (pid)=>effect_Effect__rspack_import_15.OH5(()=>{
+                            onSpawn: (pid)=>effect_Effect__rspack_import_16.OH5(()=>{
                                     job.pid = pid;
                                 }),
-                            onOutput: (channel, data)=>phase === null ? attachments.emitChunk(job, channel, data) : attachments.emitChunk(job, channel, data).pipe(effect_Effect__rspack_import_15.hgn(effect_Effect__rspack_import_15.DYE(()=>phase.feed(channel, data) ? handBackLane(lane, job) : effect_Effect__rspack_import_15.rIH))),
+                            onOutput: (channel, data)=>phase === null ? attachments.emitChunk(job, channel, data) : attachments.emitChunk(job, channel, data).pipe(effect_Effect__rspack_import_16.hgn(effect_Effect__rspack_import_16.DYE(()=>phase.feed(channel, data) ? handBackLane(lane, job) : effect_Effect__rspack_import_16.rIH))),
                             mergeStderr: job.demux === null && job.input.mergeStderr === true,
                             ...job.demux === null ? {} : {
                                 onStdoutLine: (line)=>attachments.handleStdoutLine(job, line)
                             }
-                        }).pipe(effect_Effect__rspack_import_15.fRP('cargo.exec'), effect_Effect__rspack_import_15.cVy(_reporting_broker_metrics_js__rspack_import_5.io), effect_Effect__rspack_import_15.cVy((0, _reporting_broker_metrics_js__rspack_import_5.xT)(job.intent.subcommand)), effect_Effect__rspack_import_15.PfK(effect_unstable_process_ChildProcessSpawner__rspack_import_23.CV, spawner));
+                        }).pipe(effect_Effect__rspack_import_16.fRP('cargo.exec'), effect_Effect__rspack_import_16.cVy(_reporting_broker_metrics_js__rspack_import_5.io), effect_Effect__rspack_import_16.cVy((0, _reporting_broker_metrics_js__rspack_import_5.xT)(job.intent.subcommand)), effect_Effect__rspack_import_16.PfK(effect_unstable_process_ChildProcessSpawner__rspack_import_24.CV, spawner));
                         const finishedAtMs = Date.now();
                         if (result.outcome !== 'killed') {
                             const compileMs = job.buildFinishedAtMs === null ? undefined : job.buildFinishedAtMs - runStartedAtMs;
@@ -17252,7 +17339,7 @@ var __webpack_modules__ = {
                             });
                         }
                         yield* settleJob(lane, job, result.outcome, result.exitCode, result.signal, result.outcome === 'killed' ? result.error ?? job.killReason : result.error, finishedAtMs);
-                    }).pipe(effect_Effect__rspack_import_15.fRP('job.process', {
+                    }).pipe(effect_Effect__rspack_import_16.fRP('job.process', {
                         attributes: {
                             ticket: job.ticket,
                             lane: lane.key
@@ -17262,20 +17349,20 @@ var __webpack_modules__ = {
                 const gateDisabled = config.loadThresholdPerCore === null && config.cpuStallThreshold === null && config.memPressureSoftThreshold === null && config.memPressureHardThreshold === null && config.memAvailableMinBytes === null && config.memPressureLevelThreshold === null && config.heavyMemAvailableBytes === null;
                 const sampleMemAvailable = config.memAvailableMinBytes !== null || config.heavyMemAvailableBytes !== null;
                 const sampleAdmissionInput = (running, heavy)=>{
-                    const memPsi = config.memPressureSoftThreshold === null && config.memPressureHardThreshold === null ? null : (0, _scheduling_pressure_js__rspack_import_11.g6)();
+                    const memPsi = config.memPressureSoftThreshold === null && config.memPressureHardThreshold === null ? null : (0, _scheduling_pressure_js__rspack_import_12.g6)();
                     return {
-                        cpuStallPercent: config.cpuStallThreshold === null ? null : (0, _scheduling_pressure_js__rspack_import_11.SN)(),
+                        cpuStallPercent: config.cpuStallThreshold === null ? null : (0, _scheduling_pressure_js__rspack_import_12.SN)(),
                         cpuStallThreshold: config.cpuStallThreshold,
                         heavy,
                         heavyMaxConcurrent: config.heavyMaxConcurrent,
                         heavyMemAvailableBytes: config.heavyMemAvailableBytes,
                         loadPerCore: (0, node_os__rspack_import_0.loadavg)()[0] / (0, node_os__rspack_import_0.availableParallelism)(),
-                        memAvailableBytes: sampleMemAvailable ? (0, _scheduling_pressure_js__rspack_import_11._m)() : null,
+                        memAvailableBytes: sampleMemAvailable ? (0, _scheduling_pressure_js__rspack_import_12._m)() : null,
                         memAvailableMinBytes: config.memAvailableMinBytes,
                         memFullAvg10: memPsi?.fullAvg10 ?? null,
                         memFullAvg60: memPsi?.fullAvg60 ?? null,
                         memHardThreshold: config.memPressureHardThreshold,
-                        memPressureLevel: config.memPressureLevelThreshold === null ? null : (0, _scheduling_pressure_js__rspack_import_11.x2)(),
+                        memPressureLevel: config.memPressureLevelThreshold === null ? null : (0, _scheduling_pressure_js__rspack_import_12.x2)(),
                         memPressureLevelThreshold: config.memPressureLevelThreshold,
                         memSoftThreshold: config.memPressureSoftThreshold,
                         minConcurrent: config.loadMinConcurrent,
@@ -17283,20 +17370,20 @@ var __webpack_modules__ = {
                         thresholdPerCore: config.loadThresholdPerCore ?? Number.POSITIVE_INFINITY
                     };
                 };
-                const claimHeavy = effect_Ref__rspack_import_17.yo(heavyAdmittedCount, (count)=>count + 1);
-                const releaseHeavy = effect_Ref__rspack_import_17.yo(heavyAdmittedCount, (count)=>count - 1);
-                const heavyLeader = (job)=>config.heavyMemAvailableBytes !== null && (0, _scheduling_scheduler_js__rspack_import_12.m5)(job.intent);
-                const waitForLoadHeadroom = (job, heavy, claimed)=>gateDisabled ? effect_Effect__rspack_import_15.rIH : effect_Effect__rspack_import_15.JkU(function*() {
+                const claimHeavy = effect_Ref__rspack_import_19.yo(heavyAdmittedCount, (count)=>count + 1);
+                const releaseHeavy = effect_Ref__rspack_import_19.yo(heavyAdmittedCount, (count)=>count - 1);
+                const heavyLeader = (job)=>config.heavyMemAvailableBytes !== null && (0, _scheduling_scheduler_js__rspack_import_13.m5)(job.intent);
+                const waitForLoadHeadroom = (job, heavy, claimed)=>gateDisabled ? effect_Effect__rspack_import_16.rIH : effect_Effect__rspack_import_16.JkU(function*() {
                         const deadline = Date.now() + loadGateDeadlineMs;
                         while(Date.now() < deadline){
-                            const running = yield* effect_Ref__rspack_import_17.Jt(admittedCount);
-                            const sample = yield* effect_Effect__rspack_import_15.OH5(()=>sampleAdmissionInput(running, heavy));
-                            const { decision, input } = yield* effect_Ref__rspack_import_17.JP(heavyAdmittedCount, (heavyRunning)=>{
+                            const running = yield* effect_Ref__rspack_import_19.Jt(admittedCount);
+                            const sample = yield* effect_Effect__rspack_import_16.OH5(()=>sampleAdmissionInput(running, heavy));
+                            const { decision, input } = yield* effect_Ref__rspack_import_19.JP(heavyAdmittedCount, (heavyRunning)=>{
                                 const input = {
                                     ...sample,
                                     heavyRunning
                                 };
-                                const decision = (0, _scheduling_scheduler_js__rspack_import_12.KG)(input);
+                                const decision = (0, _scheduling_scheduler_js__rspack_import_13.KG)(input);
                                 const claim = !decision.defer && heavy;
                                 claimed.value = claim;
                                 return [
@@ -17308,19 +17395,19 @@ var __webpack_modules__ = {
                                 ];
                             });
                             if (!decision.defer) {
-                                yield* effect_Effect__rspack_import_15.OH5(()=>{
+                                yield* effect_Effect__rspack_import_16.OH5(()=>{
                                     job.admissionHold = null;
                                 });
                                 return;
                             }
-                            const hold = (0, _scheduling_scheduler_js__rspack_import_12.A6)(input, decision.reason);
-                            yield* effect_Effect__rspack_import_15.OH5(()=>{
+                            const hold = (0, _scheduling_scheduler_js__rspack_import_13.A6)(input, decision.reason);
+                            yield* effect_Effect__rspack_import_16.OH5(()=>{
                                 job.admissionHold = hold;
                             });
-                            yield* effect_Effect__rspack_import_15.MDB(`admission deferred (${hold.reason}): ${hold.detail}; load/core ${input.loadPerCore.toFixed(2)}, cpu stall ${input.cpuStallPercent?.toFixed(1) ?? 'n/a'}%, memory full avg10 ${input.memFullAvg10?.toFixed(1) ?? 'n/a'}%, avg60 ${input.memFullAvg60?.toFixed(1) ?? 'n/a'}%, available ${input.memAvailableBytes ?? 'n/a'} bytes, macOS level ${input.memPressureLevel ?? 'n/a'} with ${running} running (${input.heavyRunning ?? 0} heavy)`);
-                            yield* effect_Effect__rspack_import_15.yy4('2 seconds');
+                            yield* effect_Effect__rspack_import_16.MDB(`admission deferred (${hold.reason}): ${hold.detail}; load/core ${input.loadPerCore.toFixed(2)}, cpu stall ${input.cpuStallPercent?.toFixed(1) ?? 'n/a'}%, memory full avg10 ${input.memFullAvg10?.toFixed(1) ?? 'n/a'}%, avg60 ${input.memFullAvg60?.toFixed(1) ?? 'n/a'}%, available ${input.memAvailableBytes ?? 'n/a'} bytes, macOS level ${input.memPressureLevel ?? 'n/a'} with ${running} running (${input.heavyRunning ?? 0} heavy)`);
+                            yield* effect_Effect__rspack_import_16.yy4('2 seconds');
                         }
-                        yield* effect_Effect__rspack_import_15.OH5(()=>{
+                        yield* effect_Effect__rspack_import_16.OH5(()=>{
                             job.admissionHold = null;
                         });
                         if (heavy) {
@@ -17328,10 +17415,28 @@ var __webpack_modules__ = {
                             claimed.value = true;
                         }
                     });
-                const killedBeforeStart = (job)=>effect_Deferred__rspack_import_19.Tx(job.killSignal).pipe(effect_Effect__rspack_import_15.hgn(effect_Ref__rspack_import_17.Jt(job.state)), effect_Effect__rspack_import_15.qIB((state)=>state === 'kill-requested' ? effect_Effect__rspack_import_15.rIH : effect_Effect__rspack_import_15.ZmZ));
-                const stillQueued = (job)=>effect_Ref__rspack_import_17.Jt(job.state).pipe(effect_Effect__rspack_import_15.TjK((state)=>state === 'queued'));
-                const processJob = (lane, job)=>effect_Effect__rspack_import_15.JkU(function*() {
-                        const state = yield* effect_Ref__rspack_import_17.Jt(job.state);
+                const killedBeforeStart = (job)=>effect_Deferred__rspack_import_17.Tx(job.killSignal).pipe(effect_Effect__rspack_import_16.hgn(effect_Ref__rspack_import_19.Jt(job.state)), effect_Effect__rspack_import_16.qIB((state)=>state === 'kill-requested' ? effect_Effect__rspack_import_16.rIH : effect_Effect__rspack_import_16.ZmZ));
+                const stillQueued = (job)=>effect_Ref__rspack_import_19.Jt(job.state).pipe(effect_Effect__rspack_import_16.TjK((state)=>state === 'queued'));
+                const enterTargetGate = (lane, job)=>effect_Effect__rspack_import_16.JkU(function*() {
+                        while(true){
+                            const { changed, hold } = yield* effect_Effect__rspack_import_16.OH5(()=>{
+                                const changed = lane.gate.changed;
+                                const hold = tryEnterGate(lane.gate, lane.buildLock, job.ticket);
+                                job.admissionHold = hold;
+                                return {
+                                    changed,
+                                    hold
+                                };
+                            });
+                            if (hold === null) {
+                                return;
+                            }
+                            yield* effect_Effect__rspack_import_16.MDB(`admission deferred (${hold.reason}): ${hold.detail}`);
+                            yield* effect_Deferred__rspack_import_17.Tx(changed);
+                        }
+                    });
+                const processJob = (lane, job)=>effect_Effect__rspack_import_16.JkU(function*() {
+                        const state = yield* effect_Ref__rspack_import_19.Jt(job.state);
                         if (state === 'kill-requested') {
                             yield* finishKilledBeforeRun(lane, job);
                             return;
@@ -17343,58 +17448,73 @@ var __webpack_modules__ = {
                         const claimed = {
                             value: false
                         };
-                        const admitAndRun = waitForLoadHeadroom(job, heavy, claimed).pipe(effect_Effect__rspack_import_15.hgn(admission.withPermits(1)(effect_Effect__rspack_import_15.JkU(function*() {
+                        const admitAndRun = enterTargetGate(lane, job).pipe(effect_Effect__rspack_import_16.hgn(waitForLoadHeadroom(job, heavy, claimed)), effect_Effect__rspack_import_16.hgn(admission.withPermits(1)(effect_Effect__rspack_import_16.JkU(function*() {
                             if (yield* yieldToQueuedJob(lane, job)) {
                                 return;
                             }
-                            yield* effect_Ref__rspack_import_17.yo(admittedCount, (count)=>count + 1).pipe(effect_Effect__rspack_import_15.hgn(effect_Effect__rspack_import_15.rfi(effect_Effect__rspack_import_15.JkU(function*() {
+                            yield* effect_Ref__rspack_import_19.yo(admittedCount, (count)=>count + 1).pipe(effect_Effect__rspack_import_16.hgn(effect_Effect__rspack_import_16.rfi(effect_Effect__rspack_import_16.JkU(function*() {
                                 if (yield* stillQueued(job)) {
                                     yield* foldBatch(lane, job);
                                 }
-                            }))), effect_Effect__rspack_import_15.hgn(runAdmitted(lane, job)), effect_Effect__rspack_import_15.yeE(effect_Ref__rspack_import_17.yo(admittedCount, (count)=>count - 1)));
+                            }))), effect_Effect__rspack_import_16.hgn(runAdmitted(lane, job)), effect_Effect__rspack_import_16.yeE(effect_Ref__rspack_import_19.yo(admittedCount, (count)=>count - 1)));
                         }))));
-                        yield* effect_Effect__rspack_import_15.KT6(admitAndRun, killedBeforeStart(job).pipe(effect_Effect__rspack_import_15.hgn(finishKilledBeforeRun(lane, job)))).pipe(effect_Effect__rspack_import_15.yeE(effect_Effect__rspack_import_15.DYE(()=>claimed.value ? releaseHeavy : effect_Effect__rspack_import_15.rIH)));
-                    }).pipe(effect_Effect__rspack_import_15.nAr(()=>settleInterruptedJob(job)));
-                const processLaneJob = (lane, job)=>effect_Effect__rspack_import_15.JkU(function*() {
+                        yield* effect_Effect__rspack_import_16.KT6(admitAndRun, killedBeforeStart(job).pipe(effect_Effect__rspack_import_16.hgn(finishKilledBeforeRun(lane, job)))).pipe(effect_Effect__rspack_import_16.yeE(effect_Effect__rspack_import_16.DYE(()=>claimed.value ? releaseHeavy : effect_Effect__rspack_import_16.rIH)), effect_Effect__rspack_import_16.yeE(leaveGate(lane.gate, job.ticket)));
+                    }).pipe(effect_Effect__rspack_import_16.nAr(()=>settleInterruptedJob(job)));
+                const processLaneJob = (lane, job)=>effect_Effect__rspack_import_16.JkU(function*() {
                         if (config.batchEnabled && config.batchWindowMs > 0 && !lane.pending.some(_dependencies_js__rspack_import_7.pg) && (0, _scheduling_batch_js__rspack_import_2.Wk)(job.intent) !== null && (yield* stillQueued(job))) {
-                            yield* effect_Effect__rspack_import_15.KT6(effect_Effect__rspack_import_15.yy4(`${config.batchWindowMs} millis`), effect_Deferred__rspack_import_19.Tx(job.killSignal));
+                            yield* effect_Effect__rspack_import_16.KT6(effect_Effect__rspack_import_16.yy4(`${config.batchWindowMs} millis`), effect_Deferred__rspack_import_17.Tx(job.killSignal));
                         }
                         yield* processJob(lane, job);
-                    }).pipe(effect_Effect__rspack_import_15.sJf((cause)=>!effect_Cause__rspack_import_18.nn(cause), (cause)=>{
-                        const message = effect_Cause__rspack_import_18.j9(cause);
-                        return effect_Effect__rspack_import_15.vVN(`lane ${lane.key} job ${job.ticket} crashed`, cause).pipe(effect_Effect__rspack_import_15.hgn(settleJob(lane, job, 'failed', null, null, message, Date.now()).pipe(effect_Effect__rspack_import_15.XeO)));
+                    }).pipe(effect_Effect__rspack_import_16.sJf((cause)=>!effect_Cause__rspack_import_20.nn(cause), (cause)=>{
+                        const message = effect_Cause__rspack_import_20.j9(cause);
+                        return effect_Effect__rspack_import_16.vVN(`lane ${lane.key} job ${job.ticket} crashed`, cause).pipe(effect_Effect__rspack_import_16.hgn(settleJob(lane, job, 'failed', null, null, message, Date.now()).pipe(effect_Effect__rspack_import_16.XeO)));
                     }));
-                const drainLane = (lane)=>effect_Effect__rspack_import_15.JkU(function*() {
+                const drainLane = (lane)=>effect_Effect__rspack_import_16.JkU(function*() {
                         while(true){
                             const job = yield* takeNextJob(lane);
                             if (job === undefined) {
                                 return;
                             }
-                            yield* effect_Effect__rspack_import_15.OH5(()=>{
+                            yield* effect_Effect__rspack_import_16.OH5(()=>{
                                 lane.head = job;
                             });
-                            const attempt = yield* effect_Effect__rspack_import_15.zhn(processLaneJob(lane, job).pipe(effect_Effect__rspack_import_15.swY({
+                            const attempt = yield* effect_Effect__rspack_import_16.zhn(processLaneJob(lane, job).pipe(effect_Effect__rspack_import_16.swY({
                                 ticket: job.ticket,
                                 lane: lane.key
-                            }), effect_Effect__rspack_import_15.yeE(effect_Effect__rspack_import_15.OH5(()=>{
+                            }), effect_Effect__rspack_import_16.yeE(effect_Effect__rspack_import_16.OH5(()=>{
                                 if (lane.head === job) {
                                     lane.head = null;
                                 }
-                            })), effect_Effect__rspack_import_15.yeE(effect_Effect__rspack_import_15.DYE(()=>lane.pending.includes(job) ? effect_Effect__rspack_import_15.rIH : effect_Deferred__rspack_import_19.Py(job.laneReleased, undefined)))));
-                            yield* effect_Effect__rspack_import_15.KT6(effect_Deferred__rspack_import_19.Tx(job.laneReleased), effect_Fiber__rspack_import_24.Tx(attempt));
+                            })), effect_Effect__rspack_import_16.yeE(effect_Effect__rspack_import_16.DYE(()=>lane.pending.includes(job) ? effect_Effect__rspack_import_16.rIH : effect_Deferred__rspack_import_17.Py(job.laneReleased, undefined)))));
+                            yield* effect_Effect__rspack_import_16.KT6(effect_Deferred__rspack_import_17.Tx(job.laneReleased), effect_Fiber__rspack_import_25.Tx(attempt));
                         }
                     });
-                const laneWorker = (lane)=>effect_Effect__rspack_import_15.i4r(effect_Queue__rspack_import_21.s(lane.wake).pipe(effect_Effect__rspack_import_15.hgn(drainLane(lane)), effect_Effect__rspack_import_15.sJf((cause)=>!effect_Cause__rspack_import_18.nn(cause), (cause)=>effect_Effect__rspack_import_15.vVN(`lane ${lane.key} iteration crashed`, cause))));
-                const getOrCreateLane = (key, workspaceRoot, targetDir)=>laneCreation.withPermits(1)(effect_Effect__rspack_import_15.JkU(function*() {
+                const laneWorker = (lane)=>effect_Effect__rspack_import_16.i4r(effect_Queue__rspack_import_22.s(lane.wake).pipe(effect_Effect__rspack_import_16.hgn(drainLane(lane)), effect_Effect__rspack_import_16.sJf((cause)=>!effect_Cause__rspack_import_20.nn(cause), (cause)=>effect_Effect__rspack_import_16.vVN(`lane ${lane.key} iteration crashed`, cause))));
+                const getOrCreateLane = (intent)=>laneCreation.withPermits(1)(effect_Effect__rspack_import_16.JkU(function*() {
+                        const key = laneKeyFor(intent);
                         const existing = lanes.get(key);
                         if (existing !== undefined) {
                             return existing;
                         }
-                        const wake = yield* effect_Queue__rspack_import_21.Ke(1);
+                        const { buildLock, targetDir, workspaceRoot } = intent;
+                        let gate = targetGates.get(targetDir);
+                        if (gate === undefined) {
+                            gate = {
+                                targetDir,
+                                builds: new Set(),
+                                clean: null,
+                                cleansWaiting: [],
+                                changed: yield* effect_Deferred__rspack_import_17.L8()
+                            };
+                            targetGates.set(targetDir, gate);
+                        }
+                        const wake = yield* effect_Queue__rspack_import_22.Ke(1);
                         const lane = {
                             key,
                             workspaceRoot,
                             targetDir,
+                            buildLock,
+                            gate,
                             pending: [],
                             wake,
                             running: null,
@@ -17403,21 +17523,22 @@ var __webpack_modules__ = {
                             head: null
                         };
                         lanes.set(key, lane);
-                        const worker = yield* effect_Effect__rspack_import_15.ar0(laneWorker(lane), daemonScope);
-                        yield* effect_Effect__rspack_import_15.OH5(()=>laneWorkers.add(worker));
+                        const worker = yield* effect_Effect__rspack_import_16.ar0(laneWorker(lane), daemonScope);
+                        yield* effect_Effect__rspack_import_16.OH5(()=>laneWorkers.add(worker));
                         return lane;
                     }));
-                const laneStatuses = (keys)=>effect_Effect__rspack_import_15.OH5(()=>{
+                const laneStatuses = (keys)=>effect_Effect__rspack_import_16.OH5(()=>{
                         const knownLanes = [
                             ...lanes.values()
                         ];
                         const selected = keys === undefined ? knownLanes : knownLanes.filter((lane)=>keys.has(lane.key));
                         return selected.map((lane)=>{
-                            const sharedWith = (0, _shared_target_js__rspack_import_13.h)(lane, knownLanes);
+                            const sharedWith = (0, _shared_target_js__rspack_import_14.h)(lane, knownLanes);
                             return {
                                 key: lane.key,
                                 workspaceRoot: lane.workspaceRoot,
                                 targetDir: lane.targetDir,
+                                profileDir: (0, _cargo_intent_js__rspack_import_9.$2)(lane.buildLock),
                                 ...sharedWith.length === 0 ? {} : {
                                     sharedTargetWith: sharedWith
                                 },
@@ -17456,7 +17577,7 @@ var __webpack_modules__ = {
                     const blocked = lane.pending.filter((job)=>!(0, _dependencies_js__rspack_import_7.pg)(job));
                     const ordered = [];
                     while(remaining.length > 0){
-                        const index = (0, _scheduling_scheduler_js__rspack_import_12.qw)(remaining.map((candidate)=>scheduleCandidate(candidate, [
+                        const index = (0, _scheduling_scheduler_js__rspack_import_13.qw)(remaining.map((candidate)=>scheduleCandidate(candidate, [
                                 ...remaining,
                                 ...blocked
                             ], nowMs, lane.lastSurfaceKey)));
@@ -17511,7 +17632,7 @@ var __webpack_modules__ = {
                         stalled: job.stall !== null,
                         startedAtMs: job.startedAtMs
                     });
-                const requestStatusFields = (ticket, atMs)=>effect_Effect__rspack_import_15.JkU(function*() {
+                const requestStatusFields = (ticket, atMs)=>effect_Effect__rspack_import_16.JkU(function*() {
                         const entry = directory.get(ticket);
                         if (entry === undefined) {
                             return {};
@@ -17520,7 +17641,7 @@ var __webpack_modules__ = {
                         const p90Ms = leader.startedAtMs === null ? null : yield* costModel.intentP90Ms(leader.intent.estimateKey);
                         const estimates = estimateFieldsFor(leader, atMs, p90Ms);
                         if (leader.startedAtMs !== null) {
-                            const quietMs = (0, _job_state_js__rspack_import_9.eB)(leader.lastOutputAtMs, atMs);
+                            const quietMs = (0, _job_state_js__rspack_import_10.eB)(leader.lastOutputAtMs, atMs);
                             return {
                                 ...estimates,
                                 ...quietMs === undefined ? {} : {
@@ -17536,7 +17657,7 @@ var __webpack_modules__ = {
                         }
                         const ownCreatedAtMs = entry.kind === 'leader' ? entry.job.queuedAtMs : entry.attachment.createdAtMs;
                         const ownEstimateMs = entry.kind === 'leader' ? entry.job.estimateMs : entry.attachment.estimateMs;
-                        const delayed = (0, _job_state_js__rspack_import_9.hE)(Math.max(0, atMs - ownCreatedAtMs), ownEstimateMs);
+                        const delayed = (0, _job_state_js__rspack_import_10.hE)(Math.max(0, atMs - ownCreatedAtMs), ownEstimateMs);
                         const held = {
                             ...leader.admissionHold === null ? {} : {
                                 admissionHold: leader.admissionHold
@@ -17574,7 +17695,7 @@ var __webpack_modules__ = {
                         let position = ahead.length;
                         let headFields = {};
                         const head = lane.head;
-                        if (head !== null && head !== leader && effect_Ref__rspack_import_17.fp(head.state) !== 'finished') {
+                        if (head !== null && head !== leader && effect_Ref__rspack_import_19.fp(head.state) !== 'finished') {
                             aheadTickets.unshift(head.ticket);
                             position += 1;
                             const headP90Ms = head.startedAtMs === null ? null : yield* costModel.intentP90Ms(head.intent.estimateKey);
@@ -17611,20 +17732,20 @@ var __webpack_modules__ = {
                             ...estimates
                         };
                     });
-                const interruptWorkers = ()=>effect_Effect__rspack_import_15.JkU(function*() {
-                        const workers = yield* effect_Effect__rspack_import_15.OH5(()=>[
+                const interruptWorkers = ()=>effect_Effect__rspack_import_16.JkU(function*() {
+                        const workers = yield* effect_Effect__rspack_import_16.OH5(()=>[
                                 ...laneWorkers
                             ]);
-                        yield* effect_Effect__rspack_import_15.jJl(workers, effect_Fiber__rspack_import_24.G, {
+                        yield* effect_Effect__rspack_import_16.jJl(workers, effect_Fiber__rspack_import_25.G, {
                             concurrency: 'unbounded',
                             discard: true
                         });
-                        yield* effect_Effect__rspack_import_15.OH5(()=>laneWorkers.clear());
+                        yield* effect_Effect__rspack_import_16.OH5(()=>laneWorkers.clear());
                     });
-                const heavyAdmission = (memAvailableBytes)=>config.heavyMemAvailableBytes === null ? effect_Effect__rspack_import_15.PyW(null) : effect_Ref__rspack_import_17.Jt(heavyAdmittedCount).pipe(effect_Effect__rspack_import_15.TjK((running)=>({
+                const heavyAdmission = (memAvailableBytes)=>config.heavyMemAvailableBytes === null ? effect_Effect__rspack_import_16.PyW(null) : effect_Ref__rspack_import_19.Jt(heavyAdmittedCount).pipe(effect_Effect__rspack_import_16.TjK((running)=>({
                             running,
                             maxConcurrent: config.heavyMaxConcurrent,
-                            capActive: (0, _scheduling_scheduler_js__rspack_import_12.eB)({
+                            capActive: (0, _scheduling_scheduler_js__rspack_import_13.eB)({
                                 heavyMemAvailableBytes: config.heavyMemAvailableBytes,
                                 memAvailableBytes
                             })
@@ -17644,8 +17765,7 @@ var __webpack_modules__ = {
                 };
             });
         __webpack_require__.d(__webpack_exports__, {}, {
-            Hi: makeLaneRuntime,
-            jD: laneKeyFor
+            Hi: makeLaneRuntime
         });
     },
     "./src/internal/daemon/broker/replay.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
@@ -25992,7 +26112,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                     }
             }
         };
-        const laneName = (lane)=>`${(0, _shared_format_js__rspack_import_0.uk)(lane.workspaceRoot)} (${(0, _shared_format_js__rspack_import_0.uk)(lane.targetDir)})`;
+        const laneName = (lane)=>`${(0, _shared_format_js__rspack_import_0.uk)(lane.workspaceRoot)} (${(0, _shared_format_js__rspack_import_0.xE)(lane.targetDir, lane.profileDir)})`;
         const laneBoardModel = (lanes, active, nowMs)=>{
             const byTicket = new Map(active.map((record)=>[
                     record.ticket,
@@ -26311,6 +26431,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             return `${unit === 0 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`;
         };
         const pathBasename = (path)=>path.split('/').filter(Boolean).at(-1) ?? path;
+        const laneTargetName = (targetDir, profileDir)=>profileDir == null ? pathBasename(targetDir) : `${pathBasename(targetDir)}/${profileDir}`;
         const shortenPath = (path, maxLength = 38)=>{
             const homed = path.replace(/^\/(?:home|Users)\/[^/]+/u, '~');
             if (homed.length <= maxLength) {
@@ -26342,6 +26463,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             oL: heavyCapNote,
             sP: commandDisplay,
             uk: pathBasename,
+            xE: laneTargetName,
             z3: formatBytes
         });
     },

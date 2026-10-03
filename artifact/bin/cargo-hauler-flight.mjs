@@ -10953,6 +10953,18 @@ var __webpack_modules__ = {
             }
             return 'dev';
         };
+        const profileOutputDir = (profile)=>{
+            switch(profile){
+                case 'dev':
+                case 'test':
+                    return 'debug';
+                case 'release':
+                case 'bench':
+                    return 'release';
+                default:
+                    return profile;
+            }
+        };
         const cargoJsonDemuxFlag = '--message-format=json-diagnostic-rendered-ansi';
         const optionParts = (argument)=>{
             const equalsIndex = argument.indexOf('=');
@@ -10983,7 +10995,8 @@ var __webpack_modules__ = {
         };
         __webpack_require__.d(__webpack_exports__, {}, {
             Rn: defaultCargoProfile,
-            SX: optionParts
+            SX: optionParts,
+            uv: profileOutputDir
         });
     },
     "./src/internal/cargo/env.ts" (__unused_rspack_module, __webpack_exports__, __webpack_require__) {
@@ -11041,6 +11054,7 @@ var __webpack_modules__ = {
         var node_path__rspack_import_2 = __webpack_require__("node:path");
         var _argv_js__rspack_import_4 = __webpack_require__("./src/internal/cargo/argv.ts");
         var _env_js__rspack_import_3 = __webpack_require__("./src/internal/cargo/env.ts");
+        const lockedProfileDir = (lock)=>lock._tag === 'ProfileDir' ? lock.dir : null;
         const sortedUnique = (values)=>[
                 ...new Set(values)
             ].sort((left, right)=>left.localeCompare(right));
@@ -11420,6 +11434,7 @@ var __webpack_modules__ = {
             let nextestCommand = null;
             let noDefaultFeatures = false;
             let profile = (0, _argv_js__rspack_import_4.Rn)(subcommand);
+            let profileNamed = false;
             let passthrough = [];
             let targetTriple = null;
             let workspace = false;
@@ -11467,6 +11482,7 @@ var __webpack_modules__ = {
                         break;
                     case '--profile':
                         profile = takeValue();
+                        profileNamed = true;
                         break;
                     case '--target':
                         targetTriple = takeValue();
@@ -11516,9 +11532,11 @@ var __webpack_modules__ = {
                     case '-r':
                     case '--release':
                         profile = 'release';
+                        profileNamed = true;
                         break;
                     case '--debug':
                         profile = 'dev';
+                        profileNamed = true;
                         break;
                     default:
                         if (argument.startsWith('-')) {
@@ -11538,8 +11556,15 @@ var __webpack_modules__ = {
                         break;
                 }
             }
+            const wholeTargetClean = subcommand === 'clean' && packages.length === 0 && (!profileNamed || targets.includes('doc') || targetTriple !== null);
             return {
                 allFeatures,
+                buildLock: wholeTargetClean ? {
+                    _tag: 'WholeTarget'
+                } : {
+                    _tag: 'ProfileDir',
+                    dir: (0, _argv_js__rspack_import_4.uv)(profile)
+                },
                 excludes: sortedUnique(excludes),
                 features: sortedUnique(features),
                 filterExpressions: sortedUnique(filterExpressions),
@@ -12637,7 +12662,8 @@ var __webpack_modules__ = {
                 'heavy-profile-cap',
                 'memory-soft',
                 'load',
-                'cpu-stall'
+                'cpu-stall',
+                'target-clean'
             ])
         });
         const prerequisiteContextSchema = zod__rspack_import_1.Ikc({
@@ -12717,6 +12743,7 @@ var __webpack_modules__ = {
             executingTickets: zod__rspack_import_1.YOg(zod__rspack_import_1.YjP()),
             targetDir: zod__rspack_import_1.YjP(),
             workspaceRoot: zod__rspack_import_1.YjP(),
+            profileDir: zod__rspack_import_1.YjP().nullable().optional(),
             sharedTargetWith: zod__rspack_import_1.YOg(zod__rspack_import_1.YjP()).optional()
         });
         const frequencyMetricSchema = zod__rspack_import_1.g1P(zod__rspack_import_1.YjP(), zod__rspack_import_1.aig().int().nonnegative());
@@ -17912,7 +17939,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                     }
             }
         };
-        const laneName = (lane)=>`${(0, _shared_format_js__rspack_import_0.uk)(lane.workspaceRoot)} (${(0, _shared_format_js__rspack_import_0.uk)(lane.targetDir)})`;
+        const laneName = (lane)=>`${(0, _shared_format_js__rspack_import_0.uk)(lane.workspaceRoot)} (${(0, _shared_format_js__rspack_import_0.xE)(lane.targetDir, lane.profileDir)})`;
         const laneBoardModel = (lanes, active, nowMs)=>{
             const byTicket = new Map(active.map((record)=>[
                     record.ticket,
@@ -18231,6 +18258,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             return `${unit === 0 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`;
         };
         const pathBasename = (path)=>path.split('/').filter(Boolean).at(-1) ?? path;
+        const laneTargetName = (targetDir, profileDir)=>profileDir == null ? pathBasename(targetDir) : `${pathBasename(targetDir)}/${profileDir}`;
         const shortenPath = (path, maxLength = 38)=>{
             const homed = path.replace(/^\/(?:home|Users)\/[^/]+/u, '~');
             if (homed.length <= maxLength) {
@@ -18262,6 +18290,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
             oL: heavyCapNote,
             sP: commandDisplay,
             uk: pathBasename,
+            xE: laneTargetName,
             z3: formatBytes
         });
     },
