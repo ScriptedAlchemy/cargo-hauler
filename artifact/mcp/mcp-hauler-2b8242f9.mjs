@@ -87021,7 +87021,7 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                 name: "hauler_status"
             })
         });
-        const EVENT_ARTIFACT_EPOCH = "4ca2af32d7214d0aeeded0879c465a02cebed65c5bbe20025aadb5086559745b";
+        const EVENT_ARTIFACT_EPOCH = "cea6062a35a77335b91cc025c4913697a879292e7e804c1dff56e8f262a8d039";
         const EVENT_ALLOWED_TARGETS = Object.freeze([
             "claude",
             "codex",
