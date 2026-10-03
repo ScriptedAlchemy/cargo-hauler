@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { setTimeout as delay } from 'node:timers/promises';
 import { parseRecipe } from './recipe.mjs';
 import { githubClient, receipt } from './github.mjs';
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -50,39 +49,21 @@ async function changesPolicy(client, pr, recipePath, recipe) {
   }
   return false;
 }
+// Route decides from policy alone: lane checks are minted later by enqueue and verified where
+// drain consumes them, so a trusted head that leaves policy untouched delegates at once.
 export async function route(options) {
   const controller = new AbortController();
-  const managerWait = Math.max(0, options.managerWaitMilliseconds ?? 0);
-  const timer = setTimeout(() => controller.abort(), 30000 + managerWait);
+  const timer = setTimeout(() => controller.abort(), 30000);
   let policy = 'unavailable';
   try {
-    const loaded = await loadPolicy({ ...options, signal: controller.signal }), { recipe, client, defaultBranch } = loaded;
+    const loaded = await loadPolicy({ ...options, signal: controller.signal }), { recipe, client } = loaded;
     policy = loaded.policy;
-    let checkedBase;
-    const deadline = Date.now() + Math.min(30000, Math.max(0, options.waitMilliseconds ?? 30000)), managerDeadline = Date.now() + managerWait;
-    const provenance = new Map();
-    function managerOwns(check) {
-      const runId = checkMetadata(check.external_id)?.runId;
-      if (!provenance.has(runId)) provenance.set(runId, queuedByManager(client, check, options.repository, options.managerWorkflow ?? 'hauler-ci.yml', defaultBranch));
-      return provenance.get(runId);
-    }
-    for (;;) {
-      const pr = await client.api(`/pulls/${options.pr}`);
-      if (!trustedPull(pr, options.repository, recipe) || pr.head.sha !== options.head) return { decision: 'native', policy };
-      if (!/^[a-f0-9]{40}$/.test(pr.base?.sha ?? '')) return { decision: 'native', policy };
-      if (checkedBase !== pr.base.sha) {
-        if (await changesPolicy(client, pr, options.recipePath ?? '.github/hauler-ci.json', recipe)) return { decision: 'native', policy };
-        const confirmed = await client.api(`/pulls/${options.pr}`);
-        if (!trustedPull(confirmed, options.repository, recipe) || confirmed.head.sha !== options.head || confirmed.changed_files !== pr.changed_files || confirmed.base?.sha !== pr.base.sha) return { decision: 'native', policy };
-        checkedBase = pr.base.sha;
-      }
-      const checks = await client.pages(`/commits/${options.head}/check-runs?filter=latest`, 'check_runs');
-      const owned = recipe.lanes.map(l => checks.find(c => c.name === l.checkName && c.app?.slug === 'github-actions' && matchesCheck(c, checkIdentity(options.head, l.id, policy)) && (['queued', 'in_progress'].includes(c.status) || c.status === 'completed' && ['success', 'failure'].includes(c.conclusion))));
-      if (owned.every(Boolean) && (await Promise.all(owned.map(managerOwns))).every(Boolean)) return { decision: 'delegated', policy };
-      if (Date.now() < deadline) await delay(Math.min(5000, deadline - Date.now()));
-      else if (!await managerRunSettles(client, options, managerDeadline)) break;
-    }
-    return { decision: 'native', policy };
+    const pr = await client.api(`/pulls/${options.pr}`);
+    if (!trustedPull(pr, options.repository, recipe) || pr.head.sha !== options.head || !/^[a-f0-9]{40}$/.test(pr.base?.sha ?? '')) return { decision: 'native', policy };
+    if (await changesPolicy(client, pr, options.recipePath ?? '.github/hauler-ci.json', recipe)) return { decision: 'native', policy };
+    const confirmed = await client.api(`/pulls/${options.pr}`);
+    if (!trustedPull(confirmed, options.repository, recipe) || confirmed.head.sha !== options.head || confirmed.changed_files !== pr.changed_files || confirmed.base?.sha !== pr.base.sha) return { decision: 'native', policy };
+    return { decision: 'delegated', policy };
   } catch { return { decision: 'native', policy }; }
   finally { clearTimeout(timer); }
 }
@@ -124,26 +105,4 @@ export async function enqueue({ recipe, policy, client, repository, onlyPullRequ
     }
   }
   return { queued };
-}
-
-// Late enqueue on a saturated runner pool must not lock a head to native, so route outwaits the
-// manager run for this head. Only that one run is polled; delegation still needs owned checks.
-async function managerRunSettles(client, { head, managerWorkflow = 'hauler-ci.yml' }, deadline) {
-  if (Date.now() >= deadline || !/^[\w.-]+\.ya?ml$/.test(managerWorkflow)) return false;
-  const { workflow_runs: runs } = await client.api(`/actions/workflows/${managerWorkflow}/runs?event=pull_request_target&head_sha=${head}&per_page=10`);
-  let run = runs?.find(r => r.head_sha === head && r.status !== 'completed');
-  while (run && run.status !== 'completed') {
-    if (Date.now() >= deadline) return false;
-    await delay(Math.min(10000, deadline - Date.now()));
-    run = await client.api(`/actions/runs/${run.id}`);
-  }
-  return Boolean(run);
-}
-async function queuedByManager(client, check, repository, workflow, defaultBranch) {
-  if (!/^[\w.-]+\.ya?ml$/.test(workflow)) return false;
-  const id = checkMetadata(check.external_id)?.runId;
-  if (!id) return false;
-  const run = await client.api(`/actions/runs/${id}`);
-  const trustedEvent = ['pull_request_target', 'workflow_run', 'schedule', 'workflow_dispatch', 'push'].includes(run.event);
-  return trustedEvent && run.path?.split('@')[0] === `.github/workflows/${workflow}` && run.head_repository?.full_name === repository && (run.event === 'pull_request_target' || run.head_branch === defaultBranch);
 }

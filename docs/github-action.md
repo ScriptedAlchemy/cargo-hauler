@@ -64,16 +64,17 @@ jobs:
           mode: plan
           token: ${{ github.token }}
   worker:
-    name: Hauler pool / ${{ matrix.lane }}
+    name: Hauler pool / ${{ matrix.lane }} / ${{ matrix.worker }}
     needs: plan
     if: needs.plan.outputs.count != '0'
     concurrency:
-      group: hauler-ci-${{ matrix.lane }}
+      group: hauler-ci-${{ matrix.lane }}-${{ matrix.worker }}
       cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix:
         lane: ${{ fromJSON(needs.plan.outputs.lanes) }}
+        worker: [1, 2]
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
@@ -86,11 +87,12 @@ jobs:
         with:
           token: ${{ github.token }}
           lane: ${{ matrix.lane }}
+          worker: ${{ matrix.worker }}
           max-minutes: '120'
       - uses: actions/upload-artifact@v4
         if: always() && steps.hauler.outputs.evidence != ''
         with:
-          name: hauler-${{ matrix.lane }}
+          name: hauler-${{ matrix.lane }}-${{ matrix.worker }}
           path: ${{ steps.hauler.outputs.evidence }}
 ```
 
@@ -102,10 +104,20 @@ A validated native-CI receipt also plans queued checks from prior policy version
 for retirement. Only serialized drains cancel them after rechecking the current
 head, receipt and queued state; mismatched delegated receipts never admit work.
 Checks carry a bounded controller ownership block with the worker's native run,
-attempt, lane job, snapshot ordinal, finish state, remaining admissions and deadline.
+attempt, lane job, worker index, snapshot ordinal, finish state, remaining admissions and deadline.
 The planner verifies the current run attempt, repository, default branch, manager
-workflow and unique `Hauler pool / <lane>` job through GitHub. Live owners suppress
-their active snapshots and cover ready work within their remaining capacity.
+workflow and unique lane job through GitHub. A worker with the `worker` input set
+must run in a job named exactly `Hauler pool / <lane> / <worker>`. Without it the
+job keeps the single-worker name `Hauler pool / <lane>`. Live owners suppress
+their active snapshots. When planning, every live worker of a lane covers ready
+work within its remaining capacity. A draining worker skips only snapshots another
+worker has claimed, so workers of one lane take successive ready heads.
+Check runs have no compare-and-set, so two workers can claim one head at once.
+After claiming, a worker waits a few seconds, then before every check update it
+confirms it still holds the head, which means it owns the newest live claim for
+that head and lane.
+A worker that loses stops without writing to a shared check again and closes a
+check it created as cancelled, so one worker finishes and reports the head.
 Workers with an explicit PR selection advertise zero future capacity, so unrelated
 queued PRs remain eligible; selected PRs still drain and reuse compatible sandboxes.
 One worker is counted once using its latest ordinal, even when several checks
@@ -137,10 +149,19 @@ unless routing succeeds and returns `delegated`.
 
 The named step records ownership in GitHub's job metadata. The controller
 requires that successful receipt from the configured `admission-workflow`
-(default `ci.yml`) before draining automatic work. If routing times out or
-policy validation fails, native CI remains responsible; a late enqueue cannot
-start duplicate managed work. Enqueue creates pending lane checks before a
-PR waits for a worker. It runs outside worker concurrency limits.
+(default `ci.yml`) before draining automatic work. Routing decides from policy
+alone: a trusted, non-draft, same-repository head that leaves policy untouched
+is delegated at once, without waiting for lane checks. Drain still verifies
+those checks before it admits a snapshot, so routing never mints or trusts
+them. If routing times out or policy validation fails, native CI remains
+responsible; a late enqueue cannot start duplicate managed work. Enqueue
+creates pending lane checks before a PR waits for a worker. It runs outside
+worker concurrency limits.
+
+Delegation is optimistic: a delegated head whose `pull_request_target` enqueue
+run failed or never ran has no lane checks, and no worker admits it. Consumers
+relying on delegation should also run `mode: enqueue` on a schedule (without
+`pull-requests`) so those heads get their checks on the next tick.
 
 PRs that change `.github/`, the configured recipe, or its Dockerfile or build
 context retain native CI so new validation cannot be skipped by the default
@@ -192,9 +213,11 @@ directory. It never enters the PR container or its mounts.
 
 Only ready same-repository PRs from the recipe's authors are admitted, after
 their named GitHub Actions checks pass. A lane finishes one snapshot before
-selecting the next eligible head. Each lane has exactly one worker under the
-caller workflow's concurrency group. Do not run multiple workflows with
-different concurrency groups against the same lane/check names.
+selecting the next eligible head. Each worker index of a lane runs under its own
+`hauler-ci-<lane>-<worker>` concurrency group, so a lane has at most one job per
+index. Omit `worker` and use `hauler-ci-<lane>` for one worker per lane. Do not
+run multiple workflows with different concurrency groups against the same
+lane/check names.
 
 Admission pins the PR head and its published merge snapshot. A changed PR head,
 draft conversion, or closure cancels its work. A later base-branch commit does
@@ -241,6 +264,13 @@ XML/JSON reports, passing test names, failure messages, errors and worker output
 stay private. The caller's
 final artifact upload still happens after the drain step ends. Checks therefore
 provide evidence during long drains and interrupted jobs without an artifact SDK.
+
+A drain worker is resident: when an admission scan finds nothing, it waits one
+poll interval and scans again, keeping its warm sandbox. It waits through up to
+`idle-polls` (default 5, 0 to 60) consecutive empty scans and exits on the next
+one. Found work resets the count; `idle-polls: 0` exits on the first empty scan. A snapshot superseded by a
+new PR head is cancelled but its sandbox stays warm for the next snapshot;
+infrastructure errors and workflow cancellation still discard it.
 
 Workers and caches last only for the hosted job. The schedule recovers missed
 demand; normal admission follows the cheap CI workflow's completion. When

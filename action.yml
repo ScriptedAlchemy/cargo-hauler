@@ -19,15 +19,18 @@ inputs:
   lane:
     description: Recipe lane owned by this worker.
     required: false
+  worker:
+    description: Optional worker index 1 to 100 within the lane. When set, the job must be named `Hauler pool / <lane> / <worker>`.
+    default: ''
   max-minutes:
     description: Drain deadline in minutes. An unfinished snapshot is cancelled at the deadline.
     default: '120'
   max-snapshots:
     description: Maximum snapshots admitted during this worker lifetime.
     default: '8'
-  route-wait-minutes:
-    description: Route mode keeps waiting up to this long while the manager's enqueue run for the head is still queued or running. Keep it below the route job's timeout. 0 to 30.
-    default: '0'
+  idle-polls:
+    description: Empty admission scans a drain worker waits through, one poll interval apart, before exiting. Work found resets the count. 0 to 60; 0 exits on the first empty scan.
+    default: '5'
   pull-requests:
     description: Optional comma-separated PR numbers for a bounded trial.
     default: ''
@@ -63,9 +66,10 @@ runs:
         CARGO_HAULER_CI_TOKEN: ${{ inputs.token }}
         CARGO_HAULER_CI_RECIPE: ${{ inputs.recipe }}
         CARGO_HAULER_CI_LANE: ${{ inputs.lane }}
+        CARGO_HAULER_CI_WORKER: ${{ inputs.worker }}
         CARGO_HAULER_CI_MINUTES: ${{ inputs.max-minutes }}
         CARGO_HAULER_CI_SNAPSHOTS: ${{ inputs.max-snapshots }}
         CARGO_HAULER_CI_PRS: ${{ inputs.pull-requests }}
-        CARGO_HAULER_CI_ROUTE_WAIT_MINUTES: ${{ inputs.route-wait-minutes }}
+        CARGO_HAULER_CI_IDLE_POLLS: ${{ inputs.idle-polls }}
         CARGO_HAULER_ACTION_PATH: ${{ github.action_path }}
       run: node "$CARGO_HAULER_ACTION_PATH/src/internal/github-action/main.mjs"
