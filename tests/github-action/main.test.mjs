@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, symlink, rm, realpath, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { main, assertTrustedContext, positiveInteger, within, imageLoader } from '../../src/internal/github-action/main.mjs';
+import { main, assertTrustedContext, positiveInteger, routeWaitMinutes, within, imageLoader } from '../../src/internal/github-action/main.mjs';
 import { graphqlFetch } from './graphql-fixture.mjs';
 
 test('only the exact public default-branch checkout may hold reporting credentials', () => {
@@ -101,4 +101,8 @@ test('the entry script reports the failing error instead of only the generic lin
       return true;
     });
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('route wait accepts 0 to 30 minutes and treats anything else as no wait', () => {
+  assert.deepEqual(['10', '0', '30', '31', '', undefined, '-1', '1.5', '007'].map(routeWaitMinutes), [10, 0, 30, 0, 0, 0, 0, 0, 0]);
 });

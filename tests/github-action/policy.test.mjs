@@ -196,3 +196,46 @@ test('native ownership crosses policy versions but delegation and malformed rece
     assert.equal(await receipt(loaded.client, options), null);
   }
 });
+
+function lateManager(f, runStatus, finishesAfterPolls = Infinity) {
+  const original = f.options.fetchImpl, seen = { listed: 0, polled: 0 };
+  let enqueued = false;
+  const fetchImpl = async (url, options) => {
+    const path = new URL(url).pathname.replace('/repos/owner/repo', '');
+    if (path === '/actions/workflows/hauler-ci.yml/runs') {
+      seen.listed++;
+      return { ok: true, json: async () => ({ workflow_runs: [{ id: 10, head_sha: f.state.head, status: runStatus }] }) };
+    }
+    if (path === '/actions/runs/10' && !enqueued) {
+      seen.polled++;
+      if (seen.polled < finishesAfterPolls) return { ok: true, json: async () => ({ id: 10, status: 'in_progress' }) };
+      enqueued = true;
+      return { ok: true, json: async () => ({ id: 10, status: 'completed' }) };
+    }
+    const response = await original(url, options);
+    if (path.endsWith('/check-runs') && !enqueued) return { ...response, json: async () => ({ check_runs: [] }) };
+    return response;
+  };
+  return { fetchImpl, seen };
+}
+test('route outwaits a late manager enqueue run and delegates on its checks', async () => {
+  const f = fixture(), loaded = await loadPolicy(f.options);
+  await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
+  const { fetchImpl, seen } = lateManager(f, 'queued', 1);
+  assert.deepEqual(await route({ ...f.options, fetchImpl, managerWaitMilliseconds: 3000 }), { decision: 'delegated', policy: loaded.policy });
+  assert.equal(seen.listed, 1);
+  assert.equal(seen.polled, 1);
+});
+test('route stays native when the manager run outlasts the wait or never ran', async () => {
+  const f = fixture(), loaded = await loadPolicy(f.options);
+  await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
+  const pending = lateManager(f, 'queued');
+  assert.deepEqual(await route({ ...f.options, fetchImpl: pending.fetchImpl, managerWaitMilliseconds: 500 }), { decision: 'native', policy: loaded.policy });
+  assert.equal(pending.seen.polled, 1);
+  const finished = lateManager(f, 'completed');
+  assert.deepEqual(await route({ ...f.options, fetchImpl: finished.fetchImpl, managerWaitMilliseconds: 60000 }), { decision: 'native', policy: loaded.policy });
+  assert.deepEqual(finished.seen, { listed: 1, polled: 0 });
+  const unset = lateManager(f, 'queued');
+  assert.deepEqual(await route({ ...f.options, fetchImpl: unset.fetchImpl }), { decision: 'native', policy: loaded.policy });
+  assert.deepEqual(unset.seen, { listed: 0, polled: 0 });
+});
