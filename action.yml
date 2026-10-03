@@ -25,6 +25,9 @@ inputs:
   max-snapshots:
     description: Maximum snapshots admitted during this worker lifetime.
     default: '8'
+  route-wait-minutes:
+    description: Route mode keeps waiting up to this long while the manager's enqueue run for the head is still queued or running. Keep it below the route job's timeout. 0 to 30.
+    default: '0'
   pull-requests:
     description: Optional comma-separated PR numbers for a bounded trial.
     default: ''
@@ -63,5 +66,6 @@ runs:
         CARGO_HAULER_CI_MINUTES: ${{ inputs.max-minutes }}
         CARGO_HAULER_CI_SNAPSHOTS: ${{ inputs.max-snapshots }}
         CARGO_HAULER_CI_PRS: ${{ inputs.pull-requests }}
+        CARGO_HAULER_CI_ROUTE_WAIT_MINUTES: ${{ inputs.route-wait-minutes }}
         CARGO_HAULER_ACTION_PATH: ${{ github.action_path }}
       run: node "$CARGO_HAULER_ACTION_PATH/src/internal/github-action/main.mjs"
