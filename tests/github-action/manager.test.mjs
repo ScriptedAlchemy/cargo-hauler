@@ -36,7 +36,7 @@ function fixture({ authors = ['owner'], fail = false, change = false, prepareFai
     builds++;
     return { async prepare() { if (prepareFail) throw new Error('private worker diagnostic'); }, async run(command) { events.push(['run', command]); if (change) prs[0].head.sha = hex(500); return { exitCode: fail && command === 'first' ? 1 : 0 }; }, async close() { events.push(['close']); } };
   }
-  const options = { recipe, lane: 'linux', repository: 'owner/repo', token: 'not-logged', root: '/tmp', image: 'trusted', actionIdentity: 'abc', manualAdmission: true, maxMinutes: 1, maxSnapshots: 3, fetchImpl: graphqlFetch(rest), sandboxFactory };
+  const options = { recipe, lane: 'linux', repository: 'owner/repo', token: 'not-logged', root: '/tmp', image: 'trusted', actionIdentity: 'abc', manualAdmission: true, maxMinutes: 1, maxSnapshots: 3, settleMilliseconds: 0, fetchImpl: graphqlFetch(rest), sandboxFactory };
   return { options, rest, events, checks, prs, builds: () => builds };
 }
 test('publishes first failure before running remaining task and preserves failure', async () => {
@@ -360,4 +360,54 @@ test('scoped workers reserve their active snapshot without covering unrelated qu
   assert.deepEqual(result.snapshots.map(snapshot => snapshot.pr), [1]);
   assert.equal(result.snapshots[0].tasks.length, 2);
   assert.equal(f.checks.get(99).status, 'queued');
+});
+function racingWorkers(f, gated) {
+  const workers = [1, 2].map(worker => ({ runId: '20', attempt: 2, jobId: String(30 + worker), worker }));
+  let arrived = 0, release;
+  const both = new Promise(resolve => { release = resolve; }), claims = [];
+  const fetchImpl = graphqlFetch(async (url, options) => {
+    if (url.endsWith('/actions/runs/20')) return { ok: true, json: async () => ({ id: 20, run_attempt: 2, status: 'in_progress', event: 'schedule', path: '.github/workflows/hauler-ci.yml', head_repository: { full_name: 'owner/repo' }, head_branch: 'master' }) };
+    if (url.includes('/actions/runs/20/attempts/2/jobs')) return { ok: true, json: async () => ({ jobs: workers.map(w => ({ id: Number(w.jobId), name: `Hauler pool / linux / ${w.worker}`, status: 'in_progress' })) }) };
+    if (gated(new URL(url).pathname, options.method)) { if (++arrived === 2) release(); await both; }
+    if (options.method !== 'GET' && JSON.parse(options.body).status === 'in_progress') claims.push(checkOwner(JSON.parse(options.body)).worker);
+    return f.rest(url, options);
+  });
+  const run = () => Promise.all(workers.map(worker => drain({ ...f.options, policy: 'a'.repeat(64), worker, defaultBranch: 'master', fetchImpl, settleMilliseconds: 20 })));
+  return { run, claims, fetchImpl };
+}
+test('two workers racing for one queued check produce exactly one runner', async () => {
+  const f = fixture(), policy = 'a'.repeat(64);
+  f.checks.set(99, { id: 99, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'queued' });
+  const race = racingWorkers(f, (path, method) => path.endsWith('/check-runs/99') && method === 'GET');
+  const results = await race.run();
+  assert.deepEqual(race.claims.sort(), [1, 2]);
+  assert.deepEqual(results.map(r => r.snapshots.length).sort(), [0, 1]);
+  assert.deepEqual(f.events.filter(e => e[0] === 'run'), [['run', 'first'], ['run', 'second']]);
+  assert.equal(f.builds(), 1);
+  const winner = results.findIndex(r => r.snapshots.length), check = f.checks.get(99);
+  assert.equal(check.conclusion, 'success');
+  assert.equal(checkOwner(check).worker, winner + 1);
+  assert.equal(checkOwner(check).finished, true);
+});
+test('two workers racing to create a check keep only the newest claim running', async () => {
+  const f = fixture();
+  const race = racingWorkers(f, (path, method) => path === '/repos/owner/repo/check-runs' && method === 'POST');
+  const results = await race.run();
+  assert.deepEqual(race.claims.sort(), [1, 2]);
+  assert.deepEqual(f.events.filter(e => e[0] === 'run'), [['run', 'first'], ['run', 'second']]);
+  const [older, newer] = [f.checks.get(1), f.checks.get(2)];
+  assert.equal(newer.conclusion, 'success');
+  assert.equal(older.conclusion, 'cancelled');
+  assert.equal(checkOwner(older).finished, true);
+  assert.equal(results[checkOwner(newer).worker - 1].snapshots.length, 1);
+  assert.equal(results[checkOwner(older).worker - 1].snapshots.length, 0);
+});
+test('a draining worker takes ready work beyond the capacity a live peer reserves', async () => {
+  const f = fixture({ authors: ['owner', 'owner'] }), policy = 'a'.repeat(64);
+  const peer = { runId: '20', attempt: 2, jobId: '32', worker: 2, lane: 'linux', ordinal: 1, remaining: 2, finished: false, deadline: Date.now() + 60000 };
+  f.checks.set(99, { id: 99, name: 'Hauler Linux', head_sha: hex(1), external_id: `hauler:linux:${hex(1)}:${policy}:run:10`, app: { slug: 'github-actions' }, status: 'in_progress', output: { text: `hauler-owner-v1:${JSON.stringify(peer)}` } });
+  const race = racingWorkers(f, () => false);
+  const result = await drain({ ...f.options, policy, worker: { runId: '20', attempt: 2, jobId: '31', worker: 1 }, defaultBranch: 'master', fetchImpl: race.fetchImpl });
+  assert.deepEqual(result.snapshots.map(snapshot => snapshot.pr), [2]);
+  assert.equal(f.checks.get(99).status, 'in_progress');
 });
