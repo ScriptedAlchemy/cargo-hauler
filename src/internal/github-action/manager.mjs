@@ -10,7 +10,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
 
-export async function drain({ recipe: input, lane: laneId, repository, token, root, actionIdentity, policy, admissionWorkflow = 'ci.yml', managerWorkflow = 'hauler-ci.yml', defaultBranch, worker, persistSnapshot, manualAdmission = false, image, maxMinutes = 45, maxSnapshots = 8, idlePolls = 5, onlyPullRequests, sandboxFactory, fetchImpl = fetch, signal, pollMilliseconds = 60000 }) {
+export async function drain({ recipe: input, lane: laneId, repository, token, root, actionIdentity, policy, admissionWorkflow = 'ci.yml', managerWorkflow = 'hauler-ci.yml', defaultBranch, worker, persistSnapshot, manualAdmission = false, image, maxMinutes = 45, maxSnapshots = 8, idlePolls = 5, onlyPullRequests, sandboxFactory, fetchImpl = fetch, signal, pollMilliseconds = 60000, settleMilliseconds = 5000 }) {
   const recipe = parseRecipe(input), lane = recipe.lanes.find(l => l.id === laneId);
   if (!lane || !/^[\w.-]+\/[\w.-]+$/.test(repository) || !token || !actionIdentity || !Number.isFinite(maxMinutes) || maxMinutes <= 0 || maxMinutes > 350 || !Number.isInteger(maxSnapshots) || maxSnapshots < 1 || maxSnapshots > 100 || !Number.isInteger(idlePolls) || idlePolls < 0 || idlePolls > 60) throw new TypeError('Invalid Hauler drain options');
   if (onlyPullRequests && (!Array.isArray(onlyPullRequests) || onlyPullRequests.some(n => !Number.isSafeInteger(n) || n < 1))) throw new TypeError('Invalid pull request selection');
@@ -42,6 +42,20 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
     const entries = tree.tree.filter(e => e.path === 'Cargo.toml' || e.path.endsWith('/Cargo.toml') || recipe.compatibilityPaths.some(p => p.endsWith('/') ? e.path.startsWith(p) : e.path === p)).map(e => [e.path, e.mode, e.sha]).sort((a, b) => a[0].localeCompare(b[0]));
     return digest({ identity, entries, ...(!recipe.sharedBuilds ? { merge: s.merge } : {}) });
   }
+  // Check runs have no compare-and-set, so racing workers agree on a holder
+  // instead: the newest claim for this head and lane whose owner is live. A
+  // shared queued check names whichever worker wrote last, and a check another
+  // worker finished is never taken back.
+  async function holder(s, check) {
+    const verify = verifyOwners(client, { repository, workflow: managerWorkflow, defaultBranch });
+    let newest;
+    for (const c of await client.pages(`/commits/${s.head}/check-runs?check_name=${encodeURIComponent(lane.checkName)}&filter=all`, 'check_runs')) {
+      const owner = checkOwner(c), mine = owner && ownerKey(owner) === ownerKey(worker);
+      if (c.name !== lane.checkName || c.app?.slug !== 'github-actions' || owner?.lane !== lane.id || checkMetadata(c.external_id)?.identity !== external(s)) continue;
+      if (!(newest?.id > c.id) && (mine || c.id === check.id && owner.finished || !owner.finished && await verify(owner))) newest = { id: c.id, mine };
+    }
+    return newest;
+  }
   let idle = 0;
   try {
     while (summary.snapshots.length < maxSnapshots && Date.now() < deadline && !signal?.aborted) {
@@ -71,9 +85,26 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
       const record = { pr: s.pr, head: s.head, base: s.base, merge: s.merge, imageReference: image, conclusion: 'cancelled', readyAt: new Date(s.readyAt).toISOString(), admittedAt: new Date(started).toISOString(), queueSeconds: Math.max(0, (started - s.readyAt) / 1000), durationSeconds: 0, compatibleSandboxReuse: false, stages: [], tasks: [] };
       const ownership = worker && { ...worker, lane: lane.id, ordinal: summary.snapshots.length + 1, remaining: onlyPullRequests ? 0 : maxSnapshots - summary.snapshots.length - 1, finished: false, deadline };
       const outputText = () => [ownership && ownerText(ownership), `hauler-evidence-v1:${JSON.stringify(snapshotEvidence(record))}`].filter(Boolean).join('\n');
-      let check, reports, failed = false, stale = false, polling = false;
-      // A moved head only supersedes this snapshot; the sandbox stays warm for the next one.
-      const superseded = () => stale && !signal?.aborted && !record.infrastructureError;
+      let check, reports, failed = false, stale = false, polling = false, yielded = false;
+      // A moved head or a yielded claim only ends this snapshot; the sandbox stays warm for the next one.
+      const superseded = () => (stale || yielded) && !signal?.aborted && !record.infrastructureError;
+      // Every write first confirms this worker still holds the snapshot. A
+      // worker that sees another holder never writes again, so the last writer
+      // always keeps its claim and one worker survives any race. A losing claim
+      // on its own check is closed so it stops counting; a shared check is left
+      // to the holder.
+      async function lease() {
+        if (!ownership || yielded) return !yielded;
+        const held = await holder(s, check);
+        if (held?.mine && held.id === check.id) return true;
+        yielded = true;
+        controller.abort();
+        if (held?.id !== check.id) {
+          ownership.finished = true;
+          await api(`/check-runs/${check.id}`, 'PATCH', { status: 'completed', conclusion: 'cancelled', completed_at: new Date().toISOString(), output: { title: `Hauler ${lane.id}: yielded`, summary: 'Another worker holds this snapshot.', text: outputText() } });
+        }
+        return false;
+      }
       const poll = setInterval(async () => {
         if (polling || controller.signal.aborted) return;
         polling = true;
@@ -82,6 +113,7 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
         finally { polling = false; }
       }, pollMilliseconds);
       async function progress(stage) {
+        if (!await lease()) throw new Error('Another worker holds this snapshot');
         record.stage = stage;
         await api(`/check-runs/${check.id}`, 'PATCH', { output: { title: `Hauler ${lane.id}: ${stage}`, text: outputText(), summary: `${record.tasks.length}/${lane.tasks.length} tasks finished. Stage ${stage}. Failed tasks: ${record.tasks.filter(t => t.conclusion === 'failure').map(t => `${t.id} (exit ${t.exitCode})`).join(', ') || 'none'}. Pinned base ${s.base}, merge ${s.merge}.` } });
       }
@@ -93,6 +125,7 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
         finally { record.stages.push({ id: name, conclusion: controller.signal.aborted ? 'cancelled' : conclusion, durationSeconds: (performance.now() - start) / 1000 }); }
       }
       async function report(conclusion, finished = false) {
+        if (!await lease()) return;
         if (!await currentHead(s)) { stale = true; controller.abort(); conclusion = 'cancelled'; }
         record.conclusion = conclusion;
         if (finished) { record.completedAt = new Date().toISOString(); record.durationSeconds = (performance.now() - monotonicStart) / 1000; if (ownership) ownership.finished = true; }
@@ -103,6 +136,8 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
           check = s.queued;
           await api(`/check-runs/${check.id}`, 'PATCH', { status: 'in_progress', started_at: new Date().toISOString(), ...(worker ? { details_url: `https://github.com/${repository}/actions/runs/${worker.runId}/job/${worker.jobId}` } : {}), output: { title: `Hauler ${lane.id}: claimed`, summary: 'Worker owns this snapshot.', text: outputText() } });
         } else check = await api('/check-runs', 'POST', { name: lane.checkName, head_sha: s.head, external_id: provenanceIdentity, ...(worker ? { details_url: `https://github.com/${repository}/actions/runs/${worker.runId}/job/${worker.jobId}` } : s.retry?.details_url ? { details_url: s.retry.details_url } : {}), status: 'in_progress', started_at: new Date().toISOString(), output: { title: `Hauler ${lane.id}: claimed`, summary: 'Worker owns this snapshot.', text: outputText() } });
+        // Racing claims land within a few API round trips of each other.
+        if (ownership) await delay(settleMilliseconds);
         const key = await stage('compatibility', () => compatibility(s));
         record.compatibilityKey = key;
         await stage('image', async () => {
@@ -146,12 +181,14 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
         clearTimeout(timer); clearInterval(poll);
         signal?.removeEventListener('abort', abort);
         if (controller.signal.aborted && sandbox && !superseded()) { await sandbox.close(); sandbox = undefined; }
-        record.completedAt = new Date().toISOString();
-        record.durationSeconds = (performance.now() - monotonicStart) / 1000;
-        summary.snapshots.push(record);
-        // The exported report files go to the evidence artifact; the record
-        // and check run carry only their counts.
-        if (persistSnapshot) await persistSnapshot(snapshotEvidence(record), summary, reports);
+        if (!yielded) {
+          record.completedAt = new Date().toISOString();
+          record.durationSeconds = (performance.now() - monotonicStart) / 1000;
+          summary.snapshots.push(record);
+          // The exported report files go to the evidence artifact; the record
+          // and check run carry only their counts.
+          if (persistSnapshot) await persistSnapshot(snapshotEvidence(record), summary, reports);
+        }
       }
     }
   } finally { if (sandbox) await sandbox.close(); }

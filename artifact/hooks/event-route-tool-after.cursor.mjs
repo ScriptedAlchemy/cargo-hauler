@@ -22728,7 +22728,7 @@ var __webpack_modules__ = {
                     return withEventState(signal, async (bindings)=>{
                         const gate = await (0, _agent_bundle_runtime_request__rspack_import_6.iC)({
                             invocation: {
-                                artifactEpoch: "bad849a565a2ee600312948287b2c1e085be873dfec2f0ddaf9de65530d1a7c3",
+                                artifactEpoch: "1bb8330456dbc0fe4802964f8a73ca670ff2adcd87f88d76811fb223430575f2",
                                 hostContractRevision: capabilityRevision,
                                 kind: "event",
                                 operationId: `event:${canonicalEvent}`,

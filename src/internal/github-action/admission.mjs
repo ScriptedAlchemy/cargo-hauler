@@ -148,8 +148,11 @@ export async function scanAdmission(client, { recipe, repository, policy, lanes 
     for (const item of pending) candidates.push({ lane: item.lane, snapshot: { ...snapshot, readyAt, queued: item.queued, retry: item.retry } });
   }
   candidates.sort((a, b) => a.snapshot.readyAt - b.snapshot.readyAt || a.snapshot.pr - b.snapshot.pr);
+  // Planning lets every live worker's remaining capacity absorb ready work. A
+  // draining worker only skips checks a peer has claimed: if peers' capacity
+  // absorbed the queue front too, every worker would skip the same items.
   const capacity = new Map();
-  for (const owner of owners.values()) capacity.set(owner.lane, (capacity.get(owner.lane) ?? 0) + owner.remaining);
+  if (!worker) for (const owner of owners.values()) capacity.set(owner.lane, (capacity.get(owner.lane) ?? 0) + owner.remaining);
   return { candidates: candidates.filter(item => {
     if (ownedChecks.has(item.snapshot.queued?.id) || ownedChecks.has(item.snapshot.retry?.id)) return false;
     const available = capacity.get(item.lane.id) ?? 0;

@@ -1,16 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { plan } from '../../src/internal/github-action/admission.mjs';
-import { checkOwner, ownerText, workerIdentity } from '../../src/internal/github-action/ownership.mjs';
+import { checkOwner, ownerText, verifyOwners, workerIdentity } from '../../src/internal/github-action/ownership.mjs';
 import { githubClient } from '../../src/internal/github-action/github.mjs';
 import { graphqlFetch } from './graphql-fixture.mjs';
 const sha = n => n.toString(16).padStart(40, '0'), policy = 'a'.repeat(64);
 const recipe = { version: 1, trustedAuthors: ['owner'], requiredChecks: [], image: { dockerfile: 'Dockerfile', context: '.' }, prepare: [], compatibilityPaths: [], lanes: [{ id: 'linux', checkName: 'Hauler Linux', tasks: [{ id: 'test', run: 'true', timeoutSeconds: 1 }] }] };
-function fixture() {
+function fixture({ pulls = 3 } = {}) {
   const owner = { runId: '20', attempt: 2, jobId: '30', lane: 'linux', ordinal: 1, remaining: 2, finished: false, deadline: Date.now() + 60000 };
   const run = { id: 20, run_attempt: 2, status: 'in_progress', event: 'workflow_run', path: '.github/workflows/hauler-ci.yml', head_repository: { full_name: 'owner/repo' }, head_branch: 'master' };
   const state = { run, jobs: [{ id: 30, name: 'Hauler pool / linux', status: 'in_progress' }], checks: new Map(), calls: [], missing: '', error: '' };
-  const prs = [1, 2, 3].map(number => ({ number, state: 'open', draft: false, user: { login: 'owner' }, updated_at: '2026-09-28T00:00:00Z', head: { sha: sha(number), repo: { full_name: 'owner/repo' } }, base: { sha: sha(10) }, merge_commit_sha: sha(number + 100) }));
+  const prs = Array.from({ length: pulls }, (_, i) => i + 1).map(number => ({ number, state: 'open', draft: false, user: { login: 'owner' }, updated_at: '2026-09-28T00:00:00Z', head: { sha: sha(number), repo: { full_name: 'owner/repo' } }, base: { sha: sha(10) }, merge_commit_sha: sha(number + 100) }));
   const check = (number, patch = {}) => ({ id: number, name: 'Hauler Linux', app: { slug: 'github-actions' }, head_sha: sha(number), external_id: `hauler:linux:${sha(number)}:${policy}:run:5`, status: 'in_progress', output: { text: ownerText(owner) }, ...patch });
   async function fetchImpl(url) {
     const path = new URL(url).pathname.replace('/repos/owner/repo', ''); state.calls.push(path);
@@ -82,4 +82,34 @@ test('worker identity requires the exact unique native lane job and strict block
   f.state.jobs.push({ ...f.state.jobs[0], id: 31 });
   await assert.rejects(workerIdentity(client, options), /Unique/);
   for (const patch of [{ remaining: -1 }, { finished: 'false' }, { attempt: 0 }, { jobId: '../30' }, { deadline: Infinity }, { ordinal: 101 }]) assert.equal(checkOwner({ output: { text: ownerText({ ...f.owner, ...patch }) } }), null);
+});
+test('numbered workers of one lane each verify against their own pool job', async () => {
+  const f = fixture(), client = githubClient({ repository: 'owner/repo', token: 'private', fetchImpl: f.options.fetchImpl });
+  f.state.jobs = [1, 2].map(worker => ({ id: 30 + worker, name: `Hauler pool / linux-transport / ${worker}`, status: 'in_progress' }));
+  const verify = verifyOwners(client, { repository: 'owner/repo', defaultBranch: 'master' });
+  const owner = worker => ({ ...f.owner, lane: 'linux-transport', jobId: String(30 + worker), worker });
+  assert.equal(await verify(owner(1)), true);
+  assert.equal(await verify(owner(2)), true);
+  assert.equal(await verify({ ...owner(1), jobId: '32' }), false);
+  assert.equal(await verify({ ...owner(1), worker: undefined }), false);
+  const identity = { runId: '20', attempt: '2', lane: 'linux-transport', repository: 'owner/repo', defaultBranch: 'master' };
+  assert.deepEqual(await workerIdentity(client, { ...identity, worker: 2 }), { runId: '20', attempt: 2, jobId: '32', worker: 2 });
+  await assert.rejects(workerIdentity(client, identity), /Unique/);
+  for (const worker of [0, 101, 1.5, '1']) assert.equal(checkOwner({ output: { text: ownerText({ ...owner(1), worker }) } }), null);
+});
+test('the unnumbered legacy pool job still verifies and rejects a numbered owner', async () => {
+  const f = fixture(), client = githubClient({ repository: 'owner/repo', token: 'private', fetchImpl: f.options.fetchImpl });
+  const verify = verifyOwners(client, { repository: 'owner/repo', defaultBranch: 'master' });
+  assert.equal(await verify(f.owner), true);
+  assert.equal(await verify({ ...f.owner, worker: 1 }), false);
+});
+test('planning subtracts the remaining capacity of every live worker in the lane', async () => {
+  const f = fixture({ pulls: 4 });
+  f.state.jobs = [1, 2].map(worker => ({ id: 30 + worker, name: `Hauler pool / linux / ${worker}`, status: 'in_progress' }));
+  const claim = (number, worker) => f.check(number, { output: { text: ownerText({ ...f.owner, jobId: String(30 + worker), worker, remaining: 1 }) } });
+  f.state.checks.set(1, [claim(1, 1)]);
+  f.state.checks.set(2, [claim(2, 2)]);
+  assert.deepEqual(await plan(f.options), { lanes: [], count: 0 });
+  f.state.jobs[1].status = 'completed';
+  assert.deepEqual(await plan(f.options), { lanes: ['linux'], count: 1 });
 });

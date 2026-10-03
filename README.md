@@ -13,7 +13,9 @@ PR queue. It manages isolated snapshots, per-PR checks, and compiler reuse from
 one trusted CI recipe. Routing delegates a trusted PR at once, before its lane
 checks exist, so consumers relying on that optimistic delegation should also
 run the Action with `mode: enqueue` on a schedule to recover heads whose
-enqueue run was missed.
+enqueue run was missed. A lane can run several numbered workers through a
+`worker: [1, 2]` matrix with one `hauler-ci-<lane>-<worker>` concurrency group
+each. Workers agree on one holder for each head.
 
 ## The problem
 

@@ -95,6 +95,7 @@ export async function main(env = process.env) {
   process.once('SIGINT', stop);
   const { workerIdentity } = await import('./ownership.mjs');
   const worker = await workerIdentity(loaded.client, { runId: env.GITHUB_RUN_ID, attempt: env.GITHUB_RUN_ATTEMPT, lane: env.CARGO_HAULER_CI_LANE,
+    worker: env.CARGO_HAULER_CI_WORKER?.trim() ? positiveInteger(env.CARGO_HAULER_CI_WORKER.trim(), 100, 'worker') : undefined,
     repository: options.repository, workflow: options.managerWorkflow, defaultBranch: loaded.defaultBranch });
   const image = recipe.image.reference ?? `hauler-ci:${actionIdentity.slice(0, 16)}`;
   const dockerEnv = { PATH: env.PATH, HOME: state };

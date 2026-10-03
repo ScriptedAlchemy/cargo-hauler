@@ -19,6 +19,9 @@ inputs:
   lane:
     description: Recipe lane owned by this worker.
     required: false
+  worker:
+    description: Optional worker index 1 to 100 within the lane. When set, the job must be named `Hauler pool / <lane> / <worker>`.
+    default: ''
   max-minutes:
     description: Drain deadline in minutes. An unfinished snapshot is cancelled at the deadline.
     default: '120'
@@ -63,6 +66,7 @@ runs:
         CARGO_HAULER_CI_TOKEN: ${{ inputs.token }}
         CARGO_HAULER_CI_RECIPE: ${{ inputs.recipe }}
         CARGO_HAULER_CI_LANE: ${{ inputs.lane }}
+        CARGO_HAULER_CI_WORKER: ${{ inputs.worker }}
         CARGO_HAULER_CI_MINUTES: ${{ inputs.max-minutes }}
         CARGO_HAULER_CI_SNAPSHOTS: ${{ inputs.max-snapshots }}
         CARGO_HAULER_CI_PRS: ${{ inputs.pull-requests }}
