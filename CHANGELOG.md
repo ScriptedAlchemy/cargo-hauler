@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.0
+
+### Minor Changes
+
+- 464137e: The GitHub Action runs more than one worker per lane. Set the new `worker` input
+  (1 to 100) and name the job `Hauler pool / <lane> / <worker>` with a
+  `hauler-ci-<lane>-<worker>` concurrency group. Ownership records and verifies the
+  worker index, planning counts every live worker's remaining capacity, and workers
+  that race for one head agree on a single holder that finishes it. Jobs
+  without `worker` keep the `Hauler pool / <lane>` name.
+- 501d93f: GitHub Action throughput: route mode delegates a trusted head that leaves policy untouched at once instead of waiting for lane checks, and the `route-wait-minutes` input is removed (drain still verifies checks before admission; run `mode: enqueue` on a schedule to recover missed enqueues). Drain workers are resident: a new `idle-polls` input (default 5, 0 to 60) makes a worker rescan after an empty admission scan, one poll interval apart, before exiting with its warm sandbox. A snapshot superseded by a new PR head now keeps the warm sandbox for the next snapshot.
+
 ## 0.13.7
 
 ### Patch Changes
