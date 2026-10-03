@@ -40,7 +40,8 @@ import {
 import { isSchedulable } from './dependencies.js';
 import { executeCargo, TailBuffer } from '../../cargo/execution/executor.js';
 import type { ExecutionResult } from '../../cargo/execution/executor.js';
-import type { NormalizedCargoIntent } from '../../cargo/intent.js';
+import { lockedProfileDir } from '../../cargo/intent.js';
+import type { BuildLock, NormalizedCargoIntent } from '../../cargo/intent.js';
 import {
   diagnosticFinishFields,
   diagnosticsForAttachment,
@@ -84,10 +85,86 @@ import type { TicketDirectory } from './ticket-directory.js';
 import { openTicketLog } from '../../storage/ticket-log.js';
 import type { TopologyApi } from '../../cargo/topology.js';
 
+/**
+ * One per resolved target dir, shared by every lane on it. Profile-dir
+ * leaders hold it shared from entry to settlement, since test binaries still
+ * run from the target dir after the hand-back. A whole-target clean holds it
+ * alone. A waiting clean stops new builds from entering, so a stream of
+ * builds cannot starve it.
+ */
+interface TargetGate {
+  readonly targetDir: string;
+  readonly builds: Set<string>;
+  clean: string | null;
+  readonly cleansWaiting: string[];
+  /** Resolved and replaced whenever a ticket leaves, so waiters look again. */
+  changed: Deferred.Deferred<void>;
+}
+
+/** Enters `ticket` and returns null, or returns why it must wait. */
+const tryEnterGate = (gate: TargetGate, lock: BuildLock, ticket: string): AdmissionHold | null => {
+  const cleanHold = (clean: string): AdmissionHold => ({
+    reason: 'target-clean',
+    detail: `whole-target cargo clean ${clean} on ${gate.targetDir}`,
+  });
+  switch (lock._tag) {
+    case 'ProfileDir': {
+      const clean = gate.clean ?? gate.cleansWaiting[0];
+      if (clean !== undefined) {
+        return cleanHold(clean);
+      }
+      gate.builds.add(ticket);
+      return null;
+    }
+    case 'WholeTarget': {
+      if (!gate.cleansWaiting.includes(ticket)) {
+        gate.cleansWaiting.push(ticket);
+      }
+      const ahead = gate.clean ?? gate.cleansWaiting[0];
+      if (ahead !== undefined && ahead !== ticket) {
+        return cleanHold(ahead);
+      }
+      if (gate.builds.size > 0) {
+        const builds = [...gate.builds];
+        return {
+          reason: 'target-clean',
+          detail: `${builds.join(', ')} still ${builds.length === 1 ? 'uses' : 'use'} ${gate.targetDir}`,
+        };
+      }
+      gate.cleansWaiting.shift();
+      gate.clean = ticket;
+      return null;
+    }
+    default: {
+      const exhaustive: never = lock;
+      return exhaustive;
+    }
+  }
+};
+
+/** Idempotent: drops `ticket` whether it entered or only waited, and wakes the waiters. */
+const leaveGate = (gate: TargetGate, ticket: string): Effect.Effect<void> =>
+  Effect.suspend(() => {
+    gate.builds.delete(ticket);
+    if (gate.clean === ticket) {
+      gate.clean = null;
+    }
+    const waiting = gate.cleansWaiting.indexOf(ticket);
+    if (waiting !== -1) {
+      gate.cleansWaiting.splice(waiting, 1);
+    }
+    const changed = gate.changed;
+    gate.changed = Deferred.makeUnsafe<void>();
+    return Deferred.succeed(changed, undefined);
+  });
+
 export interface Lane {
   readonly key: string;
   readonly workspaceRoot: string;
   readonly targetDir: string;
+  /** The profile dir every leader here locks, or the whole target dir for `cargo clean`. */
+  readonly buildLock: BuildLock;
+  readonly gate: TargetGate;
   /** Pending jobs; the worker picks by schedule score, not arrival order. */
   readonly pending: Job[];
   /** Capacity-one coalescing signal; the awakened worker drains pending jobs. */
@@ -107,16 +184,21 @@ export interface Lane {
   lastSurfaceKey: string | null;
   /**
    * The job the worker took from `pending`, from the batch window through
-   * settlement. While it is parked at the load gate or on the permit it is
-   * in neither `pending` nor `running`; admission re-scores it with the queue
-   * once a permit becomes available.
+   * settlement. While it is parked at the target-dir gate, the load gate, or
+   * on the permit it is in neither `pending` nor `running`; admission
+   * re-scores it with the queue once a permit becomes available.
    */
   head: Job | null;
 }
 
-/** Lane identity: one FIFO per (workspace root, resolved cargo target dir). */
-export const laneKeyFor = (workspaceRoot: string, targetDir: string): string =>
-  JSON.stringify([workspaceRoot, targetDir]);
+/**
+ * Lane identity: one FIFO per workspace root, resolved target dir, and the
+ * profile dir cargo locks (`'*'` for a whole-target clean).
+ */
+export const laneKeyFor = (
+  intent: Pick<NormalizedCargoIntent, 'workspaceRoot' | 'targetDir' | 'buildLock'>,
+): string =>
+  JSON.stringify([intent.workspaceRoot, intent.targetDir, lockedProfileDir(intent.buildLock) ?? '*']);
 
 const pinsJobs = (argument: string): boolean =>
   argument === '-j' || argument.startsWith('--jobs') || /^-j\d+$/u.test(argument);
@@ -160,11 +242,7 @@ export interface LaneRuntimeDeps {
 
 export interface LaneRuntime {
   readonly attachments: AttachmentRuntime;
-  readonly getOrCreateLane: (
-    key: string,
-    workspaceRoot: string,
-    targetDir: string,
-  ) => Effect.Effect<Lane>;
+  readonly getOrCreateLane: (intent: NormalizedCargoIntent) => Effect.Effect<Lane>;
   readonly makeJob: (
     id: number,
     ticket: string,
@@ -221,6 +299,7 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
     const heavyAdmittedCount = yield* Ref.make(0);
     const laneCreation = yield* Semaphore.make(1);
     const lanes = new Map<string, Lane>();
+    const targetGates = new Map<string, TargetGate>();
     const laneWorkers = new Set<Fiber.Fiber<never, never>>();
 
     const attachments = makeAttachmentRuntime({ directory, ledger });
@@ -997,6 +1076,24 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
     const stillQueued = (job: Job): Effect.Effect<boolean> =>
       Ref.get(job.state).pipe(Effect.map((state) => state === 'queued'));
 
+    /** Waits until the lane's target-dir gate admits `job`; the caller's finalizer leaves it. */
+    const enterTargetGate = (lane: Lane, job: Job): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        while (true) {
+          const { changed, hold } = yield* Effect.sync(() => {
+            const changed = lane.gate.changed;
+            const hold = tryEnterGate(lane.gate, lane.buildLock, job.ticket);
+            job.admissionHold = hold;
+            return { changed, hold };
+          });
+          if (hold === null) {
+            return;
+          }
+          yield* Effect.logDebug(`admission deferred (${hold.reason}): ${hold.detail}`);
+          yield* Deferred.await(changed);
+        }
+      });
+
     const processJob = (lane: Lane, job: Job): Effect.Effect<void> =>
       Effect.gen(function* () {
         const state = yield* Ref.get(job.state);
@@ -1009,7 +1106,10 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
         }
         const heavy = heavyLeader(job);
         const claimed = { value: false };
-        const admitAndRun = waitForLoadHeadroom(job, heavy, claimed).pipe(
+        // The gate comes first, so a leader parked behind a clean (or a
+        // clean parked behind builds) holds no permit or heavy slot.
+        const admitAndRun = enterTargetGate(lane, job).pipe(
+          Effect.andThen(waitForLoadHeadroom(job, heavy, claimed)),
           Effect.andThen(
             admission.withPermits(1)(
               Effect.gen(function* () {
@@ -1035,14 +1135,15 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
             ),
           ),
         );
-        // A job parked at the load gate or on the permit can wait minutes
-        // (and blocks its whole lane); a kill must settle it right away
-        // instead of waiting for a permit it will never use.
+        // A job parked at a gate or on the permit can wait minutes (and
+        // blocks its whole lane); a kill must settle it right away instead
+        // of waiting for a permit it will never use.
         yield* Effect.raceFirst(
           admitAndRun,
           killedBeforeStart(job).pipe(Effect.andThen(finishKilledBeforeRun(lane, job))),
         ).pipe(
           Effect.ensuring(Effect.suspend(() => (claimed.value ? releaseHeavy : Effect.void))),
+          Effect.ensuring(leaveGate(lane.gate, job.ticket)),
         );
       }).pipe(Effect.onInterrupt(() => settleInterruptedJob(job)));
 
@@ -1126,22 +1227,33 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
         ),
       );
 
-    const getOrCreateLane = (
-      key: string,
-      workspaceRoot: string,
-      targetDir: string,
-    ): Effect.Effect<Lane> =>
+    const getOrCreateLane = (intent: NormalizedCargoIntent): Effect.Effect<Lane> =>
       laneCreation.withPermits(1)(
         Effect.gen(function* () {
+          const key = laneKeyFor(intent);
           const existing = lanes.get(key);
           if (existing !== undefined) {
             return existing;
+          }
+          const { buildLock, targetDir, workspaceRoot } = intent;
+          let gate = targetGates.get(targetDir);
+          if (gate === undefined) {
+            gate = {
+              targetDir,
+              builds: new Set<string>(),
+              clean: null,
+              cleansWaiting: [],
+              changed: yield* Deferred.make<void>(),
+            };
+            targetGates.set(targetDir, gate);
           }
           const wake = yield* Queue.dropping<void>(1);
           const lane: Lane = {
             key,
             workspaceRoot,
             targetDir,
+            buildLock,
+            gate,
             pending: [],
             wake,
             running: null,
@@ -1166,6 +1278,7 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
             key: lane.key,
             workspaceRoot: lane.workspaceRoot,
             targetDir: lane.targetDir,
+            profileDir: lockedProfileDir(lane.buildLock),
             ...(sharedWith.length === 0 ? {} : { sharedTargetWith: sharedWith }),
             queued: lane.pending.length,
             runningTicket: lane.running,

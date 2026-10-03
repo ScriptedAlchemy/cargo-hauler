@@ -132,7 +132,9 @@ const decideBeforeShell = async (
       case 'busy':
         // An idle daemon brokers the clean like any other cargo command. A
         // busy daemon is alive but saturated, which is when a raw clean would
-        // race its lanes, so the rewrite lets the lane serialize the clean.
+        // race its lanes. Brokered, a whole-target clean waits at the target
+        // dir gate for every build on it, and a `-p` clean shares its
+        // profile's lane.
         break;
       case 'absent':
         // With no daemon there is nothing to race, and brokering would only

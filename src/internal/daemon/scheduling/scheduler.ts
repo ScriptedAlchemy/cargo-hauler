@@ -103,9 +103,12 @@ export interface AdmissionLoadInput {
 
 export type MemoryClampState = 'none' | 'soft' | 'hard';
 
+/** The arms this module decides; the broker's target-dir gate holds `target-clean`. */
+export type LoadDeferReason = Exclude<AdmissionDeferReason, 'target-clean'>;
+
 export type AdmissionDecision =
   | { readonly defer: false }
-  | { readonly defer: true; readonly reason: AdmissionDeferReason };
+  | { readonly defer: true; readonly reason: LoadDeferReason };
 
 /** Profiles cheap enough that a stacked pair does not risk an OOM storm. */
 const lightProfiles = new Set(['dev', 'test', 'check']);
@@ -217,7 +220,7 @@ const formatGib = (bytes: number): string => {
 /** Human-readable hold text for a deferred decision, from the same input. */
 export const admissionHoldFor = (
   input: AdmissionLoadInput,
-  reason: AdmissionDeferReason,
+  reason: LoadDeferReason,
 ): AdmissionHold => {
   switch (reason) {
     case 'heavy-profile-cap': {

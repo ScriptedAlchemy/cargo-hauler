@@ -9,7 +9,15 @@ import type {
   TicketSummary,
 } from '../../contracts/protocol.js';
 import type { DaemonHealth } from '../../operations/daemon-health.js';
-import { formatBytes, formatMs, heavyCapNote, pathBasename, relativeTime, shortenPath } from '../shared/format.js';
+import {
+  formatBytes,
+  formatMs,
+  heavyCapNote,
+  laneTargetName,
+  pathBasename,
+  relativeTime,
+  shortenPath,
+} from '../shared/format.js';
 import { kachePressureModel } from '../../integrations/kache/pressure-model.js';
 import type { KachePressureModel } from '../../integrations/kache/pressure-model.js';
 import type { AwaitResult, StatusResult } from '../../contracts/tool-schemas.js';
@@ -119,8 +127,8 @@ export interface LaneBoardModel {
   readonly sharedTargets: readonly SharedTargetGroup[];
 }
 
-export const laneName = (lane: Pick<LaneStatus, 'workspaceRoot' | 'targetDir'>): string =>
-  `${pathBasename(lane.workspaceRoot)} (${pathBasename(lane.targetDir)})`;
+export const laneName = (lane: Pick<LaneStatus, 'workspaceRoot' | 'targetDir' | 'profileDir'>): string =>
+  `${pathBasename(lane.workspaceRoot)} (${laneTargetName(lane.targetDir, lane.profileDir)})`;
 
 export const laneBoardModel = (
   lanes: readonly LaneStatus[],

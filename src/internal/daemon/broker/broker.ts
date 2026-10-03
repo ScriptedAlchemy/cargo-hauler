@@ -42,7 +42,7 @@ import type {
   SubmitCallbacks,
   SubmitInput,
 } from './job-state.js';
-import { laneKeyFor, makeLaneRuntime } from './lane-exec.js';
+import { makeLaneRuntime } from './lane-exec.js';
 import { Ledger } from '../../storage/ledger.js';
 import { memoryAvailableBytes, memoryPressureLevel, memoryPsi } from '../scheduling/pressure.js';
 import { daemonReportIsIdle, parseTicket, toStatusRow } from '../../contracts/protocol.js';
@@ -322,7 +322,6 @@ export const BrokerLive: Layer.Layer<
               message: cause instanceof Error ? cause.message : String(cause),
             }),
         }).pipe(recordingRejection(input));
-        const laneKey = laneKeyFor(normalized.workspaceRoot, normalized.targetDir);
         // Detection and lane creation under one permit: two first submits
         // from different roots to one outside target must not both pass.
         const { lane, warning } = yield* laneRegistration.withPermits(1)(
@@ -333,11 +332,7 @@ export const BrokerLive: Layer.Layer<
                 message: `Refusing to run: ${sharedTargetRefusal(normalized, sharedWith)}`,
               });
             }
-            const lane = yield* lanesRuntime.getOrCreateLane(
-              laneKey,
-              normalized.workspaceRoot,
-              normalized.targetDir,
-            );
+            const lane = yield* lanesRuntime.getOrCreateLane(normalized);
             return {
               lane,
               ...(sharedWith.length === 0
@@ -369,7 +364,7 @@ export const BrokerLive: Layer.Layer<
               cwd: normalized.cwd,
               workspaceRoot: normalized.workspaceRoot,
               targetDir: normalized.targetDir,
-              laneKey,
+              laneKey: lane.key,
               argv: input.argv,
               intentKey: normalized.estimateKey,
               intentJson: JSON.stringify(normalized),
@@ -397,7 +392,7 @@ export const BrokerLive: Layer.Layer<
             const registered =
               prerequisites.pending.length > 0
                 ? null
-                : yield* attachments.tryRegisterAttachment(laneKey, attachment);
+                : yield* attachments.tryRegisterAttachment(lane.key, attachment);
             if (registered !== null) {
               yield* registerOwnership(callbacks, created.ticket);
               yield* attachments.completeAttachRegistration(
@@ -408,7 +403,7 @@ export const BrokerLive: Layer.Layer<
               );
               return {
                 ticket: created.ticket,
-                laneKey,
+                laneKey: lane.key,
                 ...(warning === undefined ? {} : { warning }),
                 position: 0,
                 attachedTo: registered.leader.ticket,
@@ -420,7 +415,7 @@ export const BrokerLive: Layer.Layer<
             const job = yield* lanesRuntime.makeJob(
               created.id,
               created.ticket,
-              laneKey,
+              lane.key,
               input,
               normalized,
               callbacks,
@@ -445,7 +440,7 @@ export const BrokerLive: Layer.Layer<
             const queued = yield* lanesRuntime.requestStatusFields(created.ticket, Date.now());
             return {
               ticket: created.ticket,
-              laneKey,
+              laneKey: lane.key,
               ...(warning === undefined ? {} : { warning }),
               position: queued.queue?.position ?? enqueuedPosition,
               etaMs: job.estimateMs,

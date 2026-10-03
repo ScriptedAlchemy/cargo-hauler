@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'effect-rstest';
 
+import { profileOutputDir } from '../../../src/internal/cargo/argv.js';
 import {
   digestCargoEnvironment,
   normalizeCargoIntent,
@@ -12,6 +13,41 @@ import {
   splitShellWords,
 } from '../../../src/internal/cargo/intent.js';
 import { removeTestPath } from '../../support/tmp-guard.js';
+
+describe('cargo build lock scope', () => {
+  it('maps profiles to the output dir cargo locks', () => {
+    expect(['dev', 'test', 'release', 'bench', 'perf', 'ci'].map(profileOutputDir)).toEqual([
+      'debug',
+      'debug',
+      'release',
+      'release',
+      'perf',
+      'ci',
+    ]);
+  });
+
+  it('locks one profile dir per invocation, and the whole target dir for an unscoped clean', () => {
+    const lockOf = (argv: readonly string[]) => parseCargoArgv(['cargo', ...argv]).buildLock;
+    const table: readonly (readonly [readonly string[], unknown])[] = [
+      [['build'], { _tag: 'ProfileDir', dir: 'debug' }],
+      [['check', '-p', 'aa'], { _tag: 'ProfileDir', dir: 'debug' }],
+      [['test', '--no-run'], { _tag: 'ProfileDir', dir: 'debug' }],
+      [['build', '--release'], { _tag: 'ProfileDir', dir: 'release' }],
+      [['bench'], { _tag: 'ProfileDir', dir: 'release' }],
+      [['build', '--profile', 'perf'], { _tag: 'ProfileDir', dir: 'perf' }],
+      [['build', '--target', 'x86_64-unknown-linux-gnu'], { _tag: 'ProfileDir', dir: 'debug' }],
+      [['clean'], { _tag: 'WholeTarget' }],
+      [['clean', '--doc'], { _tag: 'WholeTarget' }],
+      [['clean', '--release', '--target', 'x86_64-unknown-linux-gnu'], { _tag: 'WholeTarget' }],
+      [['clean', '--release'], { _tag: 'ProfileDir', dir: 'release' }],
+      [['clean', '--profile', 'perf'], { _tag: 'ProfileDir', dir: 'perf' }],
+      [['clean', '-p', 'aa'], { _tag: 'ProfileDir', dir: 'debug' }],
+      [['clean', '-p', 'aa', '--target', 'x86_64-unknown-linux-gnu'], { _tag: 'ProfileDir', dir: 'debug' }],
+      [['clean', '-p', 'aa', '--release'], { _tag: 'ProfileDir', dir: 'release' }],
+    ];
+    expect(table.map(([argv]) => [argv, lockOf(argv)])).toEqual(table);
+  });
+});
 
 describe('parseCargoArgv', () => {
   it('canonicalizes the cargo compile surface independently of argument order', () => {
@@ -61,6 +97,7 @@ describe('parseCargoArgv', () => {
     expect(left).toEqual(right);
     expect(left).toEqual({
       allFeatures: false,
+      buildLock: { _tag: 'ProfileDir', dir: 'ci' },
       excludes: ['skip-me'],
       features: ['alpha', 'beta', 'zeta'],
       filterExpressions: [],

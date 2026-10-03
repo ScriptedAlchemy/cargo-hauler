@@ -59,7 +59,7 @@ const queueContextSchema = z.object({
 
 const admissionHoldSchema = z.object({
   detail: z.string(),
-  reason: z.enum(['memory-hard', 'heavy-profile-cap', 'memory-soft', 'load', 'cpu-stall']),
+  reason: z.enum(['memory-hard', 'heavy-profile-cap', 'memory-soft', 'load', 'cpu-stall', 'target-clean']),
 }) satisfies z.ZodType<AdmissionHold>;
 
 const prerequisiteContextSchema = z.object({
@@ -149,6 +149,7 @@ const laneStatusSchema = z.object({
   executingTickets: z.array(z.string()),
   targetDir: z.string(),
   workspaceRoot: z.string(),
+  profileDir: z.string().nullable().optional(),
   sharedTargetWith: z.array(z.string()).optional(),
 }) satisfies z.ZodType<LaneStatus>;
 

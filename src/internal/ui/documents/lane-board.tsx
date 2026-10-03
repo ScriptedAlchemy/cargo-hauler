@@ -16,7 +16,7 @@ export interface LaneBoardProps {
 }
 
 /**
- * Work grouped by resolved (workspace root, target dir). Only lanes with
+ * Work grouped by resolved (workspace root, target dir, profile dir). Only lanes with
  * queued or running work get a row; idle lanes are counted, never listed.
  */
 export const LaneBoard = ({ active, lanes, nowMs }: LaneBoardProps) => {

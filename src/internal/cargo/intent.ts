@@ -2,11 +2,26 @@ import { createHash } from 'node:crypto';
 import { realpathSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 
-import { defaultCargoProfile, optionParts } from './argv.js';
+import { defaultCargoProfile, optionParts, profileOutputDir } from './argv.js';
 import { isIdentityEnvironmentVariable, isRelevantCargoEnvironmentVariable } from './env.js';
+
+/**
+ * What one invocation locks or deletes under its target dir. Cargo locks the
+ * profile's output dir (the host layout's even with `--target`, so the triple
+ * never narrows it). A `cargo clean` without `-p` takes no lock and deletes
+ * across profile dirs unless it names a profile alone.
+ */
+export type BuildLock =
+  | { readonly _tag: 'ProfileDir'; readonly dir: string }
+  | { readonly _tag: 'WholeTarget' };
+
+/** The profile dir a lock holds; null for a whole-target clean. */
+export const lockedProfileDir = (lock: BuildLock): string | null =>
+  lock._tag === 'ProfileDir' ? lock.dir : null;
 
 export interface ParsedCargoArgv {
   readonly allFeatures: boolean;
+  readonly buildLock: BuildLock;
   readonly excludes: readonly string[];
   readonly features: readonly string[];
   /** nextest filterset expressions (`-E`/`--filterset`/`--filter-expr`). */
@@ -550,6 +565,7 @@ export const parseCargoArgv = (input: readonly string[]): ParsedCargoArgv => {
   let nextestCommand: string | null = null;
   let noDefaultFeatures = false;
   let profile = defaultCargoProfile(subcommand);
+  let profileNamed = false;
   let passthrough: string[] = [];
   let targetTriple: string | null = null;
   let workspace = false;
@@ -600,6 +616,7 @@ export const parseCargoArgv = (input: readonly string[]): ParsedCargoArgv => {
         break;
       case '--profile':
         profile = takeValue();
+        profileNamed = true;
         break;
       case '--target':
         targetTriple = takeValue();
@@ -649,9 +666,11 @@ export const parseCargoArgv = (input: readonly string[]): ParsedCargoArgv => {
       case '-r':
       case '--release':
         profile = 'release';
+        profileNamed = true;
         break;
       case '--debug':
         profile = 'dev';
+        profileNamed = true;
         break;
       default:
         if (argument.startsWith('-')) {
@@ -672,8 +691,16 @@ export const parseCargoArgv = (input: readonly string[]): ParsedCargoArgv => {
     }
   }
 
+  const wholeTargetClean =
+    subcommand === 'clean' &&
+    packages.length === 0 &&
+    (!profileNamed || targets.includes('doc') || targetTriple !== null);
+
   return {
     allFeatures,
+    buildLock: wholeTargetClean
+      ? { _tag: 'WholeTarget' }
+      : { _tag: 'ProfileDir', dir: profileOutputDir(profile) },
     excludes: sortedUnique(excludes),
     features: sortedUnique(features),
     filterExpressions: sortedUnique(filterExpressions),

@@ -259,6 +259,30 @@ describe('status report contract', () => {
     expect(flagged.lanes[0]?.sharedTargetWith).toEqual(['/other/ws']);
   });
 
+  it('accepts the lane profile dir, null on the whole-target clean lane, and older lanes without it', () => {
+    expect(statusReportSchema.parse(report).lanes[0]?.profileDir).toBeUndefined();
+    const split = statusReportSchema.parse({
+      ...report,
+      lanes: [
+        { ...report.lanes[0], key: '["/ws","/ws/target","perf"]', profileDir: 'perf' },
+        { ...report.lanes[0], key: '["/ws","/ws/target","*"]', profileDir: null },
+      ],
+    });
+    expect(split.lanes.map((lane) => lane.profileDir)).toEqual(['perf', null]);
+  });
+
+  it('accepts a queued row held at the target-dir gate by a whole-target clean', () => {
+    const held = requestRecordSchema.parse({
+      ...baseRecord,
+      admissionHold: { detail: 'whole-target cargo clean cc-2 on /ws/target', reason: 'target-clean' },
+      status: 'queued',
+    });
+    expect(held.admissionHold).toEqual({
+      detail: 'whole-target cargo clean cc-2 on /ws/target',
+      reason: 'target-clean',
+    });
+  });
+
   it('rejects a report without the daemon version', () => {
     expect(statusReportSchema.safeParse(reportBody).success).toBe(false);
   });

@@ -58,6 +58,10 @@ export const formatBytes = (bytes: number): string => {
 /** Hand-rolled rather than `node:path`, because this module also runs in the browser dashboard. */
 export const pathBasename = (path: string): string => path.split('/').filter(Boolean).at(-1) ?? path;
 
+/** `target/debug` for a profile-dir lane; `target` for the whole-target clean lane or an older daemon's lane. */
+export const laneTargetName = (targetDir: string, profileDir: string | null | undefined): string =>
+  profileDir == null ? pathBasename(targetDir) : `${pathBasename(targetDir)}/${profileDir}`;
+
 export const shortenPath = (path: string, maxLength = 38): string => {
   const homed = path.replace(/^\/(?:home|Users)\/[^/]+/u, '~');
   if (homed.length <= maxLength) {

@@ -117,13 +117,18 @@ export interface PrerequisiteContext {
   readonly estimateMs?: number;
 }
 
-/** Which admission arm is holding a lane head back from its permit. */
+/**
+ * Which admission arm is holding a lane head back from its permit.
+ * `target-clean` is the target-dir gate: a whole-target `cargo clean` waits
+ * for every build on its target dir, and builds wait for that clean.
+ */
 export type AdmissionDeferReason =
   | 'memory-hard'
   | 'heavy-profile-cap'
   | 'memory-soft'
   | 'load'
-  | 'cpu-stall';
+  | 'cpu-stall'
+  | 'target-clean';
 
 /** Live admission hold on a lane head that has left the queue but not yet started. */
 export interface AdmissionHold {
@@ -467,6 +472,12 @@ export interface LaneStatus {
   readonly key: string;
   readonly workspaceRoot: string;
   readonly targetDir: string;
+  /**
+   * The cargo profile output dir under `targetDir` this lane locks (`debug`,
+   * `release`, `perf`); null for the whole-target `cargo clean` lane. Older
+   * daemons omit it.
+   */
+  readonly profileDir?: string | null;
   /** Other workspace roots using this external target directory. */
   readonly sharedTargetWith?: readonly string[];
   readonly queued: number;
