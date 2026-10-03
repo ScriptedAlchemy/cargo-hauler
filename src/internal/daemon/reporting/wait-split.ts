@@ -77,12 +77,8 @@ const mergeIntervals = (intervals: readonly Interval[]): readonly Interval[] => 
   return merged;
 };
 
-/** Milliseconds of `[from, to)` covered by a sorted disjoint interval list. */
-const overlapMs = (from: number, to: number, disjoint: readonly Interval[]): number => {
-  if (to <= from) {
-    return 0;
-  }
-  // First interval that ends after `from`; everything before it cannot overlap.
+/** Index of the first interval in a sorted disjoint list that ends after `from`; nothing before it can overlap. */
+const firstEndingAfter = (disjoint: readonly Interval[], from: number): number => {
   let low = 0;
   let high = disjoint.length;
   while (low < high) {
@@ -94,8 +90,16 @@ const overlapMs = (from: number, to: number, disjoint: readonly Interval[]): num
       high = middle;
     }
   }
+  return low;
+};
+
+/** Milliseconds of `[from, to)` covered by a sorted disjoint interval list. */
+const overlapMs = (from: number, to: number, disjoint: readonly Interval[]): number => {
+  if (to <= from) {
+    return 0;
+  }
   let total = 0;
-  for (let index = low; index < disjoint.length; index += 1) {
+  for (let index = firstEndingAfter(disjoint, from); index < disjoint.length; index += 1) {
     const interval = disjoint[index];
     if (interval === undefined || interval.from >= to) {
       break;
@@ -186,12 +190,13 @@ export const classifyWaits = (
     const lane = laneUnions.get(row.laneKey) ?? [];
     const laneBoundMs = overlapMs(from, to, lane);
     let permitBoundMs = 0;
-    for (const interval of saturated) {
+    for (let index = firstEndingAfter(saturated, from); index < saturated.length; index += 1) {
+      const interval = saturated[index];
+      if (interval === undefined || interval.from >= to) {
+        break;
+      }
       const pieceFrom = Math.max(from, interval.from);
       const pieceTo = Math.min(to, interval.to);
-      if (pieceTo <= pieceFrom) {
-        continue;
-      }
       permitBoundMs += pieceTo - pieceFrom - overlapMs(pieceFrom, pieceTo, lane);
     }
     splits.set(row.id, {
