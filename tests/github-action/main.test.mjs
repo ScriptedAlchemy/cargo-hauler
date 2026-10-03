@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, symlink, rm, realpath, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { main, assertTrustedContext, positiveInteger, routeWaitMinutes, within, imageLoader } from '../../src/internal/github-action/main.mjs';
+import { main, assertTrustedContext, positiveInteger, idlePolls, within, imageLoader } from '../../src/internal/github-action/main.mjs';
 import { graphqlFetch } from './graphql-fixture.mjs';
 
 test('only the exact public default-branch checkout may hold reporting credentials', () => {
@@ -103,6 +103,7 @@ test('the entry script reports the failing error instead of only the generic lin
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
-test('route wait accepts 0 to 30 minutes and treats anything else as no wait', () => {
-  assert.deepEqual(['10', '0', '30', '31', '', undefined, '-1', '1.5', '007'].map(routeWaitMinutes), [10, 0, 30, 0, 0, 0, 0, 0, 0]);
+test('idle polls default to 5 and accept only whole numbers from 0 to 60', () => {
+  assert.deepEqual(['0', '5', '60', undefined].map(value => idlePolls(value)), [0, 5, 60, 5]);
+  for (const value of ['61', '', '-1', '1.5', '007', ' 5']) assert.throws(() => idlePolls(value), /Invalid idle-polls/);
 });

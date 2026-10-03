@@ -5,7 +5,7 @@ import { receipt } from '../../src/internal/github-action/github.mjs';
 const sha = n => n.toString(16).padStart(40, '0');
 const recipe = { version: 1, trustedAuthors: ['owner'], sharedBuilds: false, requiredChecks: ['Gates'], image: { dockerfile: 'docker/Dockerfile', context: 'docker' }, prepare: [], compatibilityPaths: [], lanes: [{ id: 'linux', checkName: 'Hauler Linux', tasks: [{ id: 'test', run: 'true', timeoutSeconds: 60 }] }] };
 function fixture() {
-  const state = { files: [{ filename: 'src/lib.rs', status: 'modified' }], fileRequests: 0, recipe, base: sha(1), image: sha(2), contextMode: '040000', checks: [], decision: null, posts: 0, head: sha(3), runHead: sha(3), event: 'pull_request', path: '.github/workflows/ci.yml' };
+  const state = { files: [{ filename: 'src/lib.rs', status: 'modified' }], fileRequests: 0, recipe, base: sha(1), image: sha(2), contextMode: '040000', checks: [], decision: null, posts: 0, head: sha(3), runHead: sha(3), event: 'pull_request', path: '.github/workflows/ci.yml', author: 'owner', draft: false, headRepo: 'owner/repo' };
   const fetchImpl = async (url, options) => {
     const path = new URL(url).pathname.replace('/repos/owner/repo', '');
     let data;
@@ -15,18 +15,17 @@ function fixture() {
     else if (path.startsWith('/git/trees/')) data = { tree: [{ path: 'docker', mode: state.contextMode, sha: state.image }, { path: state.recipe.image.dockerfile, mode: '100644', sha: state.image }, { path: 'unrelated', mode: '100644', sha: state.base }] };
     else if (path === '/pulls') data = [{ number: 1 }];
     else if (path === '/pulls/1/files') { state.fileRequests++; if (state.filesError) return { ok: false, status: 403 }; const offset = (Number(new URL(url).searchParams.get('page')) - 1) * 100; data = state.files.slice(offset, offset + 100); }
-    else if (path === '/pulls/1') data = { base: { sha: state.base }, mergeable: state.mergeable, mergeable_state: 'dirty', changed_files: Object.hasOwn(state, 'changedFiles') ? state.changedFiles : state.files.length, number: 1, state: 'open', draft: false, user: { login: 'owner' }, head: { sha: state.head, repo: { full_name: 'owner/repo' } } };
+    else if (path === '/pulls/1') data = { base: { sha: state.base }, mergeable: state.mergeable, mergeable_state: 'dirty', changed_files: Object.hasOwn(state, 'changedFiles') ? state.changedFiles : state.files.length, number: 1, state: 'open', draft: state.draft, user: { login: state.author }, head: { sha: state.head, repo: { full_name: state.headRepo } } };
     else if (path.endsWith('/check-runs') && options.method === 'GET') data = { check_runs: state.checks };
     else if (path === '/check-runs') { data = { id: ++state.posts, app: { slug: 'github-actions' }, ...JSON.parse(options.body) }; data.details_url = `https://github.com/owner/repo/runs/${data.id}`; state.checks.push(data); }
     else if (path.startsWith('/check-runs/') && options.method === 'GET') data = state.checks.find(c => c.id === Number(path.split('/').at(-1)));
     else if (path.startsWith('/check-runs/') && options.method === 'PATCH') data = Object.assign(state.checks.find(c => c.id === Number(path.split('/').at(-1))), JSON.parse(options.body));
     else if (path.includes('/actions/workflows/')) data = { workflow_runs: [{ id: 20, event: state.event, path: state.path, head_sha: state.runHead, run_attempt: 1, pull_requests: [{ number: 1 }] }] };
     else if (path.endsWith('/jobs')) data = { jobs: [{ steps: state.decision ? [{ name: state.decision, conclusion: 'success' }] : [] }] };
-    else if (path === '/actions/runs/10') data = { event: 'pull_request_target', path: '.github/workflows/hauler-ci.yml', head_repository: { full_name: 'owner/repo' }, head_branch: 'master' };
     else throw new Error(`Unknown route ${path}`);
     return { ok: true, json: async () => structuredClone(data) };
   };
-  const options = { repository: 'owner/repo', token: 'secret', actionRef: sha(5), fetchImpl, pr: 1, head: state.head, waitMilliseconds: 0 };
+  const options = { repository: 'owner/repo', token: 'secret', actionRef: sha(5), fetchImpl, pr: 1, head: state.head };
   return { state, options };
 }
 test('identity survives unrelated base changes but changes with recipe image or Action', async () => {
@@ -46,15 +45,13 @@ test('full invalid recipe falls back native without executing or queueing', asyn
   assert.deepEqual(await route(f.options), { decision: 'native', policy: 'unavailable' });
   assert.equal(f.state.posts, 0);
 });
-test('enqueue precedes cheap gates, reuses queued checks, and route verifies them', async () => {
+test('enqueue precedes cheap gates and reuses queued checks', async () => {
   const f = fixture(), loaded = await loadPolicy(f.options), opts = { ...loaded, repository: 'owner/repo', managerRunId: '10' };
   assert.equal((await enqueue(opts)).queued.length, 1);
   assert.equal((await enqueue(opts)).queued.length, 0);
   assert.deepEqual(await route(f.options), { decision: 'delegated', policy: loaded.policy });
   assert.equal(f.state.checks[0].details_url, 'https://github.com/owner/repo/runs/1');
   assert.ok(f.state.checks[0].external_id.endsWith(':run:10'));
-  f.state.checks[0].external_id += ':junk';
-  assert.equal((await route(f.options)).decision, 'native');
 });
 test('native receipt blocks late enqueue; delegated receipt requires exact workflow and head', async () => {
   const f = fixture(), loaded = await loadPolicy(f.options), opts = { workflow: 'ci.yml', head: f.state.head, pr: 1, policy: loaded.policy };
@@ -79,15 +76,10 @@ test('route falls back to native when image context is missing or not a real dir
   }
 });
 
-test('check provenance parses exactly and cannot fall back to a display URL', async () => {
+test('check provenance parses exactly', async () => {
   const identity = checkIdentity(sha(3), 'linux', 'a'.repeat(64));
   assert.deepEqual(checkMetadata(`${identity}:run:10:infrastructure`), { identity, runId: '10', infrastructure: true });
   for (const suffix of [':run:0', ':run:01', ':run:10:junk', ':run:10:infrastructure:junk', ':run:10\n', ':run:123456789012345678901']) assert.equal(checkMetadata(`${identity}${suffix}`), null);
-  const f = fixture(), loaded = await loadPolicy(f.options);
-  await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
-  f.state.checks[0].external_id = checkIdentity(f.state.head, 'linux', loaded.policy);
-  f.state.checks[0].details_url = 'https://github.com/owner/repo/actions/runs/10';
-  assert.equal((await route(f.options)).decision, 'native');
 });
 
 test('CI, recipe, image and renamed-out changes retain native validation', async () => {
@@ -154,24 +146,6 @@ test('enqueue skips conflicts without touching queued or admitted checks', async
   assert.equal((await enqueue(options)).queued.length, 1);
 });
 
-test('route rescans when waiting checks observe a newer base with changed CI files', async () => {
-  const f = fixture(), loaded = await loadPolicy(f.options);
-  await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
-  const original = f.options.fetchImpl;
-  let firstChecks = true;
-  const fetchImpl = async (url, options) => {
-    const response = await original(url, options);
-    if (url.includes('/commits/') && url.includes('/check-runs') && firstChecks) {
-      firstChecks = false;
-      f.state.base = sha(70);
-      f.state.files = [{ filename: '.github/workflows/new-test.yml', status: 'added' }];
-      return { ...response, json: async () => ({ check_runs: [] }) };
-    }
-    return response;
-  };
-  assert.deepEqual(await route({ ...f.options, fetchImpl, waitMilliseconds: 6000 }), { decision: 'native', policy: loaded.policy });
-  assert.equal(f.state.fileRequests, 2);
-});
 test('route keeps native coverage if base changes during the file scan', async () => {
   const f = fixture(), loaded = await loadPolicy(f.options);
   await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
@@ -197,45 +171,24 @@ test('native ownership crosses policy versions but delegation and malformed rece
   }
 });
 
-function lateManager(f, runStatus, finishesAfterPolls = Infinity) {
-  const original = f.options.fetchImpl, seen = { listed: 0, polled: 0 };
-  let enqueued = false;
-  const fetchImpl = async (url, options) => {
-    const path = new URL(url).pathname.replace('/repos/owner/repo', '');
-    if (path === '/actions/workflows/hauler-ci.yml/runs') {
-      seen.listed++;
-      return { ok: true, json: async () => ({ workflow_runs: [{ id: 10, head_sha: f.state.head, status: runStatus }] }) };
-    }
-    if (path === '/actions/runs/10' && !enqueued) {
-      seen.polled++;
-      if (seen.polled < finishesAfterPolls) return { ok: true, json: async () => ({ id: 10, status: 'in_progress' }) };
-      enqueued = true;
-      return { ok: true, json: async () => ({ id: 10, status: 'completed' }) };
-    }
-    const response = await original(url, options);
-    if (path.endsWith('/check-runs') && !enqueued) return { ...response, json: async () => ({ check_runs: [] }) };
-    return response;
-  };
-  return { fetchImpl, seen };
-}
-test('route outwaits a late manager enqueue run and delegates on its checks', async () => {
-  const f = fixture(), loaded = await loadPolicy(f.options);
-  await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
-  const { fetchImpl, seen } = lateManager(f, 'queued', 1);
-  assert.deepEqual(await route({ ...f.options, fetchImpl, managerWaitMilliseconds: 3000 }), { decision: 'delegated', policy: loaded.policy });
-  assert.equal(seen.listed, 1);
-  assert.equal(seen.polled, 1);
+const observed = f => {
+  const paths = [], original = f.options.fetchImpl;
+  return { paths, fetchImpl: (url, options) => { paths.push(new URL(url).pathname); return original(url, options); } };
+};
+test('route delegates a trusted head at once, before any lane check exists', { timeout: 5000 }, async t => {
+  // Any wait would stall on the frozen clock and trip the timeout.
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  const f = fixture(), seen = observed(f), loaded = await loadPolicy(f.options);
+  assert.deepEqual(await route({ ...f.options, fetchImpl: seen.fetchImpl }), { decision: 'delegated', policy: loaded.policy });
+  assert.equal(f.state.checks.length, 0);
+  assert.ok(!seen.paths.some(path => path.includes('/check-runs') || path.includes('/actions/')));
 });
-test('route stays native when the manager run outlasts the wait or never ran', async () => {
-  const f = fixture(), loaded = await loadPolicy(f.options);
-  await enqueue({ ...loaded, repository: 'owner/repo', managerRunId: '10' });
-  const pending = lateManager(f, 'queued');
-  assert.deepEqual(await route({ ...f.options, fetchImpl: pending.fetchImpl, managerWaitMilliseconds: 500 }), { decision: 'native', policy: loaded.policy });
-  assert.ok(pending.seen.polled >= 1);
-  const finished = lateManager(f, 'completed');
-  assert.deepEqual(await route({ ...f.options, fetchImpl: finished.fetchImpl, managerWaitMilliseconds: 60000 }), { decision: 'native', policy: loaded.policy });
-  assert.deepEqual(finished.seen, { listed: 1, polled: 0 });
-  const unset = lateManager(f, 'queued');
-  assert.deepEqual(await route({ ...f.options, fetchImpl: unset.fetchImpl }), { decision: 'native', policy: loaded.policy });
-  assert.deepEqual(unset.seen, { listed: 0, polled: 0 });
+test('route stays native for policy changes, untrusted authors, drafts and forks without checks', { timeout: 5000 }, async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  for (const change of [{ files: [{ filename: '.github/workflows/ci.yml', status: 'modified' }] }, { author: 'stranger' }, { draft: true }, { headRepo: 'fork/repo' }]) {
+    const f = fixture(), seen = observed(f), loaded = await loadPolicy(f.options);
+    Object.assign(f.state, change);
+    assert.deepEqual(await route({ ...f.options, fetchImpl: seen.fetchImpl }), { decision: 'native', policy: loaded.policy });
+    assert.ok(!seen.paths.some(path => path.includes('/check-runs') || path.includes('/actions/')));
+  }
 });

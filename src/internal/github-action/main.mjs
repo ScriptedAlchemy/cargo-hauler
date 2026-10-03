@@ -27,8 +27,10 @@ export function positiveInteger(value, maximum, name) {
   return Number(value);
 }
 
-// Route never fails a PR job, so a malformed wait falls back to the short poll.
-export const routeWaitMinutes = value => /^[0-9]{1,2}$/.test(value ?? '') && Number(value) <= 30 ? Number(value) : 0;
+export function idlePolls(value = '5') {
+  if (!/^(0|[1-9][0-9]?)$/.test(value) || Number(value) > 60) throw new Error('Invalid idle-polls.');
+  return Number(value);
+}
 
 export async function within(root, path) {
   const base = await realpath(root);
@@ -54,7 +56,7 @@ export async function main(env = process.env) {
     actionRef: env.CARGO_HAULER_ACTION_REF, recipePath: env.CARGO_HAULER_CI_RECIPE };
   if (mode === 'route') {
     const result = env.GITHUB_EVENT_NAME === 'pull_request' && env.GITHUB_SERVER_URL === 'https://github.com'
-      ? await route({ ...options, pr: event.pull_request?.number, head: event.pull_request?.head?.sha, managerWaitMilliseconds: routeWaitMinutes(env.CARGO_HAULER_CI_ROUTE_WAIT_MINUTES) * 60_000 })
+      ? await route({ ...options, pr: event.pull_request?.number, head: event.pull_request?.head?.sha })
       : { decision: 'native', policy: 'unavailable' };
     if (env.GITHUB_OUTPUT) await appendFile(env.GITHUB_OUTPUT, `decision=${result.decision}\npolicy=${result.policy}\n`);
     return result;
@@ -115,7 +117,7 @@ export async function main(env = process.env) {
       token: env.CARGO_HAULER_CI_TOKEN, root: state, image, actionIdentity, policy: actionIdentity, admissionWorkflow,
       managerWorkflow: options.managerWorkflow, defaultBranch: loaded.defaultBranch, worker, persistSnapshot,
       manualAdmission: env.GITHUB_EVENT_NAME === 'workflow_dispatch' && Boolean(onlyPullRequests?.length), maxMinutes, maxSnapshots,
-      onlyPullRequests, sandboxFactory, signal: abort.signal });
+      idlePolls: idlePolls(env.CARGO_HAULER_CI_IDLE_POLLS), onlyPullRequests, sandboxFactory, signal: abort.signal });
     await writeFile(summary, `${JSON.stringify(result, null, 2)}\n`, { mode: 0o600 });
     console.log(JSON.stringify(result));
     if (result.snapshots.some(snapshot => snapshot.infrastructureError)) process.exitCode = 1;
