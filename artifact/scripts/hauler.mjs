@@ -8097,6 +8097,7 @@ var __webpack_modules__ = {
         });
         const statusMetricsWaitSplitSchema = zod__rspack_import_1.Ikc({
             count: zod__rspack_import_1.aig().int().nonnegative(),
+            prerequisiteBoundMs: zod__rspack_import_1.aig().nonnegative(),
             laneBoundMs: zod__rspack_import_1.aig().nonnegative(),
             permitBoundMs: zod__rspack_import_1.aig().nonnegative(),
             otherMs: zod__rspack_import_1.aig().nonnegative(),
@@ -12355,10 +12356,7 @@ var __webpack_modules__ = {
             }
             return merged;
         };
-        const overlapMs = (from, to, disjoint)=>{
-            if (to <= from) {
-                return 0;
-            }
+        const firstEndingAfter = (disjoint, from)=>{
             let low = 0;
             let high = disjoint.length;
             while(low < high){
@@ -12370,8 +12368,14 @@ var __webpack_modules__ = {
                     high = middle;
                 }
             }
+            return low;
+        };
+        const overlapMs = (from, to, disjoint)=>{
+            if (to <= from) {
+                return 0;
+            }
             let total = 0;
-            for(let index = low; index < disjoint.length; index += 1){
+            for(let index = firstEndingAfter(disjoint, from); index < disjoint.length; index += 1){
                 const interval = disjoint[index];
                 if (interval === undefined || interval.from >= to) {
                     break;
@@ -12445,33 +12449,38 @@ var __webpack_modules__ = {
                 if (row.queuedAtMs === null || row.startedAtMs === null) {
                     continue;
                 }
-                const from = row.queuedAtMs;
+                const queuedAt = row.queuedAtMs;
                 const to = row.startedAtMs;
-                const waitMs = Math.max(0, to - from);
+                const waitMs = Math.max(0, to - queuedAt);
                 if (waitMs === 0) {
                     splits.set(row.id, {
                         laneBoundMs: 0,
                         otherMs: 0,
                         permitBoundMs: 0,
+                        prerequisiteBoundMs: 0,
                         waitMs
                     });
                     continue;
                 }
+                const from = Math.min(to, Math.max(queuedAt, row.prerequisitesDoneAtMs ?? queuedAt));
+                const prerequisiteBoundMs = from - queuedAt;
                 const lane = laneUnions.get(row.laneKey) ?? [];
                 const laneBoundMs = overlapMs(from, to, lane);
                 let permitBoundMs = 0;
-                for (const interval of saturated){
+                for(let index = firstEndingAfter(saturated, from); index < saturated.length; index += 1){
+                    const interval = saturated[index];
+                    if (interval === undefined || interval.from >= to) {
+                        break;
+                    }
                     const pieceFrom = Math.max(from, interval.from);
                     const pieceTo = Math.min(to, interval.to);
-                    if (pieceTo <= pieceFrom) {
-                        continue;
-                    }
                     permitBoundMs += pieceTo - pieceFrom - overlapMs(pieceFrom, pieceTo, lane);
                 }
                 splits.set(row.id, {
                     laneBoundMs,
-                    otherMs: Math.max(0, waitMs - laneBoundMs - permitBoundMs),
+                    otherMs: Math.max(0, waitMs - prerequisiteBoundMs - laneBoundMs - permitBoundMs),
                     permitBoundMs,
+                    prerequisiteBoundMs,
                     waitMs
                 });
             }
@@ -12480,11 +12489,13 @@ var __webpack_modules__ = {
         const sortedPercentile = (sorted, percentile)=>sorted.length === 0 ? null : sorted[Math.floor((sorted.length - 1) * percentile)] ?? null;
         const sumWaitSplits = (splits, permits)=>{
             let count = 0;
+            let prerequisiteBoundMs = 0;
             let laneBoundMs = 0;
             let permitBoundMs = 0;
             let otherMs = 0;
             for (const split of splits){
                 count += 1;
+                prerequisiteBoundMs += split.prerequisiteBoundMs;
                 laneBoundMs += split.laneBoundMs;
                 permitBoundMs += split.permitBoundMs;
                 otherMs += split.otherMs;
@@ -12494,7 +12505,8 @@ var __webpack_modules__ = {
                 laneBoundMs,
                 otherMs,
                 permitBoundMs,
-                permits
+                permits,
+                prerequisiteBoundMs
             };
         };
         const phaseSample = (row)=>{
@@ -17502,6 +17514,9 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
        started_at_ms,
        build_finished_at_ms,
        finished_at_ms,
+       (SELECT MAX(p.finished_at_ms)
+          FROM json_each(requests.after_json) j
+          JOIN requests p ON p.id = CAST(substr(j.value, 4) AS INTEGER)) AS prerequisites_done_at_ms,
        run_ms,
        wait_ms,
        COALESCE(json_extract(intent_json, '$.subcommand'), 'unknown') AS subcommand,
@@ -17658,7 +17673,8 @@ CREATE INDEX IF NOT EXISTS transitions_request_id_idx ON transitions (request_id
                     queuedAtMs: toNullableNumber(row.queued_at_ms),
                     startedAtMs: toNullableNumber(row.started_at_ms),
                     buildFinishedAtMs: toNullableNumber(row.build_finished_at_ms),
-                    finishedAtMs: toNullableNumber(row.finished_at_ms)
+                    finishedAtMs: toNullableNumber(row.finished_at_ms),
+                    prerequisitesDoneAtMs: toNullableNumber(row.prerequisites_done_at_ms)
                 });
             const classifyScannedWaits = (scanned, nowMs)=>{
                 const running = selectRunningLeaders.all().map(toWaitSplitRow);

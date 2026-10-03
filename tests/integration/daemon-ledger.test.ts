@@ -704,7 +704,7 @@ describe('metricsWindow', () => {
         waitTotalMs: 80,
         // Nothing else ran while these waited and the ledger was opened
         // without a permit count, so the whole wait is "other".
-        waitSplit: { count: 1, laneBoundMs: 0, permitBoundMs: 0, otherMs: 80, permits: null },
+        waitSplit: { count: 1, prerequisiteBoundMs: 0, laneBoundMs: 0, permitBoundMs: 0, otherMs: 80, permits: null },
         handBack: { leaders: 0, laneReleasedMs: 0 },
       });
 
@@ -727,7 +727,7 @@ describe('metricsWindow', () => {
         ],
         runTotalMs: 1_100,
         waitTotalMs: 180,
-        waitSplit: { count: 3, laneBoundMs: 0, permitBoundMs: 0, otherMs: 180, permits: null },
+        waitSplit: { count: 3, prerequisiteBoundMs: 0, laneBoundMs: 0, permitBoundMs: 0, otherMs: 180, permits: null },
         handBack: { leaders: 0, laneReleasedMs: 0 },
       });
     }));
@@ -768,6 +768,7 @@ describe('metricsWindow', () => {
       expect(report.waitTotalMs).toBe(300 + 500 + 100);
       expect(report.waitSplit).toEqual({
         count: 4,
+        prerequisiteBoundMs: 0,
         laneBoundMs: 300,
         permitBoundMs: 500,
         otherMs: 100,
@@ -796,6 +797,33 @@ describe('metricsWindow', () => {
       const windows = yield* ledger.metricsWindows(2_500);
       expect(windows.hour.waitSplit).toEqual(report.waitSplit);
       expect(windows.all.handBack).toEqual(report.handBack);
+    }));
+
+  it.effect('charges the wait behind an unfinished --after prerequisite to it', () =>
+    Effect.gen(function* () {
+      const ledger = yield* scopedLedger;
+      // A: lane 1, runs 1_000–1_700.
+      const a = yield* ledger.createRequest(makeInput({ createdAtMs: 1_000, laneKey: '/repo::/t1' }));
+      yield* ledger.markQueued(a.id, 1_000);
+      yield* ledger.markRunning(a.id, 1_000);
+      // B: lane 2, submitted --after A at 1_200; starts 100 ms after A finishes.
+      const b = yield* ledger.createRequest(
+        makeInput({ createdAtMs: 1_200, laneKey: '/repo::/t2', after: [a.ticket] }),
+      );
+      yield* ledger.markQueued(b.id, 1_200);
+      yield* ledger.markFinished(a.id, { atMs: 1_700, status: 'done' });
+      yield* ledger.markRunning(b.id, 1_800);
+      yield* ledger.markFinished(b.id, { atMs: 2_000, status: 'done' });
+
+      const report = yield* ledger.metricsWindow(null);
+      expect(report.waitSplit).toEqual({
+        count: 2,
+        prerequisiteBoundMs: 500,
+        laneBoundMs: 0,
+        permitBoundMs: 0,
+        otherMs: 100,
+        permits: null,
+      });
     }));
 });
 

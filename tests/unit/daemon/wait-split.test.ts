@@ -18,6 +18,7 @@ const row = (
     readonly started: number | null;
     readonly buildFinished?: number | null;
     readonly finished: number | null;
+    readonly prerequisitesDone?: number;
   },
 ): WaitSplitRow => ({
   id,
@@ -26,6 +27,7 @@ const row = (
   startedAtMs: stamps.started,
   buildFinishedAtMs: stamps.buildFinished ?? null,
   finishedAtMs: stamps.finished,
+  prerequisitesDoneAtMs: stamps.prerequisitesDone ?? null,
 });
 
 const nowMs = 100_000;
@@ -40,8 +42,8 @@ describe('classifyWaits', () => {
       ],
       { nowMs, permits: 8 },
     );
-    expect(splits.get(2)).toEqual({ laneBoundMs: 300, otherMs: 0, permitBoundMs: 0, waitMs: 300 });
-    expect(splits.get(1)).toEqual({ laneBoundMs: 0, otherMs: 0, permitBoundMs: 0, waitMs: 0 });
+    expect(splits.get(2)).toEqual({ prerequisiteBoundMs: 0, laneBoundMs: 300, otherMs: 0, permitBoundMs: 0, waitMs: 300 });
+    expect(splits.get(1)).toEqual({ prerequisiteBoundMs: 0, laneBoundMs: 0, otherMs: 0, permitBoundMs: 0, waitMs: 0 });
   });
 
   it('treats a head without a hand-back stamp as compiling until it finishes', () => {
@@ -52,7 +54,7 @@ describe('classifyWaits', () => {
       ],
       { nowMs, permits: 8 },
     );
-    expect(splits.get(2)).toEqual({ laneBoundMs: 500, otherMs: 0, permitBoundMs: 0, waitMs: 500 });
+    expect(splits.get(2)).toEqual({ prerequisiteBoundMs: 0, laneBoundMs: 500, otherMs: 0, permitBoundMs: 0, waitMs: 500 });
   });
 
   it('charges waits in an idle lane to permits while every permit is held', () => {
@@ -65,7 +67,7 @@ describe('classifyWaits', () => {
       ],
       { nowMs, permits: 2 },
     );
-    expect(splits.get(3)).toEqual({ laneBoundMs: 0, otherMs: 0, permitBoundMs: 900, waitMs: 900 });
+    expect(splits.get(3)).toEqual({ prerequisiteBoundMs: 0, laneBoundMs: 0, otherMs: 0, permitBoundMs: 900, waitMs: 900 });
   });
 
   it('leaves admission holds and scheduling latency as other', () => {
@@ -76,7 +78,7 @@ describe('classifyWaits', () => {
       ],
       { nowMs, permits: 4 },
     );
-    expect(splits.get(2)).toEqual({ laneBoundMs: 0, otherMs: 300, permitBoundMs: 0, waitMs: 300 });
+    expect(splits.get(2)).toEqual({ prerequisiteBoundMs: 0, laneBoundMs: 0, otherMs: 300, permitBoundMs: 0, waitMs: 300 });
   });
 
   it('gives lane precedence over permits and splits a mixed wait exactly once', () => {
@@ -92,6 +94,7 @@ describe('classifyWaits', () => {
       { nowMs, permits: 2 },
     );
     expect(splits.get(3)).toEqual({
+      prerequisiteBoundMs: 0,
       laneBoundMs: 200,
       otherMs: 200,
       permitBoundMs: 200,
@@ -108,6 +111,7 @@ describe('classifyWaits', () => {
     const withPermits = classifyWaits(rows, { nowMs: 1_000, permits: 1 });
     expect(withPermits.has(2)).toBe(false);
     expect(withPermits.get(3)).toEqual({
+      prerequisiteBoundMs: 0,
       laneBoundMs: 0,
       otherMs: 0,
       permitBoundMs: 800,
@@ -115,6 +119,7 @@ describe('classifyWaits', () => {
     });
     const withoutPermits = classifyWaits(rows, { nowMs: 1_000, permits: null });
     expect(withoutPermits.get(3)).toEqual({
+      prerequisiteBoundMs: 0,
       laneBoundMs: 0,
       otherMs: 800,
       permitBoundMs: 0,
@@ -131,7 +136,28 @@ describe('classifyWaits', () => {
       ],
       { nowMs, permits: 2 },
     );
-    expect(splits.get(3)).toEqual({ laneBoundMs: 0, otherMs: 200, permitBoundMs: 0, waitMs: 200 });
+    expect(splits.get(3)).toEqual({ prerequisiteBoundMs: 0, laneBoundMs: 0, otherMs: 200, permitBoundMs: 0, waitMs: 200 });
+  });
+
+  it('charges the wait before an --after prerequisite finished to it, even while the lane was busy', () => {
+    const splits = classifyWaits(
+      [
+        // The prerequisite runs in another lane and finishes at 40_000.
+        row(1, 'lane-b', { started: 0, finished: 40_000 }),
+        // The same-lane head compiles 5_000–55_000.
+        row(2, 'lane-a', { started: 5_000, buildFinished: 55_000, finished: 60_000 }),
+        // Waits 10_000–60_000: prerequisite 10_000–40_000, lane 40_000–55_000, other 55_000–60_000.
+        row(3, 'lane-a', { queued: 10_000, prerequisitesDone: 40_000, started: 60_000, finished: 70_000 }),
+      ],
+      { nowMs, permits: 8 },
+    );
+    expect(splits.get(3)).toEqual({
+      laneBoundMs: 15_000,
+      otherMs: 5_000,
+      permitBoundMs: 0,
+      prerequisiteBoundMs: 30_000,
+      waitMs: 50_000,
+    });
   });
 
   it('merges overlapping lane holds so overlap is never counted twice', () => {
@@ -143,7 +169,7 @@ describe('classifyWaits', () => {
       ],
       { nowMs, permits: null },
     );
-    expect(splits.get(3)).toEqual({ laneBoundMs: 400, otherMs: 100, permitBoundMs: 0, waitMs: 500 });
+    expect(splits.get(3)).toEqual({ prerequisiteBoundMs: 0, laneBoundMs: 400, otherMs: 100, permitBoundMs: 0, waitMs: 500 });
   });
 });
 
@@ -151,14 +177,22 @@ describe('sumWaitSplits', () => {
   it('totals the split across leaders and records the permit count it assumed', () => {
     const total = sumWaitSplits(
       [
-        { laneBoundMs: 300, otherMs: 0, permitBoundMs: 0, waitMs: 300 },
-        { laneBoundMs: 0, otherMs: 50, permitBoundMs: 200, waitMs: 250 },
+        { prerequisiteBoundMs: 0, laneBoundMs: 300, otherMs: 0, permitBoundMs: 0, waitMs: 300 },
+        { prerequisiteBoundMs: 400, laneBoundMs: 0, otherMs: 50, permitBoundMs: 200, waitMs: 650 },
       ],
       5,
     );
-    expect(total).toEqual({ count: 2, laneBoundMs: 300, otherMs: 50, permitBoundMs: 200, permits: 5 });
+    expect(total).toEqual({
+      count: 2,
+      prerequisiteBoundMs: 400,
+      laneBoundMs: 300,
+      otherMs: 50,
+      permitBoundMs: 200,
+      permits: 5,
+    });
     expect(sumWaitSplits([], null)).toEqual({
       count: 0,
+      prerequisiteBoundMs: 0,
       laneBoundMs: 0,
       otherMs: 0,
       permitBoundMs: 0,

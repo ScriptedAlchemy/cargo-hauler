@@ -202,7 +202,7 @@ export const waitMetricsView = (waits: readonly number[]): WaitMetricsView => {
 // ---------------------------------------------------------------------------
 // Queue wait vs run, and where the wait went (#92)
 
-export type WaitSplitPartKind = 'lane' | 'permit' | 'other';
+export type WaitSplitPartKind = 'prerequisite' | 'lane' | 'permit' | 'other';
 
 export interface WaitSplitPart {
   readonly kind: WaitSplitPartKind;
@@ -229,10 +229,11 @@ export type WaitVsRunView =
     };
 
 /**
- * The per-window wait-vs-run tile. Lane-bound wait is time a same-lane leader
- * was still compiling; permit-bound is time every admission permit was held
- * (with no same-lane compile to blame); the rest is admission holds,
- * `--after` prerequisites and scheduling latency. Without a window (the
+ * The per-window wait-vs-run tile. Prerequisite-bound wait is time an
+ * `--after` prerequisite had not finished; lane-bound is time a same-lane
+ * leader was still compiling; permit-bound is time every admission permit was
+ * held (with no same-lane compile to blame); the rest is admission holds and
+ * scheduling latency. Without a window (the
  * status carried no metrics: daemon stopped or unresponsive) the tile says
  * so rather than showing zero wait.
  */
@@ -241,7 +242,8 @@ export const waitVsRunView = (window: DashboardMetricsWindow | null): WaitVsRunV
     return { kind: 'unavailable', reason: 'no-window' };
   }
   const split = window.waitSplit;
-  const classifiedMs = split.laneBoundMs + split.permitBoundMs + split.otherMs;
+  const classifiedMs =
+    split.prerequisiteBoundMs + split.laneBoundMs + split.permitBoundMs + split.otherMs;
   const share = (ms: number): number => (classifiedMs <= 0 ? 0 : (ms / classifiedMs) * 100);
   const permitTitle =
     split.permits === null
@@ -255,6 +257,13 @@ export const waitVsRunView = (window: DashboardMetricsWindow | null): WaitVsRunV
     waitToRunPercent:
       window.runTotalMs <= 0 ? null : (window.waitTotalMs / window.runTotalMs) * 100,
     parts: [
+      {
+        kind: 'prerequisite',
+        label: 'prerequisite-bound',
+        ms: split.prerequisiteBoundMs,
+        percent: share(split.prerequisiteBoundMs),
+        title: 'waited for --after prerequisites to finish',
+      },
       {
         kind: 'lane',
         label: 'lane-bound',
@@ -275,8 +284,7 @@ export const waitVsRunView = (window: DashboardMetricsWindow | null): WaitVsRunV
         label: 'other',
         ms: split.otherMs,
         percent: share(split.otherMs),
-        title:
-          'admission holds (memory, load, heavy cap), --after prerequisites and scheduling latency',
+        title: 'admission holds (memory, load, heavy cap) and scheduling latency',
       },
     ],
     permitsNote:
