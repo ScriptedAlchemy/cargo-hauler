@@ -7,7 +7,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { fileURLToPath } from 'node:url';
 
 const pluginName = "cargo-hauler";
-const pluginVersion = "0.13.7";
+const pluginVersion = "0.14.0";
 const receiptFile = ".agent-bundle-install.json";
 const receiptFormat = "agent-bundle-install-receipt/2";
 const preservedEntries = ["state"];
