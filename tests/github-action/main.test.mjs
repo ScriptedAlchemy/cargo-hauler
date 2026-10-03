@@ -6,6 +6,7 @@ import { mkdtemp, mkdir, symlink, rm, realpath, readFile, writeFile } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { main, assertTrustedContext, positiveInteger, within, imageLoader } from '../../src/internal/github-action/main.mjs';
+import { graphqlFetch } from './graphql-fixture.mjs';
 
 test('only the exact public default-branch checkout may hold reporting credentials', () => {
   const sha = 'a'.repeat(40);
@@ -70,7 +71,7 @@ test('plan entry emits empty lanes without worker state, image files or sandbox 
     const eventPath = join(root, 'event.json'), outputPath = join(root, 'outputs');
     await writeFile(eventPath, JSON.stringify({ repository: { default_branch: 'master', private: false, full_name: 'owner/repo' } }));
     const recipe = { version: 1, trustedAuthors: ['owner'], sharedBuilds: false, requiredChecks: [], image: { dockerfile: 'absent/Dockerfile', context: '.' }, prepare: [], compatibilityPaths: [], lanes: [{ id: 'tests', checkName: 'Hauler tests', tasks: [{ id: 'test', run: 'false', timeoutSeconds: 1 }] }] };
-    globalThis.fetch = async (url, options) => {
+    globalThis.fetch = graphqlFetch(async (url, options) => {
       assert.equal(options.method, 'GET');
       const path = new URL(url).pathname.replace('/repos/owner/repo', '');
       const data = path === '' ? { default_branch: 'master', private: false, full_name: 'owner/repo' }
@@ -80,7 +81,7 @@ test('plan entry emits empty lanes without worker state, image files or sandbox 
         : path === '/pulls' ? [] : null;
       assert.notEqual(data, null);
       return { ok: true, json: async () => data };
-    };
+    });
     const result = await main({ GITHUB_WORKSPACE: root, GITHUB_EVENT_PATH: eventPath, GITHUB_EVENT_NAME: 'schedule', GITHUB_REF: 'refs/heads/master', GITHUB_SHA: head, GITHUB_SERVER_URL: 'https://github.com', GITHUB_REPOSITORY: 'owner/repo', GITHUB_OUTPUT: outputPath, RUNNER_TEMP: join(root, 'absent-runtime'), CARGO_HAULER_CI_MODE: 'plan', CARGO_HAULER_CI_TOKEN: 'private', CARGO_HAULER_ACTION_REF: 'a'.repeat(40), CARGO_HAULER_CI_MINUTES: '1', CARGO_HAULER_CI_SNAPSHOTS: '1' });
     assert.deepEqual(result, { lanes: [], count: 0 });
     assert.equal(await readFile(outputPath, 'utf8'), 'lanes=[]\ncount=0\n');

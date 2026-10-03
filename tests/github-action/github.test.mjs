@@ -49,3 +49,28 @@ test('a repeated GET revalidates with its ETag and reuses the cached body on 304
   assert.deepEqual(await client.api('/pulls/1'), { number: 1, head: { sha: 'a' } });
   assert.deepEqual(sent, [undefined, 'W/"one"']);
 });
+
+test('graphql posts one query, logs a requested cost and throws on an errors array', async () => {
+  const sent = [], logged = [], log = console.error;
+  const replies = [{ data: { rateLimit: { cost: 3, remaining: 997 }, viewer: { login: 'bot' } } }, { data: null, errors: [{ message: 'Field missing' }, { message: 'Bad id' }] }];
+  const client = githubClient({ repository: 'owner/repo', token: 'private', fetchImpl: async (url, init) => { sent.push([url, init.method, JSON.parse(init.body)]); return ok(replies[sent.length - 1]); } });
+  console.error = line => logged.push(line);
+  try {
+    assert.deepEqual(await client.graphql('query($n:Int){viewer{login}}', { n: 1 }), replies[0].data);
+    await assert.rejects(client.graphql('query{bad}', {}), /GitHub GraphQL failed: Field missing; Bad id/);
+  } finally { console.error = log; }
+  assert.deepEqual(sent[0], ['https://api.github.com/graphql', 'POST', { query: 'query($n:Int){viewer{login}}', variables: { n: 1 } }]);
+  assert.deepEqual(logged, ['GitHub GraphQL cost 3; 997 points remaining']);
+});
+
+test('graphql retries a 5xx and waits out a RATE_LIMITED 200', async () => {
+  const replies = [{ ok: false, status: 502, headers: new Map() }, ok({ errors: [{ type: 'RATE_LIMITED', message: 'API rate limit exceeded' }] }, new Map([['retry-after', '0']])), ok({ data: { viewer: { login: 'bot' } } })];
+  let calls = 0;
+  const log = console.error;
+  console.error = () => {};
+  try {
+    const client = githubClient({ repository: 'owner/repo', token: 'private', fetchImpl: async () => replies[calls++] });
+    assert.deepEqual(await client.graphql('query{viewer{login}}', {}), { viewer: { login: 'bot' } });
+  } finally { console.error = log; }
+  assert.equal(calls, 3);
+});

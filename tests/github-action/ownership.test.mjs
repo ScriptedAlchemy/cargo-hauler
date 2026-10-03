@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { plan } from '../../src/internal/github-action/admission.mjs';
 import { checkOwner, ownerText, workerIdentity } from '../../src/internal/github-action/ownership.mjs';
 import { githubClient } from '../../src/internal/github-action/github.mjs';
+import { graphqlFetch } from './graphql-fixture.mjs';
 const sha = n => n.toString(16).padStart(40, '0'), policy = 'a'.repeat(64);
 const recipe = { version: 1, trustedAuthors: ['owner'], requiredChecks: [], image: { dockerfile: 'Dockerfile', context: '.' }, prepare: [], compatibilityPaths: [], lanes: [{ id: 'linux', checkName: 'Hauler Linux', tasks: [{ id: 'test', run: 'true', timeoutSeconds: 1 }] }] };
 function fixture() {
@@ -21,13 +22,14 @@ function fixture() {
     else if (path.startsWith('/git/commits/')) {
       const pr = prs.find(p => p.merge_commit_sha === path.split('/').at(-1));
       data = pr ? { parents: [{ sha: pr.base.sha }, { sha: pr.head.sha }], tree: { sha: sha(40) } } : { committer: { date: '2026-09-28T00:00:00Z' } };
-    } else if (path === '/actions/runs/20') data = state.run;
+    } else if (path.startsWith('/actions/workflows/')) data = { workflow_runs: [] };
+    else if (path === '/actions/runs/20') data = state.run;
     else if (path === '/actions/runs/20/attempts/2/jobs') data = { jobs: state.jobs };
     else throw new Error(`Unexpected ${path}`);
     return { ok: true, json: async () => structuredClone(data) };
   }
   state.checks.set(1, [check(1)]);
-  const options = { recipe, repository: 'owner/repo', token: 'private', policy, defaultBranch: 'master', manualAdmission: true, fetchImpl };
+  const options = { recipe, repository: 'owner/repo', token: 'private', policy, defaultBranch: 'master', manualAdmission: true, fetchImpl: graphqlFetch(fetchImpl) };
   return { owner, state, check, options };
 }
 test('live ownership and its remaining capacity suppress successor allocation', async () => {
