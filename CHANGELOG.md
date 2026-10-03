@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.7
+
+### Patch Changes
+
+- ebcd405: Name up to 10 failing JUnit test cases in the completed Hauler check-run summary and evidence JSON.
+
 ## 0.13.6
 
 ### Patch Changes
