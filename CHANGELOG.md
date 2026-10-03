@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.3
+
+### Patch Changes
+
+- 9087649: Spend less of the GitHub API budget in the CI action. Repeated GETs revalidate with their ETag so unchanged answers come back as free 304s, rate-limited requests wait for the reset or retry-after and retry instead of failing the job, and admission skips the per-PR read for pull requests whose list row shows no Hauler work.
+- 1f9e1b8: The Hauler CI GitHub Action now prints the failing error, its stack, and the GitHub rate-limit headers of a rejected request when the controller fails, instead of only the generic failure line.
+
 ## 0.13.2
 
 ### Patch Changes
