@@ -26,7 +26,11 @@ export function verifyOwners(client, { repository, workflow = 'hauler-ci.yml', d
     let run;
     try { run = await runs.get(owner.runId); }
     catch (error) { if (error.message === 'GitHub GET returned 404') return false; throw error; }
-    if (String(run.id) !== owner.runId || run.run_attempt !== owner.attempt || !['queued', 'in_progress'].includes(run.status) ||
+    // GitHub reports the whole matrix as pending while a sibling job waits
+    // on concurrency, even when this exact pool job is already running.
+    // Its own live status below still proves ownership; an aggregate status
+    // alone never reserves capacity or authorizes a worker.
+    if (String(run.id) !== owner.runId || run.run_attempt !== owner.attempt || !['queued', 'pending', 'in_progress'].includes(run.status) ||
         !['pull_request_target', 'workflow_run', 'schedule', 'workflow_dispatch', 'push'].includes(run.event) ||
         run.path?.split('@')[0] !== `.github/workflows/${workflow}` || run.head_repository?.full_name !== repository ||
         !defaultBranch || run.head_branch !== defaultBranch) return false;
