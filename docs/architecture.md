@@ -62,7 +62,9 @@ twice.
   (`daemon/broker/job-state.ts`).
 - **leader.** The job that spawns cargo.
 - **rider.** A request attached to an in-flight leader instead of running
-  (`attachments.ts`). `coverage.ts` decides *how* it may attach, by identity
+  (`attachments.ts`). A fresh `cargo/source-snapshot.ts` comparison also
+  rejects running reuse after workspace source edits; unknown source trees
+  refuse reuse. `coverage.ts` decides *how* it may attach, by identity
   or by coverage.
 - **lane.** One FIFO per workspace root, resolved target directory, and cargo
   profile output directory (`debug`, `release`, `perf`), keyed by

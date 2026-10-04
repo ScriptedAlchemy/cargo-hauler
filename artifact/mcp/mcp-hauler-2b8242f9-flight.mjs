@@ -14187,7 +14187,8 @@ var __webpack_modules__ = {
             'packages',
             'targets',
             'channels',
-            'leader-build-finished'
+            'leader-build-finished',
+            'source'
         ];
         const statusOutputPreviewBytes = 512;
         const statusOutputPreviewLines = 8;

@@ -82,7 +82,9 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
       signal?.addEventListener('abort', abort, { once: true });
       if (signal?.aborted) controller.abort();
       const timer = setTimeout(() => controller.abort(), Math.max(1, deadline - Date.now()));
-      const record = { pr: s.pr, head: s.head, base: s.base, merge: s.merge, imageReference: image, conclusion: 'cancelled', readyAt: new Date(s.readyAt).toISOString(), admittedAt: new Date(started).toISOString(), queueSeconds: Math.max(0, (started - s.readyAt) / 1000), durationSeconds: 0, compatibleSandboxReuse: false, stages: [], tasks: [] };
+      const record = { pr: s.pr, head: s.head, base: s.base, merge: s.merge, imageReference: image, conclusion: 'in_progress', readyAt: new Date(s.readyAt).toISOString(), admittedAt: new Date(started).toISOString(), queueSeconds: Math.max(0, (started - s.readyAt) / 1000), durationSeconds: 0, compatibleSandboxReuse: false, stages: [], tasks: [] };
+      let stageStart = monotonicStart;
+      let progressWrite = Promise.resolve();
       const ownership = worker && { ...worker, lane: lane.id, ordinal: summary.snapshots.length + 1, remaining: onlyPullRequests ? 0 : maxSnapshots - summary.snapshots.length - 1, finished: false, deadline };
       const outputText = () => [ownership && ownerText(ownership), `hauler-evidence-v1:${JSON.stringify(snapshotEvidence(record))}`].filter(Boolean).join('\n');
       let check, reports, failed = false, stale = false, polling = false, yielded = false;
@@ -108,27 +110,42 @@ export async function drain({ recipe: input, lane: laneId, repository, token, ro
       const poll = setInterval(async () => {
         if (polling || controller.signal.aborted) return;
         polling = true;
-        try { if (!await currentHead(s)) { stale = true; controller.abort(); } }
+        try {
+          if (!await currentHead(s)) { stale = true; controller.abort(); }
+          else if (record.stage && !ownership?.finished) await progress();
+        }
         catch { record.infrastructureError = true; controller.abort(); }
         finally { polling = false; }
       }, pollMilliseconds);
-      async function progress(stage) {
+      async function progress() {
         if (!await lease()) throw new Error('Another worker holds this snapshot');
-        record.stage = stage;
-        await api(`/check-runs/${check.id}`, 'PATCH', { output: { title: `Hauler ${lane.id}: ${stage}`, text: outputText(), summary: `${record.tasks.length}/${lane.tasks.length} tasks finished. Stage ${stage}. Failed tasks: ${record.tasks.filter(t => t.conclusion === 'failure').map(t => `${t.id} (exit ${t.exitCode})`).join(', ') || 'none'}. Pinned base ${s.base}, merge ${s.merge}.` } });
+        if (record.completedAt) return;
+        const stage = record.stage;
+        record.durationSeconds = (performance.now() - monotonicStart) / 1000;
+        record.stageElapsedSeconds = (performance.now() - stageStart) / 1000;
+        const output = { title: `Hauler ${lane.id}: ${stage}`, text: outputText(), summary: `${record.tasks.length}/${lane.tasks.length} tasks finished. Stage ${stage}. Failed tasks: ${record.tasks.filter(t => t.conclusion === 'failure').map(t => `${t.id} (exit ${t.exitCode})`).join(', ') || 'none'}. Pinned base ${s.base}, merge ${s.merge}.` };
+        progressWrite = progressWrite.catch(() => {}).then(() => api(`/check-runs/${check.id}`, 'PATCH', { output }));
+        await progressWrite;
       }
       async function stage(name, operation) {
-        await progress(name);
+        stageStart = performance.now();
+        record.stage = name;
+        record.stageStartedAt = new Date().toISOString();
+        await progress();
         const start = performance.now();
         let conclusion = 'failure';
         try { const value = await operation(); conclusion = controller.signal.aborted ? 'cancelled' : 'success'; return value; }
-        finally { record.stages.push({ id: name, conclusion: controller.signal.aborted ? 'cancelled' : conclusion, durationSeconds: (performance.now() - start) / 1000 }); }
+        finally { record.stageElapsedSeconds = (performance.now() - stageStart) / 1000; record.stages.push({ id: name, conclusion: controller.signal.aborted ? 'cancelled' : conclusion, durationSeconds: (performance.now() - start) / 1000 }); }
       }
       async function report(conclusion, finished = false) {
         if (!await lease()) return;
         if (!await currentHead(s)) { stale = true; controller.abort(); conclusion = 'cancelled'; }
         record.conclusion = conclusion;
         if (finished) { record.completedAt = new Date().toISOString(); record.durationSeconds = (performance.now() - monotonicStart) / 1000; if (ownership) ownership.finished = true; }
+        // An in-flight heartbeat must finish before the terminal output,
+        // and completedAt prevents a delayed poll from posting afterwards.
+        await progressWrite.catch(() => {});
+        if (yielded) return;
         await api(`/check-runs/${check.id}`, 'PATCH', { external_id: record.infrastructureError ? `${provenanceIdentity}:infrastructure` : provenanceIdentity, status: 'completed', conclusion, completed_at: new Date().toISOString(), output: { title: `Hauler ${lane.id}: ${conclusion}`, text: outputText(), summary: `${record.tasks.length}/${lane.tasks.length} tasks finished. Stage ${record.stage}. Tested head ${s.head} against pinned base ${s.base}, merge ${s.merge}. Later base changes are not revalidated. Failed tasks: ${record.tasks.filter(t => t.conclusion === 'failure').map(t => `${t.id} (exit ${t.exitCode})`).join(', ') || 'none'}.${failingTestsSummary(record.junit)}` } });
       }
       try {

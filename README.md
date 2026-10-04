@@ -837,6 +837,18 @@ files keep the permissions the filesystem gives them.
   run more than one participant asked for (another package, another name
   filter). Only participants that asked for everything the composite ran
   inherit its failure, and the rest rerun alone.
+- A running leader accepts identity or coverage riders only when a fresh
+  workspace source snapshot matches the one captured before it started.
+  Edits, additions, deletions and renames force a fresh queued run, even
+  with identical argv. Git workspaces include tracked and nonignored
+  untracked files; plain workspaces scan files directly. Cargo output
+  directories and installed JavaScript dependencies are excluded. Symlinked,
+  unreadable or oversized source trees refuse running reuse. The snapshot
+  uses file identity, size, mtime and ctime, so restoring mtime after an edit
+  does not restore reuse authority. Queued requests can still share the
+  sources their eventual process will compile. This guards workspace source
+  changes; ignored runtime data and external inputs still belong to the
+  caller's execution contract.
 - The `cargo clean` guard probes the daemon for 250 ms. Active work denies
   the clean, and an idle daemon brokers it. A daemon that accepts but does
   not answer in time is busy, so the hook brokers the clean. A whole-target

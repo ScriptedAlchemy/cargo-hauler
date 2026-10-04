@@ -61,6 +61,7 @@ export const attachRejectionGates = [
   'targets',
   'channels',
   'leader-build-finished',
+  'source',
 ] as const;
 export type AttachRejectionGate = (typeof attachRejectionGates)[number];
 
