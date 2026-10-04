@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.1
+
+### Patch Changes
+
+- c47c68e: Refuse identity and coverage reuse of running Cargo work after workspace source changes, including same-size edits with restored mtime. Unknown source snapshots fail closed while unchanged sources and queued work retain sharing. Report active GitHub worker stages as in progress with refreshed elapsed time instead of cancelled with zero duration.
+- 5637be2: Verify an active exact pool job when GitHub reports its aggregate matrix workflow as pending on a sibling lane's concurrency. Preserve repository, default branch, workflow, attempt, unique job identity and live job checks, so valid workers can claim admitted work without weakening provenance validation.
+
 ## 0.14.0
 
 ### Minor Changes
