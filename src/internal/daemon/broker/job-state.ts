@@ -201,6 +201,8 @@ export interface Job {
   startedAtMs: number | null;
   /** When cargo reported the build finished (execution-phase subcommands only); null otherwise. */
   buildFinishedAtMs: number | null;
+  /** Fresh source-tree authority captured before spawning; null refuses running reuse. */
+  sourceSnapshot: string | null;
   /**
    * Completed once the lane may take its next job: at settlement, or earlier
    * when the build finished and the daemon overlaps the execution phase.

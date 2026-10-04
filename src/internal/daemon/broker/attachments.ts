@@ -4,6 +4,7 @@ import * as Metric from 'effect/Metric';
 import { batchFailureOwned, compositeSelection } from '../scheduling/batch.js';
 import { attachModeMetric, attachRejectionMetric, jobOutcomeMetric } from '../reporting/broker-metrics.js';
 import { hasLibKind, parseCargoJsonLine } from '../../cargo/execution/cargo-json.js';
+import { sourceSnapshot } from '../../cargo/source-snapshot.js';
 import { attachDecisionFor, attachRejectionRank, isBuildOnlyIntent } from './coverage.js';
 import type { AttachDecision } from './coverage.js';
 import {
@@ -469,6 +470,7 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
         };
         const rejections: AttachRejection[] = [];
         let coverageCandidate: Job | null = null;
+        let currentSource: string | null | undefined;
         for (const entry of directory.entries()) {
           if (entry.kind !== 'leader') {
             continue;
@@ -477,7 +479,14 @@ export const makeAttachmentRuntime = (deps: AttachmentRuntimeDeps): AttachmentRu
           if (job.laneKey !== laneKey || !job.attachGate.open) {
             continue;
           }
-          const decision = decideAttach(job, attachment);
+          let decision = decideAttach(job, attachment);
+          if (decision._tag === 'attach' && job.startedAtMs !== null) {
+            if (currentSource === undefined) currentSource = sourceSnapshot(attachment.intent.workspaceRoot, attachment.intent.targetDir);
+            if (currentSource === null || job.sourceSnapshot === null || currentSource !== job.sourceSnapshot) {
+              decision = { _tag: 'rejected', gate: 'source',
+                detail: 'workspace sources changed since the leader started, or source authority is unavailable' };
+            }
+          }
           switch (decision._tag) {
             case 'attach':
               if (decision.mode === 'identity') {

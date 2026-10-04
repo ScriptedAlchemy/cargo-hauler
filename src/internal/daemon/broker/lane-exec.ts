@@ -39,6 +39,7 @@ import {
 } from '../scheduling/cost.js';
 import { isSchedulable } from './dependencies.js';
 import { executeCargo, TailBuffer } from '../../cargo/execution/executor.js';
+import { sourceSnapshot } from '../../cargo/source-snapshot.js';
 import type { ExecutionResult } from '../../cargo/execution/executor.js';
 import { lockedProfileDir } from '../../cargo/intent.js';
 import type { BuildLock, NormalizedCargoIntent } from '../../cargo/intent.js';
@@ -365,6 +366,7 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
           estimateSource: estimate.source,
           startedAtMs: null,
           buildFinishedAtMs: null,
+          sourceSnapshot: null,
           laneReleased,
           lastOutputAtMs: null,
           admissionHold: null,
@@ -842,6 +844,9 @@ export const makeLaneRuntime = (deps: LaneRuntimeDeps): Effect.Effect<LaneRuntim
           return;
         }
         yield* Effect.logDebug('starting admitted job');
+        yield* Effect.sync(() => {
+          job.sourceSnapshot = sourceSnapshot(job.intent.workspaceRoot, job.intent.targetDir);
+        });
         const runStartedAtMs = Date.now();
         // The log opens in the same frame that publishes the start, so a
         // follower registering against a started leader always finds the

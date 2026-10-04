@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'effect-rstest';
 import * as Effect from 'effect/Effect';
 import * as Fiber from 'effect/Fiber';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import type {
   AckMessage,
@@ -15,6 +17,7 @@ import {
   pollReport,
   scopedDaemon,
   scopedLedger,
+  scopedGate,
 } from '../support/harness.js';
 
 const findAck = (messages: readonly { type: string }[]): AckMessage => {
@@ -26,6 +29,48 @@ const findAck = (messages: readonly { type: string }[]): AckMessage => {
 };
 
 describe('identity coalescing', () => {
+  it.live('runs edited sources independently instead of replaying an old in-flight failure', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(5);
+      const gate = yield* scopedGate(fixture, 'source.gate');
+      yield* Effect.sync(() => {
+        mkdirSync(join(fixture.ws1, 'tests'));
+        writeFileSync(join(fixture.ws1, 'tests', 'acceptance.rs'), 'old assertion');
+      });
+      const leader = yield* Effect.forkChild(execRequest(fixture, {
+        cwd: fixture.ws1, exit: '7', extraEnv: { FAKE_RELEASE_FILE: gate.path }, timeoutMs: 12_000,
+      }));
+      yield* pollReport(fixture, report => report.active.some(row => row.status === 'running'));
+      yield* Effect.sync(() => writeFileSync(join(fixture.ws1, 'tests', 'acceptance.rs'), 'new assertion'));
+      const follower = yield* Effect.forkChild(execRequest(fixture, { cwd: fixture.ws1, timeoutMs: 12_000 }));
+      const queued = yield* pollReport(fixture, report => report.active.some(row => row.ticket === 'cc-2'));
+      expect(queued.active.find(row => row.ticket === 'cc-2')?.attachedTo).toBeNull();
+      yield* gate.open;
+      const messages = yield* Fiber.join(follower);
+      expect(findAck(messages).attachedTo).toBeUndefined();
+      expect(findExit(messages).exitCode).toBe(0);
+      expect(findExit(yield* Fiber.join(leader)).exitCode).toBe(7);
+    }));
+
+  it.live('rejects a coverage rider after a source edit', () =>
+    Effect.gen(function* () {
+      const fixture = yield* scopedDaemon(5);
+      const gate = yield* scopedGate(fixture, 'coverage-source.gate');
+      const leader = yield* Effect.forkChild(execRequest(fixture, {
+        cwd: fixture.ws1, argv: ['cargo', 'build', '-p', 'aa'],
+        extraEnv: { FAKE_RELEASE_FILE: gate.path }, timeoutMs: 12_000,
+      }));
+      yield* pollReport(fixture, report => report.active.some(row => row.status === 'running'));
+      yield* Effect.sync(() => writeFileSync(join(fixture.ws1, 'new-input.rs'), 'changed'));
+      const follower = yield* Effect.forkChild(execRequest(fixture, {
+        cwd: fixture.ws1, argv: ['cargo', 'check', '-p', 'aa'], timeoutMs: 12_000,
+      }));
+      const queued = yield* pollReport(fixture, report => report.active.some(row => row.ticket === 'cc-2'));
+      expect(queued.active.find(row => row.ticket === 'cc-2')?.attachedTo).toBeNull();
+      yield* gate.open;
+      expect(findAck(yield* Fiber.join(follower)).attachedTo).toBeUndefined();
+      yield* Fiber.join(leader);
+    }));
   it.live('attaches a request whose shell bookkeeping and agent session differ from the leader', () =>
     Effect.gen(function* () {
       const fixture = yield* scopedDaemon(5);

@@ -5,6 +5,7 @@ export function snapshotEvidence(record) {
   return { pr: record.pr, head: record.head, base: record.base, merge: record.merge, conclusion: record.conclusion,
     readyAt: record.readyAt, admittedAt: record.admittedAt, completedAt: record.completedAt,
     queueSeconds: record.queueSeconds, durationSeconds: record.durationSeconds,
+    stage: record.stage, stageStartedAt: record.stageStartedAt, stageElapsedSeconds: record.stageElapsedSeconds,
     compatibleSandboxReuse: record.compatibleSandboxReuse, compatibilityKey: record.compatibilityKey, imageReference: record.imageReference,
     stages: record.stages, tasks: record.tasks, ...(record.junit ? { junit: record.junit } : {}),
     ...(record.infrastructureError ? { infrastructureError: true } : {}) };

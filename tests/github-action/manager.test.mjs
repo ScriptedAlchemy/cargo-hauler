@@ -45,6 +45,51 @@ test('publishes first failure before running remaining task and preserves failur
   assert.deepEqual(f.events.slice(1, 5), [['run', 'first'], ['report', 'failure'], ['run', 'second'], ['report', 'failure']]);
   assert.equal(result.snapshots[0].tasks.length, 2);
 });
+test('active task evidence reports in-progress state and refreshes elapsed stage time', async () => {
+  const f = fixture(), evidence = [];
+  const fetchImpl = graphqlFetch(async (url, options) => {
+    if (options.body) {
+      const body = JSON.parse(options.body);
+      const line = body.output?.text?.split('\n').find(line => line.startsWith('hauler-evidence-v1:'));
+      if (line) evidence.push(JSON.parse(line.slice('hauler-evidence-v1:'.length)));
+    }
+    return f.rest(url, options);
+  });
+  f.options.sandboxFactory = async () => ({ async prepare() {}, async close() {}, async run() {
+    await new Promise(resolve => setTimeout(resolve, 35));
+    return { exitCode: 0 };
+  } });
+  await drain({ ...f.options, fetchImpl, maxSnapshots: 1, pollMilliseconds: 5 });
+  const active = evidence.filter(row => row.stage === 'task-first' && row.conclusion === 'in_progress');
+  assert.ok(active.length > 1);
+  assert.ok(active.at(-1).stageElapsedSeconds > active[0].stageElapsedSeconds);
+  assert.ok(active.at(-1).durationSeconds > active[0].durationSeconds);
+  assert.ok(active[0].stageStartedAt);
+  assert.equal(evidence.at(-1).conclusion, 'success');
+});
+test('terminal evidence follows any delayed heartbeat and survives a failed progress write', async () => {
+  for (const fail of [false, true]) {
+    const f = fixture();
+    let taskWrites = 0;
+    const fetchImpl = graphqlFetch(async (url, options) => {
+      const body = options.body && JSON.parse(options.body);
+      if (body?.output?.title === 'Hauler linux: task-first' && ++taskWrites === 2) {
+        await new Promise(resolve => setTimeout(resolve, 25));
+        if (fail) return { ok: false, status: 400, headers: new Headers(), text: async () => 'unavailable' };
+      }
+      return f.rest(url, options);
+    });
+    f.options.sandboxFactory = async () => ({ async prepare() {}, async close() {}, async run() {
+      await new Promise(resolve => setTimeout(resolve, 15));
+      return { exitCode: 0 };
+    } });
+    await drain({ ...f.options, fetchImpl, maxSnapshots: 1, pollMilliseconds: 5 });
+    const check = [...f.checks.values()][0];
+    assert.equal(check.status, 'completed');
+    assert.match(check.output.title, /^Hauler linux: (success|failure|cancelled)$/);
+    assert.ok(JSON.parse(check.output.text.split('hauler-evidence-v1:')[1]).completedAt);
+  }
+});
 test('cancels superseded snapshot, never posts success', async () => {
   const f = fixture({ change: true }), result = await drain({ ...f.options, maxSnapshots: 1 });
   assert.equal(result.snapshots[0].conclusion, 'cancelled');

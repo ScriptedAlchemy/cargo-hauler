@@ -73,7 +73,8 @@ var __webpack_modules__ = {
             'packages',
             'targets',
             'channels',
-            'leader-build-finished'
+            'leader-build-finished',
+            'source'
         ];
         const statusOutputPreviewBytes = 512;
         const statusOutputPreviewLines = 8;
@@ -20469,7 +20470,7 @@ var __webpack_modules__ = {
                     return withEventState(signal, async (bindings)=>{
                         const gate = await (0, _agent_bundle_runtime_request__rspack_import_6.iC)({
                             invocation: {
-                                artifactEpoch: "5e4ee4a446cf16bfc4f8a7036ec102c42ffd38d486ebe0df79b8b9e0adb3c015",
+                                artifactEpoch: "88ad41aa1d93e30aec7a3a4861bcf9349b0b27f7d2de7784e14de4805ac4561b",
                                 hostContractRevision: capabilityRevision,
                                 kind: "event",
                                 operationId: `event:${canonicalEvent}`,
