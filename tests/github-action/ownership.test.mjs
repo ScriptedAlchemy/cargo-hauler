@@ -83,6 +83,26 @@ test('worker identity requires the exact unique native lane job and strict block
   await assert.rejects(workerIdentity(client, options), /Unique/);
   for (const patch of [{ remaining: -1 }, { finished: 'false' }, { attempt: 0 }, { jobId: '../30' }, { deadline: Infinity }, { ordinal: 101 }]) assert.equal(checkOwner({ output: { text: ownerText({ ...f.owner, ...patch }) } }), null);
 });
+test('a running lane verifies while the aggregate matrix is pending on sibling concurrency', async () => {
+  const f = fixture();
+  f.state.run.status = 'pending';
+  f.state.jobs.push({ id: 31, name: 'Hauler pool / sibling', status: 'pending' });
+  const client = githubClient({ repository: 'owner/repo', token: 'private', fetchImpl: f.options.fetchImpl });
+  const options = { runId: '20', attempt: '2', lane: 'linux', repository: 'owner/repo', defaultBranch: 'master' };
+  assert.deepEqual(await workerIdentity(client, options), { runId: '20', attempt: 2, jobId: '30' });
+  assert.deepEqual(await plan(f.options), { lanes: [], count: 0 });
+  for (const status of ['pending', 'completed']) {
+    f.state.jobs[0].status = status;
+    await assert.rejects(workerIdentity(client, options), /Could not verify/);
+  }
+  for (const patch of [{ head_branch: 'pr-code' }, { run_attempt: 3 }, { path: '.github/workflows/other.yml' }, { head_repository: { full_name: 'other/repo' } }]) {
+    f.state.jobs[0].status = 'in_progress';
+    const original = { ...f.state.run };
+    Object.assign(f.state.run, patch);
+    await assert.rejects(workerIdentity(client, options), /Could not verify/);
+    f.state.run = original;
+  }
+});
 test('numbered workers of one lane each verify against their own pool job', async () => {
   const f = fixture(), client = githubClient({ repository: 'owner/repo', token: 'private', fetchImpl: f.options.fetchImpl });
   f.state.jobs = [1, 2].map(worker => ({ id: 30 + worker, name: `Hauler pool / linux-transport / ${worker}`, status: 'in_progress' }));
