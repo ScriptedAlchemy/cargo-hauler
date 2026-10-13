@@ -171,7 +171,7 @@ importers:
     devDependencies:
       '@agent-bundle/runtime':
         specifier: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d
-        version: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.8(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)
+        version: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.8(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.7)
       '@changesets/cli':
         specifier: 3.0.3
         version: 3.0.3
@@ -207,7 +207,7 @@ importers:
         version: 7.0.0-dev.20260707.2
       agent-bundle:
         specifier: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@899755dc6d
-        version: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@899755dc6d(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.8(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5))(@rspack/core@2.2.8(@swc/helpers@0.5.23))(@rstest/core@0.12.3)(hono@4.13.7)(react@19.3.0)(typescript@7.0.2)
+        version: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@899755dc6d(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.8(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.7))(@rspack/core@2.2.8(@swc/helpers@0.5.23))(@rstest/core@0.12.3)(hono@4.13.7)(react@19.3.0)(typescript@7.0.2)
       bashjsast:
         specifier: github:woolkingx/bashjsast#131f4b677d1906774fc49cfceab0ccb7b370b2e6
         version: https://codeload.github.com/woolkingx/bashjsast/tar.gz/131f4b677d1906774fc49cfceab0ccb7b370b2e6
@@ -236,8 +236,8 @@ importers:
         specifier: 7.0.2
         version: 7.0.2
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
 
 packages:
 
@@ -1544,9 +1544,12 @@ packages:
   zod@4.6.5:
     resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
+
 snapshots:
 
-  '@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.8(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)':
+  '@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.8(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.7)':
     dependencies:
       '@modelcontextprotocol/server': 2.0.0
       effect: 4.0.0-rc.117
@@ -1555,7 +1558,7 @@ snapshots:
       react-dom: 19.3.0(react@19.3.0)
       react-server-dom-rspack: 0.1.0(@rspack/core@2.2.8(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       rsc-markdown-stream: https://pkg.pr.new/ScriptedAlchemy/agent-bundle/rsc-markdown-stream@899755dc6db7b742fa4e568f8672c41453d09bbe(react@19.3.0)
-      zod: 4.6.5
+      zod: 4.6.7
     optionalDependencies:
       '@rspack/core': 2.2.8(@swc/helpers@0.5.23)
 
@@ -2192,7 +2195,7 @@ snapshots:
 
   acorn@8.18.0: {}
 
-  agent-bundle@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@899755dc6d(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.8(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5))(@rspack/core@2.2.8(@swc/helpers@0.5.23))(@rstest/core@0.12.3)(hono@4.13.7)(react@19.3.0)(typescript@7.0.2):
+  agent-bundle@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/agent-bundle@899755dc6d(@agent-bundle/runtime@https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.8(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.7))(@rspack/core@2.2.8(@swc/helpers@0.5.23))(@rstest/core@0.12.3)(hono@4.13.7)(react@19.3.0)(typescript@7.0.2):
     dependencies:
       '@effect/platform-node-shared': 4.0.0-rc.117(patch_hash=4a91f30c92993fc75800f9dc1483722836b8a5d6fed17e8b2789767fb447e171)(effect@4.0.0-rc.117)
       '@modelcontextprotocol/client': 2.0.0
@@ -2217,7 +2220,7 @@ snapshots:
       ws: 8.21.3
       yaml: 2.9.1
     optionalDependencies:
-      '@agent-bundle/runtime': https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.8(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.5)
+      '@agent-bundle/runtime': https://pkg.pr.new/ScriptedAlchemy/agent-bundle/@agent-bundle/runtime@899755dc6d(@rspack/core@2.2.8(@swc/helpers@0.5.23))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(zod@4.6.7)
       '@rstest/core': 0.12.3
       react: 19.3.0
     transitivePeerDependencies:
@@ -2654,3 +2657,5 @@ snapshots:
   yoctocolors@2.2.0: {}
 
   zod@4.6.5: {}
+
+  zod@4.6.7: {}
