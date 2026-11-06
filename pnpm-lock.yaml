@@ -186,7 +186,7 @@ importers:
         version: 0.45.0
       '@rstest/browser':
         specifier: 0.12.3
-        version: 0.12.3(@rstest/core@0.12.3)(playwright@1.63.0)
+        version: 0.12.3(@rstest/core@0.12.3)(playwright@1.65.0)
       '@rstest/core':
         specifier: 0.12.3
         version: 0.12.3
@@ -218,8 +218,8 @@ importers:
         specifier: https://pkg.pr.new/ScriptedAlchemy/effect-rstest@cbbf87e
         version: https://pkg.pr.new/ScriptedAlchemy/effect-rstest@cbbf87e(@rstest/core@0.12.3)(effect@4.0.0-rc.117)
       playwright:
-        specifier: 1.63.0
-        version: 1.63.0
+        specifier: 1.65.0
+        version: 1.65.0
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
@@ -1321,13 +1321,13 @@ packages:
     resolution: {integrity: sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==}
     engines: {node: '>=16.20.0'}
 
-  playwright-core@1.63.0:
-    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+  playwright-core@1.65.0:
+    resolution: {integrity: sha512-vNSKgH6YqtN7cdT/L334zo0a+YwkrpicyrHJlWWPIm/Q+Nn2SWInil01oT0mbu96U4GgoRtCYQD9CzJQgju+lA==}
     engines: {node: '>=20'}
     hasBin: true
 
-  playwright@1.63.0:
-    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+  playwright@1.65.0:
+    resolution: {integrity: sha512-F3AMWcR44qMBt4kq+6Kb6mX7bjGXshktKFOPULd7reED6ZJWevjbNRqysP7q+AATE9kdPEZBibex1BYsvpVoeA==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -2033,7 +2033,7 @@ snapshots:
     optionalDependencies:
       jiti: 2.7.0
 
-  '@rstest/browser@0.12.3(@rstest/core@0.12.3)(playwright@1.63.0)':
+  '@rstest/browser@0.12.3(@rstest/core@0.12.3)(playwright@1.65.0)':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@rstest/core': 0.12.3
@@ -2043,7 +2043,7 @@ snapshots:
       sirv: 3.0.2
       ws: 8.21.3
     optionalDependencies:
-      playwright: 1.63.0
+      playwright: 1.65.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -2485,11 +2485,11 @@ snapshots:
 
   pkce-challenge@5.0.1: {}
 
-  playwright-core@1.63.0: {}
+  playwright-core@1.65.0: {}
 
-  playwright@1.63.0:
+  playwright@1.65.0:
     dependencies:
-      playwright-core: 1.63.0
+      playwright-core: 1.65.0
 
   powershell-utils@0.1.0: {}
 
